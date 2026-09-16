@@ -28,6 +28,10 @@ So every chapter page does two things:
 are stated in full. Where a correspondence is exact it is proved; where it is
 merely structural, that is said plainly.
 
+> **Continuing this work?** Read [](HANDOFF.md) first — it carries the build
+> procedure, the rules, and a bank of pre-worked mechanical-engineering bridges for the
+> remaining chapters.
+
 ## Chapters
 
 | # | Chapter | Page | Published |
