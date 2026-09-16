@@ -1,0 +1,1731 @@
+<title>Chance, Failure, Surprise</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(', '\\)']], displayMath: [['$$', '$$']], processEscapes: true },
+  svg: { fontCache: 'global', scale: 1.0 },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-svg.js" id="MathJax-script" async></script>
+
+<style>
+/* ============ TOKENS: light is complete and authoritative ============ */
+:root{
+  --ground:#F0F2F1;
+  --sheet:#FBFCFB;
+  --sheet-2:#F4F6F5;
+  --ink:#14181A;
+  --ink-2:#4E575B;
+  --ink-3:#77838A;
+  --rule:#D3DAD7;
+  --rule-strong:#A8B4B0;
+  --accent:#12507E;
+  --accent-ink:#0E4267;
+  --accent-soft:#E4EEF6;
+  --bridge:#1F8A4C;
+  --bridge-soft:#E4F2EA;
+  --brk:#A8500F;
+  --brk-soft:#FAEBDF;
+  --s1:#BF5B00;
+  --s2:#0F74C7;
+  --s3:#1F8A4C;
+  --paper:#FFFFFF;            /* pasted-drawing ground, both themes */
+  --paper-ink:#1b1b1b;
+  --shadow:0 1px 2px rgba(20,24,26,.06), 0 6px 18px rgba(20,24,26,.05);
+  --f-disp:'Archivo Narrow', 'Arial Narrow', Helvetica, sans-serif;
+  --f-body:'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --f-mono:'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+    --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+    --rule:#293134; --rule-strong:#3F494C;
+    --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+    --bridge:#35AC63; --bridge-soft:#11281B;
+    --brk:#E0913F; --brk-soft:#2E2012;
+    --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+  --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+  --rule:#293134; --rule-strong:#3F494C;
+  --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+  --bridge:#35AC63; --bridge-soft:#11281B;
+  --brk:#E0913F; --brk-soft:#2E2012;
+  --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:var(--f-body); font-size:17px; line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ============ TITLE BLOCK (engineering drawing header) ============ */
+.titleblock{
+  position:sticky; top:env(safe-area-inset-top,0px); z-index:40;
+  background:var(--sheet); border-bottom:1px solid var(--rule-strong);
+}
+.tb-in{
+  max-width:1240px; margin:0 auto; padding:0 16px;
+  display:flex; align-items:stretch; gap:0; min-height:46px;
+}
+.tb-cell{
+  display:flex; flex-direction:column; justify-content:center;
+  padding:5px 14px; border-right:1px solid var(--rule);
+  font-family:var(--f-disp);
+}
+.tb-cell:first-child{padding-left:0}
+.tb-cell:last-child{border-right:0; margin-left:auto; padding-right:0}
+.tb-k{
+  font-size:8.5px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); line-height:1.4;
+}
+.tb-v{font-size:13px; font-weight:700; letter-spacing:.02em; color:var(--ink); line-height:1.3}
+.tb-v.accent{color:var(--accent)}
+.tb-hide{display:none}
+@media (min-width:680px){ .tb-hide{display:flex} }
+
+.themebtn{
+  appearance:none; background:transparent; border:1px solid var(--rule-strong);
+  color:var(--ink-2); font-family:var(--f-disp); font-size:10px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:6px 10px; border-radius:2px;
+  cursor:pointer; align-self:center; white-space:nowrap;
+}
+.themebtn:hover{border-color:var(--accent); color:var(--accent)}
+.themebtn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+/* ============ SHELL ============ */
+.shell{max-width:1240px; margin:0 auto; padding:0 16px; padding-block:0 64px}
+@media (min-width:1080px){
+  .shell{display:grid; grid-template-columns:212px minmax(0,1fr); gap:44px; align-items:start}
+}
+.rail{display:none}
+@media (min-width:1080px){
+  .rail{
+    display:block; position:sticky; top:calc(env(safe-area-inset-top,0px) + 70px);
+    padding-block:28px; font-family:var(--f-disp); font-size:12.5px;
+  }
+}
+.rail-h{
+  font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-3);
+  padding-bottom:8px; border-bottom:1px solid var(--rule); margin-bottom:10px;
+}
+.rail a{
+  display:flex; gap:9px; padding:4px 0; color:var(--ink-2); text-decoration:none;
+  border-left:2px solid transparent; padding-left:9px; margin-left:-11px; line-height:1.35;
+}
+.rail a:hover{color:var(--accent)}
+.rail a.on{color:var(--accent); border-left-color:var(--accent); font-weight:700}
+.rail a .n{font-family:var(--f-mono); font-size:10.5px; color:var(--ink-3); flex:none; padding-top:1px}
+.rail a.on .n{color:var(--accent)}
+
+main{min-width:0; padding-block:0 0}
+.col{max-width:70ch}
+
+/* ============ TYPE ============ */
+h1,h2,h3,h4{font-family:var(--f-disp); text-wrap:balance; margin:0; line-height:1.14}
+h1{font-size:clamp(34px,7vw,58px); font-weight:700; letter-spacing:-.015em}
+h2{font-size:clamp(25px,4.2vw,34px); font-weight:700; letter-spacing:-.01em}
+h3{font-size:19px; font-weight:700; letter-spacing:.005em; margin-top:2px}
+h4{font-size:14px; font-weight:700; letter-spacing:.06em; text-transform:uppercase}
+p{margin:0 0 1.05em}
+a{color:var(--accent-ink)}
+strong{font-weight:600}
+em{font-style:italic}
+code{font-family:var(--f-mono); font-size:.87em; background:var(--sheet-2); padding:1px 5px; border-radius:2px; border:1px solid var(--rule)}
+.lead{font-size:19.5px; line-height:1.56; color:var(--ink-2)}
+.eyebrow{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--ink-3); margin:0 0 10px;
+}
+.srcref{
+  font-family:var(--f-mono); font-size:11px; color:var(--ink-3);
+  border:1px solid var(--rule); border-radius:2px; padding:2px 7px; display:inline-block;
+  background:var(--sheet-2); white-space:nowrap;
+}
+
+/* ============ SECTION ============ */
+section{padding-block:38px 0; scroll-margin-top:calc(env(safe-area-inset-top,0px) + 62px)}
+.sechead{display:flex; align-items:baseline; gap:13px; margin-bottom:6px; flex-wrap:wrap}
+.secnum{
+  font-family:var(--f-mono); font-size:12px; font-weight:600; color:var(--accent);
+  border:1px solid var(--accent); border-radius:2px; padding:2px 7px; flex:none;
+  background:var(--accent-soft);
+}
+.rule-h{border:0; border-top:1px solid var(--rule); margin:0 0 22px}
+.rule-d{border:0; border-top:1px dashed var(--rule-strong); margin:34px 0}
+
+/* ============ CALLOUTS ============ */
+.note{
+  border:1px solid var(--rule); border-left:3px solid var(--accent);
+  background:var(--sheet); border-radius:2px; padding:16px 18px; margin:22px 0;
+}
+.note.bridge{border-left-color:var(--bridge); background:var(--bridge-soft)}
+.note.brk{border-left-color:var(--brk); background:var(--brk-soft)}
+.note-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; margin-bottom:7px; display:flex; align-items:center; gap:8px;
+}
+.note.bridge .note-h{color:var(--bridge)}
+.note.brk .note-h{color:var(--brk)}
+.note .note-h{color:var(--accent)}
+.note p:last-child, .note ul:last-child{margin-bottom:0}
+.note-h .ic{
+  width:15px; height:15px; border-radius:50%; border:1.5px solid currentColor; flex:none;
+  display:grid; place-items:center; font-size:9.5px; font-weight:700; font-family:var(--f-mono);
+}
+ul,ol{margin:0 0 1.05em; padding-left:1.25em}
+li{margin-bottom:.4em}
+li::marker{color:var(--ink-3)}
+
+/* ============ DEFINITION BLOCK ============ */
+.defn{
+  background:var(--sheet); border:1px solid var(--rule); border-radius:3px;
+  padding:18px 20px; margin:22px 0; box-shadow:var(--shadow);
+}
+.defn-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:10px;
+  padding-bottom:8px; border-bottom:1px solid var(--rule);
+}
+.defn p:last-child{margin-bottom:0}
+
+/* ============ TABLES ============ */
+.tw{overflow-x:auto; margin:22px 0; border:1px solid var(--rule); border-radius:3px; background:var(--sheet)}
+table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:480px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule); vertical-align:top}
+thead th{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); background:var(--sheet-2); font-weight:700; white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:0}
+td.mono,th.mono{font-family:var(--f-mono); font-size:13px; font-variant-numeric:tabular-nums}
+.tw caption{
+  caption-side:bottom; text-align:left; padding:9px 14px; font-size:12.5px;
+  color:var(--ink-3); border-top:1px solid var(--rule); font-family:var(--f-disp);
+}
+
+/* ============ FIGURES ============ */
+figure{margin:24px 0}
+.paper{
+  background:var(--paper); border:1px solid var(--rule-strong); border-radius:3px;
+  padding:16px; display:flex; justify-content:center; box-shadow:var(--shadow);
+}
+.paper img{max-width:100%; height:auto; display:block}
+figcaption{
+  font-family:var(--f-disp); font-size:12.5px; color:var(--ink-3); margin-top:9px;
+  line-height:1.45; padding-left:2px;
+}
+figcaption b{color:var(--ink-2); font-weight:700; letter-spacing:.04em}
+
+/* ============ INTERACTIVE PANELS ============ */
+.lab{
+  background:var(--sheet); border:1px solid var(--rule-strong); border-radius:3px;
+  margin:26px 0; overflow:hidden; box-shadow:var(--shadow);
+}
+.lab-h{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:11px 16px; border-bottom:1px solid var(--rule); background:var(--sheet-2);
+}
+.lab-t{font-family:var(--f-disp); font-size:13px; font-weight:700; letter-spacing:.05em; text-transform:uppercase}
+.lab-tag{
+  font-family:var(--f-mono); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--accent); border:1px solid var(--accent); border-radius:2px; padding:2px 6px;
+  margin-left:auto; white-space:nowrap;
+}
+.lab-body{padding:16px}
+.lab-foot{
+  padding:11px 16px; border-top:1px solid var(--rule); background:var(--sheet-2);
+  font-size:13.5px; color:var(--ink-2); line-height:1.5;
+}
+.lab-foot b{color:var(--ink)}
+.stage{width:100%; max-width:560px; height:auto; display:block; margin-inline:auto; touch-action:none; cursor:grab}
+.stage.drag{cursor:grabbing}
+
+.readout{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr)); gap:1px;
+  background:var(--rule); border:1px solid var(--rule); border-radius:2px; margin-top:14px;
+}
+.ro{background:var(--sheet); padding:8px 11px}
+.ro-k{
+  font-family:var(--f-disp); font-size:9px; letter-spacing:.13em; text-transform:uppercase;
+  color:var(--ink-3); margin-bottom:2px; white-space:nowrap;
+}
+.ro-v{
+  font-family:var(--f-mono); font-size:15px; font-weight:500; font-variant-numeric:tabular-nums;
+  color:var(--ink); line-height:1.25;
+}
+.ro-v.a{color:var(--s2)} .ro-v.b{color:var(--s1)} .ro-v.c{color:var(--s3)}
+
+.ctl{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:14px}
+.ctl label{
+  font-family:var(--f-disp); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-2); white-space:nowrap;
+}
+input[type=range]{
+  -webkit-appearance:none; appearance:none; height:22px; background:transparent;
+  flex:1 1 160px; min-width:130px; cursor:pointer;
+}
+input[type=range]:focus-visible{outline:2px solid var(--accent); outline-offset:3px}
+input[type=range]::-webkit-slider-runnable-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-moz-range-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:16px; height:16px; border-radius:50%;
+  background:var(--accent); border:2px solid var(--sheet); margin-top:-6.5px;
+}
+input[type=range]::-moz-range-thumb{
+  width:16px; height:16px; border-radius:50%; background:var(--accent);
+  border:2px solid var(--sheet);
+}
+.btn{
+  appearance:none; font-family:var(--f-disp); font-size:11px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:7px 13px; border-radius:2px;
+  border:1px solid var(--rule-strong); background:var(--sheet); color:var(--ink-2); cursor:pointer;
+}
+.btn:hover{border-color:var(--accent); color:var(--accent)}
+.btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.btn.on{background:var(--accent); border-color:var(--accent); color:var(--sheet)}
+
+.legend{display:flex; gap:16px; flex-wrap:wrap; margin-top:12px}
+.lg{display:flex; align-items:center; gap:7px; font-family:var(--f-disp); font-size:12px; color:var(--ink-2)}
+.lg i{width:15px; height:3px; border-radius:2px; flex:none; display:block}
+
+/* ============ MISC ============ */
+.mathbox{overflow-x:auto; overflow-y:hidden; margin:18px 0}
+mjx-container[display="true"]{margin:0 !important}
+.kv{display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:15px; margin:16px 0}
+.kv dt{font-family:var(--f-mono); font-size:13px; color:var(--accent); white-space:nowrap}
+.kv dd{margin:0; color:var(--ink-2)}
+
+details.q{
+  border:1px solid var(--rule); border-radius:3px; background:var(--sheet);
+  margin-bottom:9px; overflow:hidden;
+}
+details.q summary{
+  cursor:pointer; padding:12px 15px; font-weight:600; list-style:none;
+  display:flex; gap:11px; align-items:flex-start; font-size:15.5px;
+}
+details.q summary::-webkit-details-marker{display:none}
+details.q summary::after{
+  content:'+'; margin-left:auto; font-family:var(--f-mono); color:var(--accent);
+  font-size:17px; line-height:1; flex:none; padding-top:2px;
+}
+details.q[open] summary::after{content:'\2212'}
+details.q summary:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
+details.q summary .qn{
+  font-family:var(--f-mono); font-size:12px; color:var(--ink-3); flex:none; padding-top:3px;
+}
+details.q .ans{padding:0 15px 14px 41px; font-size:15.5px; color:var(--ink-2); border-top:1px solid var(--rule); padding-top:13px}
+details.q .ans p:last-child{margin-bottom:0}
+
+.endnote{
+  margin-top:44px; padding-top:20px; border-top:1px solid var(--rule-strong);
+  font-size:13.5px; color:var(--ink-3); font-family:var(--f-disp); line-height:1.55;
+}
+.endnote a{color:var(--accent)}
+
+.srcref{text-decoration:none}
+a.srcref{color:var(--ink-2); transition:none}
+
+<style>
+.srcref{text-decoration:none}
+a.srcref{color:var(--ink-2)}
+a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(--accent-soft)}
+.srcref.nolink{opacity:.75; font-style:italic}
+.pv{font-family:var(--f-disp); font-size:9.5px; font-weight:700; letter-spacing:.1em;
+    text-transform:uppercase; padding:2px 7px; border-radius:2px; white-space:nowrap}
+.pv.ok{background:var(--bridge-soft); color:var(--bridge)}
+.pv.add{background:var(--accent-soft); color:var(--accent)}
+.pv.corr{background:var(--brk-soft); color:var(--brk)}
+.flag{display:inline-block; padding:1px 7px; border-radius:2px; font-family:var(--f-disp);
+      font-size:10px; letter-spacing:.1em; text-transform:uppercase; font-weight:700}
+.flag.ok{background:var(--bridge-soft); color:var(--bridge)}
+.flag.bad{background:var(--brk-soft); color:var(--brk)}
+/* prediction-first panel: commit to an answer before the lab reveals it */
+.predict{border:1px solid var(--rule-strong); border-left:3px solid var(--brk);
+  background:var(--brk-soft); border-radius:2px; padding:13px 15px; margin:0 0 14px}
+.predict-h{font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--brk); margin-bottom:6px}
+.predict p{margin:0 0 10px; font-size:15px}
+.predict .opts{display:flex; gap:8px; flex-wrap:wrap}
+.pbtn{appearance:none; font-family:var(--f-disp); font-size:12px; font-weight:600;
+  padding:6px 12px; border-radius:2px; border:1px solid var(--rule-strong);
+  background:var(--sheet); color:var(--ink-2); cursor:pointer}
+.pbtn:hover{border-color:var(--brk); color:var(--brk)}
+.pbtn.picked{background:var(--brk); border-color:var(--brk); color:var(--sheet)}
+.pverdict{margin-top:10px; font-size:14.5px; color:var(--ink-2); display:none}
+.pverdict.show{display:block}
+.pverdict b{color:var(--ink)}
+.gap{border:1px solid var(--rule); border-left:3px solid var(--ink-3); background:var(--sheet-2);
+  border-radius:2px; padding:14px 16px; margin:18px 0}
+.gap-h{font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:7px}
+</style>
+
+<header class="titleblock">
+  <div class="tb-in">
+    <div class="tb-cell"><span class="tb-k">Chapter</span><span class="tb-v accent">05 &middot; Probability</span></div>
+    <div class="tb-cell tb-hide"><span class="tb-k">Sheet</span><span class="tb-v">5 of 20</span></div>
+    <div class="tb-cell tb-hide"><span class="tb-k">Reader</span><span class="tb-v">B.E. Mechanical</span></div>
+    <div class="tb-cell tb-hide"><span class="tb-k">Prerequisite</span><span class="tb-v">Sheets 1&ndash;4</span></div>
+    <div class="tb-cell"><button class="themebtn" id="themebtn" type="button" aria-label="Switch colour theme">Theme</button></div>
+  </div>
+</header>
+
+<div class="shell">
+
+<nav class="rail" aria-label="Chapter contents">
+  <div class="rail-h">Contents</div>
+  <a href="#bridge" class="on"><span class="n">00</span><span>The bridge</span></a>
+  <a href="#axioms"><span class="n">01</span><span>Counting &amp; axioms</span></a>
+  <a href="#hazard"><span class="n">02</span><span>The hazard rate</span></a>
+  <a href="#blocks"><span class="n">03</span><span>Series and parallel</span></a>
+  <a href="#dists"><span class="n">04</span><span>The bathtub curve</span></a>
+  <a href="#bayes"><span class="n">05</span><span>Bayes &amp; the base rate</span></a>
+  <a href="#mle"><span class="n">06</span><span>MLE, MAP, priors</span></a>
+  <a href="#markov"><span class="n">07</span><span>Markov &amp; availability</span></a>
+  <a href="#entropy"><span class="n">08</span><span>Entropy</span></a>
+  <a href="#breaks"><span class="n">09</span><span>Where it breaks</span></a>
+  <a href="#gaps"><span class="n">10</span><span>What is missing</span></a>
+  <a href="#worked"><span class="n">11</span><span>Worked example</span></a>
+  <a href="#recall"><span class="n">12</span><span>Question bank</span></a>
+  <a href="#next"><span class="n">13</span><span>What this feeds</span></a>
+  <a href="#provenance"><span class="n">A</span><span>Provenance</span></a>
+</nav>
+
+<main>
+
+<section id="top" style="padding-top:44px">
+  <div class="col">
+    <p class="eyebrow">Maths, CS &amp; AI Compendium &middot; Chapter 05</p>
+    <h1>Chance, Failure, Surprise</h1>
+    <p class="lead" style="margin-top:18px">
+      Chapter 04 handed you data and asked you to summarise it. This chapter hands you a model
+      and asks what data it would produce &mdash; and then, with Bayes' theorem, lets you run
+      that arrow backwards. That reversal is the single most useful idea in the chapter, and it
+      settles a debt: Chapter 04 &sect;09 said a p-value cannot tell you the probability your
+      process is fine. Bayes is what can.
+    </p>
+    <p>
+      The engineering home for all of this is <strong>reliability</strong>. The exponential
+      distribution is a constant hazard rate. The Weibull shape parameter <em>is</em> the bathtub
+      curve. Series and parallel reliability block diagrams are the AND and OR rules of
+      probability drawn as boxes. And the hazard rate itself &mdash; the thing that defines a
+      failure model &mdash; is a conditional density, which is the definition of conditional
+      probability.
+    </p>
+    <p>
+      There is also one correspondence here that is deeper than an analogy and genuinely
+      startling: the entropy of information theory and the entropy of your thermodynamics course
+      are <em>the same quantity in different units</em>. &sect;08 does that carefully, because it
+      is also the place where overclaiming is easiest.
+    </p>
+  </div>
+</section>
+
+<section id="bridge">
+  <div class="col">
+    <div class="sechead"><span class="secnum">00</span><h2>The bridge</h2></div>
+    <hr class="rule-h">
+  </div>
+  <div class="tw">
+    <table>
+      <thead><tr><th>What you already use</th><th>What probability calls it</th><th>How good is the match?</th></tr></thead>
+      <tbody>
+        <tr><td>Hazard rate \(h(t)=f(t)/R(t)\)</td><td>Conditional density</td><td><b style="color:var(--bridge)">Identical.</b> Failure rate <em>is</em> a conditional probability.</td></tr>
+        <tr><td>Series reliability \(R=\prod R_i\)</td><td>AND rule for independent events</td><td><b style="color:var(--bridge)">Identical.</b></td></tr>
+        <tr><td>Parallel/redundant \(1-\prod(1-R_i)\)</td><td>OR rule via the complement</td><td><b style="color:var(--bridge)">Identical.</b></td></tr>
+        <tr><td>Constant failure rate, MTBF</td><td>Exponential distribution</td><td><b style="color:var(--bridge)">Identical.</b> MTBF \(=1/\lambda\).</td></tr>
+        <tr><td>The bathtub curve</td><td>Weibull shape parameter \(\beta\)</td><td><b style="color:var(--bridge)">Exact.</b> \(\beta<1,=1,>1\) are its three zones.</td></tr>
+        <tr><td>Failures per interval at rate \(\lambda\)</td><td>Poisson distribution</td><td><b style="color:var(--bridge)">Identical.</b></td></tr>
+        <tr><td>Process capability, \(\pm3\sigma\), PPM</td><td>Normal tail probabilities</td><td><b style="color:var(--bridge)">Identical.</b></td></tr>
+        <tr><td>Fault diagnosis from a noisy alarm</td><td>Bayes' theorem</td><td><b style="color:var(--bridge)">Identical &mdash; and you probably get it wrong.</b> See &sect;05.</td></tr>
+        <tr><td>Machine state models, availability</td><td>Markov chains, stationary distribution</td><td><b style="color:var(--bridge)">Identical.</b></td></tr>
+        <tr><td>Gibbs entropy \(S=-k_B\sum p\ln p\)</td><td>Shannon entropy</td><td><b style="color:var(--bridge)">The same quantity,</b> rescaled. See &sect;08.</td></tr>
+        <tr><td>Least-squares curve fit</td><td>Maximum likelihood under Gaussian noise</td><td><b style="color:var(--bridge)">Identical.</b> See &sect;06.</td></tr>
+        <tr><td>"Components fail independently"</td><td>The i.i.d. assumption</td><td><b style="color:var(--brk)">Usually false in both.</b> See &sect;09.</td></tr>
+      </tbody>
+      <caption>Eleven exact correspondences and one shared, load-bearing lie.</caption>
+    </table>
+  </div>
+</section>
+
+<section id="axioms">
+  <div class="col">
+    <div class="sechead"><span class="secnum">01</span><h2>Counting, and the three axioms</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2005%20-%20probability/01.%20counting.md" target="_blank" rel="noopener">src 01. counting &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      Probability starts with counting outcomes. A <strong>permutation</strong> counts arrangements
+      where order matters, \(P(n,r)=\frac{n!}{(n-r)!}\); a <strong>combination</strong> counts
+      selections where it does not, \(\binom{n}{r}=\frac{n!}{r!(n-r)!}\). The whole of
+      combinatorics is bookkeeping about whether order and repetition count.
+    </p>
+    <p>
+      Everything then rests on three axioms: probabilities are non-negative, the whole sample
+      space has probability 1, and for mutually exclusive events probabilities add. From those
+      three, two rules do most of the work:
+    </p>
+    <div class="mathbox">
+      $$P(A\cup B)=P(A)+P(B)-P(A\cap B), \qquad P(A\cap B)=P(A)\,P(B)\ \text{ if independent}$$
+    </div>
+    <p>
+      Subtracting the overlap in the first is inclusion&ndash;exclusion; forgetting to subtract it
+      is the most common counting error there is. The second is the definition of independence,
+      not a theorem about it &mdash; a distinction &sect;09 will make expensive.
+    </p>
+  </div>
+  <figure class="col">
+    <div class="paper"><img src="img/venn_diagram.svg" alt="Two overlapping sets showing union, intersection and complement" width="400"></div>
+    <figcaption><b>Fig. 5.1</b> &mdash; Union, intersection, complement. The overlap is what inclusion&ndash;exclusion exists to avoid double-counting. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="hazard">
+  <div class="col">
+    <div class="sechead"><span class="secnum">02</span><h2>Conditional probability is a hazard rate</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2005%20-%20probability/02.%20probability%20concepts.md" target="_blank" rel="noopener">src 02. concepts &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      <strong>Conditional probability</strong> is the probability of \(A\) given that \(B\) has
+      already happened &mdash; it restricts attention to the part of the world where \(B\) holds,
+      and renormalises:
+    </p>
+    <div class="mathbox">
+      $$P(A\mid B)=\frac{P(A\cap B)}{P(B)}$$
+    </div>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; the failure rate you quote is a conditional density</div>
+      <p>
+        Take a component with failure density \(f(t)\) and reliability
+        \(R(t)=P(T>t)=1-F(t)\). The <strong>hazard rate</strong> is
+      </p>
+      <div class="mathbox">
+        $$h(t)=\frac{f(t)}{R(t)}$$
+      </div>
+      <p style="margin-bottom:0">
+        Read the definition rather than the formula: \(h(t)\,\mathrm{d}t\) is the probability the
+        part fails in the next instant <em>given that it has survived to \(t\)</em>. The
+        denominator \(R(t)\) is the renormalisation onto the survivors &mdash; exactly the
+        \(P(B)\) above. Every failure rate you have ever quoted, every FIT number on a datasheet,
+        is a conditional probability. That is why a hazard rate can rise while the failure
+        density falls: the population of survivors is shrinking underneath it.
+      </p>
+    </div>
+    <p>
+      Two events are <strong>independent</strong> when \(P(A\mid B)=P(A)\) &mdash; learning \(B\)
+      tells you nothing about \(A\). Note carefully that this is not the same as being mutually
+      exclusive. Mutually exclusive events are maximally <em>dependent</em>: if one happens, the
+      other definitely did not.
+    </p>
+  </div>
+  <figure class="col">
+    <div class="paper"><img src="img/conditional_probability.svg" alt="The sample space restricted to the conditioning event and renormalised" width="400"></div>
+    <figcaption><b>Fig. 5.2</b> &mdash; Conditioning shrinks the world to \(B\) and rescales. In reliability, \(B\) is "still working at time \(t\)". <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="blocks">
+  <div class="col">
+    <div class="sechead"><span class="secnum">03</span><h2>Series and parallel are AND and OR</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2005%20-%20probability/02.%20probability%20concepts.md" target="_blank" rel="noopener">src 02. concepts &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      A reliability block diagram is a probability expression drawn as boxes. A
+      <strong>series</strong> system works only if <em>every</em> block works, so its reliability
+      is an AND over independent events &mdash; a product. A <strong>parallel</strong> (redundant)
+      system works if <em>any</em> block works, which is easiest computed through the complement:
+      it fails only if all of them fail.
+    </p>
+    <div class="mathbox">
+      $$R_{\text{series}}=\prod_{i=1}^{n}R_i, \qquad
+        R_{\text{parallel}}=1-\prod_{i=1}^{n}(1-R_i)$$
+    </div>
+  </div>
+  <div class="tw col">
+    <table>
+      <thead><tr><th>Arrangement</th><th>Probability statement</th><th class="mono">10 blocks at R = 0.99</th></tr></thead>
+      <tbody>
+        <tr><td>Series &mdash; all must work</td><td>\(P(A_1\cap\cdots\cap A_n)\)</td><td class="mono">0.904 &nbsp;<span class="flag bad">worse than any part</span></td></tr>
+        <tr><td>Parallel &mdash; any may work</td><td>\(1-P(\text{all fail})\)</td><td class="mono">0.99999999999... &nbsp;<span class="flag ok">far better</span></td></tr>
+        <tr><td>2-out-of-3 voting</td><td>Binomial tail, \(P(X\ge2)\)</td><td class="mono">0.99970 &nbsp;(for 3 blocks)</td></tr>
+      </tbody>
+      <caption>
+        The series result is the one worth internalising: ten excellent components in series give
+        a mediocre system. Reliability multiplies downward, which is why complexity is
+        expensive and why redundancy exists.
+      </caption>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      The <strong>2-out-of-3 voting</strong> row is a binomial tail probability, which is the
+      distribution &sect;04 introduces. Triple-redundant sensors with majority voting are standard
+      in safety-critical control, and their reliability is one line of probability arithmetic.
+    </p>
+  </div>
+</section>
+
+<section id="dists">
+  <div class="col">
+    <div class="sechead"><span class="secnum">04</span><h2>Distributions, and the bathtub curve</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2005%20-%20probability/03.%20distributions.md" target="_blank" rel="noopener">src 03. distributions &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      The source chapter catalogues the standard distributions. Rather than repeat the catalogue,
+      here is the subset you already use daily, named properly.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <thead><tr><th>Distribution</th><th>Models</th><th>Where you meet it</th></tr></thead>
+      <tbody>
+        <tr><td><b>Bernoulli</b></td><td>One pass/fail trial</td><td>A single part conforming or not</td></tr>
+        <tr><td><b>Binomial</b></td><td>Successes in \(n\) trials</td><td>Defectives in a sample; 2-out-of-3 voting</td></tr>
+        <tr><td><b>Poisson</b></td><td>Events per interval at rate \(\lambda\)</td><td>Breakdowns per month; defects per casting</td></tr>
+        <tr><td><b>Exponential</b></td><td>Waiting time between Poisson events</td><td>Time to failure at constant hazard; MTBF \(=1/\lambda\)</td></tr>
+        <tr><td><b>Weibull</b></td><td>Time to failure, hazard varying with age</td><td>Fatigue, bearing wear &mdash; the whole bathtub</td></tr>
+        <tr><td><b>Normal</b></td><td>Sums of many small effects</td><td>Dimensions, process capability, \(C_p\) and \(C_{pk}\)</td></tr>
+        <tr><td><b>Beta</b></td><td>A probability that is itself uncertain</td><td>Prior belief about a defect rate (&sect;06)</td></tr>
+      </tbody>
+      <caption>Poisson and exponential are two views of one process: count the events, or time the gaps between them.</caption>
+    </table>
+  </div>
+
+  <div class="col">
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; the bathtub curve <em>is</em> the Weibull shape parameter</div>
+      <p>The Weibull reliability and hazard functions are</p>
+      <div class="mathbox">
+        $$R(t)=e^{-(t/\eta)^{\beta}}, \qquad h(t)=\frac{\beta}{\eta}\left(\frac{t}{\eta}\right)^{\beta-1}$$
+      </div>
+      <p style="margin-bottom:0">
+        Look only at the exponent of \(t\) in the hazard, which is \(\beta-1\). If
+        \(\beta<1\) the hazard <em>falls</em> with age &mdash; infant mortality, weeding out
+        manufacturing defects. If \(\beta=1\) the hazard is <em>constant</em>, the exponential
+        case, random failures independent of age. If \(\beta>1\) the hazard <em>rises</em>
+        &mdash; wear-out. The three zones of the bathtub curve are one parameter taking three
+        ranges, and \(\beta\) is what a Weibull plot of your failure data estimates.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab">
+    <div class="lab-h"><span class="lab-t">The bathtub, one parameter at a time</span><span class="lab-tag">Predict, then drag</span></div>
+    <div class="lab-body">
+      <div class="predict" id="pred1">
+        <div class="predict-h">Commit before you drag</div>
+        <p>
+          A bearing population has Weibull \(\beta=2.5\) (wear-out). You replace every bearing at
+          a fixed interval. Does <b>preventive replacement</b> reduce the failure rate?
+        </p>
+        <div class="opts">
+          <button class="pbtn" data-p1="yes" type="button">Yes, it helps</button>
+          <button class="pbtn" data-p1="no" type="button">No, it does nothing</button>
+          <button class="pbtn" data-p1="dep" type="button">Only if &beta; &gt; 1</button>
+        </div>
+        <div class="pverdict" id="v1"></div>
+      </div>
+      <svg class="stage" id="sW" viewBox="0 0 480 300" role="img"
+           aria-label="Weibull hazard rate and reliability curves, whose shape changes from falling to constant to rising as the shape parameter passes one">
+        <g id="wGrid"></g><g id="wCurves"></g><g id="wAx"></g>
+      </svg>
+      <div class="ctl">
+        <label for="bSl">Shape &beta;</label>
+        <input type="range" id="bSl" min="30" max="400" value="100" step="5">
+        <span class="ro-v" id="bVal" style="min-width:74px">&beta; = 1.00</span>
+        <button class="btn" data-b="50" type="button">Infant 0.5</button>
+        <button class="btn on" data-b="100" type="button">Random 1.0</button>
+        <button class="btn" data-b="250" type="button">Wear-out 2.5</button>
+      </div>
+      <div class="readout">
+        <div class="ro"><div class="ro-k">Zone</div><div class="ro-v" id="oZone">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">R at t = &eta;</div><div class="ro-v a" id="oRe">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Hazard at t = &eta;/2</div><div class="ro-v b" id="oH1">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Hazard at t = 2&eta;</div><div class="ro-v c" id="oH2">&mdash;</div></div>
+      </div>
+      <div class="legend">
+        <span class="lg"><i style="background:var(--s1)"></i>hazard h(t) &mdash; failure rate of survivors</span>
+        <span class="lg"><i style="background:var(--s2)"></i>reliability R(t)</span>
+      </div>
+    </div>
+    <div class="lab-foot">
+      Characteristic life \(\eta=1\). Note that \(R(\eta)=e^{-1}\approx0.368\) for
+      <em>every</em> \(\beta\) &mdash; the curves all pass through the same point, which is what
+      makes \(\eta\) "characteristic". The readouts compare the hazard early and late: at
+      \(\beta=0.5\) it falls by a factor of two, at \(\beta=1\) it does not move, at
+      \(\beta=2.5\) it rises exactly eightfold, since
+      \(h(2\eta)/h(\eta/2)=4^{1.5}=8\).
+    </div>
+  </div>
+</section>
+
+<section id="bayes">
+  <div class="col">
+    <div class="sechead"><span class="secnum">05</span><h2>Bayes, and the alarm that is probably wrong</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2005%20-%20probability/02.%20probability%20concepts.md" target="_blank" rel="noopener">src 02. concepts &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      Rearranging the definition of conditional probability gives the most consequential formula
+      in applied statistics:
+    </p>
+    <div class="mathbox">
+      $$P(A\mid B)=\frac{P(B\mid A)\,P(A)}{P(B)}$$
+    </div>
+    <p>
+      It reverses the direction of conditioning. You know how the instrument behaves given the
+      fault &mdash; that is \(P(\text{alarm}\mid\text{fault})\), the sensitivity, and it is what
+      the manufacturer tests and quotes. What you actually want is
+      \(P(\text{fault}\mid\text{alarm})\): the alarm has sounded, should I stop the machine?
+    </p>
+    <p>
+      Those two numbers are <em>not</em> the same, and the gap between them is set by
+      \(P(A)\) &mdash; the <strong>base rate</strong>, how often the fault occurs at all. This is
+      the debt Chapter 04 &sect;09 left open: a p-value is the first kind of statement, and
+      converting it to the second needs a prior.
+    </p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-h"><span class="lab-t">A 99% accurate alarm just fired</span><span class="lab-tag">Predict, then reveal</span></div>
+    <div class="lab-body">
+      <div class="predict" id="pred2">
+        <div class="predict-h">Commit before you look</div>
+        <p>
+          A vibration monitor is <b>99% accurate</b> &mdash; it catches 99% of genuine bearing
+          faults, and gives a false alarm on only 1% of healthy machines. About <b>1 machine in
+          100</b> actually has a developing fault. The alarm fires on one of your machines.
+          What is the probability the fault is real?
+        </p>
+        <div class="opts">
+          <button class="pbtn" data-p2="99" type="button">About 99%</button>
+          <button class="pbtn" data-p2="90" type="button">About 90%</button>
+          <button class="pbtn" data-p2="50" type="button">About 50%</button>
+          <button class="pbtn" data-p2="9" type="button">About 9%</button>
+        </div>
+        <div class="pverdict" id="v2"></div>
+      </div>
+      <svg class="stage" id="sB" viewBox="0 0 480 300" role="img"
+           aria-label="One thousand machines drawn as dots, coloured by whether they have a fault and whether the alarm fired, showing that false alarms can outnumber true ones">
+        <g id="bDots"></g><g id="bLab"></g>
+      </svg>
+      <div class="ctl">
+        <label for="prevSl">Base rate</label>
+        <input type="range" id="prevSl" min="1" max="200" value="10" step="1">
+        <span class="ro-v" id="prevVal" style="min-width:66px">1.0%</span>
+      </div>
+      <div class="ctl">
+        <label for="senSl">Sensitivity</label>
+        <input type="range" id="senSl" min="700" max="999" value="990" step="1">
+        <span class="ro-v" id="senVal" style="min-width:60px">99.0%</span>
+        <label for="specSl" style="margin-left:6px">Specificity</label>
+        <input type="range" id="specSl" min="700" max="999" value="990" step="1">
+        <span class="ro-v" id="specVal" style="min-width:60px">99.0%</span>
+      </div>
+      <div class="readout">
+        <div class="ro"><div class="ro-k">True alarms</div><div class="ro-v c" id="oTP">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">False alarms</div><div class="ro-v b" id="oFP">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Missed faults</div><div class="ro-v" id="oFN">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">P(fault | alarm)</div><div class="ro-v a" id="oPPV" style="font-size:19px">&mdash;</div></div>
+      </div>
+      <div class="legend">
+        <span class="lg"><i style="background:var(--s3)"></i>fault, alarm fired</span>
+        <span class="lg"><i style="background:var(--s1)"></i>healthy, false alarm</span>
+        <span class="lg"><i style="background:var(--brk)"></i>fault, missed</span>
+        <span class="lg"><i style="background:var(--rule-strong)"></i>healthy, quiet</span>
+      </div>
+    </div>
+    <div class="lab-foot">
+      1,000 machines. Count the alarms &mdash; green plus orange &mdash; and ask what fraction are
+      green. At the defaults the two groups are <b>the same size</b>, so half of all alarms are
+      false despite a "99% accurate" instrument. Drag the base rate down to 0.1% and it collapses
+      to about 9%: nine out of ten alarms are noise. Nothing about the instrument changed. This
+      is why a rare-fault detector needs far better specificity than intuition suggests, and why
+      a maintenance team stops trusting an alarm that cries wolf.
+    </div>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/bayes_components.svg" alt="Bayes theorem broken into prior, likelihood, evidence and posterior" width="420"></div>
+    <figcaption><b>Fig. 5.3</b> &mdash; The four parts. <b>Prior</b> is the base rate before evidence, <b>likelihood</b> is what the instrument does, <b>evidence</b> normalises, <b>posterior</b> is what you wanted. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="mle">
+  <div class="col">
+    <div class="sechead"><span class="secnum">06</span><h2>MLE, MAP, and why a prior is regularisation</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2005%20-%20probability/04.%20bayesian.md" target="_blank" rel="noopener">src 04. bayesian &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      <strong>Maximum likelihood</strong> picks the parameters that make the observed data most
+      probable. Because products underflow and sums do not, you maximise the log:
+    </p>
+    <div class="mathbox">
+      $$\hat{\theta}_{\text{MLE}}=\arg\max_\theta \sum_{i=1}^{n}\log P(x_i\mid\theta)$$
+    </div>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; least squares <em>is</em> maximum likelihood</div>
+      <p>
+        Assume your measurements differ from the model by independent Gaussian noise,
+        \(y_i=g(x_i)+\varepsilon_i\) with \(\varepsilon\sim\mathcal{N}(0,\sigma^2)\). Write the
+        log-likelihood, drop the terms that do not contain \(\theta\), and what remains is
+      </p>
+      <div class="mathbox">
+        $$\ell(\theta)=-\frac{1}{2\sigma^2}\sum_i\big(y_i-g(x_i)\big)^2+\text{const}$$
+      </div>
+      <p style="margin-bottom:0">
+        Maximising that is <em>identical</em> to minimising the sum of squared residuals. Every
+        least-squares fit you have made to lab data is a maximum likelihood estimate, and the
+        hidden assumption you were making is that the errors are independent, Gaussian and of
+        equal variance. When they are not &mdash; heteroscedastic data, outliers, correlated
+        errors &mdash; least squares is the wrong estimator, and now you know precisely why.
+      </p>
+    </div>
+    <p>
+      MLE has a failure mode the source names clearly: ten heads in ten flips gives
+      \(\hat{p}=1\), a claim that the coin can never land tails on the strength of ten
+      observations. <strong>MAP</strong> fixes it by multiplying in a prior before maximising.
+      With a Beta(2,2) prior and 7 heads in 10, the estimate moves from \(0.7\) to
+      \(\frac{2+7-1}{2+2+10-2}=\frac{8}{12}=0.667\), pulled toward fairness.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>A prior is a spring back to the default</div>
+      <p style="margin-bottom:0">
+        The source notes that L2 regularisation is exactly MAP with a Gaussian prior on the
+        weights. Mechanically: the likelihood pulls the estimate toward the data, the prior pulls
+        it toward a default, and the answer sits where the two balance &mdash; a restoring force
+        against an applied load, with the prior's strength playing the spring constant. Weak
+        prior, stiff data: the estimate goes where the data says. Strong prior, sparse data: it
+        barely moves. This is the same trade Chapter 01 &sect;04 drew as an L1 or L2 penalty.
+      </p>
+    </div>
+  </div>
+  <figure class="col">
+    <div class="paper"><img src="img/mle_vs_map.svg" alt="The likelihood peak against the peak of likelihood times prior" width="420"></div>
+    <figcaption><b>Fig. 5.4</b> &mdash; MLE takes the peak of the likelihood; MAP takes the peak of likelihood times prior, which sits between the data and the default. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="markov">
+  <div class="col">
+    <div class="sechead"><span class="secnum">07</span><h2>Markov chains and long-run availability</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2005%20-%20probability/04.%20bayesian.md" target="_blank" rel="noopener">src 04. bayesian &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      A <strong>Markov chain</strong> is a system whose next state depends only on the current
+      state, never on how it got there. States, a transition matrix \(T\) with rows summing to 1,
+      and a state vector propagated by \(\mathbf{s}_{k+1}=\mathbf{s}_k T\).
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; availability is a stationary distribution</div>
+      <p style="margin-bottom:0">
+        Model a machine with states <em>running</em>, <em>degraded</em>, <em>under repair</em>, and
+        write down the monthly transition probabilities. The <strong>stationary
+        distribution</strong> \(\boldsymbol\pi\), satisfying \(\boldsymbol\pi T=\boldsymbol\pi\),
+        is the long-run fraction of time spent in each state &mdash; and the entry for
+        <em>running</em> is your <strong>availability</strong>. Solving \(\boldsymbol\pi T=\boldsymbol\pi\)
+        means finding the left eigenvector of \(T\) with eigenvalue 1, so availability is an
+        eigenvalue problem, and Chapter 02 &sect;07 already taught you how to think about it.
+      </p>
+    </div>
+    <p>
+      A <strong>hidden Markov model</strong> adds the realistic complication: the true state is
+      not observable, only a noisy signal it emits. That is condition monitoring exactly &mdash;
+      you never see "bearing is spalling", you see a vibration spectrum and infer the state
+      behind it. The same machinery underpins speech recognition, which Chapter 09 will reach.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>A note on the source text</div>
+      <p style="margin-bottom:0">
+        The source chapter says the state propagation \(\mathbf{s}_0T^2\) "uses matrix
+        multiplication from Chapter 1". Matrix multiplication is <strong>Chapter 2</strong>;
+        Chapter 1 is vectors. A trivial slip, flagged only so you do not go looking in the wrong
+        place.
+      </p>
+    </div>
+  </div>
+  <figure class="col">
+    <div class="paper"><img src="img/markov_chain.svg" alt="A three-state Markov chain with labelled transition probabilities" width="400"></div>
+    <figcaption><b>Fig. 5.5</b> &mdash; Three states and their transition probabilities. Relabel them running, degraded and under repair and it is a maintenance model. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="entropy">
+  <div class="col">
+    <div class="sechead"><span class="secnum">08</span><h2>Entropy &mdash; yes, that entropy</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2005%20-%20probability/05.%20information%20theory.md" target="_blank" rel="noopener">src 05. information theory &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      <strong>Surprisal</strong> measures how much you learn from one event:
+      \(I(x)=-\log_2 p(x)\), in bits. Certain events teach you nothing,
+      \(-\log_2 1=0\); rare events teach you a lot. <strong>Entropy</strong> is the average
+      surprisal &mdash; the expected information per event, and equivalently the uncertainty of
+      the distribution:
+    </p>
+    <div class="mathbox">
+      $$H(X)=-\sum_x p(x)\log_2 p(x)$$
+    </div>
+    <p>
+      A fair coin has \(H=1\) bit; a coin with \(p=0.9\) has \(H\approx0.469\); a certain outcome
+      has \(H=0\). Entropy is maximised when everything is equally likely, giving
+      \(H=\log_2 n\). Its practical meaning is compression: Shannon's source coding theorem says
+      you cannot compress below the entropy rate without losing information.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; this is your thermodynamics entropy, rescaled</div>
+      <p>The Gibbs entropy from statistical mechanics is</p>
+      <div class="mathbox">
+        $$S=-k_B\sum_i p_i \ln p_i$$
+      </div>
+      <p>
+        which is Shannon's formula with a natural logarithm and a constant in front. Since
+        \(\ln x=\log_2 x\cdot\ln 2\), the two are related by a single fixed factor:
+      </p>
+      <div class="mathbox">
+        $$S=k_B\ln 2\cdot H_{\text{bits}}$$
+      </div>
+      <p style="margin-bottom:0">
+        Not an analogy &mdash; a unit conversion. The Boltzmann form \(S=k_B\ln W\) is the
+        special case where \(W\) microstates are equally likely, which is exactly the maximum
+        entropy case \(H=\log_2 W\). And the link has physical teeth:
+        <strong>Landauer's principle</strong> says erasing one bit of information must dissipate
+        at least \(k_B T\ln 2\) of heat, about \(2.9\times10^{-21}\) J at room temperature.
+        Information erasure is a thermodynamically irreversible act. That is why Maxwell's demon
+        does not work.
+      </p>
+    </div>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>Where the analogy breaks &mdash; do not say they are "the same thing"</div>
+      <p style="margin-bottom:0">
+        The formula is shared; the <em>referents</em> are not. Thermodynamic entropy counts
+        physical microstates of a system with real energy, and carries units of J/K. Shannon
+        entropy applies to <em>any</em> probability distribution &mdash; a language model's
+        next-token probabilities have an entropy, and there are no microstates and no
+        temperature there. The constant \(k_B\ln 2\) is doing real work: it is what converts a
+        dimensionless count of bits into a physical quantity. Say "the same mathematical
+        quantity, and physically connected through Landauer" &mdash; that is defensible. Say
+        "entropy is entropy" and you have overclaimed.
+      </p>
+    </div>
+
+    <p>
+      Two more quantities follow, and they are the ones you will actually meet in ML.
+      <strong>Cross-entropy</strong> \(H(p,q)=-\sum_x p(x)\log_2 q(x)\) is the average bits
+      needed to encode outcomes from \(p\) using a code built for \(q\). <strong>KL
+      divergence</strong> is the excess:
+    </p>
+    <div class="mathbox">
+      $$D_{\mathrm{KL}}(p\,\|\,q)=H(p,q)-H(p)=\sum_x p(x)\log_2\frac{p(x)}{q(x)}\ \ge 0$$
+    </div>
+    <p>
+      That inequality is Gibbs' inequality, and equality holds only when \(q=p\). It is why
+      minimising cross-entropy is a sensible training objective: \(H(p)\) is fixed by the data,
+      so driving cross-entropy down is driving the model toward the truth. For a single sample
+      with true class \(c\), cross-entropy loss collapses to \(-\log \hat{y}_c\) &mdash;
+      <em>the surprisal of the correct answer under the model's beliefs</em>. Confident and right
+      costs almost nothing; confident and wrong is enormously expensive.
+    </p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-h"><span class="lab-t">Entropy, cross-entropy, and the penalty for being wrong</span><span class="lab-tag">Predict, then drag the bars</span></div>
+    <div class="lab-body">
+      <div class="predict" id="pred3">
+        <div class="predict-h">Commit before you drag</div>
+        <p>
+          The truth \(p\) is concentrated on one outcome. Your model \(q\) is spread evenly over
+          all six. Compared with \(H(p)\), what is the cross-entropy \(H(p,q)\)?
+        </p>
+        <div class="opts">
+          <button class="pbtn" data-p3="lower" type="button">Lower</button>
+          <button class="pbtn" data-p3="same" type="button">The same</button>
+          <button class="pbtn" data-p3="higher" type="button">Higher</button>
+          <button class="pbtn" data-p3="dep" type="button">Depends</button>
+        </div>
+        <div class="pverdict" id="v3"></div>
+      </div>
+      <svg class="stage" id="sE" viewBox="0 0 480 320" role="img"
+           aria-label="Two rows of draggable bars, the true distribution above and the model distribution below, with entropy, cross-entropy and KL divergence computed live">
+        <g id="eGrid"></g><g id="eBars"></g><g id="eLab"></g>
+      </svg>
+      <div class="ctl">
+        <button class="btn" data-preset="peak" type="button">p peaked</button>
+        <button class="btn" data-preset="unif" type="button">p uniform</button>
+        <button class="btn" data-preset="match" type="button">q matches p</button>
+        <button class="btn" data-preset="bad" type="button">q confidently wrong</button>
+      </div>
+      <div class="readout">
+        <div class="ro"><div class="ro-k">H(p) &mdash; entropy</div><div class="ro-v a" id="oHp">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">H(p,q) &mdash; cross-entropy</div><div class="ro-v b" id="oHpq">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">KL(p&#8741;q) &mdash; excess bits</div><div class="ro-v c" id="oKL">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Max possible H</div><div class="ro-v" id="oHmax">2.585</div></div>
+      </div>
+      <div class="legend">
+        <span class="lg"><i style="background:var(--s2)"></i>p &mdash; the truth</span>
+        <span class="lg"><i style="background:var(--s1)"></i>q &mdash; the model</span>
+      </div>
+    </div>
+    <div class="lab-foot">
+      Drag any bar; each row renormalises to sum to 1. Try <b>q confidently wrong</b> &mdash;
+      putting the model's mass where the truth has almost none &mdash; and watch the cross-entropy
+      explode while \(H(p)\) does not move. That gap is the KL divergence, and it is the loss your
+      classifier is actually minimising. You cannot push KL below zero no matter how you drag,
+      which is Gibbs' inequality holding in front of you.
+    </div>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/kl_divergence.svg" alt="Two distributions overlaid with the divergence between them shaded" width="420"></div>
+    <figcaption><b>Fig. 5.6</b> &mdash; KL divergence as the gap between two distributions. Note it is <i>not</i> symmetric: \(D(p\|q)\neq D(q\|p)\), so it is not a distance in the Chapter 01 sense. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="breaks">
+  <div class="col">
+    <div class="sechead"><span class="secnum">09</span><h2>Where the reliability picture breaks</h2>
+      <span class="srcref nolink" title="Added material, not in the source chapter">beyond the chapter</span>
+    </div>
+    <hr class="rule-h">
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>1 &mdash; Independence is the assumption that fails first</div>
+      <p style="margin-bottom:0">
+        \(R_{\text{series}}=\prod R_i\) requires independent failures. Real systems violate this
+        constantly through <strong>common-cause failure</strong>: components sharing a power
+        supply, a cooling loop, a bad material batch, a maintenance error, or a flood. Triple
+        redundancy computed as \(1-(1-R)^3\) can be wildly optimistic if all three units sit in
+        the same cabinet. The identical error appears in ML as the i.i.d. assumption &mdash;
+        training data assumed independent when it was collected from one factory, one season,
+        one operator. In both fields the arithmetic is fine and the assumption is what kills you.
+      </p>
+    </div>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>2 &mdash; Memorylessness is a strong claim about wear</div>
+      <p style="margin-bottom:0">
+        The exponential distribution is <em>memoryless</em>: \(P(T>s+t\mid T>s)=P(T>t)\). A
+        component that has run ten years is exactly as good as new. That is defensible for
+        electronics in the flat zone of the bathtub, and plainly false for anything that wears
+        &mdash; bearings, gears, tooling, anything fatigue-driven. Yet constant-failure-rate
+        models are used everywhere because they are analytically convenient. If you fit an
+        exponential to a wear-out population you will systematically under-predict late failures
+        and over-predict early ones. That is what the Weibull \(\beta\) is for; fit it, do not
+        assume it.
+      </p>
+    </div>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>3 &mdash; "99% accurate" is not one number</div>
+      <p style="margin-bottom:0">
+        &sect;05 showed this live. Sensitivity and specificity are different quantities, a single
+        "accuracy" figure hides which one is weak, and neither tells you what you want without
+        the base rate. For a rare fault, specificity dominates completely: improving sensitivity
+        from 99% to 99.9% barely moves the answer, while improving specificity from 99% to 99.9%
+        transforms it. Ask a vendor for both numbers, and know your own fault rate.
+      </p>
+    </div>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>4 &mdash; Probability of what, exactly?</div>
+      <p style="margin-bottom:0">
+        Your training is <em>frequentist</em>: a probability is a long-run frequency over many
+        parts, which is exactly right for a production line. Much of ML speaks
+        <em>Bayesian</em>: a probability is a degree of belief, and you can write \(P(\theta)\)
+        for a parameter that has one true fixed value and will never be "sampled" repeatedly.
+        Both are coherent; they answer different questions. When a paper says "the probability
+        the model has learned X", that is not a frequency over anything. Notice which language is
+        being spoken before arguing with the conclusion.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="gaps">
+  <div class="col">
+    <div class="sechead"><span class="secnum">10</span><h2>What this chapter does not cover</h2>
+      <span class="srcref nolink" title="Added material, not in the source chapter">beyond the chapter</span>
+    </div>
+    <hr class="rule-h">
+    <p>
+      A compendium that fits twenty chapters cannot be complete, and pretending otherwise would
+      be the same overclaiming &sect;08 just warned about. Here is what a full treatment of
+      probability would include that this one does not &mdash; not as criticism, but so you know
+      where the edges are and what to go and read when you hit one.
+    </p>
+    <div class="gap">
+      <div class="gap-h">Covered elsewhere or not at all</div>
+      <ul style="margin-bottom:0">
+        <li><b>Measure-theoretic foundations.</b> &sigma;-algebras, the formal definition of a random variable, why some sets have no probability. Not needed to use any of this, needed to prove it.</li>
+        <li><b>Concentration inequalities.</b> Markov, Chebyshev, Hoeffding &mdash; the tools that bound how far a sample can stray from its expectation. These underpin generalisation theory in ML and are conspicuously absent.</li>
+        <li><b>Stochastic processes beyond Markov chains.</b> Brownian motion, Poisson processes in continuous time, queueing theory. Queueing in particular is Chapter 18 material and is the direct ancestor of Little's law, which you may already use.</li>
+        <li><b>Causal inference.</b> The whole apparatus of do-calculus, confounding and counterfactuals. Correlation is covered in Chapter 04; causation is nowhere in the compendium, and it is the thing you usually actually want.</li>
+        <li><b>Modern Bayesian computation.</b> MCMC is mentioned in one line; variational inference, Hamiltonian Monte Carlo and the practical business of sampling from a posterior are not covered.</li>
+        <li><b>Extreme value theory.</b> The distribution of maxima rather than averages &mdash; which is what actually governs a failure caused by the worst load, not the average one.</li>
+      </ul>
+    </div>
+    <p style="margin-bottom:0">
+      Of these, the two most likely to matter to you are <strong>concentration inequalities</strong>
+      (if you go deeper into why ML generalises) and <strong>extreme value theory</strong> (if you
+      design against worst-case loads rather than average ones).
+    </p>
+  </div>
+</section>
+
+<section id="worked">
+  <div class="col">
+    <div class="sechead"><span class="secnum">11</span><h2>Worked example: one pump, three questions</h2></div>
+    <hr class="rule-h">
+    <p>
+      A pump carries <strong>three bearings in series</strong> &mdash; all must survive. Each
+      bearing is Weibull with \(\beta=2.5\) (wear-out) and characteristic life
+      \(\eta=20{,}000\) hours. Every value below is checked in
+      <code>verify_claims.py</code>.
+    </p>
+
+    <h3>A &mdash; Will it last to 10,000 hours?</h3>
+    <div class="mathbox">
+      $$R_{\text{brg}}(10^4)=e^{-(10^4/2\times10^4)^{2.5}}=e^{-(0.5)^{2.5}}=e^{-0.17678}=0.8380$$
+    </div>
+    <p>Three in series, assumed independent:</p>
+    <div class="mathbox">
+      $$R_{\text{pump}}=0.8380^3=0.5884$$
+    </div>
+    <p>
+      Three bearings each 84% reliable give a pump only 59% reliable. That is the series
+      multiplication of &sect;03 biting. The hazard at that moment is
+      \(h=\frac{2.5}{20000}(0.5)^{1.5}=4.42\times10^{-5}\) per hour and <em>rising</em>, because
+      \(\beta>1\). Mean life is \(\eta\,\Gamma(1+1/\beta)=20000\times0.8873=17{,}745\) hours.
+    </p>
+    <p>Install a second identical pump in parallel and the redundancy pays:</p>
+    <div class="mathbox">
+      $$R_{\text{parallel}}=1-(1-0.5884)^2=1-0.4116^2=0.8306$$
+    </div>
+
+    <h3>B &mdash; The vibration monitor fires. Do I stop the machine?</h3>
+    <p>
+      In any month, 2% of pumps develop a detectable fault. The monitor catches 95% of real
+      faults (sensitivity) and stays quiet on 90% of healthy pumps (specificity). Count per 1,000
+      pump-months:
+    </p>
+    <div class="mathbox">
+      $$\text{true alarms}=1000(0.02)(0.95)=19,\qquad
+        \text{false alarms}=1000(0.98)(0.10)=98$$
+    </div>
+    <div class="mathbox">
+      $$P(\text{fault}\mid\text{alarm})=\frac{19}{19+98}=\frac{19}{117}=0.162$$
+    </div>
+    <p>
+      <strong>84% of alarms are false.</strong> Note which number caused it: the specificity of
+      90% is applied to the 980 healthy pumps, and 10% of a large number beats 95% of a small
+      one. This is &sect;05 in a real maintenance decision.
+    </p>
+
+    <h3>C &mdash; Is the monitor worth having at all?</h3>
+    <p>
+      Information theory answers this directly. Before the alarm, uncertainty about the fault is
+      \(H=0.1414\) bits. After seeing the monitor's output it falls to \(0.0861\) bits. The
+      difference is the mutual information:
+    </p>
+    <div class="mathbox">
+      $$I(\text{fault};\text{alarm})=0.1414-0.0861=0.0553\ \text{bits}$$
+    </div>
+    <p style="margin-bottom:0">
+      The monitor removes about <strong>39%</strong> of your uncertainty. So both things are true
+      at once: most alarms are false, <em>and</em> the monitor is genuinely informative. Those
+      feel contradictory and are not &mdash; which is exactly why this chapter is worth the
+      effort.
+    </p>
+  </div>
+</section>
+
+<section id="recall">
+  <div class="col">
+    <div class="sechead"><span class="secnum">12</span><h2>Question bank</h2></div>
+    <hr class="rule-h">
+    <p>
+      Twenty-four prompts in three tiers. Write the answer out before opening it &mdash;
+      recognising an answer feels like knowing and is not. Revisit the <b>judge</b> tier a week
+      later; those are the ones that decay.
+    </p>
+    <h3 style="margin-top:22px">Tier 1 &mdash; recall</h3>
+  </div>
+  <div class="col">
+    <details class="q"><summary><span class="qn">R1</span><span>Write the hazard rate in terms of \(f\) and \(R\), and say what it means in words.</span></summary>
+      <div class="ans"><p>\(h(t)=f(t)/R(t)\): the probability of failing in the next instant <em>given survival to \(t\)</em>. The denominator renormalises onto the survivors, which makes it a conditional density — the same \(P(B)\) as in \(P(A\mid B)=P(A\cap B)/P(B)\).</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">R2</span><span>Give the series and parallel reliability formulas and the assumption both need.</span></summary>
+      <div class="ans"><p>\(R_{\text{series}}=\prod R_i\) (AND), \(R_{\text{parallel}}=1-\prod(1-R_i)\) (OR via the complement). Both assume <b>independent</b> failures — the assumption common-cause failures destroy.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">R3</span><span>What do \(\beta<1\), \(\beta=1\) and \(\beta>1\) mean for a Weibull?</span></summary>
+      <div class="ans"><p>The hazard exponent is \(\beta-1\). \(\beta<1\): falling hazard, infant mortality. \(\beta=1\): constant hazard, the exponential case, random failures. \(\beta>1\): rising hazard, wear-out. The three zones of the bathtub curve are one parameter.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">R4</span><span>State Bayes' theorem and name all four parts.</span></summary>
+      <div class="ans"><p>\(P(A\mid B)=P(B\mid A)P(A)/P(B)\). Prior \(P(A)\) — belief before evidence. Likelihood \(P(B\mid A)\) — what the instrument does. Evidence \(P(B)\) — the normaliser. Posterior \(P(A\mid B)\) — what you wanted.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">R5</span><span>Define surprisal and entropy, with units.</span></summary>
+      <div class="ans"><p>Surprisal \(I(x)=-\log_2 p(x)\), in bits. Entropy \(H(X)=-\sum p\log_2 p\) is its expectation — average bits per event. Fair coin 1 bit; fair die \(\log_2 6\approx2.585\); certain outcome 0.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">R6</span><span>Relate Poisson and exponential.</span></summary>
+      <div class="ans"><p>Two views of one process. Poisson counts events per interval at rate \(\lambda\); exponential gives the waiting time <em>between</em> them. Count the events or time the gaps.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">R7</span><span>What is a stationary distribution, and what does it mean for a machine?</span></summary>
+      <div class="ans"><p>\(\boldsymbol\pi\) with \(\boldsymbol\pi T=\boldsymbol\pi\) — the long-run fraction of time in each state. For a running/degraded/repair model, the running entry is <b>availability</b>. It is a left eigenvector of \(T\) with eigenvalue 1.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">R8</span><span>Write cross-entropy and KL divergence, and state the sign of KL.</span></summary>
+      <div class="ans"><p>\(H(p,q)=-\sum p\log_2 q\); \(D_{\mathrm{KL}}(p\|q)=H(p,q)-H(p)\ge0\), zero only when \(q=p\) (Gibbs' inequality). KL is not symmetric, so it is not a metric.</p></div>
+    </details>
+  </div>
+
+  <div class="col"><h3 style="margin-top:26px">Tier 2 &mdash; apply</h3></div>
+  <div class="col">
+    <details class="q"><summary><span class="qn">A1</span><span>Ten components, each \(R=0.99\), in series. System reliability?</span></summary>
+      <div class="ans"><p>\(0.99^{10}=0.904\). Ten excellent parts give a mediocre system — reliability multiplies downward, which is the whole argument for simplicity and for redundancy.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">A2</span><span>Weibull \(\beta=2.5\), \(\eta=20{,}000\) h. Find \(R\) at 10,000 h.</span></summary>
+      <div class="ans"><p>\((0.5)^{2.5}=0.1768\), so \(R=e^{-0.1768}=0.838\). Three such bearings in series: \(0.838^3=0.588\).</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">A3</span><span>Why does \(R(\eta)=0.368\) for every \(\beta\)?</span></summary>
+      <div class="ans"><p>At \(t=\eta\) the exponent is \((\eta/\eta)^\beta=1\) whatever \(\beta\) is, so \(R=e^{-1}=0.3679\). All Weibull curves pass through that point — which is what makes \(\eta\) the "characteristic" life.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">A4</span><span>2% fault rate, 95% sensitivity, 90% specificity. The alarm fires. \(P(\text{fault}\mid\text{alarm})\)?</span></summary>
+      <div class="ans"><p>Per 1,000: true alarms \(1000(0.02)(0.95)=19\); false alarms \(1000(0.98)(0.10)=98\). \(19/117=0.162\). So 84% of alarms are false, driven by the 10% false-positive rate acting on the 980 healthy machines.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">A5</span><span>Convert an entropy of 3 bits into thermodynamic entropy at 300 K.</span></summary>
+      <div class="ans"><p>\(S=k_B\ln2\cdot H=1.381\times10^{-23}\times0.693\times3=2.87\times10^{-23}\) J/K. Landauer: erasing those 3 bits dissipates at least \(TS=8.6\times10^{-21}\) J.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">A6</span><span>Show that minimising squared error is maximum likelihood.</span></summary>
+      <div class="ans"><p>With \(y_i=g(x_i)+\varepsilon_i\), \(\varepsilon\sim\mathcal N(0,\sigma^2)\) i.i.d., the log-likelihood is \(-\frac{1}{2\sigma^2}\sum(y_i-g(x_i))^2\) plus constants. Maximising it is minimising the sum of squared residuals. The hidden assumptions are independence, Gaussianity and equal variance.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">A7</span><span>Beta(2,2) prior, 7 heads in 10. MLE and MAP?</span></summary>
+      <div class="ans"><p>MLE \(=7/10=0.700\). MAP \(=\frac{\alpha+h-1}{\alpha+\beta+h+t-2}=\frac{8}{12}=0.667\), pulled toward 0.5 by the prior. The full posterior is Beta(9,5), mean \(9/14=0.643\).</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">A8</span><span>Binary entropy of a \(p=0.9\) coin, and why it is under 1 bit.</span></summary>
+      <div class="ans"><p>\(H=-0.9\log_2 0.9-0.1\log_2 0.1=0.469\) bits. Below the fair coin's 1 bit because the outcome is more predictable — you learn less per flip. Entropy is maximised by uniformity.</p></div>
+    </details>
+  </div>
+
+  <div class="col"><h3 style="margin-top:26px">Tier 3 &mdash; judge</h3></div>
+  <div class="col">
+    <details class="q"><summary><span class="qn">J1</span><span>A vendor quotes "99.9% accurate" for a rare-fault detector. What do you ask next?</span></summary>
+      <div class="ans"><p>Sensitivity and specificity separately, because a single accuracy figure hides which is weak — a detector that never alarms is 99.9% accurate on a 0.1% fault rate. Then apply your own base rate. For rare faults, specificity dominates: improving it from 99% to 99.9% transforms the posterior, while improving sensitivity barely moves it.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">J2</span><span>Triple-redundant sensors in one cabinet, computed as \(1-(1-R)^3\). What is wrong?</span></summary>
+      <div class="ans"><p>The independence assumption. Shared cabinet means shared power, temperature, vibration, flood exposure and maintenance errors — common-cause failure. The true reliability is bounded well below the independent calculation; standards handle this with an explicit common-cause factor (beta-factor models).</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">J3</span><span>You fit an exponential to bearing failure data. What will you systematically get wrong?</span></summary>
+      <div class="ans"><p>You will assume a constant hazard on a wear-out population. That under-predicts late failures and over-predicts early ones, and it makes preventive replacement look worthless — because for a memoryless part a new one really is no better. Fit \(\beta\), don't assume it.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">J4</span><span>Is preventive replacement worth doing? On what does it depend?</span></summary>
+      <div class="ans"><p>Entirely on \(\beta\). If \(\beta>1\) the hazard rises with age, so replacing a used part with a new one genuinely lowers the failure rate. If \(\beta=1\) the part is memoryless and replacement achieves <em>nothing</em> but cost. If \(\beta<1\) replacement is actively harmful — you swap a survivor for a fresh unit in its infant-mortality phase.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">J5</span><span>Is Shannon entropy "the same as" thermodynamic entropy? Defend your answer precisely.</span></summary>
+      <div class="ans"><p>The same mathematical quantity up to \(S=k_B\ln2\cdot H\), and physically connected via Landauer's principle (erasing a bit costs \(\ge k_BT\ln2\) of heat). But the referents differ: thermodynamic entropy counts physical microstates and has units J/K, while Shannon entropy applies to any distribution — a language model's token probabilities have entropy with no microstates and no temperature. "Same formula, physically linked" is defensible; "entropy is entropy" overclaims.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">J6</span><span>Most alarms are false, yet the monitor is informative. Reconcile these.</span></summary>
+      <div class="ans"><p>They measure different things. \(P(\text{fault}\mid\text{alarm})=0.162\) is a posterior probability; mutual information \(I=0.055\) bits out of \(H=0.141\) is the <em>reduction in uncertainty</em>, about 39%. A weak but real signal on a rare event produces exactly this: most alarms false, and the alarm still worth listening to. Acting on it is a cost question, not a probability one.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">J7</span><span>An ML paper writes \(P(\theta)\) for a model parameter. Your frequentist instinct objects. Who is right?</span></summary>
+      <div class="ans"><p>Both, about different questions. Frequentist probability is a long-run frequency — correct for parts off a line. Bayesian probability is a degree of belief, and can be assigned to a parameter with one true fixed value that is never resampled. Neither is wrong; notice which language is being spoken before arguing with the conclusion.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">J8</span><span>Your design must survive the worst load in 30 years, not the average. Which of this chapter's tools applies, and which does not?</span></summary>
+      <div class="ans"><p>The CLT and normal-tail machinery describe <em>averages</em> and are the wrong instrument — tail behaviour is exactly where the normal approximation is least trustworthy. What you want is <b>extreme value theory</b>, the distribution of maxima, which &sect;10 flags as absent from the compendium. Using \(\pm3\sigma\) reasoning on a 30-year maximum is a common and expensive mistake.</p></div>
+    </details>
+  </div>
+</section>
+
+<section id="next">
+  <div class="col">
+    <div class="sechead"><span class="secnum">13</span><h2>What this chapter feeds</h2></div>
+    <hr class="rule-h">
+  </div>
+  <figure>
+    <div class="paper">
+      <svg viewBox="0 0 780 430" role="img" style="max-width:100%;height:auto"
+           aria-label="Probability branches into four tools, each feeding a named technique in a later chapter"
+           fill="none" stroke="#1b1b1b" font-family="Archivo Narrow, Arial Narrow, sans-serif">
+        <defs><marker id="cm5" markerWidth="9" markerHeight="7" refX="8.5" refY="3.5" orient="auto">
+          <polygon points="0,0 9,3.5 0,7" fill="#1b1b1b" stroke="none"/></marker></defs>
+        <rect x="18" y="170" width="132" height="76" rx="3" fill="#ffffff" stroke="#1b1b1b" stroke-width="2"/>
+        <text x="84" y="200" text-anchor="middle" font-size="14" font-weight="700" fill="#1b1b1b" stroke="none">Reasoning under</text>
+        <text x="84" y="220" text-anchor="middle" font-size="14" font-weight="700" fill="#1b1b1b" stroke="none">uncertainty</text>
+        <text x="84" y="238" text-anchor="middle" font-size="10" fill="#666" stroke="none">CHAPTER 05</text>
+        <line x1="150" y1="208" x2="190" y2="208" stroke="#1b1b1b" stroke-width="1.5"/>
+        <line x1="190" y1="53" x2="190" y2="341" stroke="#1b1b1b" stroke-width="1.5"/>
+        <line x1="190" y1="53"  x2="226" y2="53"  stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cm5)"/>
+        <line x1="190" y1="149" x2="226" y2="149" stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cm5)"/>
+        <line x1="190" y1="245" x2="226" y2="245" stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cm5)"/>
+        <line x1="190" y1="341" x2="226" y2="341" stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cm5)"/>
+
+        <rect x="238" y="22" width="170" height="62" rx="3" fill="#ffffff" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="323" y="47" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">Cross-entropy</text>
+        <text x="323" y="67" text-anchor="middle" font-size="11" fill="#555" stroke="none">surprisal of the truth</text>
+        <rect x="238" y="118" width="170" height="62" rx="3" fill="#ffffff" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="323" y="143" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">Likelihood</text>
+        <text x="323" y="163" text-anchor="middle" font-size="11" fill="#555" stroke="none">and a prior on top</text>
+        <rect x="238" y="214" width="170" height="62" rx="3" fill="#ffffff" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="323" y="239" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">Bayes' rule</text>
+        <text x="323" y="259" text-anchor="middle" font-size="11" fill="#555" stroke="none">reverses the arrow</text>
+        <rect x="238" y="310" width="170" height="62" rx="3" fill="#ffffff" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="323" y="335" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">Markov property</text>
+        <text x="323" y="355" text-anchor="middle" font-size="11" fill="#555" stroke="none">state, not history</text>
+
+        <line x1="408" y1="53"  x2="514" y2="53"  stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cm5)"/>
+        <line x1="408" y1="149" x2="514" y2="149" stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cm5)"/>
+        <line x1="408" y1="245" x2="514" y2="245" stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cm5)"/>
+        <line x1="408" y1="341" x2="514" y2="341" stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cm5)"/>
+        <text x="461" y="45"  text-anchor="middle" font-size="10.5" fill="#666" stroke="none">as a loss</text>
+        <text x="461" y="141" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">as regularisation</text>
+        <text x="461" y="237" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">as a classifier</text>
+        <text x="461" y="333" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">as a sequence</text>
+
+        <rect x="526" y="22" width="236" height="62" rx="3" fill="#f2f2f0" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="644" y="47" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">Every classification loss</text>
+        <text x="644" y="67" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">CHAPTER 06 &#183; MACHINE LEARNING</text>
+        <rect x="526" y="118" width="236" height="62" rx="3" fill="#f2f2f0" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="644" y="143" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">Weight decay, priors</text>
+        <text x="644" y="163" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">CHAPTER 06 &#183; TRAINING</text>
+        <rect x="526" y="214" width="236" height="62" rx="3" fill="#f2f2f0" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="644" y="239" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">Naive Bayes, diagnosis</text>
+        <text x="644" y="259" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">CHAPTER 06 &amp; 19</text>
+        <rect x="526" y="310" width="236" height="62" rx="3" fill="#f2f2f0" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="644" y="335" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">HMMs, speech, language</text>
+        <text x="644" y="355" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">CHAPTER 07 &amp; 09</text>
+      </svg>
+    </div>
+    <figcaption><b>Fig. 5.7</b> &mdash; Where each tool is spent. The top row is the most immediate: the loss function training almost every classifier in existence is the surprisal of the correct answer, which is &sect;08 applied one sample at a time.</figcaption>
+  </figure>
+
+  <div class="col">
+    <p>
+      Chapter 06 is machine learning, and it is where Chapters 01&ndash;05 stop being preparation
+      and start being the subject. A model is a function with parameters (Ch 01&ndash;02), fitted
+      by walking downhill (Ch 03), evaluated on a sample (Ch 04), against a loss that is a
+      surprisal (Ch 05). You now have every piece.
+    </p>
+    <div class="note">
+      <div class="note-h"><span class="ic">i</span>Before you move on</div>
+      <p style="margin-bottom:0">
+        One exercise, worth more than re-reading: take real failure data from any machine you
+        know &mdash; or the maintenance log of anything &mdash; and fit a Weibull. Getting
+        \(\beta\) out of real data, and then deciding whether preventive replacement is
+        justified, uses &sect;04, &sect;06 and &sect;09 at once, and the answer has money attached.
+        Then run the source chapter's Monte Carlo &pi; estimate to see sampling do real work.
+      </p>
+    </div>
+  </div>
+
+  <div class="col" id="provenance" style="scroll-margin-top:calc(env(safe-area-inset-top,0px) + 62px)">
+    <div class="sechead" style="margin-top:40px"><span class="secnum">A</span><h2>Provenance and changes</h2></div>
+    <hr class="rule-h">
+    <p>
+      A derivative work under Apache-2.0, which requires a statement of changes. Source
+      references link to the original files, pinned to commit <code>9850ee5</code>.
+    </p>
+  </div>
+  <div class="tw">
+    <table>
+      <thead><tr><th>Section</th><th>Title</th><th>Source</th><th>Verdict</th><th>What changed</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">&sect;00</td><td>The bridge</td><td class="mono">&mdash;</td><td><span class="pv add">added</span></td><td>Mapping table is mine.</td></tr>
+        <tr><td class="mono">&sect;01</td><td>Counting &amp; axioms</td><td class="mono">01, 02</td><td><span class="pv ok">faithful</span></td><td>Permutations, combinations and the axioms as in source.</td></tr>
+        <tr><td class="mono">&sect;02</td><td>The hazard rate</td><td class="mono">02</td><td><span class="pv ok">expanded</span></td><td>Conditional probability and independence as in source. The hazard-rate reading is <b>added</b>.</td></tr>
+        <tr><td class="mono">&sect;03</td><td>Series and parallel</td><td class="mono">02</td><td><span class="pv add">added</span></td><td>The AND/OR rules are the source's; casting them as reliability block diagrams is mine.</td></tr>
+        <tr><td class="mono">&sect;04</td><td>The bathtub curve</td><td class="mono">03</td><td><span class="pv ok">expanded</span></td><td>Distribution catalogue follows the source. Weibull is <b>added</b> &mdash; the source does not cover it &mdash; along with the bathtub reading.</td></tr>
+        <tr><td class="mono">&sect;05</td><td>Bayes &amp; the base rate</td><td class="mono">02, 04</td><td><span class="pv ok">expanded</span></td><td>Bayes as in source. The base-rate demonstration and the maintenance framing are <b>added</b>.</td></tr>
+        <tr><td class="mono">&sect;06</td><td>MLE, MAP, priors</td><td class="mono">04</td><td><span class="pv ok">faithful</span></td><td>MLE, MAP, the coin example and the L2-prior equivalence are all the source's. The least-squares derivation is <b>added</b>.</td></tr>
+        <tr><td class="mono">&sect;07</td><td>Markov &amp; availability</td><td class="mono">04</td><td><span class="pv corr">corrected</span></td><td>Chains, transition matrices and HMMs as in source. The availability reading is <b>added</b>. The source cites "Chapter 1" for matrix multiplication; it is Chapter 2, and the page says so.</td></tr>
+        <tr><td class="mono">&sect;08</td><td>Entropy</td><td class="mono">05</td><td><span class="pv ok">expanded</span></td><td>Surprisal, entropy, cross-entropy, KL and mutual information as in source. The Gibbs/Shannon unit conversion, Landauer, and the warning against overclaiming are <b>added</b>.</td></tr>
+        <tr><td class="mono">&sect;09</td><td>Where it breaks</td><td class="mono">&mdash;</td><td><span class="pv add">added</span></td><td>Entirely mine, and flagged on the page.</td></tr>
+        <tr><td class="mono">&sect;10</td><td>What is missing</td><td class="mono">&mdash;</td><td><span class="pv add">added</span></td><td>An honest inventory of what a full probability course covers and this one does not.</td></tr>
+        <tr><td class="mono">&sect;11</td><td>Worked example</td><td class="mono">&mdash;</td><td><span class="pv add">added</span></td><td>Mine; every value checked in <code>verify_claims.py</code>.</td></tr>
+      </tbody>
+      <caption>
+        <b>faithful</b> follows the source &middot; <b>expanded</b> keeps it and adds &middot;
+        <b>added</b> has no source counterpart &middot; <b>corrected</b> departs on a point of
+        fact.
+      </caption>
+    </table>
+  </div>
+
+  <div class="col endnote">
+    <p>
+      Companion to <b>Chapter 05 &mdash; Probability</b> of the Maths, CS &amp; AI Compendium by
+      Henry Ndubuaku. Figures marked <i>from the compendium</i> are reproduced from the
+      repository. &sect;&sect;09 and 10 are added material and are marked as such.
+    </p>
+    <p style="margin-bottom:0">Sheet 5 of 20. Built for a mechanical engineer with GATE-level mathematics and no prior CS.</p>
+  </div>
+</section>
+
+</main>
+</div>
+
+<style>
+#wGrid line, #eGrid line{stroke:var(--rule)}
+.axl{stroke:var(--rule-strong); stroke-width:1.4}
+.tk{fill:var(--ink-3); font-family:'IBM Plex Mono',monospace; font-size:10px}
+.al{fill:var(--ink-2); font-family:'Archivo Narrow',sans-serif; font-size:11px; letter-spacing:.07em}
+.hz{fill:none; stroke:var(--s1); stroke-width:2.5}
+.rl{fill:none; stroke:var(--s2); stroke-width:2.5}
+.refl{stroke:var(--ink-3); stroke-width:1; stroke-dasharray:4 4}
+.pbar{fill:var(--s2); cursor:ns-resize}
+.qbar{fill:var(--s1); cursor:ns-resize}
+.blab{fill:var(--ink-3); font-family:'IBM Plex Mono',monospace; font-size:9px}
+</style>
+
+<script>
+(function(){
+  'use strict';
+  var root=document.documentElement;
+  function dk(){var t=root.getAttribute('data-theme');
+    return t?t==='dark':(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);}
+  try{var sv=localStorage.getItem('ch05-theme'); if(sv==='dark'||sv==='light') root.setAttribute('data-theme',sv);}catch(e){}
+  var tb=document.getElementById('themebtn');
+  if(tb) tb.addEventListener('click',function(){var n=dk()?'light':'dark';
+    root.setAttribute('data-theme',n); try{localStorage.setItem('ch05-theme',n);}catch(e){}});
+
+  function $(id){return document.getElementById(id);}
+  function fmt(n,d){d=d===undefined?2:d; return (Math.abs(n)<5e-5?0:n).toFixed(d);}
+  function clamp(v,a,b){return v<a?a:v>b?b:v;}
+  function grid(g,w,h,s){var o='';for(var x=0;x<=w;x+=s)o+='<line x1="'+x+'" y1="0" x2="'+x+'" y2="'+h+'"/>';
+    for(var y=0;y<=h;y+=s)o+='<line x1="0" y1="'+y+'" x2="'+w+'" y2="'+y+'"/>'; g.innerHTML=o;}
+  function svgXY(svg,ev){var r=svg.getBoundingClientRect(),vb=svg.viewBox.baseVal;
+    return {x:(ev.clientX-r.left)/r.width*vb.width, y:(ev.clientY-r.top)/r.height*vb.height};}
+
+  /* ---------- prediction panels ---------- */
+  function predict(groupAttr, verdictId, answers){
+    document.querySelectorAll('['+groupAttr+']').forEach(function(b){
+      b.addEventListener('click',function(){
+        document.querySelectorAll('['+groupAttr+']').forEach(function(o){o.classList.remove('picked');});
+        b.classList.add('picked');
+        var v=$(verdictId); v.innerHTML=answers[b.getAttribute(groupAttr)]; v.classList.add('show');
+      });
+    });
+  }
+  predict('data-p1','v1',{
+    yes:'<b>Right, but only because &beta; &gt; 1 here.</b> With rising hazard a used bearing really is worse than a new one, so replacement lowers the failure rate. Drag &beta; below 1 below and the same policy becomes actively harmful.',
+    no:'<b>Not for this population.</b> That answer is correct for &beta; = 1 &mdash; a memoryless part, where a used one is as good as new. At &beta; = 2.5 the hazard rises with age, so replacement genuinely helps.',
+    dep:'<b>This is the precise answer.</b> Preventive replacement helps only when &beta; &gt; 1, does nothing when &beta; = 1, and is <i>harmful</i> when &beta; &lt; 1 because you swap a proven survivor for a unit in its infant-mortality phase.'
+  });
+  predict('data-p2','v2',{
+    '99':'<b>Far too high &mdash; and this is the usual answer.</b> It confuses P(alarm | fault) with P(fault | alarm). Look at the dots.',
+    '90':'<b>Still much too high.</b> The instrument is good; the fault is rare. That combination is what the base rate governs.',
+    '50':'<b>Correct at these settings.</b> 10 true alarms against 10 false ones. A "99% accurate" instrument whose alarms are right half the time. Now drag the base rate down to 0.1%.',
+    '9':'<b>That is the answer for a 0.1% base rate</b> &mdash; drag the slider down and you will land on it. At the 1% stated here it is about 50%. Either way, the instinct that it should be near 99% is the one to unlearn.'
+  });
+  predict('data-p3','v3',{
+    lower:'<b>Impossible.</b> Gibbs\' inequality says H(p,q) &ge; H(p) always, with equality only when q = p. Cross-entropy can never be below entropy.',
+    same:'<b>Only if q = p.</b> Here q is uniform and p is peaked, so they differ and the cross-entropy must exceed H(p). The gap is the KL divergence.',
+    higher:'<b>Correct, and necessarily so.</b> H(p,q) = H(p) + KL(p&#8741;q), and KL &ge; 0. The excess is the price of encoding reality with the wrong model.',
+    dep:'<b>It does not depend.</b> H(p,q) &ge; H(p) unconditionally &mdash; that is Gibbs\' inequality. Try to break it by dragging the bars; you cannot.'
+  });
+
+  /* ---------- LAB 1 : Weibull ---------- */
+  var BETA=1.0, WX0=52, WX1=452, TMAX=2.5;
+  var HY0=38, HY1=142, RY0=176, RY1=280, HMAX=4;
+  function wx(t){return WX0+t/TMAX*(WX1-WX0);}
+  function haz(t,b){return t<=0?(b<1?HMAX:(b===1?1:0)):b*Math.pow(t,b-1);}
+  function rel(t,b){return Math.exp(-Math.pow(t,b));}
+  function drawW(){
+    var d1='',d2='',i,t,h;
+    for(i=0;i<=300;i++){ t=i/300*TMAX;
+      h=clamp(haz(t,BETA),0,HMAX);
+      d1+=(i?'L':'M')+wx(t).toFixed(1)+' '+(HY1-h/HMAX*(HY1-HY0)).toFixed(1);
+      d2+=(i?'L':'M')+wx(t).toFixed(1)+' '+(RY1-rel(t,BETA)*(RY1-RY0)).toFixed(1);
+    }
+    $('wCurves').innerHTML='<path class="hz" d="'+d1+'"/><path class="rl" d="'+d2+'"/>';
+    var ax='<line class="axl" x1="'+WX0+'" y1="'+HY1+'" x2="'+WX1+'" y2="'+HY1+'"/>'
+      +'<line class="axl" x1="'+WX0+'" y1="'+RY1+'" x2="'+WX1+'" y2="'+RY1+'"/>'
+      +'<text class="al" x="'+WX0+'" y="'+(HY0-8)+'">HAZARD h(t) &mdash; failure rate of survivors</text>'
+      +'<text class="al" x="'+WX0+'" y="'+(RY0-8)+'">RELIABILITY R(t)</text>'
+      +'<text class="tk" x="'+(WX0-6)+'" y="'+(HY0+4)+'" text-anchor="end">'+HMAX+'</text>'
+      +'<text class="tk" x="'+(WX0-6)+'" y="'+(HY1+4)+'" text-anchor="end">0</text>'
+      +'<text class="tk" x="'+(WX0-6)+'" y="'+(RY0+4)+'" text-anchor="end">1</text>'
+      +'<text class="tk" x="'+(WX0-6)+'" y="'+(RY1+4)+'" text-anchor="end">0</text>'
+      +'<line class="refl" x1="'+wx(1)+'" y1="'+RY0+'" x2="'+wx(1)+'" y2="'+RY1+'"/>'
+      +'<text class="tk" x="'+wx(1)+'" y="'+(RY1+16)+'" text-anchor="middle">&eta;</text>'
+      +'<text class="tk" x="'+wx(2)+'" y="'+(RY1+16)+'" text-anchor="middle">2&eta;</text>'
+      +'<text class="al" x="'+((WX0+WX1)/2)+'" y="'+(RY1+34)+'" text-anchor="middle">age t, in units of characteristic life &eta;</text>';
+    $('wAx').innerHTML=ax;
+    $('bVal').textContent='β = '+fmt(BETA,2);
+    $('oZone').innerHTML = BETA<0.98 ? '<span class="flag bad">infant mortality</span>'
+      : (BETA<1.02 ? '<span class="flag">random</span>' : '<span class="flag ok">wear-out</span>');
+    $('oRe').textContent=fmt(rel(1,BETA),4);
+    $('oH1').textContent=fmt(haz(0.5,BETA),4);
+    $('oH2').textContent=fmt(haz(2,BETA),4);
+  }
+  $('bSl').addEventListener('input',function(){BETA=parseInt(this.value,10)/100;
+    document.querySelectorAll('[data-b]').forEach(function(o){o.classList.remove('on');}); drawW();});
+  document.querySelectorAll('[data-b]').forEach(function(b){
+    b.addEventListener('click',function(){BETA=parseInt(b.getAttribute('data-b'),10)/100;
+      $('bSl').value=b.getAttribute('data-b');
+      document.querySelectorAll('[data-b]').forEach(function(o){o.classList.remove('on');});
+      b.classList.add('on'); drawW();});
+  });
+  grid($('wGrid'),480,300,30); drawW();
+
+  /* ---------- LAB 2 : Bayes frequency grid ---------- */
+  var COLS=50, ROWS=20, TOT=COLS*ROWS;
+  function drawB(){
+    var prev=parseInt($('prevSl').value,10)/1000;
+    var sen=parseInt($('senSl').value,10)/1000;
+    var spc=parseInt($('specSl').value,10)/1000;
+    var nF=Math.round(TOT*prev), nH=TOT-nF;
+    var tp=Math.round(nF*sen), fn=nF-tp, fp=Math.round(nH*(1-spc)), tn=nH-fp;
+    var cols=['var(--s3)','var(--brk)','var(--s1)','var(--rule-strong)'];
+    var counts=[tp,fn,fp,tn], s='', idx=0;
+    for(var g=0;g<4;g++){
+      for(var k=0;k<counts[g];k++){
+        var r=Math.floor(idx/COLS), c=idx%COLS;
+        s+='<circle cx="'+(32+c*8.4).toFixed(1)+'" cy="'+(36+r*11).toFixed(1)+'" r="3.1" fill="'+cols[g]+'"/>';
+        idx++;
+      }
+    }
+    $('bDots').innerHTML=s;
+    var ppv = (tp+fp)>0 ? tp/(tp+fp) : 0;
+    $('bLab').innerHTML='<text class="al" x="32" y="22">1,000 machines &#183; '+(tp+fp)+' alarms, of which '+tp+' are real</text>'
+      +'<text class="al" x="32" y="288" fill="var(--s3)">P(fault | alarm) = '+fmt(ppv*100,1)+'%</text>';
+    $('prevVal').textContent=fmt(prev*100,1)+'%';
+    $('senVal').textContent=fmt(sen*100,1)+'%';
+    $('specVal').textContent=fmt(spc*100,1)+'%';
+    $('oTP').textContent=String(tp); $('oFP').textContent=String(fp);
+    $('oFN').textContent=String(fn); $('oPPV').textContent=fmt(ppv*100,1)+'%';
+  }
+  ['prevSl','senSl','specSl'].forEach(function(id){$(id).addEventListener('input',drawB);});
+  drawB();
+
+  /* ---------- LAB 3 : entropy, cross-entropy, KL ---------- */
+  var NB=6, pv=[0.55,0.15,0.1,0.08,0.07,0.05], qv=[1/6,1/6,1/6,1/6,1/6,1/6];
+  var PB0=150, QB0=300, BH=105, BX0=58, BW=58, BGAP=10;
+  function norm(a){var s=a.reduce(function(x,y){return x+y;},0)||1;
+    return a.map(function(v){return Math.max(v/s,0.004);});}
+  function renorm(a){var b=norm(a),s=b.reduce(function(x,y){return x+y;},0);
+    return b.map(function(v){return v/s;});}
+  function H(p){return -p.reduce(function(s,v){return s+v*Math.log2(v);},0);}
+  function HX(p,q){return -p.reduce(function(s,v,i){return s+v*Math.log2(q[i]);},0);}
+  function drawE(){
+    pv=renorm(pv); qv=renorm(qv);
+    var s='',i,x,h;
+    for(i=0;i<NB;i++){
+      x=BX0+i*(BW+BGAP);
+      h=pv[i]*BH*2.2; h=clamp(h,2,BH);
+      s+='<rect class="pbar" data-row="p" data-i="'+i+'" x="'+x+'" y="'+(PB0-h).toFixed(1)+'" width="'+BW+'" height="'+h.toFixed(1)+'" rx="2"/>';
+      s+='<text class="blab" x="'+(x+BW/2)+'" y="'+(PB0+12)+'" text-anchor="middle">'+fmt(pv[i],3)+'</text>';
+      h=qv[i]*BH*2.2; h=clamp(h,2,BH);
+      s+='<rect class="qbar" data-row="q" data-i="'+i+'" x="'+x+'" y="'+(QB0-h).toFixed(1)+'" width="'+BW+'" height="'+h.toFixed(1)+'" rx="2"/>';
+      s+='<text class="blab" x="'+(x+BW/2)+'" y="'+(QB0+12)+'" text-anchor="middle">'+fmt(qv[i],3)+'</text>';
+    }
+    $('eBars').innerHTML=s;
+    $('eLab').innerHTML='<text class="al" x="'+BX0+'" y="34">p &mdash; THE TRUTH</text>'
+      +'<text class="al" x="'+BX0+'" y="184">q &mdash; THE MODEL</text>'
+      +'<line class="axl" x1="'+BX0+'" y1="'+PB0+'" x2="440" y2="'+PB0+'"/>'
+      +'<line class="axl" x1="'+BX0+'" y1="'+QB0+'" x2="440" y2="'+QB0+'"/>';
+    var hp=H(pv), hpq=HX(pv,qv);
+    $('oHp').textContent=fmt(hp,3); $('oHpq').textContent=fmt(hpq,3);
+    $('oKL').textContent=fmt(hpq-hp,3);
+  }
+  (function initE(){
+    var svg=$('sE'), drag=null;
+    svg.addEventListener('pointerdown',function(ev){
+      var t=ev.target; if(!t.getAttribute||!t.getAttribute('data-row')) return;
+      ev.preventDefault(); drag={row:t.getAttribute('data-row'),i:parseInt(t.getAttribute('data-i'),10)};
+      svg.setPointerCapture(ev.pointerId);
+    });
+    svg.addEventListener('pointermove',function(ev){
+      if(!drag) return; ev.preventDefault();
+      var y=svgXY(svg,ev).y, base=drag.row==='p'?PB0:QB0;
+      var val=clamp((base-y)/BH,0.01,1)/2.2;
+      if(drag.row==='p') pv[drag.i]=val; else qv[drag.i]=val;
+      drawE();
+    });
+    function up(ev){ if(!drag) return; drag=null; try{svg.releasePointerCapture(ev.pointerId);}catch(e){} }
+    svg.addEventListener('pointerup',up); svg.addEventListener('pointercancel',up);
+    document.querySelectorAll('[data-preset]').forEach(function(b){
+      b.addEventListener('click',function(){
+        var k=b.getAttribute('data-preset');
+        if(k==='peak') pv=[0.75,0.08,0.06,0.05,0.04,0.02];
+        if(k==='unif') pv=[1/6,1/6,1/6,1/6,1/6,1/6];
+        if(k==='match') qv=pv.slice();
+        if(k==='bad'){ pv=[0.70,0.10,0.08,0.06,0.04,0.02]; qv=[0.02,0.04,0.06,0.08,0.10,0.70]; }
+        drawE();
+      });
+    });
+    grid($('eGrid'),480,320,30); drawE();
+  })();
+
+  /* ---------- rail ---------- */
+  (function(){
+    var links=Array.prototype.slice.call(document.querySelectorAll('.rail a'));
+    if(!links.length||!window.IntersectionObserver) return;
+    var map={}; links.forEach(function(a){map[a.getAttribute('href').slice(1)]=a;});
+    var seen={};
+    var io=new IntersectionObserver(function(es){
+      es.forEach(function(e){seen[e.target.id]=e.isIntersecting;});
+      var ids=Object.keys(map),act=null;
+      for(var i=0;i<ids.length;i++) if(seen[ids[i]]){act=ids[i];break;}
+      if(!act) return;
+      links.forEach(function(a){a.classList.toggle('on',a===map[act]);});
+    },{rootMargin:'-70px 0px -65% 0px',threshold:0});
+    Object.keys(map).forEach(function(id){var el=document.getElementById(id); if(el) io.observe(el);});
+  })();
+})();
+</script>
+<script>
+/* Safety net: if the MathJax bundle cannot be reached, degrade the TeX to
+   readable Unicode instead of leaving raw backslash markup on the page. */
+(function () {
+  'use strict';
+  var GREEK = { theta:'θ', sigma:'σ', delta:'δ', mu:'μ', pi:'π',
+                infty:'∞', alpha:'α', beta:'β', lambda:'λ' };
+  var SUB = { '1':'₁','2':'₂','3':'₃','i':'ᵢ','j':'ⱼ','n':'ₙ','p':'ₚ','x':'ₓ','y':'ᵧ' };
+  var SUP = { '2':'²','3':'³','n':'ⁿ','p':'ᵖ','*':'*' };
+
+  function degrade(t) {
+    t = t.replace(/\$\$/g, '').replace(/\\[()[\]]/g, '');
+    t = t.replace(/\\(?:left|right|textstyle|displaystyle|!|,|;|:)/g, '');
+    t = t.replace(/\\q?quad/g, ' ');
+    t = t.replace(/\\mathbb\{R\}/g, 'ℝ').replace(/\\mathbb\{Z\}/g, 'ℤ')
+         .replace(/\\mathbb\{N\}/g, 'ℕ').replace(/\\mathbb\{Q\}/g, 'ℚ');
+    t = t.replace(/\\(?:mathbf|mathrm|text|textbf|operatorname)\{([^{}]*)\}/g, '$1');
+    t = t.replace(/\\hat\{([^{}]*)\}/g, '$1̂').replace(/\\bar\{([^{}]*)\}/g, '$1̄');
+    t = t.replace(/\\sqrt\{([^{}]*)\}/g, '√($1)');
+    t = t.replace(/\\t?frac\{([^{}]*)\}\{([^{}]*)\}/g, '($1)/($2)');
+    t = t.replace(/\\binom\{([^{}]*)\}\{([^{}]*)\}/g, 'C($1,$2)');
+    t = t.replace(/\\([a-zA-Z]+)/g, function (m, w) {
+      if (GREEK[w]) return GREEK[w];
+      switch (w) {
+        case 'cdot': return '·';
+        case 'times': return '×';
+        case 'le': case 'leq': return '≤';
+        case 'ge': case 'geq': return '≥';
+        case 'neq': return '≠';
+        case 'approx': return '≈';
+        case 'in': return '∈';
+        case 'pm': return '±';
+        case 'to': case 'rightarrow': return '→';
+        case 'Rightarrow': return '⇒';
+        case 'iff': return '⇔';
+        case 'parallel': return '∥';
+        case 'perp': return '⊥';
+        case 'sum': return 'Σ';
+        case 'langle': return '⟨';
+        case 'rangle': return '⟩';
+        case 'wedge': return '∧';
+        case 'ast': return '*';
+        case 'cdots': case 'ldots': case 'dots': return '…';
+        case 'max': case 'min': case 'cos': case 'sin': case 'log': case 'exp': return w;
+        default: return w;
+      }
+    });
+    t = t.replace(/\\\|/g, '‖').replace(/\|\|/g, '‖');
+    t = t.replace(/_\{?([0-9ijnpxy])\}?/g, function (m, c) { return SUB[c] || ('_' + c); });
+    t = t.replace(/\^\{?([23np*])\}?/g, function (m, c) { return SUP[c] || ('^' + c); });
+    t = t.replace(/[{}]/g, '');
+    return t.replace(/[ \t]{2,}/g, ' ');
+  }
+
+  function run() {
+    if (window.MathJax && window.MathJax.startup && window.MathJax.startup.document) return;
+    var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+      acceptNode: function (n) {
+        if (!n.nodeValue || n.nodeValue.indexOf('\\') < 0 && n.nodeValue.indexOf('$$') < 0)
+          return NodeFilter.FILTER_REJECT;
+        var p = n.parentNode;
+        while (p && p !== document.body) {
+          var tag = p.nodeName;
+          if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'CODE' || tag === 'PRE')
+            return NodeFilter.FILTER_REJECT;
+          p = p.parentNode;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    var hits = [], n;
+    while ((n = walker.nextNode())) hits.push(n);
+    hits.forEach(function (node) { node.nodeValue = degrade(node.nodeValue); });
+    document.querySelectorAll('.mathbox').forEach(function (el) {
+      el.style.fontFamily = "'IBM Plex Mono', monospace";
+      el.style.fontSize = '15px';
+      el.style.textAlign = 'center';
+      el.style.padding = '10px 0';
+    });
+  }
+  setTimeout(run, 6000);
+})();
+</script>
+
+<script>
+/* Long display equations can be wider than their container - especially inside a
+   callout box, which is narrower than the main column. After the typesetter
+   finishes, measure each one and shrink it just enough to fit. Only ever shrinks,
+   never grows, and never below a readable floor - so the worst case is the
+   scrollbar we already had. */
+(function () {
+  'use strict';
+  var MIN_SCALE = 0.70;   /* below this, scrolling beats illegible text */
+
+  function fitOne(box) {
+    try {
+      var c = box.querySelector('mjx-container[display="true"]');
+      if (!c) return;
+      var svg = c.querySelector('svg');
+      if (!svg) return;
+      c.style.fontSize = '';
+      var avail = box.clientWidth;
+      if (!avail) return;
+      var w = svg.getBoundingClientRect().width;
+      if (!w || w <= avail) return;
+      var k = Math.max(MIN_SCALE, (avail / w) * 0.98);
+      c.style.fontSize = (k * 100).toFixed(1) + '%';
+      var w2 = svg.getBoundingClientRect().width;      /* one refinement pass */
+      if (w2 > avail) {
+        k = Math.max(MIN_SCALE, k * (avail / w2) * 0.98);
+        c.style.fontSize = (k * 100).toFixed(1) + '%';
+      }
+    } catch (e) { /* leave the equation exactly as it was */ }
+  }
+
+  function fitAll() {
+    try { document.querySelectorAll('.mathbox').forEach(fitOne); } catch (e) {}
+  }
+
+  function start() {
+    fitAll();
+    var t;
+    window.addEventListener('resize', function () {
+      clearTimeout(t); t = setTimeout(fitAll, 160);
+    });
+  }
+
+  function waitForTypesetter(n) {
+    if (window.MathJax && window.MathJax.startup && window.MathJax.startup.promise) {
+      window.MathJax.startup.promise.then(start, start);
+      return;
+    }
+    if (n > 60) return;            /* typesetter never arrived - nothing to fit */
+    setTimeout(function () { waitForTypesetter(n + 1); }, 200);
+  }
+  waitForTypesetter(0);
+})();
+</script>

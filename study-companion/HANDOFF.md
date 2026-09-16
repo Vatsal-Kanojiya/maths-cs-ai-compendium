@@ -5,7 +5,7 @@ minutes instead of re-deriving decisions already made.
 
 ## State
 
-Branch `claude/blissful-euler-0c6xih`, latest commit carries sheets 1–4 of 20.
+Branch `claude/blissful-euler-0c6xih`, latest commit carries sheets 1–5 of 20.
 
 | # | Chapter | Folder | Published |
 |---|---------|--------|-----------|
@@ -13,8 +13,9 @@ Branch `claude/blissful-euler-0c6xih`, latest commit carries sheets 1–4 of 20.
 | 02 | Matrices | `ch02-matrices/` | https://claude.ai/artifact/SaJmwkXPKYmaJ6Eet8uBKd |
 | 03 | Calculus | `ch03-calculus/` | https://claude.ai/artifact/DhK5wG1RE9YMnRxSHizngC |
 | 04 | Statistics | `ch04-statistics/` | https://claude.ai/artifact/XWetUvsAH8Mw25LRxecCKU |
+| 05 | Probability | `ch05-probability/` | https://claude.ai/artifact/DDbGs67DwJPTwCYWFyTUMW |
 
-Next up: **Chapter 05 — Probability**.
+Next up: **Chapter 06 — Machine Learning**.
 
 ## The reader
 
@@ -61,6 +62,28 @@ Load these skills before writing: `artifact-design`, `artifact-diagramming`, and
 `dataviz` if the chapter has any chart. Validate any categorical palette with
 `dataviz/scripts/validate_palette.js` for **both** `--mode light` and `--mode dark`
 (bands differ: light 0.43–0.77, dark 0.48–0.67).
+
+## Format changes agreed at Chapter 05
+
+The reader reviewed the work and rejected a proposal to shorten it. Their reasoning
+was sound and is now policy: compressing to a "bridge sheet" would keep the
+correspondences but discard the re-narration that makes them stick, and
+optimising words-per-unit-learning risks abstracting away the truth. **Length is
+not the constraint. Value is.** Four changes, starting from Chapter 05:
+
+1. **Prediction-first labs.** Every lab opens with a `.predict` panel asking the
+   reader to commit to an answer before the widget reveals it. This converts a
+   passive demo into retrieval practice for almost no extra cost, and it is the
+   single highest-value change made so far.
+2. **A real question bank** — 24 prompts in three tiers (recall / apply / judge)
+   rather than 10 flat ones. The judge tier is where the thinking is.
+3. **A "what this chapter does not cover" section**, naming honestly what a full
+   treatment would include and this one omits. The reader was sceptical that
+   twenty chapters could cover the field; they are right, and the page should say
+   so rather than imply completeness.
+4. **Drop decorative labs.** A widget that teaches a mechanical engineer something
+   they already know cold (the parallelogram of forces, in Chapter 01) is
+   decoration. Better labs, not more of them.
 
 ## Chapter skeleton that works
 

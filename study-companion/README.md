@@ -40,6 +40,7 @@ merely structural, that is said plainly.
 | 02 | Matrices | [`ch02-matrices/`](ch02-matrices/index.html) | [Read online](https://claude.ai/artifact/SaJmwkXPKYmaJ6Eet8uBKd) |
 | 03 | Calculus | [`ch03-calculus/`](ch03-calculus/index.html) | [Read online](https://claude.ai/artifact/DhK5wG1RE9YMnRxSHizngC) |
 | 04 | Statistics | [`ch04-statistics/`](ch04-statistics/index.html) | [Read online](https://claude.ai/artifact/XWetUvsAH8Mw25LRxecCKU) |
+| 05 | Probability | [`ch05-probability/`](ch05-probability/index.html) | [Read online](https://claude.ai/artifact/DDbGs67DwJPTwCYWFyTUMW) |
 
 ## What's in a chapter page
 

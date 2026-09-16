@@ -158,3 +158,55 @@ for n in (1, 5, 20, 40):
     d = rng2.exponential(2.0, size=(40000, n)).mean(axis=1)
     print(f"[Ch04 s05] n={n:3d}  SE {d.std():.4f}   sigma/sqrt(n) {2.0/np.sqrt(n):.4f}       {P(abs(d.std()-2.0/np.sqrt(n))<0.05*2.0/np.sqrt(n))}")
 print("\n" + "="*66)
+
+# ===================== CHAPTER 05 - PROBABILITY =====================
+print("\n" + "="*66); print("CHAPTER 05"); print("="*66 + "\n")
+from scipy.special import gamma as GAMMA
+
+beta_, eta = 2.5, 20000.0
+R = lambda t: np.exp(-(t/eta)**beta_)
+h = lambda t: (beta_/eta)*(t/eta)**(beta_-1)
+print(f"[Ch05 s11] R(10k) = {R(1e4):.4f} (page 0.8380)                  {P(abs(R(1e4)-0.8380)<5e-4)}")
+print(f"[Ch05 s11] 3 in series = {R(1e4)**3:.4f} (page 0.5884)          {P(abs(R(1e4)**3-0.5884)<5e-4)}")
+print(f"[Ch05 s11] hazard(10k) = {h(1e4):.3e} (page 4.42e-5)        {P(abs(h(1e4)-4.4194e-5)<1e-8)}")
+mean = eta*GAMMA(1+1/beta_)
+print(f"[Ch05 s11] mean life = {mean:.0f} h (page 17,745)              {P(abs(mean-17745)<3)}")
+par = 1-(1-R(1e4)**3)**2
+print(f"[Ch05 s11] two pumps parallel = {par:.4f} (page 0.8306)        {P(abs(par-0.8306)<5e-4)}")
+print(f"[Ch05 s04] R(eta) = {np.exp(-1):.4f} for every beta             {P(abs(np.exp(-1)-0.36788)<1e-5)}")
+for b in (0.5, 1.0, 2.5):
+    rr = np.exp(-(eta/eta)**b)
+    print(f"[Ch05 s04]   beta={b}: R(eta)={rr:.4f}                       {P(abs(rr-np.exp(-1))<1e-12)}")
+
+prev, sen, spc = 0.02, 0.95, 0.90
+tp, fp = 1000*prev*sen, 1000*(1-prev)*(1-spc)
+ppv = tp/(tp+fp)
+print(f"\n[Ch05 s11] true alarms {tp:.0f}, false {fp:.0f}, PPV {ppv:.4f} (page 0.162)  {P(abs(ppv-19/117)<1e-9)}")
+def Hb(p): return 0.0 if p<=0 or p>=1 else -(p*np.log2(p)+(1-p)*np.log2(1-p))
+Hf = Hb(prev)
+pa = prev*sen + (1-prev)*(1-spc)
+Hcond = pa*Hb(tp/1000/pa) + (1-pa)*Hb(prev*(1-sen)/(1-pa))
+MI = Hf - Hcond
+print(f"[Ch05 s11] H(fault) {Hf:.4f} (page 0.1414)                   {P(abs(Hf-0.1414)<5e-4)}")
+print(f"[Ch05 s11] H(fault|alarm) {Hcond:.4f} (page 0.0861)          {P(abs(Hcond-0.0861)<5e-4)}")
+print(f"[Ch05 s11] mutual info {MI:.4f} bits = {MI/Hf*100:.0f}% removed (page 39%)  {P(abs(MI/Hf-0.39)<0.01)}")
+
+print(f"\n[Ch05 s08] fair coin H = {Hb(0.5):.4f} bit                      {P(Hb(0.5)==1.0)}")
+print(f"[Ch05 s08] p=0.9 coin H = {Hb(0.9):.4f} (page 0.469)           {P(abs(Hb(0.9)-0.469)<1e-3)}")
+print(f"[Ch05 s08] fair die H = {np.log2(6):.4f} (page 2.585)           {P(abs(np.log2(6)-2.585)<1e-3)}")
+kB = 1.380649e-23
+S3 = kB*np.log(2)*3
+print(f"[Ch05 s08] 3 bits -> S = {S3:.3e} J/K (page 2.87e-23)       {P(abs(S3-2.871e-23)<1e-26)}")
+print(f"[Ch05 s08] Landauer at 300K = {kB*300*np.log(2):.3e} J (page 2.9e-21)  {P(abs(kB*300*np.log(2)-2.871e-21)<1e-24)}")
+
+# Gibbs inequality: cross-entropy never below entropy, over random pairs
+rng5 = np.random.default_rng(11); worst = 1.0
+for _ in range(20000):
+    p = rng5.dirichlet(np.ones(6)); q = rng5.dirichlet(np.ones(6))
+    worst = min(worst, -(p*np.log2(q)).sum() + (p*np.log2(p)).sum())
+print(f"\n[Ch05 s08] min KL over 20000 random pairs = {worst:.2e} >= 0   {P(worst >= -1e-12)}")
+
+print(f"[Ch05 s03] 10 in series at 0.99 = {0.99**10:.4f} (page 0.904)   {P(abs(0.99**10-0.904)<5e-4)}")
+mle, mapv = 7/10, (2+7-1)/(2+2+10-2)
+print(f"[Ch05 s06] MLE {mle:.3f}, MAP {mapv:.3f} (page 0.700 / 0.667)   {P(abs(mapv-2/3)<1e-9)}")
+print("\n" + "="*66)
