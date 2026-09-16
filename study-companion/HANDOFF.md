@@ -5,15 +5,16 @@ minutes instead of re-deriving decisions already made.
 
 ## State
 
-Branch `claude/blissful-euler-0c6xih`, latest commit carries sheets 1–3 of 20.
+Branch `claude/blissful-euler-0c6xih`, latest commit carries sheets 1–4 of 20.
 
 | # | Chapter | Folder | Published |
 |---|---------|--------|-----------|
 | 01 | Vectors | `ch01-vectors/` | https://claude.ai/artifact/98j4cnE4QvTKi1znhH6vh9 |
 | 02 | Matrices | `ch02-matrices/` | https://claude.ai/artifact/SaJmwkXPKYmaJ6Eet8uBKd |
 | 03 | Calculus | `ch03-calculus/` | https://claude.ai/artifact/DhK5wG1RE9YMnRxSHizngC |
+| 04 | Statistics | `ch04-statistics/` | https://claude.ai/artifact/XWetUvsAH8Mw25LRxecCKU |
 
-Next up: **Chapter 04 — Statistics**.
+Next up: **Chapter 05 — Probability**.
 
 ## The reader
 

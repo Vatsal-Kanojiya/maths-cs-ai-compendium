@@ -1,0 +1,1756 @@
+<title>Spread, Sample, Evidence</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(', '\\)']], displayMath: [['$$', '$$']], processEscapes: true },
+  svg: { fontCache: 'global', scale: 1.0 },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-svg.js" id="MathJax-script" async></script>
+
+<style>
+/* ============ TOKENS: light is complete and authoritative ============ */
+:root{
+  --ground:#F0F2F1;
+  --sheet:#FBFCFB;
+  --sheet-2:#F4F6F5;
+  --ink:#14181A;
+  --ink-2:#4E575B;
+  --ink-3:#77838A;
+  --rule:#D3DAD7;
+  --rule-strong:#A8B4B0;
+  --accent:#12507E;
+  --accent-ink:#0E4267;
+  --accent-soft:#E4EEF6;
+  --bridge:#1F8A4C;
+  --bridge-soft:#E4F2EA;
+  --brk:#A8500F;
+  --brk-soft:#FAEBDF;
+  --s1:#BF5B00;
+  --s2:#0F74C7;
+  --s3:#1F8A4C;
+  --paper:#FFFFFF;            /* pasted-drawing ground, both themes */
+  --paper-ink:#1b1b1b;
+  --shadow:0 1px 2px rgba(20,24,26,.06), 0 6px 18px rgba(20,24,26,.05);
+  --f-disp:'Archivo Narrow', 'Arial Narrow', Helvetica, sans-serif;
+  --f-body:'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --f-mono:'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+    --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+    --rule:#293134; --rule-strong:#3F494C;
+    --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+    --bridge:#35AC63; --bridge-soft:#11281B;
+    --brk:#E0913F; --brk-soft:#2E2012;
+    --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+  --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+  --rule:#293134; --rule-strong:#3F494C;
+  --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+  --bridge:#35AC63; --bridge-soft:#11281B;
+  --brk:#E0913F; --brk-soft:#2E2012;
+  --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:var(--f-body); font-size:17px; line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ============ TITLE BLOCK (engineering drawing header) ============ */
+.titleblock{
+  position:sticky; top:env(safe-area-inset-top,0px); z-index:40;
+  background:var(--sheet); border-bottom:1px solid var(--rule-strong);
+}
+.tb-in{
+  max-width:1240px; margin:0 auto; padding:0 16px;
+  display:flex; align-items:stretch; gap:0; min-height:46px;
+}
+.tb-cell{
+  display:flex; flex-direction:column; justify-content:center;
+  padding:5px 14px; border-right:1px solid var(--rule);
+  font-family:var(--f-disp);
+}
+.tb-cell:first-child{padding-left:0}
+.tb-cell:last-child{border-right:0; margin-left:auto; padding-right:0}
+.tb-k{
+  font-size:8.5px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); line-height:1.4;
+}
+.tb-v{font-size:13px; font-weight:700; letter-spacing:.02em; color:var(--ink); line-height:1.3}
+.tb-v.accent{color:var(--accent)}
+.tb-hide{display:none}
+@media (min-width:680px){ .tb-hide{display:flex} }
+
+.themebtn{
+  appearance:none; background:transparent; border:1px solid var(--rule-strong);
+  color:var(--ink-2); font-family:var(--f-disp); font-size:10px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:6px 10px; border-radius:2px;
+  cursor:pointer; align-self:center; white-space:nowrap;
+}
+.themebtn:hover{border-color:var(--accent); color:var(--accent)}
+.themebtn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+/* ============ SHELL ============ */
+.shell{max-width:1240px; margin:0 auto; padding:0 16px; padding-block:0 64px}
+@media (min-width:1080px){
+  .shell{display:grid; grid-template-columns:212px minmax(0,1fr); gap:44px; align-items:start}
+}
+.rail{display:none}
+@media (min-width:1080px){
+  .rail{
+    display:block; position:sticky; top:calc(env(safe-area-inset-top,0px) + 70px);
+    padding-block:28px; font-family:var(--f-disp); font-size:12.5px;
+  }
+}
+.rail-h{
+  font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-3);
+  padding-bottom:8px; border-bottom:1px solid var(--rule); margin-bottom:10px;
+}
+.rail a{
+  display:flex; gap:9px; padding:4px 0; color:var(--ink-2); text-decoration:none;
+  border-left:2px solid transparent; padding-left:9px; margin-left:-11px; line-height:1.35;
+}
+.rail a:hover{color:var(--accent)}
+.rail a.on{color:var(--accent); border-left-color:var(--accent); font-weight:700}
+.rail a .n{font-family:var(--f-mono); font-size:10.5px; color:var(--ink-3); flex:none; padding-top:1px}
+.rail a.on .n{color:var(--accent)}
+
+main{min-width:0; padding-block:0 0}
+.col{max-width:70ch}
+
+/* ============ TYPE ============ */
+h1,h2,h3,h4{font-family:var(--f-disp); text-wrap:balance; margin:0; line-height:1.14}
+h1{font-size:clamp(34px,7vw,58px); font-weight:700; letter-spacing:-.015em}
+h2{font-size:clamp(25px,4.2vw,34px); font-weight:700; letter-spacing:-.01em}
+h3{font-size:19px; font-weight:700; letter-spacing:.005em; margin-top:2px}
+h4{font-size:14px; font-weight:700; letter-spacing:.06em; text-transform:uppercase}
+p{margin:0 0 1.05em}
+a{color:var(--accent-ink)}
+strong{font-weight:600}
+em{font-style:italic}
+code{font-family:var(--f-mono); font-size:.87em; background:var(--sheet-2); padding:1px 5px; border-radius:2px; border:1px solid var(--rule)}
+.lead{font-size:19.5px; line-height:1.56; color:var(--ink-2)}
+.eyebrow{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--ink-3); margin:0 0 10px;
+}
+.srcref{
+  font-family:var(--f-mono); font-size:11px; color:var(--ink-3);
+  border:1px solid var(--rule); border-radius:2px; padding:2px 7px; display:inline-block;
+  background:var(--sheet-2); white-space:nowrap;
+}
+
+/* ============ SECTION ============ */
+section{padding-block:38px 0; scroll-margin-top:calc(env(safe-area-inset-top,0px) + 62px)}
+.sechead{display:flex; align-items:baseline; gap:13px; margin-bottom:6px; flex-wrap:wrap}
+.secnum{
+  font-family:var(--f-mono); font-size:12px; font-weight:600; color:var(--accent);
+  border:1px solid var(--accent); border-radius:2px; padding:2px 7px; flex:none;
+  background:var(--accent-soft);
+}
+.rule-h{border:0; border-top:1px solid var(--rule); margin:0 0 22px}
+.rule-d{border:0; border-top:1px dashed var(--rule-strong); margin:34px 0}
+
+/* ============ CALLOUTS ============ */
+.note{
+  border:1px solid var(--rule); border-left:3px solid var(--accent);
+  background:var(--sheet); border-radius:2px; padding:16px 18px; margin:22px 0;
+}
+.note.bridge{border-left-color:var(--bridge); background:var(--bridge-soft)}
+.note.brk{border-left-color:var(--brk); background:var(--brk-soft)}
+.note-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; margin-bottom:7px; display:flex; align-items:center; gap:8px;
+}
+.note.bridge .note-h{color:var(--bridge)}
+.note.brk .note-h{color:var(--brk)}
+.note .note-h{color:var(--accent)}
+.note p:last-child, .note ul:last-child{margin-bottom:0}
+.note-h .ic{
+  width:15px; height:15px; border-radius:50%; border:1.5px solid currentColor; flex:none;
+  display:grid; place-items:center; font-size:9.5px; font-weight:700; font-family:var(--f-mono);
+}
+ul,ol{margin:0 0 1.05em; padding-left:1.25em}
+li{margin-bottom:.4em}
+li::marker{color:var(--ink-3)}
+
+/* ============ DEFINITION BLOCK ============ */
+.defn{
+  background:var(--sheet); border:1px solid var(--rule); border-radius:3px;
+  padding:18px 20px; margin:22px 0; box-shadow:var(--shadow);
+}
+.defn-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:10px;
+  padding-bottom:8px; border-bottom:1px solid var(--rule);
+}
+.defn p:last-child{margin-bottom:0}
+
+/* ============ TABLES ============ */
+.tw{overflow-x:auto; margin:22px 0; border:1px solid var(--rule); border-radius:3px; background:var(--sheet)}
+table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:480px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule); vertical-align:top}
+thead th{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); background:var(--sheet-2); font-weight:700; white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:0}
+td.mono,th.mono{font-family:var(--f-mono); font-size:13px; font-variant-numeric:tabular-nums}
+.tw caption{
+  caption-side:bottom; text-align:left; padding:9px 14px; font-size:12.5px;
+  color:var(--ink-3); border-top:1px solid var(--rule); font-family:var(--f-disp);
+}
+
+/* ============ FIGURES ============ */
+figure{margin:24px 0}
+.paper{
+  background:var(--paper); border:1px solid var(--rule-strong); border-radius:3px;
+  padding:16px; display:flex; justify-content:center; box-shadow:var(--shadow);
+}
+.paper img{max-width:100%; height:auto; display:block}
+figcaption{
+  font-family:var(--f-disp); font-size:12.5px; color:var(--ink-3); margin-top:9px;
+  line-height:1.45; padding-left:2px;
+}
+figcaption b{color:var(--ink-2); font-weight:700; letter-spacing:.04em}
+
+/* ============ INTERACTIVE PANELS ============ */
+.lab{
+  background:var(--sheet); border:1px solid var(--rule-strong); border-radius:3px;
+  margin:26px 0; overflow:hidden; box-shadow:var(--shadow);
+}
+.lab-h{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:11px 16px; border-bottom:1px solid var(--rule); background:var(--sheet-2);
+}
+.lab-t{font-family:var(--f-disp); font-size:13px; font-weight:700; letter-spacing:.05em; text-transform:uppercase}
+.lab-tag{
+  font-family:var(--f-mono); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--accent); border:1px solid var(--accent); border-radius:2px; padding:2px 6px;
+  margin-left:auto; white-space:nowrap;
+}
+.lab-body{padding:16px}
+.lab-foot{
+  padding:11px 16px; border-top:1px solid var(--rule); background:var(--sheet-2);
+  font-size:13.5px; color:var(--ink-2); line-height:1.5;
+}
+.lab-foot b{color:var(--ink)}
+.stage{width:100%; max-width:560px; height:auto; display:block; margin-inline:auto; touch-action:none; cursor:grab}
+.stage.drag{cursor:grabbing}
+
+.readout{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr)); gap:1px;
+  background:var(--rule); border:1px solid var(--rule); border-radius:2px; margin-top:14px;
+}
+.ro{background:var(--sheet); padding:8px 11px}
+.ro-k{
+  font-family:var(--f-disp); font-size:9px; letter-spacing:.13em; text-transform:uppercase;
+  color:var(--ink-3); margin-bottom:2px; white-space:nowrap;
+}
+.ro-v{
+  font-family:var(--f-mono); font-size:15px; font-weight:500; font-variant-numeric:tabular-nums;
+  color:var(--ink); line-height:1.25;
+}
+.ro-v.a{color:var(--s2)} .ro-v.b{color:var(--s1)} .ro-v.c{color:var(--s3)}
+
+.ctl{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:14px}
+.ctl label{
+  font-family:var(--f-disp); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-2); white-space:nowrap;
+}
+input[type=range]{
+  -webkit-appearance:none; appearance:none; height:22px; background:transparent;
+  flex:1 1 160px; min-width:130px; cursor:pointer;
+}
+input[type=range]:focus-visible{outline:2px solid var(--accent); outline-offset:3px}
+input[type=range]::-webkit-slider-runnable-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-moz-range-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:16px; height:16px; border-radius:50%;
+  background:var(--accent); border:2px solid var(--sheet); margin-top:-6.5px;
+}
+input[type=range]::-moz-range-thumb{
+  width:16px; height:16px; border-radius:50%; background:var(--accent);
+  border:2px solid var(--sheet);
+}
+.btn{
+  appearance:none; font-family:var(--f-disp); font-size:11px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:7px 13px; border-radius:2px;
+  border:1px solid var(--rule-strong); background:var(--sheet); color:var(--ink-2); cursor:pointer;
+}
+.btn:hover{border-color:var(--accent); color:var(--accent)}
+.btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.btn.on{background:var(--accent); border-color:var(--accent); color:var(--sheet)}
+
+.legend{display:flex; gap:16px; flex-wrap:wrap; margin-top:12px}
+.lg{display:flex; align-items:center; gap:7px; font-family:var(--f-disp); font-size:12px; color:var(--ink-2)}
+.lg i{width:15px; height:3px; border-radius:2px; flex:none; display:block}
+
+/* ============ MISC ============ */
+.mathbox{overflow-x:auto; overflow-y:hidden; margin:18px 0}
+mjx-container[display="true"]{margin:0 !important}
+.kv{display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:15px; margin:16px 0}
+.kv dt{font-family:var(--f-mono); font-size:13px; color:var(--accent); white-space:nowrap}
+.kv dd{margin:0; color:var(--ink-2)}
+
+details.q{
+  border:1px solid var(--rule); border-radius:3px; background:var(--sheet);
+  margin-bottom:9px; overflow:hidden;
+}
+details.q summary{
+  cursor:pointer; padding:12px 15px; font-weight:600; list-style:none;
+  display:flex; gap:11px; align-items:flex-start; font-size:15.5px;
+}
+details.q summary::-webkit-details-marker{display:none}
+details.q summary::after{
+  content:'+'; margin-left:auto; font-family:var(--f-mono); color:var(--accent);
+  font-size:17px; line-height:1; flex:none; padding-top:2px;
+}
+details.q[open] summary::after{content:'\2212'}
+details.q summary:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
+details.q summary .qn{
+  font-family:var(--f-mono); font-size:12px; color:var(--ink-3); flex:none; padding-top:3px;
+}
+details.q .ans{padding:0 15px 14px 41px; font-size:15.5px; color:var(--ink-2); border-top:1px solid var(--rule); padding-top:13px}
+details.q .ans p:last-child{margin-bottom:0}
+
+.endnote{
+  margin-top:44px; padding-top:20px; border-top:1px solid var(--rule-strong);
+  font-size:13.5px; color:var(--ink-3); font-family:var(--f-disp); line-height:1.55;
+}
+.endnote a{color:var(--accent)}
+
+.srcref{text-decoration:none}
+a.srcref{color:var(--ink-2); transition:none}
+
+<style>
+.srcref{text-decoration:none}
+a.srcref{color:var(--ink-2)}
+a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(--accent-soft)}
+a.srcref:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.srcref.nolink{opacity:.75; font-style:italic}
+.pv{font-family:var(--f-disp); font-size:9.5px; font-weight:700; letter-spacing:.1em;
+    text-transform:uppercase; padding:2px 7px; border-radius:2px; white-space:nowrap}
+.pv.ok{background:var(--bridge-soft); color:var(--bridge)}
+.pv.add{background:var(--accent-soft); color:var(--accent)}
+.pv.corr{background:var(--brk-soft); color:var(--brk)}
+.flag{display:inline-block; padding:1px 7px; border-radius:2px; font-family:var(--f-disp);
+      font-size:10px; letter-spacing:.1em; text-transform:uppercase; font-weight:700}
+.flag.ok{background:var(--bridge-soft); color:var(--bridge)}
+.flag.bad{background:var(--brk-soft); color:var(--brk)}
+</style>
+
+<header class="titleblock">
+  <div class="tb-in">
+    <div class="tb-cell">
+      <span class="tb-k">Chapter</span>
+      <span class="tb-v accent">04 &middot; Statistics</span>
+    </div>
+    <div class="tb-cell tb-hide"><span class="tb-k">Sheet</span><span class="tb-v">4 of 20</span></div>
+    <div class="tb-cell tb-hide"><span class="tb-k">Reader</span><span class="tb-v">B.E. Mechanical</span></div>
+    <div class="tb-cell tb-hide"><span class="tb-k">Prerequisite</span><span class="tb-v">Sheets 1&ndash;3</span></div>
+    <div class="tb-cell">
+      <button class="themebtn" id="themebtn" type="button" aria-label="Switch colour theme">Theme</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+
+<nav class="rail" aria-label="Chapter contents">
+  <div class="rail-h">Contents</div>
+  <a href="#bridge" class="on"><span class="n">00</span><span>The bridge</span></a>
+  <a href="#moments"><span class="n">01</span><span>Moments of a section</span></a>
+  <a href="#spread"><span class="n">02</span><span>Spread and shape</span></a>
+  <a href="#corr"><span class="n">03</span><span>Correlation</span></a>
+  <a href="#sampling"><span class="n">04</span><span>Sampling</span></a>
+  <a href="#clt"><span class="n">05</span><span>CLT &amp; stack-up</span></a>
+  <a href="#testing"><span class="n">06</span><span>Hypothesis testing</span></a>
+  <a href="#errors"><span class="n">07</span><span>Risk and power</span></a>
+  <a href="#ci"><span class="n">08</span><span>Confidence intervals</span></a>
+  <a href="#breaks"><span class="n">09</span><span>Where it breaks</span></a>
+  <a href="#worked"><span class="n">10</span><span>Worked example</span></a>
+  <a href="#recall"><span class="n">11</span><span>Shadow reading</span></a>
+  <a href="#next"><span class="n">12</span><span>What this feeds</span></a>
+  <a href="#provenance"><span class="n">A</span><span>Provenance</span></a>
+</nav>
+
+<main>
+
+<section id="top" style="padding-top:44px">
+  <div class="col">
+    <p class="eyebrow">Maths, CS &amp; AI Compendium &middot; Chapter 04</p>
+    <h1>Spread, Sample, Evidence</h1>
+    <p class="lead" style="margin-top:18px">
+      This is the chapter where the mechanical engineer has an unfair advantage, and almost
+      nobody tells them. The whole apparatus of descriptive statistics &mdash; mean, variance,
+      standard deviation, covariance &mdash; is the apparatus of <em>section properties</em>,
+      renamed. You have been computing these since your first strength of materials course.
+    </p>
+    <p>
+      Not loosely. Exactly. The mean is a centroid. The variance is a second moment of area
+      about that centroid. The standard deviation is a radius of gyration. And the identity
+      \(\operatorname{Var}(X)=E[X^2]-\mu^2\), which statistics textbooks present as an algebraic
+      convenience, <em>is the parallel axis theorem</em>.
+    </p>
+    <p>
+      The second half of the chapter &mdash; sampling, hypothesis testing, confidence intervals
+      &mdash; maps just as cleanly onto quality control, where Type I and Type II errors already
+      have engineering names. What does <strong>not</strong> transfer is subtler and more
+      dangerous, and &sect;09 is about it: a section property is an exact number, and a statistic
+      never is.
+    </p>
+  </div>
+</section>
+
+<section id="bridge">
+  <div class="col">
+    <div class="sechead"><span class="secnum">00</span><h2>The bridge</h2></div>
+    <hr class="rule-h">
+  </div>
+
+  <div class="tw">
+    <table>
+      <thead><tr><th>What you already compute</th><th>What statistics calls it</th><th>How good is the match?</th></tr></thead>
+      <tbody>
+        <tr><td>Centroid \(\bar{y}=\int y\,\mathrm{d}A/\!\int \mathrm{d}A\)</td><td>Mean, expected value</td><td><b style="color:var(--bridge)">Identical.</b> Same integral, same meaning.</td></tr>
+        <tr><td>Second moment of area \(\bar{I}=\int (y-\bar{y})^2\mathrm{d}A\)</td><td>Variance</td><td><b style="color:var(--bridge)">Identical,</b> normalised by total area.</td></tr>
+        <tr><td>Radius of gyration \(k=\sqrt{\bar{I}/A}\)</td><td>Standard deviation \(\sigma\)</td><td><b style="color:var(--bridge)">Identical.</b> Same idea, same formula.</td></tr>
+        <tr><td>Parallel axis theorem \(I_O=\bar{I}+Ad^2\)</td><td>\(\operatorname{Var}(X)=E[X^2]-\mu^2\)</td><td><b style="color:var(--bridge)">The same theorem.</b> See &sect;01.</td></tr>
+        <tr><td>Product of inertia \(I_{xy}=\int xy\,\mathrm{d}A\)</td><td>Covariance</td><td><b style="color:var(--bridge)">Identical.</b> Zero on principal axes = uncorrelated.</td></tr>
+        <tr><td>RSS tolerance stack-up</td><td>Standard error \(\sigma/\sqrt{n}\)</td><td><b style="color:var(--bridge)">Same \(\sqrt{n}\),</b> same independence assumption.</td></tr>
+        <tr><td>Why stack-ups come out normal</td><td>Central Limit Theorem</td><td><b style="color:var(--bridge)">This is the CLT,</b> applied without naming it.</td></tr>
+        <tr><td>Acceptance sampling of a lot</td><td>Hypothesis test</td><td><b style="color:var(--bridge)">Identical logic.</b></td></tr>
+        <tr><td>Producer's risk / consumer's risk</td><td>Type I error \(\alpha\) / Type II error \(\beta\)</td><td><b style="color:var(--bridge)">The same two numbers.</b></td></tr>
+        <tr><td>OC curve of a sampling plan</td><td>Power curve \(1-\beta\)</td><td><b style="color:var(--bridge)">The same curve,</b> plotted upside down.</td></tr>
+        <tr><td>Expanded uncertainty \(U=k\,u\)</td><td>Confidence interval</td><td><b style="color:var(--bridge)">Identical.</b> Coverage factor \(k=2\) is \(z^\ast\!\approx\!1.96\).</td></tr>
+        <tr><td>A section property</td><td>A sample statistic</td><td><b style="color:var(--brk)">One is exact, the other is a guess.</b> See &sect;09.</td></tr>
+      </tbody>
+      <caption>Eleven exact correspondences and one difference that changes everything downstream.</caption>
+    </table>
+  </div>
+</section>
+
+<section id="moments">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">01</span><h2>Moments of a section, moments of a distribution</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2004%20-%20statistics/01.%20fundamentals.md" target="_blank" rel="noopener">src 01. fundamentals &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      A <strong>distribution</strong> describes how values are spread out. A
+      <strong>random variable</strong> maps outcomes to numbers so you can do arithmetic on
+      them. For a discrete variable the probabilities are a <strong>mass</strong> function
+      summing to one; for a continuous variable a <strong>density</strong> whose integral is one.
+    </p>
+    <p>
+      Hold that word &mdash; <em>mass</em>. It is not a metaphor. A probability distribution is
+      a unit mass smeared along an axis, and every summary statistic you are about to meet is a
+      property of that mass distribution, computed exactly as you would compute it for a beam
+      cross-section.
+    </p>
+    <div class="mathbox">
+      $$E[X]=\sum_x x\,p(x) \qquad\text{or}\qquad E[X]=\int_{-\infty}^{\infty} x\,f(x)\,\mathrm{d}x$$
+    </div>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; the mean is a centroid</div>
+      <p>Put the two calculations side by side and there is nothing left to explain:</p>
+      <div class="mathbox">
+        $$\bar{y}=\frac{\int y\,\mathrm{d}A}{\int \mathrm{d}A}
+          \qquad\longleftrightarrow\qquad
+          \mu=E[X]=\frac{\int x f(x)\,\mathrm{d}x}{\int f(x)\,\mathrm{d}x}$$
+      </div>
+      <p style="margin-bottom:0">
+        The denominator on the right is 1, because probability is normalised &mdash; that is the
+        <em>only</em> difference. The compendium calls the expectation the "centre of gravity of
+        the distribution". It means that literally. A distribution balances at its mean exactly
+        as a section balances at its centroid.
+      </p>
+    </div>
+
+    <p>
+      <strong>Moments</strong> then follow. The \(k\)-th raw moment is \(E[X^k]\), measured from
+      zero; the \(k\)-th central moment is \(E[(X-\mu)^k]\), measured from the mean. In section
+      terms: moments about the origin, and moments about the centroidal axis. The first central
+      moment is zero in both worlds, for the same reason &mdash; deviations either side of the
+      balance point cancel.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; variance is the parallel axis theorem</div>
+      <p>
+        Every statistics course teaches this identity as a computational shortcut, with no
+        explanation of where it comes from:
+      </p>
+      <div class="mathbox">
+        $$\operatorname{Var}(X)=E[X^2]-\mu^2$$
+      </div>
+      <p>And every mechanics course teaches this, with a derivation and a diagram:</p>
+      <div class="mathbox">
+        $$I_O=\bar{I}+A\,d^2$$
+      </div>
+      <p>
+        Divide the second by the total area \(A\) and set the offset \(d\) to the centroid
+        distance. Second moment about the origin, per unit area, equals second moment about the
+        centroid, per unit area, plus the square of the shift:
+      </p>
+      <div class="mathbox">
+        $$\underbrace{E[X^2]}_{I_O/A}=\underbrace{\operatorname{Var}(X)}_{\bar{I}/A}+\underbrace{\mu^2}_{d^2}$$
+      </div>
+      <p style="margin-bottom:0">
+        They are the same theorem. You already know why it is true, and you already know why the
+        cross term vanishes &mdash; it is \(\int (y-\bar{y})\,\mathrm{d}A=0\), the first moment
+        about the centroid, which is zero by definition of the centroid. &sect;10 checks this
+        numerically on the compendium's own dataset.
+      </p>
+    </div>
+  </div>
+
+  <figure class="col">
+    <div class="paper">
+      <img src="img/moments_shape.svg" alt="A bell curve annotated with mean, variance, skewness and kurtosis" width="420">
+    </div>
+    <figcaption><b>Fig. 4.1</b> &mdash; The first four moments. The first two you compute for every beam you design; the third and fourth have no role in bending, which is why they will feel unfamiliar. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="spread">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">02</span><h2>Spread, and the radius of gyration</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2004%20-%20statistics/02.%20measures.md" target="_blank" rel="noopener">src 02. measures &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      <strong>Variance</strong> is the average squared distance from the mean; we square so that
+      deviations either side do not cancel. <strong>Standard deviation</strong> is its square
+      root, which returns the answer to the original units.
+    </p>
+    <div class="mathbox">
+      $$\sigma^2=\frac{1}{N}\sum_{i=1}^{N}(x_i-\mu)^2, \qquad \sigma=\sqrt{\sigma^2}$$
+    </div>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; &sigma; is a radius of gyration</div>
+      <p>
+        The radius of gyration answers a specific question: <em>at what single distance could I
+        concentrate the entire area and still get the same second moment?</em>
+      </p>
+      <div class="mathbox">
+        $$k=\sqrt{\frac{\bar{I}}{A}} \qquad\longleftrightarrow\qquad \sigma=\sqrt{\frac{\sum(x_i-\mu)^2}{N}}$$
+      </div>
+      <p style="margin-bottom:0">
+        Standard deviation answers the identical question about probability mass: at what single
+        distance could I put all the probability and still get the same variance? Same question,
+        same formula, same answer. When a column buckles you use \(k\) because it captures how
+        far the material sits from the axis; when data is noisy you use \(\sigma\) because it
+        captures how far the observations sit from the mean. One concept, two vocabularies.
+      </p>
+    </div>
+
+    <p>
+      Drag the blocks below. Each one is a unit of area &mdash; equivalently, one data point.
+      Everything updates live, including the parallel axis check.
+    </p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-h">
+      <span class="lab-t">The balance point</span>
+      <span class="lab-tag">Drag the blocks</span>
+    </div>
+    <div class="lab-body">
+      <svg class="stage" id="sM" viewBox="0 0 480 300" role="img"
+           aria-label="Eight unit blocks on an axis, with the centroid marked as a balance point and the standard deviation shown as a band either side">
+        <g id="mBand"></g>
+        <g id="mBlocks"></g>
+        <g id="mAxis"></g>
+        <g id="mMark"></g>
+      </svg>
+      <div class="ctl">
+        <button class="btn" id="mReset" type="button">Reset to 2,4,4,4,5,5,7,9</button>
+        <button class="btn" id="mSpread" type="button">Spread out</button>
+        <button class="btn" id="mTight" type="button">Cluster</button>
+      </div>
+      <div class="readout">
+        <div class="ro"><div class="ro-k">Mean &mdash; centroid</div><div class="ro-v a" id="oMu">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Variance &mdash; I&#772;/A</div><div class="ro-v" id="oVar">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">&sigma; &mdash; radius of gyration</div><div class="ro-v c" id="oSig">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">E[X&sup2;] &mdash; I&#8338;/A</div><div class="ro-v" id="oEx2">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">&mu;&sup2; &mdash; shift d&sup2;</div><div class="ro-v" id="oMu2">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Parallel axis check</div><div class="ro-v" id="oPax">&mdash;</div></div>
+      </div>
+    </div>
+    <div class="lab-foot">
+      The triangle is the balance point &mdash; drag any block and it shifts exactly as a
+      centroid would. The shaded band is \(\mu\pm\sigma\): the radius of gyration drawn to
+      scale. The last readout evaluates \(E[X^2]-\mu^2\) and compares it with the variance
+      computed directly from the deviations. They agree for every arrangement you can make,
+      because the parallel axis theorem is not an approximation.
+    </div>
+  </div>
+
+  <div class="col">
+    <h3>Bessel's correction, and why it has no mechanical counterpart</h3>
+    <p>
+      When the data is a <em>sample</em> rather than the whole population, the divisor changes
+      from \(N\) to \(N-1\):
+    </p>
+    <div class="mathbox">
+      $$s^2=\frac{1}{N-1}\sum_{i=1}^{N}(x_i-\bar{x})^2$$
+    </div>
+    <p>
+      The reason is that you measured the deviations from the <em>sample</em> mean, not the true
+      mean, and the sample mean sits, by construction, exactly where it minimises that sum of
+      squares. So the sum comes out too small, systematically. Dividing by \(N-1\) corrects the
+      bias.
+    </p>
+    <p>
+      There is no equivalent in section properties, and the reason is the first thing in this
+      chapter that genuinely differs: your cross-section is fully known. You never estimated its
+      centroid from a sample of the material. &sect;09 returns to this.
+    </p>
+
+    <h3>Position and shape</h3>
+    <p>
+      <strong>Quartiles</strong> split sorted data into four equal parts, and the
+      <strong>interquartile range</strong> \(Q_3-Q_1\) measures the spread of the middle half
+      while ignoring extremes. The <strong>z-score</strong> \(z=(x-\mu)/\sigma\) reports position
+      in units of standard deviation &mdash; the same standardisation that Chapter 01 &sect;02
+      argued was essential before any distance calculation.
+    </p>
+    <p>
+      <strong>Skewness</strong> is the standardised third moment and measures asymmetry;
+      <strong>kurtosis</strong> is the standardised fourth and measures tail weight. Here the
+      section analogy politely stops: bending needs the second moment, so mechanics rarely goes
+      higher. These are genuinely new tools, not renamed old ones &mdash; and they matter,
+      because a heavy-tailed distribution produces extreme values far more often than a normal
+      one, which is exactly the case where a \(\pm3\sigma\) rule quietly stops being safe.
+    </p>
+  </div>
+
+  <figure class="col">
+    <div class="paper">
+      <img src="img/quartiles_boxplot.svg" alt="A box plot showing the quartiles, median, interquartile range, whiskers and an outlier" width="420">
+    </div>
+    <figcaption><b>Fig. 4.2</b> &mdash; The box plot. \(Q_1\) to \(Q_3\) is the box, the line is the median, and points beyond the whiskers are flagged as outliers by the \(1.5\times\mathrm{IQR}\) rule. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="corr">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">03</span><h2>Correlation is a product of inertia</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2004%20-%20statistics/02.%20measures.md" target="_blank" rel="noopener">src 02. measures &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      <strong>Covariance</strong> measures whether two variables move together.
+      <strong>Pearson correlation</strong> normalises it to \([-1,1]\):
+    </p>
+    <div class="mathbox">
+      $$r=\frac{\sum (x_i-\bar{x})(y_i-\bar{y})}{\sqrt{\sum (x_i-\bar{x})^2}\ \sqrt{\sum (y_i-\bar{y})^2}}$$
+    </div>
+    <p>
+      The compendium points out that this is the cosine similarity of Chapter 01 applied to the
+      mean-centred vectors, which is true and worth holding. But there is a second reading that
+      closes a loop opened two chapters ago.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; the covariance matrix is an inertia tensor</div>
+      <p>
+        The numerator above is \(\sum (x_i-\bar{x})(y_i-\bar{y})\). Compare the
+        <strong>product of inertia</strong> about centroidal axes:
+      </p>
+      <div class="mathbox">
+        $$\bar{I}_{xy}=\int (x-\bar{x})(y-\bar{y})\,\mathrm{d}A$$
+      </div>
+      <p>
+        The same expression. So the covariance matrix of two features has exactly the structure
+        of the inertia tensor of a cross-section: variances on the diagonal, covariances off it,
+        where mechanics writes second moments on the diagonal and products of inertia off it.
+      </p>
+      <p style="margin-bottom:0">
+        Which means the statement <em>"the products of inertia vanish on the principal axes"</em>
+        and the statement <em>"the features are uncorrelated along the principal components"</em>
+        are the same sentence. Chapter 02 &sect;07 claimed that balancing a rotor and running PCA
+        were the same computation. This is why: PCA diagonalises a covariance matrix, and a
+        covariance matrix is an inertia tensor.
+      </p>
+    </div>
+
+    <p>
+      <strong>Spearman correlation</strong> ranks the values first and then computes Pearson on
+      the ranks, which makes it robust to outliers and sensitive to any consistently increasing
+      relationship rather than only a straight-line one.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>Where the analogy breaks &mdash; \(r\) only sees straight lines</div>
+      <p style="margin-bottom:0">
+        A product of inertia is a complete description of a rigid section. A correlation
+        coefficient is not a complete description of a relationship. Pearson \(r\) can be
+        <em>exactly zero</em> for variables that are perfectly and deterministically related
+        &mdash; take \(y=x^2\) with \(x\) symmetric about zero, where every upward pairing is
+        cancelled by a downward one. Zero correlation does not mean independence; it means no
+        <em>linear</em> association. Always plot the scatter before trusting the number.
+      </p>
+    </div>
+  </div>
+
+  <figure class="col">
+    <div class="paper">
+      <img src="img/correlation_scatter.svg" alt="Three scatter plots showing positive, absent and negative correlation" width="420">
+    </div>
+    <figcaption><b>Fig. 4.3</b> &mdash; Positive, none, negative. The middle panel shows what \(r\approx 0\) usually looks like &mdash; but a parabola would also read zero. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="sampling">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">04</span><h2>Sampling</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2004%20-%20statistics/03.%20sampling.md" target="_blank" rel="noopener">src 03. sampling &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      You cannot measure everything, so you measure a <strong>sample</strong> and reason about
+      the <strong>population</strong>. A number describing the population is a
+      <strong>parameter</strong>; a number computed from your sample is a
+      <strong>statistic</strong>, used to estimate it.
+    </p>
+    <p>
+      The methods will be familiar from inspection practice. <strong>Simple random</strong> gives
+      everyone an equal chance. <strong>Stratified</strong> divides into groups first and samples
+      each &mdash; which is what you do when you deliberately draw parts from every machine
+      rather than trusting a handful from one. <strong>Cluster</strong> selects whole groups,
+      like inspecting entire pallets. <strong>Systematic</strong> takes every \(k\)-th item,
+      exactly as an in-line gauge does.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>Where systematic sampling bites</div>
+      <p style="margin-bottom:0">
+        Taking every \(k\)-th part is simple and usually fine, but if the production line has a
+        hidden period that matches \(k\) &mdash; a four-spindle machine and \(k=4\), say &mdash;
+        you will sample the same spindle every time and never see the other three. The source
+        chapter warns that a systematic sample "can introduce bias if the list has a hidden
+        pattern"; on a shop floor that pattern is usually a fixture, a cavity number, or a shift
+        change.
+      </p>
+    </div>
+
+    <p>
+      Take a different sample and you get a different statistic. The distribution of a statistic
+      across all possible samples is the <strong>sampling distribution</strong>, and its standard
+      deviation has its own name, the <strong>standard error</strong>:
+    </p>
+    <div class="mathbox">
+      $$SE=\frac{\sigma}{\sqrt{n}}$$
+    </div>
+    <p>
+      Quadruple the sample and you halve the error. That \(\sqrt{n}\) is the single most
+      consequential square root in statistics, and it is the reason precision is expensive:
+      going from \(\pm 1\) to \(\pm 0.1\) costs a hundred times the data.
+    </p>
+  </div>
+
+  <figure class="col">
+    <div class="paper">
+      <img src="img/sampling_methods.svg" alt="Simple random, stratified and cluster sampling shown side by side" width="430">
+    </div>
+    <figcaption><b>Fig. 4.4</b> &mdash; Three probability sampling schemes. Stratified reduces variance when the strata genuinely differ &mdash; which on a shop floor they usually do. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="clt">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">05</span><h2>The Central Limit Theorem, which you already rely on</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2004%20-%20statistics/03.%20sampling.md" target="_blank" rel="noopener">src 03. sampling &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      Whatever shape the population has, the distribution of <em>sample means</em> tends to a
+      normal distribution as \(n\) grows:
+    </p>
+    <div class="mathbox">
+      $$\bar{X}\ \longrightarrow\ \mathrm{Normal}\!\left(\mu,\ \frac{\sigma^2}{n}\right)$$
+    </div>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; this is why RSS tolerance stack-up works</div>
+      <p>
+        Stack \(n\) parts in a line. The worst-case method adds the tolerances, which is
+        correct but absurdly conservative, because every part would have to be at its extreme
+        simultaneously and in the same direction. So you use root-sum-square instead:
+      </p>
+      <div class="mathbox">
+        $$\sigma_{\text{stack}}=\sqrt{\sigma_1^2+\sigma_2^2+\cdots+\sigma_n^2}$$
+      </div>
+      <p style="margin-bottom:0">
+        Two things you were taught to take on faith are theorems here. First, that formula is
+        the variance addition rule for independent variables &mdash; variances add, standard
+        deviations do not. Second, and less often explained: <em>why is the assembled stack
+        normally distributed</em>, when the individual part distributions are skewed, bimodal or
+        anything else? Because of the Central Limit Theorem. It is what lets you quote a
+        \(\pm3\sigma\) figure for an assembly whose components are nothing like normal.
+      </p>
+    </div>
+
+    <p>
+      The theorem needs three conditions, and each has a shop-floor failure mode worth naming:
+      <strong>independence</strong> (a common tool-wear drift correlates every part made that
+      shift), <strong>finite variance</strong> (rarely a problem with physical dimensions), and
+      <strong>identical distribution</strong> (two machines with different capability are two
+      populations, not one).
+    </p>
+    <p>
+      Run it yourself. Pick a deliberately non-normal population, raise \(n\), and watch the
+      means become bell-shaped while the spread narrows as \(\sigma/\sqrt{n}\).
+    </p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-h">
+      <span class="lab-t">Stack-up in action</span>
+      <span class="lab-tag">Change the population and n</span>
+    </div>
+    <div class="lab-body">
+      <svg class="stage" id="sC" viewBox="0 0 480 330" role="img"
+           aria-label="A non-normal population histogram above the histogram of its sample means, which becomes bell-shaped as the sample size rises">
+        <g id="cGrid"></g>
+        <g id="cPop"></g>
+        <g id="cMeans"></g>
+        <g id="cAx"></g>
+      </svg>
+      <div class="ctl">
+        <button class="btn on" data-pop="skew" type="button">Skewed</button>
+        <button class="btn" data-pop="uniform" type="button">Uniform</button>
+        <button class="btn" data-pop="bimodal" type="button">Bimodal</button>
+        <button class="btn" data-pop="spiky" type="button">Two-spindle</button>
+      </div>
+      <div class="ctl">
+        <label for="nSl">Parts per stack &nbsp;n</label>
+        <input type="range" id="nSl" min="1" max="40" value="1" step="1">
+        <span class="ro-v" id="nVal" style="min-width:56px">n = 1</span>
+        <button class="btn" id="cRoll" type="button">Resample</button>
+      </div>
+      <div class="readout">
+        <div class="ro"><div class="ro-k">Population &sigma;</div><div class="ro-v a" id="oPs">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Measured SE of means</div><div class="ro-v b" id="oSe">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Theory &sigma;/&radic;n</div><div class="ro-v c" id="oSeT">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Skewness of means</div><div class="ro-v" id="oSk">&mdash;</div></div>
+      </div>
+      <div class="legend">
+        <span class="lg"><i style="background:var(--s1)"></i>population &mdash; one part</span>
+        <span class="lg"><i style="background:var(--s2)"></i>mean of n parts</span>
+      </div>
+    </div>
+    <div class="lab-foot">
+      The orange histogram is the population you chose; the blue one is the distribution of the
+      mean of \(n\) draws from it, resampled live. At \(n=1\) they are identical. Raise \(n\) and
+      the blue one becomes symmetric and narrow whatever the orange one looks like &mdash; watch
+      the skewness readout fall toward zero and the measured spread track \(\sigma/\sqrt{n}\).
+      <b>Two-spindle</b> is the interesting case: a population that is two separate peaks still
+      produces normal-looking means, which is exactly how a bimodal process can hide inside a
+      healthy-looking assembly measurement.
+    </div>
+  </div>
+
+  <figure class="col">
+    <div class="paper">
+      <img src="img/central_limit_theorem.svg" alt="A skewed population producing normally distributed sample means" width="420">
+    </div>
+    <figcaption><b>Fig. 4.5</b> &mdash; The theorem in one picture: skewed in, normal out. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="testing">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">06</span><h2>Hypothesis testing is acceptance sampling</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2004%20-%20statistics/04.%20hypothesis%20testing.md" target="_blank" rel="noopener">src 04. hypothesis testing &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      The source chapter's worked example is a factory measuring bolts, which is no accident.
+      Hypothesis testing was built for exactly this problem, largely by people working in
+      industry.
+    </p>
+    <p>
+      The <strong>null hypothesis</strong> \(H_0\) is the default claim of no change &mdash; the
+      process is on target. The <strong>alternative</strong> \(H_1\) is what you suspect instead.
+      You never prove \(H_1\); you ask how surprising your data would be if \(H_0\) were true,
+      and reject \(H_0\) when the answer is "very".
+    </p>
+    <p>
+      The <strong>p-value</strong> is that surprise, quantified: the probability of a result at
+      least as extreme as the one you got, <em>assuming \(H_0\) is true</em>. The
+      <strong>significance level</strong> \(\alpha\) is the threshold you commit to
+      <em>before</em> looking.
+    </p>
+    <div class="mathbox">
+      $$z=\frac{\bar{x}-\mu_0}{\sigma/\sqrt{n}}
+        =\frac{10.3-10}{0.9/\sqrt{36}}=\frac{0.3}{0.15}=2.0$$
+    </div>
+    <p>
+      At \(\alpha=0.05\) two-tailed the critical values are \(\pm1.96\), so \(z=2.0\) rejects
+      \(H_0\), with \(p\approx0.046\). The bolts have drifted.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; you already run these tests</div>
+      <p style="margin-bottom:0">
+        Every point you plot on an \(\bar{X}\) control chart is a hypothesis test. The centre
+        line is \(H_0\), the control limits at \(\mu_0\pm3\sigma/\sqrt{n}\) are critical values,
+        and a point outside them rejects \(H_0\) at \(\alpha\approx0.0027\). Choosing three sigma
+        rather than two is choosing a significance level &mdash; a deliberate trade of false
+        alarms against missed shifts. Acceptance sampling of an incoming lot is the same
+        structure again: inspect \(n\), compare against a limit, accept or reject.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab">
+    <div class="lab-h">
+      <span class="lab-t">Producer's risk, consumer's risk</span>
+      <span class="lab-tag">Shift the true mean</span>
+    </div>
+    <div class="lab-body">
+      <svg class="stage" id="sH" viewBox="0 0 480 300" role="img"
+           aria-label="The null and true sampling distributions overlaid, with the rejection regions, the false alarm rate and the missed detection rate shaded">
+        <g id="hGrid"></g>
+        <g id="hShade"></g>
+        <g id="hCurves"></g>
+        <g id="hAx"></g>
+      </svg>
+      <div class="ctl">
+        <label for="muSl">True mean (cm)</label>
+        <input type="range" id="muSl" min="940" max="1060" value="1030" step="1">
+        <span class="ro-v" id="muVal" style="min-width:66px">10.30</span>
+      </div>
+      <div class="ctl">
+        <label for="nnSl">Sample size n</label>
+        <input type="range" id="nnSl" min="4" max="200" value="36" step="1">
+        <span class="ro-v" id="nnVal" style="min-width:56px">36</span>
+        <label for="aSl" style="margin-left:6px">&alpha;</label>
+        <input type="range" id="aSl" min="1" max="20" value="5" step="1">
+        <span class="ro-v" id="aVal" style="min-width:56px">0.05</span>
+      </div>
+      <div class="readout">
+        <div class="ro"><div class="ro-k">Standard error</div><div class="ro-v" id="oSE">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">&alpha; &mdash; producer's risk</div><div class="ro-v b" id="oAl">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">&beta; &mdash; consumer's risk</div><div class="ro-v" id="oBe">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Power 1&minus;&beta;</div><div class="ro-v c" id="oPw">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">z for x&#772; = true mean</div><div class="ro-v a" id="oZ">&mdash;</div></div>
+      </div>
+      <div class="legend">
+        <span class="lg"><i style="background:var(--s2)"></i>if H&#8320; true &mdash; process on target</span>
+        <span class="lg"><i style="background:var(--s1)"></i>the true process</span>
+      </div>
+    </div>
+    <div class="lab-foot">
+      \(\mu_0=10\) cm, \(\sigma=0.9\) cm, two-tailed. The blue curve is where \(\bar{x}\) would
+      land if the process were on target; the orange curve is where it actually lands. Blue area
+      in the rejection zone is \(\alpha\), rejecting a good process &mdash; <b>producer's
+      risk</b>. Orange area outside it is \(\beta\), passing a drifted one &mdash; <b>consumer's
+      risk</b>. Drag the true mean back to 10.00 and \(\beta\) becomes meaningless; drag \(n\)
+      up and both curves narrow, which is the only move that reduces both risks at once.
+    </div>
+  </div>
+</section>
+
+<section id="errors">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">07</span><h2>Two errors, and the curve that trades them</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2004%20-%20statistics/04.%20hypothesis%20testing.md" target="_blank" rel="noopener">src 04. hypothesis testing &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      There are exactly two ways to be wrong, and both already have engineering names.
+    </p>
+  </div>
+
+  <div class="tw col">
+    <table>
+      <thead><tr><th></th><th>Statistics</th><th>Quality control</th><th>Rate</th></tr></thead>
+      <tbody>
+        <tr><td><b>False alarm</b></td><td>Type I error &mdash; reject a true \(H_0\)</td><td>Producer's risk &mdash; scrap a good lot</td><td class="mono">&alpha;</td></tr>
+        <tr><td><b>Missed shift</b></td><td>Type II error &mdash; fail to reject a false \(H_0\)</td><td>Consumer's risk &mdash; ship a bad lot</td><td class="mono">&beta;</td></tr>
+        <tr><td><b>Detection</b></td><td>Power</td><td>Probability of rejecting a bad lot</td><td class="mono">1 &minus; &beta;</td></tr>
+        <tr><td><b>The trade curve</b></td><td>Power curve</td><td>Operating characteristic (OC) curve</td><td class="mono">&mdash;</td></tr>
+      </tbody>
+      <caption>The same two numbers, named twice. An OC curve plots probability of acceptance against true quality, which is the power curve turned upside down.</caption>
+    </table>
+  </div>
+
+  <div class="col">
+    <p>
+      Power rises when the true effect is larger, the sample is bigger, \(\alpha\) is looser, or
+      the process is less variable. With \(n\) fixed you cannot shrink \(\alpha\) and \(\beta\)
+      together &mdash; tightening the control limits catches more real shifts and also cries wolf
+      more often. The only way to improve both is more data, or less variation.
+    </p>
+    <p>
+      <strong>Power analysis</strong> inverts the question and asks how much data you need before
+      you start:
+    </p>
+    <div class="mathbox">
+      $$n=\left(\frac{(z_{\alpha/2}+z_\beta)\,\sigma}{\delta}\right)^2$$
+    </div>
+    <p>
+      To detect a 2 cm shift with \(\sigma=8\), at \(\alpha=0.05\) and 80% power:
+      \(n=\left(\frac{(1.96+0.84)\cdot 8}{2}\right)^2\approx126\). Note the square: halving the
+      shift you want to detect quadruples the sample. That is the same \(\sqrt{n}\) from &sect;04,
+      seen from the other side, and it is why detecting small process drifts is so expensive.
+    </p>
+  </div>
+
+  <figure class="col">
+    <div class="paper">
+      <img src="img/type_errors.svg" alt="A two by two grid of reality against decision, marking Type I and Type II errors" width="400">
+    </div>
+    <figcaption><b>Fig. 4.6</b> &mdash; The two-by-two. Reading it as producer's and consumer's risk makes the asymmetry concrete: the two errors have different costs, and which one you fear should set \(\alpha\). <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="ci">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">08</span><h2>Confidence intervals</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2004%20-%20statistics/05.%20inference.md" target="_blank" rel="noopener">src 05. inference &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      A point estimate alone is nearly useless; you need a range. A
+      <strong>confidence interval</strong> is the estimate plus a margin of error:
+    </p>
+    <div class="mathbox">
+      $$\mathrm{CI}=\bar{x}\pm z^\ast\frac{\sigma}{\sqrt{n}}
+        \qquad\text{e.g.}\qquad 170\pm1.96\cdot\frac{8}{\sqrt{50}}=[167.78,\ 172.22]$$
+    </div>
+    <p>
+      When \(\sigma\) is unknown and estimated from the sample, \(z^\ast\) becomes
+      \(t^\ast_{n-1}\) from the t-distribution, whose heavier tails pay for the extra uncertainty
+      of having estimated \(\sigma\). As \(n\) grows the t-distribution converges on the normal.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; this is measurement uncertainty</div>
+      <p style="margin-bottom:0">
+        A calibration certificate does not report a bare number. It reports a value plus an
+        <strong>expanded uncertainty</strong> \(U=k\,u_c\), where \(u_c\) is the combined
+        standard uncertainty and \(k\) is a <em>coverage factor</em>, conventionally \(k=2\) for
+        roughly 95% coverage. That is a confidence interval, and \(k=2\) is \(z^\ast\approx1.96\)
+        rounded. The GUM procedure of combining component uncertainties in quadrature is the
+        variance addition rule from &sect;05. Metrology and inferential statistics are the same
+        subject with different committees.
+      </p>
+    </div>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>Where the analogy breaks &mdash; what "95% confident" does not mean</div>
+      <p style="margin-bottom:0">
+        It does not mean there is a 95% probability the true value lies in <em>your</em>
+        interval. The true value is a fixed number; it is either in there or it is not. The 95%
+        describes the <em>procedure</em>: if you repeated the whole exercise many times, 95% of
+        the intervals you construct would contain the true value. Your particular interval is
+        one draw from that process. This distinction sounds pedantic until you are asked to
+        defend a measurement in a dispute, at which point it is the whole argument.
+      </p>
+    </div>
+  </div>
+
+  <figure class="col">
+    <div class="paper">
+      <img src="img/confidence_interval.svg" alt="A sampling distribution with a confidence interval marked around the estimate" width="420">
+    </div>
+    <figcaption><b>Fig. 4.7</b> &mdash; The interval and the margin of error. Widen the confidence level and the interval widens; increase \(n\) and it narrows as \(1/\sqrt{n}\). <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="breaks">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">09</span><h2>Where a statistic stops being a section property</h2>
+      <span class="srcref nolink" title="Added material, not in the source chapter">beyond the chapter</span>
+    </div>
+    <hr class="rule-h">
+    <p>
+      Everything in &sect;&sect;01&ndash;03 was an exact correspondence. This section is what it
+      costs, and the root of all four items is a single sentence: <strong>a section property is
+      a fact about a known object; a statistic is a guess about an unknown one.</strong>
+    </p>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>1 &mdash; Your statistic has its own error bar</div>
+      <p style="margin-bottom:0">
+        When you compute \(I\) for a cross-section, the answer is exact and reproducible to as
+        many digits as you care to carry. When you compute \(s^2\) from 30 parts, the answer is
+        itself a random variable &mdash; measure 30 more and you get a different number.
+        Bessel's \(N-1\) exists solely because of this, and it is the first sign that you have
+        crossed from geometry into inference. Every downstream idea in this chapter &mdash;
+        standard error, confidence interval, hypothesis test &mdash; is machinery for quantifying
+        how wrong your statistic might be. Section properties need none of it.
+      </p>
+    </div>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>2 &mdash; The p-value is not the probability you are wrong</div>
+      <p>
+        This is the most consequential misreading in applied statistics, and engineers make it
+        constantly. The p-value is
+      </p>
+      <div class="mathbox">
+        $$p=P(\text{data this extreme}\mid H_0\ \text{true})$$
+      </div>
+      <p style="margin-bottom:0">
+        and <em>not</em> \(P(H_0\ \text{true}\mid \text{data})\). Those are different quantities
+        and swapping them is the same error as confusing "probability the alarm sounds given a
+        fire" with "probability there is a fire given the alarm sounds" &mdash; which depends
+        entirely on how often fires actually happen. A \(p=0.046\) does not mean a 4.6% chance
+        the process is fine. Getting from one to the other requires a prior, which is Bayes'
+        theorem, which is Chapter 05.
+      </p>
+    </div>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>3 &mdash; Statistically significant is not engineering significant</div>
+      <p>
+        Significance measures whether an effect is <em>detectable</em>, not whether it
+        <em>matters</em>. Look again at the test statistic:
+      </p>
+      <div class="mathbox">
+        $$z=\frac{\bar{x}-\mu_0}{\sigma/\sqrt{n}}$$
+      </div>
+      <p style="margin-bottom:0">
+        The denominator shrinks as \(n\) grows, so with enough samples <em>any</em> non-zero
+        difference becomes significant. A bolt mean off target by one micron is highly
+        significant at \(n=10^6\) and completely irrelevant to the assembly. Always report the
+        <strong>effect size</strong> &mdash; the actual difference, in millimetres &mdash;
+        alongside the p-value. In ML this is why a model that is significantly better on a
+        benchmark may be indistinguishable in use.
+      </p>
+    </div>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>4 &mdash; Test enough things and something will look real</div>
+      <p style="margin-bottom:0">
+        At \(\alpha=0.05\), each test has a 5% false alarm rate. Run twenty independent tests on
+        a process that is perfectly fine and the probability of at least one false alarm is
+        \(1-0.95^{20}\approx 64\%\). Inspect enough characteristics and something will always be
+        out of limits by luck alone. Statistics calls this the <strong>multiple comparisons
+        problem</strong>; it is why trawling a dataset for whatever looks interesting produces
+        findings that evaporate on retest, and why corrections such as Bonferroni exist. The
+        discipline that protects you is the one you already apply to gauge R&amp;R: decide what
+        you are testing before you look.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="worked">
+  <div class="col">
+    <div class="sechead"><span class="secnum">10</span><h2>One dataset, two readings</h2></div>
+    <hr class="rule-h">
+    <p>
+      The compendium works four moments for \(X=\{2,4,4,4,5,5,7,9\}\). Take the same eight
+      numbers and read them twice: once as data, once as eight unit areas placed along an axis.
+    </p>
+
+    <h3>Reading one &mdash; as data</h3>
+    <div class="mathbox">
+      $$\mu=\frac{2+4+4+4+5+5+7+9}{8}=\frac{40}{8}=5$$
+    </div>
+    <p>Deviations \(-3,-1,-1,-1,0,0,2,4\); squares summing to 32. So</p>
+    <div class="mathbox">
+      $$\sigma^2=\frac{32}{8}=4,\qquad \sigma=2$$
+    </div>
+    <p>And the raw second moment, for the shortcut:</p>
+    <div class="mathbox">
+      $$E[X^2]=\frac{4+16+16+16+25+25+49+81}{8}=\frac{232}{8}=29$$
+    </div>
+    <div class="mathbox">
+      $$\operatorname{Var}(X)=E[X^2]-\mu^2=29-25=4\quad\checkmark$$
+    </div>
+
+    <h3>Reading two &mdash; as a section</h3>
+    <p>
+      Eight unit areas at \(y=2,4,4,4,5,5,7,9\). Total area \(A=8\).
+    </p>
+    <div class="mathbox">
+      $$\bar{y}=\frac{\sum A_i y_i}{A}=\frac{40}{8}=5,\qquad
+        \bar{I}=\sum A_i(y_i-\bar{y})^2=32,\qquad
+        k=\sqrt{\frac{\bar{I}}{A}}=\sqrt{\frac{32}{8}}=2$$
+    </div>
+    <p>And the second moment about the origin, with the parallel axis theorem:</p>
+    <div class="mathbox">
+      $$I_O=\sum A_i y_i^2=232,\qquad \bar{I}+A\,d^2=32+8(5)^2=32+200=232\quad\checkmark$$
+    </div>
+  </div>
+
+  <div class="tw col">
+    <table>
+      <thead><tr><th>Quantity</th><th>As data</th><th>As a section</th><th class="mono">Value</th></tr></thead>
+      <tbody>
+        <tr><td>Balance point</td><td>Mean \(\mu\)</td><td>Centroid \(\bar{y}\)</td><td class="mono">5</td></tr>
+        <tr><td>Spread about it</td><td>Variance \(\sigma^2\)</td><td>\(\bar{I}/A\)</td><td class="mono">4</td></tr>
+        <tr><td>In original units</td><td>Std deviation \(\sigma\)</td><td>Radius of gyration \(k\)</td><td class="mono">2</td></tr>
+        <tr><td>Moment about zero</td><td>\(E[X^2]\)</td><td>\(I_O/A\)</td><td class="mono">29</td></tr>
+        <tr><td>The shift term</td><td>\(\mu^2\)</td><td>\(d^2\)</td><td class="mono">25</td></tr>
+        <tr><td>The identity</td><td>\(\operatorname{Var}=E[X^2]-\mu^2\)</td><td>\(I_O=\bar{I}+Ad^2\)</td><td class="mono">29 &minus; 25 = 4</td></tr>
+      </tbody>
+      <caption>
+        Not similar &mdash; identical, line for line. Every value is checked in
+        <code>verify_claims.py</code>.
+      </caption>
+    </table>
+  </div>
+
+  <div class="col">
+    <p>
+      The third and fourth moments follow the same pattern and have no bending counterpart:
+      \(\sum(x_i-\mu)^3=42\) gives skewness \((42/8)/2^3\approx0.656\), a right lean, and
+      \(\sum(x_i-\mu)^4=356\) gives kurtosis \((356/8)/2^4\approx2.78\), slightly lighter tails
+      than a normal distribution's 3.
+    </p>
+  </div>
+</section>
+
+<section id="recall">
+  <div class="col">
+    <div class="sechead"><span class="secnum">11</span><h2>Shadow reading</h2></div>
+    <hr class="rule-h">
+  </div>
+  <div class="col">
+    <details class="q"><summary><span class="qn">Q1</span><span>State \(\operatorname{Var}(X)=E[X^2]-\mu^2\) as a mechanics theorem.</span></summary>
+      <div class="ans"><p>It is the parallel axis theorem, \(I_O=\bar{I}+Ad^2\), divided through by the total area with \(d=\mu\). Second moment about the origin equals second moment about the centroid plus the square of the shift. The cross term vanishes because the first moment about the centroid is zero — which is the definition of the centroid.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">Q2</span><span>What is the standard deviation, in section-property terms?</span></summary>
+      <div class="ans"><p>The radius of gyration, \(k=\sqrt{\bar{I}/A}\). Both answer the same question: at what single distance could you concentrate all the area (or all the probability mass) and preserve the second moment?</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">Q3</span><span>Why divide by \(N-1\) for a sample, and why has this no mechanical counterpart?</span></summary>
+      <div class="ans"><p>Deviations are measured from the sample mean, which sits exactly where it minimises the sum of squares, so that sum is systematically too small. Dividing by \(N-1\) removes the bias. No counterpart exists because a cross-section is fully known — you never estimated its centroid from a sample.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">Q4</span><span>Connect the covariance matrix to something you have diagonalised before.</span></summary>
+      <div class="ans"><p>It is an inertia tensor: variances on the diagonal, covariances off it, exactly as second moments sit on the diagonal and products of inertia off it. "Products of inertia vanish on the principal axes" and "features are uncorrelated along the principal components" are the same statement, which is why PCA and rotor balancing are the same computation.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">Q5</span><span>Why does RSS tolerance stack-up give a normal result from non-normal parts?</span></summary>
+      <div class="ans"><p>The Central Limit Theorem. Summing many independent contributions drives the total toward normality whatever the individual distributions look like, which is what licenses quoting a \(\pm3\sigma\) figure for the assembly. The quadrature addition itself is the variance addition rule: variances add, standard deviations do not.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">Q6</span><span>Give the quality-control names for Type I and Type II errors.</span></summary>
+      <div class="ans"><p>Type I (\(\alpha\)) is producer's risk — scrapping a good lot, a false alarm. Type II (\(\beta\)) is consumer's risk — shipping a bad one. Power \(1-\beta\) is the probability of catching a bad lot, and the OC curve of a sampling plan is the power curve inverted.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">Q7</span><span>Why is an \(\bar{X}\) control chart a hypothesis test?</span></summary>
+      <div class="ans"><p>The centre line is \(H_0\), the limits at \(\mu_0\pm3\sigma/\sqrt{n}\) are critical values, and a point outside them rejects \(H_0\) at \(\alpha\approx0.0027\). Choosing three sigma rather than two is choosing a significance level — trading false alarms against missed shifts.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">Q8</span><span>A test returns \(p=0.046\). What does that number mean, and what does it not?</span></summary>
+      <div class="ans"><p>It is \(P(\text{data at least this extreme}\mid H_0)\). It is <em>not</em> the probability that \(H_0\) is true, and not the probability you are wrong. Converting between them needs a prior — that is Bayes' theorem, in Chapter 05.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">Q9</span><span>Why can a result be highly significant and completely unimportant?</span></summary>
+      <div class="ans"><p>Because \(z=(\bar{x}-\mu_0)/(\sigma/\sqrt{n})\) has \(n\) in the denominator. With enough samples any non-zero difference clears the threshold. Report the effect size — the actual difference in real units — alongside the p-value.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">Q10</span><span>You check twenty characteristics on a healthy process at \(\alpha=0.05\). What is the chance of at least one false alarm?</span></summary>
+      <div class="ans"><p>\(1-0.95^{20}\approx 64\%\). Inspect enough things and something fails by luck alone. This is the multiple comparisons problem; the protection is deciding what you will test before you look at the data.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">Q11</span><span>What does a 95% confidence interval actually claim?</span></summary>
+      <div class="ans"><p>That the <em>procedure</em> produces intervals containing the true value 95% of the time. The true value is fixed; your particular interval either contains it or does not. It is the same object as an expanded uncertainty \(U=k\,u_c\) on a calibration certificate, where \(k=2\) is \(z^\ast\approx1.96\).</p></div>
+    </details>
+  </div>
+</section>
+
+<section id="next">
+  <div class="col">
+    <div class="sechead"><span class="secnum">12</span><h2>What this chapter feeds</h2></div>
+    <hr class="rule-h">
+  </div>
+
+  <figure>
+    <div class="paper">
+      <svg viewBox="0 0 780 430" role="img" style="max-width:100%;height:auto"
+           aria-label="Statistics branches into four tools, each feeding a named technique in a later chapter"
+           fill="none" stroke="#1b1b1b" font-family="Archivo Narrow, Arial Narrow, sans-serif">
+        <defs><marker id="cm4" markerWidth="9" markerHeight="7" refX="8.5" refY="3.5" orient="auto">
+          <polygon points="0,0 9,3.5 0,7" fill="#1b1b1b" stroke="none"/></marker></defs>
+        <rect x="18" y="170" width="132" height="76" rx="3" fill="#ffffff" stroke="#1b1b1b" stroke-width="2"/>
+        <text x="84" y="200" text-anchor="middle" font-size="14" font-weight="700" fill="#1b1b1b" stroke="none">Summarising</text>
+        <text x="84" y="220" text-anchor="middle" font-size="14" font-weight="700" fill="#1b1b1b" stroke="none">uncertainty</text>
+        <text x="84" y="238" text-anchor="middle" font-size="10" fill="#666" stroke="none">CHAPTER 04</text>
+        <line x1="150" y1="208" x2="190" y2="208" stroke="#1b1b1b" stroke-width="1.5"/>
+        <line x1="190" y1="53" x2="190" y2="341" stroke="#1b1b1b" stroke-width="1.5"/>
+        <line x1="190" y1="53"  x2="226" y2="53"  stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cm4)"/>
+        <line x1="190" y1="149" x2="226" y2="149" stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cm4)"/>
+        <line x1="190" y1="245" x2="226" y2="245" stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cm4)"/>
+        <line x1="190" y1="341" x2="226" y2="341" stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cm4)"/>
+
+        <rect x="238" y="22" width="170" height="62" rx="3" fill="#ffffff" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="323" y="47" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">Expectation</text>
+        <text x="323" y="67" text-anchor="middle" font-size="11" fill="#555" stroke="none">a centroid of density</text>
+        <rect x="238" y="118" width="170" height="62" rx="3" fill="#ffffff" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="323" y="143" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">Covariance matrix</text>
+        <text x="323" y="163" text-anchor="middle" font-size="11" fill="#555" stroke="none">an inertia tensor</text>
+        <rect x="238" y="214" width="170" height="62" rx="3" fill="#ffffff" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="323" y="239" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">Sampling error</text>
+        <text x="323" y="259" text-anchor="middle" font-size="11" fill="#555" stroke="none">&#963;/&#8730;n</text>
+        <rect x="238" y="310" width="170" height="62" rx="3" fill="#ffffff" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="323" y="335" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">Testing a claim</text>
+        <text x="323" y="355" text-anchor="middle" font-size="11" fill="#555" stroke="none">&#945;, &#946;, power</text>
+
+        <line x1="408" y1="53"  x2="514" y2="53"  stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cm4)"/>
+        <line x1="408" y1="149" x2="514" y2="149" stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cm4)"/>
+        <line x1="408" y1="245" x2="514" y2="245" stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cm4)"/>
+        <line x1="408" y1="341" x2="514" y2="341" stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cm4)"/>
+        <text x="461" y="45"  text-anchor="middle" font-size="10.5" fill="#666" stroke="none">of a loss</text>
+        <text x="461" y="141" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">diagonalised</text>
+        <text x="461" y="237" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">of a batch</text>
+        <text x="461" y="333" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">on two variants</text>
+
+        <rect x="526" y="22" width="236" height="62" rx="3" fill="#f2f2f0" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="644" y="47" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">Loss functions, risk</text>
+        <text x="644" y="67" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">CHAPTER 05 &amp; 06</text>
+        <rect x="526" y="118" width="236" height="62" rx="3" fill="#f2f2f0" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="644" y="143" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">PCA, whitening</text>
+        <text x="644" y="163" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">CHAPTER 02 &amp; 06</text>
+        <rect x="526" y="214" width="236" height="62" rx="3" fill="#f2f2f0" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="644" y="239" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">Why SGD noise scales so</text>
+        <text x="644" y="259" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">CHAPTER 06 &#183; TRAINING</text>
+        <rect x="526" y="310" width="236" height="62" rx="3" fill="#f2f2f0" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="644" y="335" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">A/B testing, evaluation</text>
+        <text x="644" y="355" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">CHAPTER 18 &#183; ML SYSTEMS</text>
+      </svg>
+    </div>
+    <figcaption><b>Fig. 4.8</b> &mdash; Where each tool is spent. The third row is worth noticing now: a mini-batch gradient is a sample mean, so its noise falls as \(1/\sqrt{\text{batch size}}\) &mdash; the same square root, governing how large a batch is worth paying for.</figcaption>
+  </figure>
+
+  <div class="col">
+    <p>
+      Chapter 05 is probability, and it inverts this chapter's direction. Here you had data and
+      summarised it. There you will have a model and ask what data it produces &mdash; and then
+      Bayes' theorem lets you run the arrow backwards, which is precisely what &sect;09 said the
+      p-value could not do on its own. The engineering home for it is reliability: MTBF, the
+      exponential distribution, Weibull for fatigue, and the bathtub curve are all Chapter 05
+      material you have already met under another name.
+    </p>
+    <div class="note">
+      <div class="note-h"><span class="ic">i</span>Before you move on</div>
+      <p style="margin-bottom:0">
+        Take any cross-section you have computed by hand &mdash; an I-beam, a tee, a channel
+        &mdash; and recompute its centroid and \(\bar{I}\) calling them a mean and a variance.
+        Then reverse it: take a set of measurements from a lab report and compute its "radius of
+        gyration". Doing both once, deliberately, fixes the correspondence better than reading
+        about it. Then run the source chapter's CLT coding task and watch a skewed population
+        produce bell-shaped means.
+      </p>
+    </div>
+  </div>
+
+  <div class="col" id="provenance" style="scroll-margin-top:calc(env(safe-area-inset-top,0px) + 62px)">
+    <div class="sechead" style="margin-top:40px"><span class="secnum">A</span><h2>Provenance and changes</h2></div>
+    <hr class="rule-h">
+    <p>
+      This page is a derivative work. The compendium is Apache-2.0 licensed, which requires a
+      statement of what was changed &mdash; and independently of the licence, you should be able
+      to see where I followed the source and where I departed from it. Every source reference on
+      this page links to the original file, pinned to commit <code>9850ee5</code> so it cannot
+      drift.
+    </p>
+  </div>
+  <div class="tw">
+    <table>
+      <thead><tr><th>Section</th><th>Title</th><th>Source</th><th>Verdict</th><th>What changed</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">&sect;00</td><td>The bridge</td><td class="mono">&mdash;</td><td><span class="pv add">added</span></td><td>Mapping table is mine.</td></tr>
+        <tr><td class="mono">&sect;01</td><td>Moments of a section</td><td class="mono">01</td><td><span class="pv ok">faithful</span></td><td>Distributions, random variables, expectation and moments as in source. The centroid and parallel-axis readings are <b>added</b>.</td></tr>
+        <tr><td class="mono">&sect;02</td><td>Spread and shape</td><td class="mono">01, 02</td><td><span class="pv ok">faithful</span></td><td>Variance, Bessel, quartiles, z-score, skewness, kurtosis as in source. The radius-of-gyration identity is <b>added</b>.</td></tr>
+        <tr><td class="mono">&sect;03</td><td>Correlation</td><td class="mono">02</td><td><span class="pv ok">expanded</span></td><td>Pearson, Spearman and the cosine-similarity link are the source's. The product-of-inertia reading and the \(y=x^2\) counterexample are <b>added</b>.</td></tr>
+        <tr><td class="mono">&sect;04</td><td>Sampling</td><td class="mono">03</td><td><span class="pv ok">faithful</span></td><td>All four schemes and the standard error as in source. The multi-spindle failure mode is <b>added</b>.</td></tr>
+        <tr><td class="mono">&sect;05</td><td>CLT &amp; stack-up</td><td class="mono">03</td><td><span class="pv ok">faithful</span></td><td>Statement and the three conditions as in source. The RSS tolerance stack-up reading is <b>added</b>.</td></tr>
+        <tr><td class="mono">&sect;06</td><td>Hypothesis testing</td><td class="mono">04</td><td><span class="pv ok">faithful</span></td><td>Procedure and the bolt example are the source's, numbers unchanged. The control-chart reading is <b>added</b>.</td></tr>
+        <tr><td class="mono">&sect;07</td><td>Risk and power</td><td class="mono">04, 05</td><td><span class="pv ok">faithful</span></td><td>Errors, power and the sample-size formula as in source. Producer's and consumer's risk naming and the OC curve are <b>added</b>.</td></tr>
+        <tr><td class="mono">&sect;08</td><td>Confidence intervals</td><td class="mono">05</td><td><span class="pv ok">faithful</span></td><td>Construction and worked numbers as in source. The measurement-uncertainty link and the warning about what 95% means are <b>added</b>.</td></tr>
+        <tr><td class="mono">&sect;09</td><td>Where it breaks</td><td class="mono">&mdash;</td><td><span class="pv add">added</span></td><td>Entirely mine, and flagged on the page.</td></tr>
+        <tr><td class="mono">&sect;10</td><td>Worked example</td><td class="mono">01</td><td><span class="pv ok">expanded</span></td><td>Uses the source's own dataset. The section-property reading is <b>added</b>; every value is checked in <code>verify_claims.py</code>.</td></tr>
+      </tbody>
+      <caption>
+        <b>faithful</b> follows the source closely &middot; <b>expanded</b> keeps the source and
+        adds to it &middot; <b>added</b> has no source counterpart &middot; <b>corrected</b>
+        departs from the source on a point of fact. Nothing in this chapter needed correcting.
+      </caption>
+    </table>
+  </div>
+
+  <div class="col endnote">
+    <p>
+      Companion to <b>Chapter 04 &mdash; Statistics</b> of the Maths, CS &amp; AI Compendium by
+      Henry Ndubuaku. Figures marked <i>from the compendium</i> are reproduced from the
+      repository. &sect;09 is added material and is marked as such.
+    </p>
+    <p style="margin-bottom:0">Sheet 4 of 20. Built for a mechanical engineer with GATE-level mathematics and no prior CS.</p>
+  </div>
+</section>
+
+</main>
+</div>
+
+<style>
+#cGrid line, #hGrid line{stroke:var(--rule)}
+.blk{fill:var(--s2); stroke:var(--sheet); stroke-width:1.5; cursor:grab}
+.blk.on{cursor:grabbing}
+.axline{stroke:var(--rule-strong); stroke-width:1.5}
+.tick{stroke:var(--rule-strong); stroke-width:1}
+.tlab{fill:var(--ink-3); font-family:'IBM Plex Mono',monospace; font-size:10px}
+.alab{fill:var(--ink-2); font-family:'Archivo Narrow',sans-serif; font-size:11px; letter-spacing:.07em}
+.sigband{fill:var(--s3); fill-opacity:.13; stroke:var(--s3); stroke-width:1; stroke-dasharray:4 3}
+.cenline{stroke:var(--s1); stroke-width:2}
+.centri{fill:var(--s1)}
+.barP{fill:var(--s1); fill-opacity:.75}
+.barM{fill:var(--s2); fill-opacity:.85}
+.curveN{fill:none; stroke:var(--s2); stroke-width:2.5}
+.curveT{fill:none; stroke:var(--s1); stroke-width:2.5}
+.shA{fill:var(--s2); fill-opacity:.45}
+.shB{fill:var(--s1); fill-opacity:.30}
+.critl{stroke:var(--ink-2); stroke-width:1.5; stroke-dasharray:5 4}
+</style>
+
+<script>
+(function () {
+  'use strict';
+  var root = document.documentElement;
+  function dark(){ var t=root.getAttribute('data-theme');
+    return t ? t==='dark' : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches); }
+  try { var sv=localStorage.getItem('ch04-theme'); if(sv==='dark'||sv==='light') root.setAttribute('data-theme',sv); } catch(e){}
+  var tb=document.getElementById('themebtn');
+  if(tb) tb.addEventListener('click',function(){ var n=dark()?'light':'dark';
+    root.setAttribute('data-theme',n); try{localStorage.setItem('ch04-theme',n);}catch(e){} });
+
+  function $(id){ return document.getElementById(id); }
+  function fmt(n,d){ d=d===undefined?2:d; return (Math.abs(n)<5e-4?0:n).toFixed(d); }
+  function clamp(v,lo,hi){ return v<lo?lo:v>hi?hi:v; }
+  function grid(g,w,h,s){ var o=''; for(var x=0;x<=w;x+=s) o+='<line x1="'+x+'" y1="0" x2="'+x+'" y2="'+h+'"/>';
+    for(var y=0;y<=h;y+=s) o+='<line x1="0" y1="'+y+'" x2="'+w+'" y2="'+y+'"/>'; g.innerHTML=o; }
+  function erf(x){ var s=x<0?-1:1; x=Math.abs(x);
+    var a1=.254829592,a2=-.284496736,a3=1.421413741,a4=-1.453152027,a5=1.061405429,p=.3275911;
+    var t=1/(1+p*x); return s*(1-((((a5*t+a4)*t+a3)*t+a2)*t+a1)*t*Math.exp(-x*x)); }
+  function Phi(z){ return .5*(1+erf(z/Math.SQRT2)); }
+  function zstar(al){ var tg=1-al/2, lo=0, hi=6, m;
+    for(var i=0;i<60;i++){ m=(lo+hi)/2; if(Phi(m)<tg) lo=m; else hi=m; } return (lo+hi)/2; }
+
+  /* ============ LAB 1 : the balance point ============ */
+  var DATA=[2,4,4,4,5,5,7,9], VMAX=12, MX0=42, MX1=452, MAX_Y=228, BW=26, BH=16;
+  function mx(v){ return MX0 + v/VMAX*(MX1-MX0); }
+  function mval(px){ return clamp(Math.round((px-MX0)/(MX1-MX0)*VMAX),0,VMAX); }
+  function stats(a){
+    var n=a.length, mu=a.reduce(function(s,x){return s+x;},0)/n;
+    var v=a.reduce(function(s,x){return s+(x-mu)*(x-mu);},0)/n;
+    var e2=a.reduce(function(s,x){return s+x*x;},0)/n;
+    return {mu:mu, v:v, sd:Math.sqrt(v), e2:e2};
+  }
+  function drawM(){
+    var st=stats(DATA), seen={}, blocks='';
+    DATA.forEach(function(v,i){
+      var k=v.toFixed(3); seen[k]=(seen[k]||0)+1;
+      var x=mx(v)-BW/2, y=MAX_Y-seen[k]*(BH+2);
+      blocks+='<rect class="blk" data-i="'+i+'" x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+BW+'" height="'+BH+'" rx="2"/>';
+    });
+    $('mBlocks').innerHTML=blocks;
+    var lo=mx(st.mu-st.sd), hi=mx(st.mu+st.sd);
+    $('mBand').innerHTML='<rect class="sigband" x="'+lo.toFixed(1)+'" y="40" width="'+(hi-lo).toFixed(1)+'" height="'+(MAX_Y-40)+'"/>'
+      +'<text class="alab" x="'+((lo+hi)/2).toFixed(1)+'" y="34" text-anchor="middle" fill="var(--s3)">&#956; &#177; &#963;</text>';
+    var ax='<line class="axline" x1="'+MX0+'" y1="'+MAX_Y+'" x2="'+MX1+'" y2="'+MAX_Y+'"/>';
+    for(var t=0;t<=VMAX;t+=2){ ax+='<line class="tick" x1="'+mx(t)+'" y1="'+MAX_Y+'" x2="'+mx(t)+'" y2="'+(MAX_Y+5)+'"/>'
+      +'<text class="tlab" x="'+mx(t)+'" y="'+(MAX_Y+18)+'" text-anchor="middle">'+t+'</text>'; }
+    ax+='<text class="alab" x="'+((MX0+MX1)/2)+'" y="'+(MAX_Y+40)+'" text-anchor="middle">each block is one unit of area, or one data point</text>';
+    $('mAxis').innerHTML=ax;
+    var cx=mx(st.mu);
+    $('mMark').innerHTML='<line class="cenline" x1="'+cx.toFixed(1)+'" y1="42" x2="'+cx.toFixed(1)+'" y2="'+(MAX_Y+2)+'"/>'
+      +'<polygon class="centri" points="'+cx.toFixed(1)+','+(MAX_Y+2)+' '+(cx-7).toFixed(1)+','+(MAX_Y+16)+' '+(cx+7).toFixed(1)+','+(MAX_Y+16)+'"/>';
+    $('oMu').textContent=fmt(st.mu,3); $('oVar').textContent=fmt(st.v,3);
+    $('oSig').textContent=fmt(st.sd,3); $('oEx2').textContent=fmt(st.e2,3);
+    $('oMu2').textContent=fmt(st.mu*st.mu,3);
+    var d=Math.abs((st.e2-st.mu*st.mu)-st.v);
+    $('oPax').innerHTML=fmt(st.e2-st.mu*st.mu,3)+' <span class="flag ok" style="margin-left:4px">'+(d<1e-9?'= Var':'?')+'</span>';
+  }
+  (function initM(){
+    var svg=$('sM'), drag=null;
+    svg.addEventListener('pointerdown',function(ev){
+      var t=ev.target; if(!t.classList || !t.classList.contains('blk')) return;
+      ev.preventDefault(); drag=parseInt(t.getAttribute('data-i'),10);
+      t.classList.add('on'); svg.setPointerCapture(ev.pointerId);
+    });
+    svg.addEventListener('pointermove',function(ev){
+      if(drag===null) return; ev.preventDefault();
+      var r=svg.getBoundingClientRect(), vb=svg.viewBox.baseVal;
+      DATA[drag]=mval((ev.clientX-r.left)/r.width*vb.width); drawM();
+    });
+    function up(ev){ if(drag===null) return; drag=null;
+      Array.prototype.forEach.call(svg.querySelectorAll('.blk'),function(b){b.classList.remove('on');});
+      try{svg.releasePointerCapture(ev.pointerId);}catch(e){} }
+    svg.addEventListener('pointerup',up); svg.addEventListener('pointercancel',up);
+    $('mReset').addEventListener('click',function(){ DATA=[2,4,4,4,5,5,7,9]; drawM(); });
+    $('mSpread').addEventListener('click',function(){ DATA=[0,1,3,4,6,8,10,12]; drawM(); });
+    $('mTight').addEventListener('click',function(){ DATA=[5,5,5,6,6,6,7,7]; drawM(); });
+    drawM();
+  })();
+
+  /* ============ LAB 2 : CLT / stack-up ============ */
+  var POP='skew', NSTACK=1, XLO=0, XHI=10, NB=44, NDRAW=4000;
+  function draw1(){
+    var u,a,b;
+    if(POP==='uniform') return Math.random()*10;
+    if(POP==='skew'){ u=Math.random(); return clamp(-Math.log(1-u)*2.0,0,10); }
+    if(POP==='bimodal'){ a=Math.random()<.5?2.5:7.5; return clamp(a+gau()*0.65,0,10); }
+    b=Math.random()<.5?3.0:7.0; return clamp(b+gau()*0.16,0,10);
+  }
+  function gau(){ var u=0,v=0; while(u===0)u=Math.random(); while(v===0)v=Math.random();
+    return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
+  function hist(vals){ var b=new Array(NB).fill(0);
+    vals.forEach(function(v){ b[clamp(Math.floor((v-XLO)/(XHI-XLO)*NB),0,NB-1)]++; }); return b; }
+  function bars(b,x0,x1,yBase,hMax,cls){
+    var mx2=Math.max.apply(null,b)||1, w=(x1-x0)/NB, o='';
+    for(var i=0;i<NB;i++){ var h=b[i]/mx2*hMax; if(h<0.5) continue;
+      o+='<rect class="'+cls+'" x="'+(x0+i*w+0.6).toFixed(1)+'" y="'+(yBase-h).toFixed(1)+'" width="'+(w-1.2).toFixed(1)+'" height="'+h.toFixed(1)+'" rx="1"/>'; }
+    return o;
+  }
+  function drawC(){
+    var pop=[], i, j, s, means=[];
+    for(i=0;i<20000;i++) pop.push(draw1());
+    for(i=0;i<NDRAW;i++){ s=0; for(j=0;j<NSTACK;j++) s+=draw1(); means.push(s/NSTACK); }
+    var mu=pop.reduce(function(a,b2){return a+b2;},0)/pop.length;
+    var sd=Math.sqrt(pop.reduce(function(a,b2){return a+(b2-mu)*(b2-mu);},0)/pop.length);
+    var mm=means.reduce(function(a,b2){return a+b2;},0)/means.length;
+    var ms=Math.sqrt(means.reduce(function(a,b2){return a+(b2-mm)*(b2-mm);},0)/means.length);
+    var sk=means.reduce(function(a,b2){return a+Math.pow((b2-mm)/(ms||1),3);},0)/means.length;
+    $('cPop').innerHTML=bars(hist(pop),40,456,150,110,'barP');
+    $('cMeans').innerHTML=bars(hist(means),40,456,296,110,'barM');
+    var ax='<line class="axline" x1="40" y1="150" x2="456" y2="150"/><line class="axline" x1="40" y1="296" x2="456" y2="296"/>'
+      +'<text class="alab" x="40" y="32">POPULATION &#183; one part</text>'
+      +'<text class="alab" x="40" y="178">MEAN OF n PARTS</text>';
+    for(var t=0;t<=10;t+=2){ var px=40+t/10*416;
+      ax+='<text class="tlab" x="'+px+'" y="310" text-anchor="middle">'+t+'</text>'; }
+    $('cAx').innerHTML=ax;
+    $('oPs').textContent=fmt(sd,3); $('oSe').textContent=fmt(ms,3);
+    $('oSeT').textContent=fmt(sd/Math.sqrt(NSTACK),3); $('oSk').textContent=fmt(sk,3);
+    $('nVal').textContent='n = '+NSTACK;
+  }
+  (function initC(){
+    grid($('cGrid'),480,330,30);
+    $('nSl').addEventListener('input',function(){ NSTACK=parseInt(this.value,10); drawC(); });
+    $('cRoll').addEventListener('click',drawC);
+    document.querySelectorAll('[data-pop]').forEach(function(b){
+      b.addEventListener('click',function(){ POP=b.getAttribute('data-pop');
+        document.querySelectorAll('[data-pop]').forEach(function(o){o.classList.remove('on');});
+        b.classList.add('on'); drawC(); });
+    });
+    drawC();
+  })();
+
+  /* ============ LAB 3 : producer's and consumer's risk ============ */
+  var MU0=10, SIG=0.9;
+  function drawH(){
+    var mu=parseInt($('muSl').value,10)/100, n=parseInt($('nnSl').value,10), al=parseInt($('aSl').value,10)/100;
+    var se=SIG/Math.sqrt(n), zs=zstar(al), cl=MU0-zs*se, ch=MU0+zs*se;
+    var half=Math.max(4*se, Math.abs(mu-MU0)+3.2*se, 0.18);
+    var lo=MU0-half, hi=MU0+half, X0=44, X1=456, Y=244, H=186;
+    function px(v){ return X0+(v-lo)/(hi-lo)*(X1-X0); }
+    function pdf(v,m){ var z=(v-m)/se; return Math.exp(-.5*z*z); }
+    function path(m,cls){ var d='',i,v;
+      for(i=0;i<=300;i++){ v=lo+i/300*(hi-lo); d+=(i?'L':'M')+px(v).toFixed(1)+' '+(Y-pdf(v,m)*H).toFixed(1); }
+      return '<path class="'+cls+'" d="'+d+'"/>'; }
+    function area(m,a,b,cls){ var d='M'+px(a).toFixed(1)+' '+Y,i,v;
+      for(i=0;i<=120;i++){ v=a+i/120*(b-a); d+='L'+px(v).toFixed(1)+' '+(Y-pdf(v,m)*H).toFixed(1); }
+      return '<path class="'+cls+'" d="'+d+'L'+px(b).toFixed(1)+' '+Y+'Z"/>'; }
+    $('hShade').innerHTML = area(MU0,lo,cl,'shA')+area(MU0,ch,hi,'shA')+area(mu,cl,ch,'shB');
+    $('hCurves').innerHTML = path(MU0,'curveN')+path(mu,'curveT');
+    var ax='<line class="axline" x1="'+X0+'" y1="'+Y+'" x2="'+X1+'" y2="'+Y+'"/>'
+      +'<line class="critl" x1="'+px(cl).toFixed(1)+'" y1="44" x2="'+px(cl).toFixed(1)+'" y2="'+Y+'"/>'
+      +'<line class="critl" x1="'+px(ch).toFixed(1)+'" y1="44" x2="'+px(ch).toFixed(1)+'" y2="'+Y+'"/>'
+      +'<text class="tlab" x="'+px(cl).toFixed(1)+'" y="38" text-anchor="middle">'+fmt(cl,3)+'</text>'
+      +'<text class="tlab" x="'+px(ch).toFixed(1)+'" y="38" text-anchor="middle">'+fmt(ch,3)+'</text>'
+      +'<text class="alab" x="'+((X0+X1)/2)+'" y="'+(Y+34)+'" text-anchor="middle">sample mean of n bolts (cm)</text>';
+    [MU0, mu].forEach(function(v,i){ ax+='<text class="tlab" x="'+px(v).toFixed(1)+'" y="'+(Y+16)+'" text-anchor="middle" fill="'+(i?'var(--s1)':'var(--s2)')+'">'+fmt(v,2)+'</text>'; });
+    $('hAx').innerHTML=ax;
+    var be=Phi((ch-mu)/se)-Phi((cl-mu)/se);
+    $('muVal').textContent=fmt(mu,2); $('nnVal').textContent=String(n); $('aVal').textContent=fmt(al,2);
+    $('oSE').textContent=fmt(se,4); $('oAl').textContent=fmt(al,3);
+    $('oBe').textContent=fmt(be,3); $('oPw').textContent=fmt(1-be,3);
+    $('oZ').textContent=fmt((mu-MU0)/se,2);
+  }
+  (function initH(){
+    grid($('hGrid'),480,300,30);
+    ['muSl','nnSl','aSl'].forEach(function(id){ $(id).addEventListener('input',drawH); });
+    drawH();
+  })();
+
+  /* ============ rail ============ */
+  (function initRail(){
+    var links=Array.prototype.slice.call(document.querySelectorAll('.rail a'));
+    if(!links.length||!window.IntersectionObserver) return;
+    var map={}; links.forEach(function(a){ map[a.getAttribute('href').slice(1)]=a; });
+    var seen={};
+    var io=new IntersectionObserver(function(es){
+      es.forEach(function(e){ seen[e.target.id]=e.isIntersecting; });
+      var ids=Object.keys(map), act=null;
+      for(var i=0;i<ids.length;i++) if(seen[ids[i]]){ act=ids[i]; break; }
+      if(!act) return;
+      links.forEach(function(a){ a.classList.toggle('on',a===map[act]); });
+    },{rootMargin:'-70px 0px -65% 0px',threshold:0});
+    Object.keys(map).forEach(function(id){ var el=document.getElementById(id); if(el) io.observe(el); });
+  })();
+})();
+</script>
+<script>
+/* Safety net: if the MathJax bundle cannot be reached, degrade the TeX to
+   readable Unicode instead of leaving raw backslash markup on the page. */
+(function () {
+  'use strict';
+  var GREEK = { theta:'θ', sigma:'σ', delta:'δ', mu:'μ', pi:'π',
+                infty:'∞', alpha:'α', beta:'β', lambda:'λ' };
+  var SUB = { '1':'₁','2':'₂','3':'₃','i':'ᵢ','j':'ⱼ','n':'ₙ','p':'ₚ','x':'ₓ','y':'ᵧ' };
+  var SUP = { '2':'²','3':'³','n':'ⁿ','p':'ᵖ','*':'*' };
+
+  function degrade(t) {
+    t = t.replace(/\$\$/g, '').replace(/\\[()[\]]/g, '');
+    t = t.replace(/\\(?:left|right|textstyle|displaystyle|!|,|;|:)/g, '');
+    t = t.replace(/\\q?quad/g, ' ');
+    t = t.replace(/\\mathbb\{R\}/g, 'ℝ').replace(/\\mathbb\{Z\}/g, 'ℤ')
+         .replace(/\\mathbb\{N\}/g, 'ℕ').replace(/\\mathbb\{Q\}/g, 'ℚ');
+    t = t.replace(/\\(?:mathbf|mathrm|text|textbf|operatorname)\{([^{}]*)\}/g, '$1');
+    t = t.replace(/\\hat\{([^{}]*)\}/g, '$1̂').replace(/\\bar\{([^{}]*)\}/g, '$1̄');
+    t = t.replace(/\\sqrt\{([^{}]*)\}/g, '√($1)');
+    t = t.replace(/\\t?frac\{([^{}]*)\}\{([^{}]*)\}/g, '($1)/($2)');
+    t = t.replace(/\\binom\{([^{}]*)\}\{([^{}]*)\}/g, 'C($1,$2)');
+    t = t.replace(/\\([a-zA-Z]+)/g, function (m, w) {
+      if (GREEK[w]) return GREEK[w];
+      switch (w) {
+        case 'cdot': return '·';
+        case 'times': return '×';
+        case 'le': case 'leq': return '≤';
+        case 'ge': case 'geq': return '≥';
+        case 'neq': return '≠';
+        case 'approx': return '≈';
+        case 'in': return '∈';
+        case 'pm': return '±';
+        case 'to': case 'rightarrow': return '→';
+        case 'Rightarrow': return '⇒';
+        case 'iff': return '⇔';
+        case 'parallel': return '∥';
+        case 'perp': return '⊥';
+        case 'sum': return 'Σ';
+        case 'langle': return '⟨';
+        case 'rangle': return '⟩';
+        case 'wedge': return '∧';
+        case 'ast': return '*';
+        case 'cdots': case 'ldots': case 'dots': return '…';
+        case 'max': case 'min': case 'cos': case 'sin': case 'log': case 'exp': return w;
+        default: return w;
+      }
+    });
+    t = t.replace(/\\\|/g, '‖').replace(/\|\|/g, '‖');
+    t = t.replace(/_\{?([0-9ijnpxy])\}?/g, function (m, c) { return SUB[c] || ('_' + c); });
+    t = t.replace(/\^\{?([23np*])\}?/g, function (m, c) { return SUP[c] || ('^' + c); });
+    t = t.replace(/[{}]/g, '');
+    return t.replace(/[ \t]{2,}/g, ' ');
+  }
+
+  function run() {
+    if (window.MathJax && window.MathJax.startup && window.MathJax.startup.document) return;
+    var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+      acceptNode: function (n) {
+        if (!n.nodeValue || n.nodeValue.indexOf('\\') < 0 && n.nodeValue.indexOf('$$') < 0)
+          return NodeFilter.FILTER_REJECT;
+        var p = n.parentNode;
+        while (p && p !== document.body) {
+          var tag = p.nodeName;
+          if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'CODE' || tag === 'PRE')
+            return NodeFilter.FILTER_REJECT;
+          p = p.parentNode;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    var hits = [], n;
+    while ((n = walker.nextNode())) hits.push(n);
+    hits.forEach(function (node) { node.nodeValue = degrade(node.nodeValue); });
+    document.querySelectorAll('.mathbox').forEach(function (el) {
+      el.style.fontFamily = "'IBM Plex Mono', monospace";
+      el.style.fontSize = '15px';
+      el.style.textAlign = 'center';
+      el.style.padding = '10px 0';
+    });
+  }
+  setTimeout(run, 6000);
+})();
+</script>
+
+<script>
+/* Long display equations can be wider than their container - especially inside a
+   callout box, which is narrower than the main column. After the typesetter
+   finishes, measure each one and shrink it just enough to fit. Only ever shrinks,
+   never grows, and never below a readable floor - so the worst case is the
+   scrollbar we already had. */
+(function () {
+  'use strict';
+  var MIN_SCALE = 0.70;   /* below this, scrolling beats illegible text */
+
+  function fitOne(box) {
+    try {
+      var c = box.querySelector('mjx-container[display="true"]');
+      if (!c) return;
+      var svg = c.querySelector('svg');
+      if (!svg) return;
+      c.style.fontSize = '';
+      var avail = box.clientWidth;
+      if (!avail) return;
+      var w = svg.getBoundingClientRect().width;
+      if (!w || w <= avail) return;
+      var k = Math.max(MIN_SCALE, (avail / w) * 0.98);
+      c.style.fontSize = (k * 100).toFixed(1) + '%';
+      var w2 = svg.getBoundingClientRect().width;      /* one refinement pass */
+      if (w2 > avail) {
+        k = Math.max(MIN_SCALE, k * (avail / w2) * 0.98);
+        c.style.fontSize = (k * 100).toFixed(1) + '%';
+      }
+    } catch (e) { /* leave the equation exactly as it was */ }
+  }
+
+  function fitAll() {
+    try { document.querySelectorAll('.mathbox').forEach(fitOne); } catch (e) {}
+  }
+
+  function start() {
+    fitAll();
+    var t;
+    window.addEventListener('resize', function () {
+      clearTimeout(t); t = setTimeout(fitAll, 160);
+    });
+  }
+
+  function waitForTypesetter(n) {
+    if (window.MathJax && window.MathJax.startup && window.MathJax.startup.promise) {
+      window.MathJax.startup.promise.then(start, start);
+      return;
+    }
+    if (n > 60) return;            /* typesetter never arrived - nothing to fit */
+    setTimeout(function () { waitForTypesetter(n + 1); }, 200);
+  }
+  waitForTypesetter(0);
+})();
+</script>
