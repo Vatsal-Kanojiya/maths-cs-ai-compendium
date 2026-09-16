@@ -591,12 +591,16 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
   </div>
 
   <figure class="col">
+    <div class="paper"><img src="img/decision_tree_split.svg" alt="A dataset divided by a single threshold split, with the resulting two groups" width="410"></div>
+    <figcaption><b>Fig. 6.1</b> &mdash; One split, and what it does to the data. Choosing the threshold means choosing the question that removes the most uncertainty &mdash; information gain, which is Chapter 05&rsquo;s mutual information under another name. A troubleshooting flowchart, except that the questions are chosen by measurement rather than by experience. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+  <figure class="col">
     <div class="paper"><img src="img/svm_margin.svg" alt="A separating boundary with the maximum margin marked and the support vectors touching it" width="410"></div>
-    <figcaption><b>Fig. 6.1</b> &mdash; The maximum-margin boundary. Only the circled support vectors matter; every other point could move freely without changing the answer. <i>Figure from the compendium.</i></figcaption>
+    <figcaption><b>Fig. 6.2</b> &mdash; The maximum-margin boundary. Only the circled support vectors matter; every other point could move freely without changing the answer. <i>Figure from the compendium.</i></figcaption>
   </figure>
   <figure class="col">
     <div class="paper"><img src="img/kmeans_clustering.svg" alt="Points grouped into clusters around their centroids" width="410"></div>
-    <figcaption><b>Fig. 6.2</b> &mdash; k-means. Read each cluster as a section and its centre as a centroid, and the objective is total second moment. <i>Figure from the compendium.</i></figcaption>
+    <figcaption><b>Fig. 6.3</b> &mdash; k-means. Read each cluster as a section and its centre as a centroid, and the objective is total second moment. <i>Figure from the compendium.</i></figcaption>
   </figure>
 </section>
 
@@ -638,7 +642,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
   </div>
   <figure class="col">
     <div class="paper"><img src="img/ensemble_methods.svg" alt="Several models combined by voting or averaging into a single prediction" width="410"></div>
-    <figcaption><b>Fig. 6.3</b> &mdash; Bagging and boosting. Bagging averages independent models; boosting fits each new model to what the previous ones got wrong. <i>Figure from the compendium.</i></figcaption>
+    <figcaption><b>Fig. 6.4</b> &mdash; Bagging and boosting. Bagging averages independent models; boosting fits each new model to what the previous ones got wrong. <i>Figure from the compendium.</i></figcaption>
   </figure>
 </section>
 
@@ -904,7 +908,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
 
   <figure class="col">
     <div class="paper"><img src="img/optimizer_trajectories.svg" alt="Paths taken across a loss surface by several different optimisers" width="420"></div>
-    <figcaption><b>Fig. 6.4</b> &mdash; Optimiser trajectories on the same surface. <b>Nesterov</b> momentum, in the source, evaluates the gradient at the look-ahead position \(\mathbf{w}-\eta\beta\mathbf{v}_{t-1}\) &mdash; anticipating where the mass is heading and correcting early, which is what a lead compensator does in a control loop. <i>Figure from the compendium.</i></figcaption>
+    <figcaption><b>Fig. 6.5</b> &mdash; Optimiser trajectories on the same surface. <b>Nesterov</b> momentum, in the source, evaluates the gradient at the look-ahead position \(\mathbf{w}-\eta\beta\mathbf{v}_{t-1}\) &mdash; anticipating where the mass is heading and correcting early, which is what a lead compensator does in a control loop. <i>Figure from the compendium.</i></figcaption>
   </figure>
 </section>
 
@@ -1188,7 +1192,11 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
   </div>
   <figure class="col">
     <div class="paper"><img src="img/activation_functions.svg" alt="ReLU, sigmoid, tanh and GELU plotted together" width="420"></div>
-    <figcaption><b>Fig. 6.5</b> &mdash; The activations. Note where each one saturates: a flat region is a dead gradient, which is why ReLU-family functions replaced sigmoid in deep networks. <i>Figure from the compendium.</i></figcaption>
+    <figcaption><b>Fig. 6.6</b> &mdash; The activations. Note where each one saturates: a flat region is a dead gradient, which is why ReLU-family functions replaced sigmoid in deep networks. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+  <figure class="col">
+    <div class="paper"><img src="img/normalization_types.svg" alt="Which axes each normalisation scheme averages over" width="420"></div>
+    <figcaption><b>Fig. 6.7</b> &mdash; What each scheme averages over. <b>BatchNorm</b> normalises one feature across the whole batch, which couples samples that have nothing to do with each other &mdash; and is why it must switch to stored running statistics at inference, when there is no batch to normalise against. <b>LayerNorm</b> normalises across features within a single sample, so each sample is independent of its neighbours. That independence is why transformers use it. <i>Figure from the compendium.</i></figcaption>
   </figure>
 </section>
 
@@ -1241,7 +1249,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
   </div>
   <figure class="col">
     <div class="paper"><img src="img/mdp_agent_loop.svg" alt="An agent acting on an environment and receiving state and reward in return" width="400"></div>
-    <figcaption><b>Fig. 6.6</b> &mdash; The agent&ndash;environment loop. Relabel it plant, controller, sensor and setpoint and it is a block diagram from a control course. <i>Figure from the compendium.</i></figcaption>
+    <figcaption><b>Fig. 6.8</b> &mdash; The agent&ndash;environment loop. Relabel it plant, controller, sensor and setpoint and it is a block diagram from a control course. <i>Figure from the compendium.</i></figcaption>
   </figure>
 </section>
 
@@ -1295,7 +1303,11 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
   </div>
   <figure class="col">
     <div class="paper"><img src="img/data_model_parallelism.svg" alt="Data parallelism replicating the model against model parallelism splitting it" width="420"></div>
-    <figcaption><b>Fig. 6.7</b> &mdash; Data parallelism replicates the model and splits the batch; model parallelism splits the model itself. Large training runs combine both, plus pipelining. <i>Figure from the compendium.</i></figcaption>
+    <figcaption><b>Fig. 6.9</b> &mdash; Data parallelism replicates the model and splits the batch; model parallelism splits the model itself. Large training runs combine both, plus pipelining. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+  <figure class="col">
+    <div class="paper"><img src="img/ring_allreduce.svg" alt="Workers arranged in a ring, each passing a partial sum to its neighbour" width="420"></div>
+    <figcaption><b>Fig. 6.10</b> &mdash; Ring all-reduce, which is how the gradients actually get summed. Each worker passes a partial sum to one neighbour and receives one from the other, so the data makes two laps of the ring &mdash; once accumulating, once distributing &mdash; and no node is ever a central collection point. It is a bucket brigade rather than a hub. The useful consequence: the volume each worker sends does not grow with the number of workers, which is what makes scaling to thousands of them possible at all. <i>Figure from the compendium.</i></figcaption>
   </figure>
 </section>
 
@@ -1610,7 +1622,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
         <text x="644" y="355" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">CHAPTERS 11 &amp; 19</text>
       </svg>
     </div>
-    <figcaption><b>Fig. 6.8</b> &mdash; From here the compendium stops teaching method and starts applying it. Everything after this chapter is one of these four capabilities pointed at a domain.</figcaption>
+    <figcaption><b>Fig. 6.11</b> &mdash; From here the compendium stops teaching method and starts applying it. Everything after this chapter is one of these four capabilities pointed at a domain.</figcaption>
   </figure>
 
   <div class="col">
