@@ -41,6 +41,7 @@ merely structural, that is said plainly.
 | 03 | Calculus | [`ch03-calculus/`](ch03-calculus/index.html) | [Read online](https://claude.ai/artifact/DhK5wG1RE9YMnRxSHizngC) |
 | 04 | Statistics | [`ch04-statistics/`](ch04-statistics/index.html) | [Read online](https://claude.ai/artifact/XWetUvsAH8Mw25LRxecCKU) |
 | 05 | Probability | [`ch05-probability/`](ch05-probability/index.html) | [Read online](https://claude.ai/artifact/DDbGs67DwJPTwCYWFyTUMW) |
+| 06 | Machine Learning | [`ch06-machine-learning/`](ch06-machine-learning/index.html) | [Read online](https://claude.ai/artifact/AazU1pknayKewgpJQhzo3Z) |
 
 ## What's in a chapter page
 

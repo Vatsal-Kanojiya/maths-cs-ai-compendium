@@ -171,6 +171,10 @@ section{padding-block:38px 0; scroll-margin-top:calc(env(safe-area-inset-top,0px
   border:1px solid var(--rule); border-left:3px solid var(--accent);
   background:var(--sheet); border-radius:2px; padding:16px 18px; margin:22px 0;
 }
+/* Greek letters must never be uppercased: text-transform turns beta into
+   a capital Beta, which is the Latin letter B on screen -- likewise eta->H,
+   kappa->K, lambda->A-shape.  Any Greek inside an uppercased label wears .gk. */
+.gk{text-transform:none}
 .note.bridge{border-left-color:var(--bridge); background:var(--bridge-soft)}
 .note.brk{border-left-color:var(--brk); background:var(--brk-soft)}
 .note-h{
@@ -962,7 +966,7 @@ a.srcref:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
         <div class="ro"><div class="ro-k">trace A</div><div class="ro-v" id="oTr">&mdash;</div></div>
         <div class="ro"><div class="ro-k">rank</div><div class="ro-v" id="oRank">&mdash;</div></div>
         <div class="ro"><div class="ro-k">Eigenvalues</div><div class="ro-v a" id="oEig" style="font-size:12px">&mdash;</div></div>
-        <div class="ro"><div class="ro-k">Condition &kappa;</div><div class="ro-v" id="oCond">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Condition <span class="gk">&kappa;</span></div><div class="ro-v" id="oCond">&mdash;</div></div>
       </div>
       <div class="legend">
         <span class="lg"><i style="background:var(--s2)"></i>column 1 &middot; where <b>i</b> lands</span>
@@ -1122,10 +1126,10 @@ a.srcref:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
         <button class="btn" id="snapAx" type="button">Snap to principal axis</button>
       </div>
       <div class="readout">
-        <div class="ro"><div class="ro-k">Input &omega;</div><div class="ro-v a" id="oIn">&mdash;</div></div>
-        <div class="ro"><div class="ro-k">Output I&omega;</div><div class="ro-v b" id="oOut">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Input <span class="gk">&omega;</span></div><div class="ro-v a" id="oIn">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Output I<span class="gk">&omega;</span></div><div class="ro-v b" id="oOut">&mdash;</div></div>
         <div class="ro"><div class="ro-k">Misalignment</div><div class="ro-v" id="oMis">&mdash;</div></div>
-        <div class="ro"><div class="ro-k">Stretch |I&omega;|/|&omega;|</div><div class="ro-v c" id="oStr">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Stretch |I<span class="gk">&omega;</span>|/|<span class="gk">&omega;</span>|</div><div class="ro-v c" id="oStr">&mdash;</div></div>
       </div>
       <div class="legend">
         <span class="lg"><i style="background:var(--s2)"></i>input &omega;</span>
@@ -1343,7 +1347,7 @@ a.srcref:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
         <div class="ro"><div class="ro-k">Numbers stored</div><div class="ro-v" id="oStore">&mdash;</div></div>
         <div class="ro"><div class="ro-k">vs. 4096 original</div><div class="ro-v c" id="oRatio">&mdash;</div></div>
         <div class="ro"><div class="ro-k">Relative error</div><div class="ro-v a" id="oErr">&mdash;</div></div>
-        <div class="ro"><div class="ro-k">&sigma;&#8342; / &sigma;&#8321;</div><div class="ro-v" id="oSig">&mdash;</div></div>
+        <div class="ro"><div class="ro-k"><span class="gk">&sigma;</span>&#8342; / <span class="gk">&sigma;</span>&#8321;</div><div class="ro-v" id="oSig">&mdash;</div></div>
       </div>
     </div>
     <div class="lab-foot">

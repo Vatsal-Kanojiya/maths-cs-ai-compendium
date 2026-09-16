@@ -1,0 +1,2124 @@
+<title>Fitting, Overfitting, Momentum</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(', '\\)']], displayMath: [['$$', '$$']], processEscapes: true },
+  svg: { fontCache: 'global', scale: 1.0 },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-svg.js" id="MathJax-script" async></script>
+
+<style>
+/* ============ TOKENS: light is complete and authoritative ============ */
+:root{
+  --ground:#F0F2F1;
+  --sheet:#FBFCFB;
+  --sheet-2:#F4F6F5;
+  --ink:#14181A;
+  --ink-2:#4E575B;
+  --ink-3:#77838A;
+  --rule:#D3DAD7;
+  --rule-strong:#A8B4B0;
+  --accent:#12507E;
+  --accent-ink:#0E4267;
+  --accent-soft:#E4EEF6;
+  --bridge:#1F8A4C;
+  --bridge-soft:#E4F2EA;
+  --brk:#A8500F;
+  --brk-soft:#FAEBDF;
+  --s1:#BF5B00;
+  --s2:#0F74C7;
+  --s3:#1F8A4C;
+  --paper:#FFFFFF;            /* pasted-drawing ground, both themes */
+  --paper-ink:#1b1b1b;
+  --shadow:0 1px 2px rgba(20,24,26,.06), 0 6px 18px rgba(20,24,26,.05);
+  --f-disp:'Archivo Narrow', 'Arial Narrow', Helvetica, sans-serif;
+  --f-body:'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --f-mono:'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+    --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+    --rule:#293134; --rule-strong:#3F494C;
+    --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+    --bridge:#35AC63; --bridge-soft:#11281B;
+    --brk:#E0913F; --brk-soft:#2E2012;
+    --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+  --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+  --rule:#293134; --rule-strong:#3F494C;
+  --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+  --bridge:#35AC63; --bridge-soft:#11281B;
+  --brk:#E0913F; --brk-soft:#2E2012;
+  --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:var(--f-body); font-size:17px; line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ============ TITLE BLOCK (engineering drawing header) ============ */
+.titleblock{
+  position:sticky; top:env(safe-area-inset-top,0px); z-index:40;
+  background:var(--sheet); border-bottom:1px solid var(--rule-strong);
+}
+.tb-in{
+  max-width:1240px; margin:0 auto; padding:0 16px;
+  display:flex; align-items:stretch; gap:0; min-height:46px;
+}
+.tb-cell{
+  display:flex; flex-direction:column; justify-content:center;
+  padding:5px 14px; border-right:1px solid var(--rule);
+  font-family:var(--f-disp);
+}
+.tb-cell:first-child{padding-left:0}
+.tb-cell:last-child{border-right:0; margin-left:auto; padding-right:0}
+.tb-k{
+  font-size:8.5px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); line-height:1.4;
+}
+.tb-v{font-size:13px; font-weight:700; letter-spacing:.02em; color:var(--ink); line-height:1.3}
+.tb-v.accent{color:var(--accent)}
+.tb-hide{display:none}
+@media (min-width:680px){ .tb-hide{display:flex} }
+
+.themebtn{
+  appearance:none; background:transparent; border:1px solid var(--rule-strong);
+  color:var(--ink-2); font-family:var(--f-disp); font-size:10px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:6px 10px; border-radius:2px;
+  cursor:pointer; align-self:center; white-space:nowrap;
+}
+.themebtn:hover{border-color:var(--accent); color:var(--accent)}
+.themebtn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+/* ============ SHELL ============ */
+.shell{max-width:1240px; margin:0 auto; padding:0 16px; padding-block:0 64px}
+@media (min-width:1080px){
+  .shell{display:grid; grid-template-columns:212px minmax(0,1fr); gap:44px; align-items:start}
+}
+.rail{display:none}
+@media (min-width:1080px){
+  .rail{
+    display:block; position:sticky; top:calc(env(safe-area-inset-top,0px) + 70px);
+    padding-block:28px; font-family:var(--f-disp); font-size:12.5px;
+  }
+}
+.rail-h{
+  font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-3);
+  padding-bottom:8px; border-bottom:1px solid var(--rule); margin-bottom:10px;
+}
+.rail a{
+  display:flex; gap:9px; padding:4px 0; color:var(--ink-2); text-decoration:none;
+  border-left:2px solid transparent; padding-left:9px; margin-left:-11px; line-height:1.35;
+}
+.rail a:hover{color:var(--accent)}
+.rail a.on{color:var(--accent); border-left-color:var(--accent); font-weight:700}
+.rail a .n{font-family:var(--f-mono); font-size:10.5px; color:var(--ink-3); flex:none; padding-top:1px}
+.rail a.on .n{color:var(--accent)}
+
+main{min-width:0; padding-block:0 0}
+.col{max-width:70ch}
+
+/* ============ TYPE ============ */
+h1,h2,h3,h4{font-family:var(--f-disp); text-wrap:balance; margin:0; line-height:1.14}
+h1{font-size:clamp(34px,7vw,58px); font-weight:700; letter-spacing:-.015em}
+h2{font-size:clamp(25px,4.2vw,34px); font-weight:700; letter-spacing:-.01em}
+h3{font-size:19px; font-weight:700; letter-spacing:.005em; margin-top:2px}
+h4{font-size:14px; font-weight:700; letter-spacing:.06em; text-transform:uppercase}
+p{margin:0 0 1.05em}
+a{color:var(--accent-ink)}
+strong{font-weight:600}
+em{font-style:italic}
+code{font-family:var(--f-mono); font-size:.87em; background:var(--sheet-2); padding:1px 5px; border-radius:2px; border:1px solid var(--rule)}
+.lead{font-size:19.5px; line-height:1.56; color:var(--ink-2)}
+.eyebrow{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--ink-3); margin:0 0 10px;
+}
+.srcref{
+  font-family:var(--f-mono); font-size:11px; color:var(--ink-3);
+  border:1px solid var(--rule); border-radius:2px; padding:2px 7px; display:inline-block;
+  background:var(--sheet-2); white-space:nowrap;
+}
+
+/* ============ SECTION ============ */
+section{padding-block:38px 0; scroll-margin-top:calc(env(safe-area-inset-top,0px) + 62px)}
+.sechead{display:flex; align-items:baseline; gap:13px; margin-bottom:6px; flex-wrap:wrap}
+.secnum{
+  font-family:var(--f-mono); font-size:12px; font-weight:600; color:var(--accent);
+  border:1px solid var(--accent); border-radius:2px; padding:2px 7px; flex:none;
+  background:var(--accent-soft);
+}
+.rule-h{border:0; border-top:1px solid var(--rule); margin:0 0 22px}
+.rule-d{border:0; border-top:1px dashed var(--rule-strong); margin:34px 0}
+
+/* ============ CALLOUTS ============ */
+.note{
+  border:1px solid var(--rule); border-left:3px solid var(--accent);
+  background:var(--sheet); border-radius:2px; padding:16px 18px; margin:22px 0;
+}
+/* Greek letters must never be uppercased: text-transform turns beta into
+   a capital Beta, which is the Latin letter B on screen -- likewise eta->H,
+   kappa->K, lambda->A-shape.  Any Greek inside an uppercased label wears .gk. */
+.gk{text-transform:none}
+.note.bridge{border-left-color:var(--bridge); background:var(--bridge-soft)}
+.note.brk{border-left-color:var(--brk); background:var(--brk-soft)}
+.note-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; margin-bottom:7px; display:flex; align-items:center; gap:8px;
+}
+.note.bridge .note-h{color:var(--bridge)}
+.note.brk .note-h{color:var(--brk)}
+.note .note-h{color:var(--accent)}
+.note p:last-child, .note ul:last-child{margin-bottom:0}
+.note-h .ic{
+  width:15px; height:15px; border-radius:50%; border:1.5px solid currentColor; flex:none;
+  display:grid; place-items:center; font-size:9.5px; font-weight:700; font-family:var(--f-mono);
+}
+ul,ol{margin:0 0 1.05em; padding-left:1.25em}
+li{margin-bottom:.4em}
+li::marker{color:var(--ink-3)}
+
+/* ============ DEFINITION BLOCK ============ */
+.defn{
+  background:var(--sheet); border:1px solid var(--rule); border-radius:3px;
+  padding:18px 20px; margin:22px 0; box-shadow:var(--shadow);
+}
+.defn-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:10px;
+  padding-bottom:8px; border-bottom:1px solid var(--rule);
+}
+.defn p:last-child{margin-bottom:0}
+
+/* ============ TABLES ============ */
+.tw{overflow-x:auto; margin:22px 0; border:1px solid var(--rule); border-radius:3px; background:var(--sheet)}
+table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:480px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule); vertical-align:top}
+thead th{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); background:var(--sheet-2); font-weight:700; white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:0}
+td.mono,th.mono{font-family:var(--f-mono); font-size:13px; font-variant-numeric:tabular-nums}
+.tw caption{
+  caption-side:bottom; text-align:left; padding:9px 14px; font-size:12.5px;
+  color:var(--ink-3); border-top:1px solid var(--rule); font-family:var(--f-disp);
+}
+
+/* ============ FIGURES ============ */
+figure{margin:24px 0}
+.paper{
+  background:var(--paper); border:1px solid var(--rule-strong); border-radius:3px;
+  padding:16px; display:flex; justify-content:center; box-shadow:var(--shadow);
+}
+.paper img{max-width:100%; height:auto; display:block}
+figcaption{
+  font-family:var(--f-disp); font-size:12.5px; color:var(--ink-3); margin-top:9px;
+  line-height:1.45; padding-left:2px;
+}
+figcaption b{color:var(--ink-2); font-weight:700; letter-spacing:.04em}
+
+/* ============ INTERACTIVE PANELS ============ */
+.lab{
+  background:var(--sheet); border:1px solid var(--rule-strong); border-radius:3px;
+  margin:26px 0; overflow:hidden; box-shadow:var(--shadow);
+}
+.lab-h{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:11px 16px; border-bottom:1px solid var(--rule); background:var(--sheet-2);
+}
+.lab-t{font-family:var(--f-disp); font-size:13px; font-weight:700; letter-spacing:.05em; text-transform:uppercase}
+.lab-tag{
+  font-family:var(--f-mono); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--accent); border:1px solid var(--accent); border-radius:2px; padding:2px 6px;
+  margin-left:auto; white-space:nowrap;
+}
+.lab-body{padding:16px}
+.lab-foot{
+  padding:11px 16px; border-top:1px solid var(--rule); background:var(--sheet-2);
+  font-size:13.5px; color:var(--ink-2); line-height:1.5;
+}
+.lab-foot b{color:var(--ink)}
+.stage{width:100%; max-width:560px; height:auto; display:block; margin-inline:auto; touch-action:none; cursor:grab}
+.stage.drag{cursor:grabbing}
+
+/* Dividers are drawn as cell borders rather than as 1px grid gaps over a grey
+   backdrop: when the item count does not fill the last row, a gap-based grid
+   leaves the backdrop showing as an empty grey block. */
+.readout{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr)); gap:0;
+  background:var(--sheet); border:1px solid var(--rule); border-radius:2px;
+  margin-top:14px; overflow:hidden;
+}
+.ro{background:var(--sheet); padding:8px 11px;
+  border-right:1px solid var(--rule); border-bottom:1px solid var(--rule)}
+.ro-k{
+  font-family:var(--f-disp); font-size:9px; letter-spacing:.13em; text-transform:uppercase;
+  color:var(--ink-3); margin-bottom:2px;
+  /* was white-space:nowrap, which clipped the longer keys instead of wrapping */
+  white-space:normal; overflow-wrap:break-word; line-height:1.3; min-height:2.6em;
+}
+.ro-v{
+  font-family:var(--f-mono); font-size:15px; font-weight:500; font-variant-numeric:tabular-nums;
+  color:var(--ink); line-height:1.25;
+}
+.ro-v.a{color:var(--s2)} .ro-v.b{color:var(--s1)} .ro-v.c{color:var(--s3)}
+
+.ctl{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:14px}
+.ctl label{
+  font-family:var(--f-disp); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-2); white-space:nowrap;
+}
+input[type=range]{
+  -webkit-appearance:none; appearance:none; height:22px; background:transparent;
+  flex:1 1 160px; min-width:130px; cursor:pointer;
+}
+input[type=range]:focus-visible{outline:2px solid var(--accent); outline-offset:3px}
+input[type=range]::-webkit-slider-runnable-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-moz-range-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:16px; height:16px; border-radius:50%;
+  background:var(--accent); border:2px solid var(--sheet); margin-top:-6.5px;
+}
+input[type=range]::-moz-range-thumb{
+  width:16px; height:16px; border-radius:50%; background:var(--accent);
+  border:2px solid var(--sheet);
+}
+.btn{
+  appearance:none; font-family:var(--f-disp); font-size:11px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:7px 13px; border-radius:2px;
+  border:1px solid var(--rule-strong); background:var(--sheet); color:var(--ink-2); cursor:pointer;
+}
+.btn:hover{border-color:var(--accent); color:var(--accent)}
+.btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.btn.on{background:var(--accent); border-color:var(--accent); color:var(--sheet)}
+
+.legend{display:flex; gap:16px; flex-wrap:wrap; margin-top:12px}
+.lg{display:flex; align-items:center; gap:7px; font-family:var(--f-disp); font-size:12px; color:var(--ink-2)}
+.lg i{width:15px; height:3px; border-radius:2px; flex:none; display:block}
+
+/* ============ MISC ============ */
+.mathbox{overflow-x:auto; overflow-y:hidden; margin:18px 0}
+mjx-container[display="true"]{margin:0 !important}
+.kv{display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:15px; margin:16px 0}
+.kv dt{font-family:var(--f-mono); font-size:13px; color:var(--accent); white-space:nowrap}
+.kv dd{margin:0; color:var(--ink-2)}
+
+details.q{
+  border:1px solid var(--rule); border-radius:3px; background:var(--sheet);
+  margin-bottom:9px; overflow:hidden;
+}
+details.q summary{
+  cursor:pointer; padding:12px 15px; font-weight:600; list-style:none;
+  display:flex; gap:11px; align-items:flex-start; font-size:15.5px;
+}
+details.q summary::-webkit-details-marker{display:none}
+details.q summary::after{
+  content:'+'; margin-left:auto; font-family:var(--f-mono); color:var(--accent);
+  font-size:17px; line-height:1; flex:none; padding-top:2px;
+}
+details.q[open] summary::after{content:'\2212'}
+details.q summary:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
+details.q summary .qn{
+  font-family:var(--f-mono); font-size:12px; color:var(--ink-3); flex:none; padding-top:3px;
+}
+details.q .ans{padding:0 15px 14px 41px; font-size:15.5px; color:var(--ink-2); border-top:1px solid var(--rule); padding-top:13px}
+details.q .ans p:last-child{margin-bottom:0}
+
+.endnote{
+  margin-top:44px; padding-top:20px; border-top:1px solid var(--rule-strong);
+  font-size:13.5px; color:var(--ink-3); font-family:var(--f-disp); line-height:1.55;
+}
+.endnote a{color:var(--accent)}
+
+.srcref{text-decoration:none}
+a.srcref{color:var(--ink-2); transition:none}
+
+</style>
+<style>
+.srcref{text-decoration:none}
+a.srcref{color:var(--ink-2)}
+a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(--accent-soft)}
+.srcref.nolink{opacity:.75; font-style:italic}
+.pv{font-family:var(--f-disp); font-size:9.5px; font-weight:700; letter-spacing:.1em;
+    text-transform:uppercase; padding:2px 7px; border-radius:2px; white-space:nowrap}
+.pv.ok{background:var(--bridge-soft); color:var(--bridge)}
+.pv.add{background:var(--accent-soft); color:var(--accent)}
+.pv.corr{background:var(--brk-soft); color:var(--brk)}
+.flag{display:inline-block; padding:1px 7px; border-radius:2px; font-family:var(--f-disp);
+      font-size:10px; letter-spacing:.1em; text-transform:uppercase; font-weight:700}
+.flag.ok{background:var(--bridge-soft); color:var(--bridge)}
+.flag.bad{background:var(--brk-soft); color:var(--brk)}
+.predict{border:1px solid var(--rule-strong); border-left:3px solid var(--brk);
+  background:var(--brk-soft); border-radius:2px; padding:13px 15px; margin:0 0 14px}
+.predict-h{font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--brk); margin-bottom:6px}
+.predict p{margin:0 0 10px; font-size:15px}
+.predict .opts{display:flex; gap:8px; flex-wrap:wrap}
+.pbtn{appearance:none; font-family:var(--f-disp); font-size:12px; font-weight:600;
+  padding:6px 12px; border-radius:2px; border:1px solid var(--rule-strong);
+  background:var(--sheet); color:var(--ink-2); cursor:pointer}
+.pbtn:hover{border-color:var(--brk); color:var(--brk)}
+.pbtn.picked{background:var(--brk); border-color:var(--brk); color:var(--sheet)}
+.pverdict{margin-top:10px; font-size:14.5px; color:var(--ink-2); display:none}
+.pverdict.show{display:block}
+.pverdict b{color:var(--ink)}
+.gap{border:1px solid var(--rule); border-left:3px solid var(--ink-3); background:var(--sheet-2);
+  border-radius:2px; padding:14px 16px; margin:18px 0}
+.gap-h{font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:7px}
+</style>
+
+<header class="titleblock">
+  <div class="tb-in">
+    <div class="tb-cell"><span class="tb-k">Chapter</span><span class="tb-v accent">06 &middot; Machine Learning</span></div>
+    <div class="tb-cell tb-hide"><span class="tb-k">Sheet</span><span class="tb-v">6 of 20</span></div>
+    <div class="tb-cell tb-hide"><span class="tb-k">Reader</span><span class="tb-v">B.E. Mechanical</span></div>
+    <div class="tb-cell tb-hide"><span class="tb-k">Prerequisite</span><span class="tb-v">Sheets 1&ndash;5</span></div>
+    <div class="tb-cell"><button class="themebtn" id="themebtn" type="button" aria-label="Switch colour theme">Theme</button></div>
+  </div>
+</header>
+
+<div class="shell">
+
+<nav class="rail" aria-label="Chapter contents">
+  <div class="rail-h">Contents</div>
+  <a href="#bridge" class="on"><span class="n">00</span><span>The bridge</span></a>
+  <a href="#shape"><span class="n">01</span><span>What a model is</span></a>
+  <a href="#classical"><span class="n">02</span><span>Classical methods</span></a>
+  <a href="#ensembles"><span class="n">03</span><span>Ensembles as redundancy</span></a>
+  <a href="#gradient"><span class="n">04</span><span>Fitting by gradient</span></a>
+  <a href="#momentum"><span class="n">05</span><span>Momentum is a damper</span></a>
+  <a href="#adam"><span class="n">06</span><span>Adam &amp; annealing</span></a>
+  <a href="#biasvar"><span class="n">07</span><span>Bias and variance</span></a>
+  <a href="#metrics"><span class="n">08</span><span>Precision and recall</span></a>
+  <a href="#deep"><span class="n">09</span><span>Deep learning</span></a>
+  <a href="#rl"><span class="n">10</span><span>Reinforcement learning</span></a>
+  <a href="#dist"><span class="n">11</span><span>Distributed training</span></a>
+  <a href="#breaks"><span class="n">12</span><span>Where it breaks</span></a>
+  <a href="#gaps"><span class="n">13</span><span>What is missing</span></a>
+  <a href="#worked"><span class="n">14</span><span>Worked example</span></a>
+  <a href="#recall"><span class="n">15</span><span>Question bank</span></a>
+  <a href="#next"><span class="n">16</span><span>What this feeds</span></a>
+  <a href="#provenance"><span class="n">A</span><span>Provenance</span></a>
+</nav>
+
+<main>
+
+<section id="top" style="padding-top:44px">
+  <div class="col">
+    <p class="eyebrow">Maths, CS &amp; AI Compendium &middot; Chapter 06</p>
+    <h1>Fitting, Overfitting, Momentum</h1>
+    <p class="lead" style="margin-top:18px">
+      This is the pivot. Chapters 01&ndash;05 were preparation; here they stop being preparation
+      and become the subject. A model is a function with parameters (Ch 01&ndash;02), fitted by
+      walking downhill (Ch 03), judged on a sample (Ch 04), against a loss that is a surprisal
+      (Ch 05). Every piece is already in your hands.
+    </p>
+    <p>
+      It is also the largest chapter in the compendium &mdash; five sub-fields in one file. Rather
+      than thin everything equally, this page goes deep where the mechanical correspondence is
+      exact and states plainly where it is compressing. &sect;13 is an honest inventory of what
+      got compressed.
+    </p>
+    <p>
+      The headline result is in &sect;05, and it is worth knowing before you start.
+      <strong>Momentum &mdash; the single most important trick in optimisation &mdash; is a mass
+      on a damped spring.</strong> Not a metaphor: the update rule is the discretised equation of
+      motion, \(\beta\) sets the damping ratio, and tuning it is choosing between underdamped
+      overshoot and overdamped sluggishness. You have solved this exact problem in vibrations.
+    </p>
+  </div>
+</section>
+
+<section id="bridge">
+  <div class="col">
+    <div class="sechead"><span class="secnum">00</span><h2>The bridge</h2></div>
+    <hr class="rule-h">
+  </div>
+  <div class="tw">
+    <table>
+      <thead><tr><th>What you already know</th><th>What ML calls it</th><th>How good is the match?</th></tr></thead>
+      <tbody>
+        <tr><td>Damped mass&ndash;spring, damping ratio \(\zeta\)</td><td>SGD with momentum</td><td><b style="color:var(--bridge)">Exact.</b> Same ODE, discretised. See &sect;05.</td></tr>
+        <tr><td>Moment of inertia about a centroid</td><td>k-means objective</td><td><b style="color:var(--bridge)">Exact</b> &mdash; scikit-learn calls it <code>inertia_</code>.</td></tr>
+        <tr><td>Factor of safety, binding constraint</td><td>SVM margin, support vectors</td><td><b style="color:var(--bridge)">Same structure.</b> Maximise the clearance.</td></tr>
+        <tr><td>2-out-of-3 voting, redundancy</td><td>Ensembles, random forests</td><td><b style="color:var(--bridge)">Exact,</b> including the \(\sqrt{n}\).</td></tr>
+        <tr><td>Troubleshooting flowchart</td><td>Decision tree</td><td><b style="color:var(--bridge)">Identical object.</b></td></tr>
+        <tr><td>Annealing &mdash; controlled cooling</td><td>Learning-rate schedule</td><td><b style="color:var(--bridge)">The name is literal,</b> borrowed from metallurgy.</td></tr>
+        <tr><td>Accuracy vs precision of an instrument</td><td>Bias vs variance</td><td><b style="color:var(--bridge)">Exact.</b> See &sect;07.</td></tr>
+        <tr><td>Producer's and consumer's risk (Ch 04&ndash;05)</td><td>Precision and recall</td><td><b style="color:var(--bridge)">The same four counts.</b> See &sect;08.</td></tr>
+        <tr><td>Springs in series, \(1/k_{eq}=\sum 1/k_i\)</td><td>F1 score</td><td><b style="color:var(--bridge)">Same harmonic mean.</b></td></tr>
+        <tr><td>Assembly line with idle stations</td><td>Pipeline parallelism &amp; bubbles</td><td><b style="color:var(--bridge)">Identical problem.</b> See &sect;11.</td></tr>
+        <tr><td>Cost-to-go in optimal control</td><td>Value function, Bellman equation</td><td><b style="color:var(--bridge)">The same equation.</b></td></tr>
+        <tr><td>Tension-only member (Ch 02)</td><td>ReLU</td><td><b style="color:var(--bridge)">Same constitutive law.</b></td></tr>
+        <tr><td>A design with one correct answer</td><td>A trained model</td><td><b style="color:var(--brk)">Nothing like it.</b> See &sect;12.</td></tr>
+      </tbody>
+      <caption>Twelve correspondences. The first one is the most useful thing in this chapter.</caption>
+    </table>
+  </div>
+</section>
+
+<section id="shape">
+  <div class="col">
+    <div class="sechead"><span class="secnum">01</span><h2>What a model actually is</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2006%20-%20machine%20learning/01.%20classical%20machine%20learning.md" target="_blank" rel="noopener">src 01. classical &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      Strip away the vocabulary and machine learning is curve fitting with the curve chosen
+      automatically. You have:
+    </p>
+    <div class="kv">
+      <dt>a model</dt><dd>a function \(f_\theta(\mathbf{x})\) with adjustable parameters \(\theta\)</dd>
+      <dt>a loss</dt><dd>a number saying how wrong it is on data you have</dd>
+      <dt>an optimiser</dt><dd>a rule for changing \(\theta\) to make the loss smaller</dd>
+      <dt>a test set</dt><dd>data held back, to check you have not simply memorised</dd>
+    </div>
+    <p>
+      <strong>Supervised</strong> learning has labelled examples &mdash; inputs with known correct
+      outputs, like a calibration dataset. <strong>Unsupervised</strong> learning has none, and
+      must find structure itself. <strong>Reinforcement</strong> learning has neither, only a
+      reward signal arriving after a sequence of decisions, which is &sect;10.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; you have done this with two parameters</div>
+      <p style="margin-bottom:0">
+        Fitting \(y=mx+c\) to lab data by least squares is supervised learning with two
+        parameters, and Chapter 05 &sect;06 showed it is maximum likelihood under Gaussian noise.
+        Everything in this chapter is that, scaled up: more parameters, a nastier loss surface,
+        and a serious worry about whether the fit generalises. The worry is the genuinely new
+        part &mdash; your calibration curve never had to work on a machine it had not seen.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="classical">
+  <div class="col">
+    <div class="sechead"><span class="secnum">02</span><h2>Classical methods, four of them</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2006%20-%20machine%20learning/01.%20classical%20machine%20learning.md" target="_blank" rel="noopener">src 01. classical &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      The source catalogues Naive Bayes, k-NN, decision trees, random forests, SVMs, k-means and
+      PCA. Four of those have exact mechanical readings worth spelling out.
+    </p>
+
+    <h3>Decision trees</h3>
+    <p>
+      A decision tree asks a sequence of threshold questions &mdash; "is temperature above
+      80&deg;C?" &mdash; splitting the data at each node until the leaves are pure. That is a
+      <strong>troubleshooting flowchart</strong>, the thing at the back of every service manual,
+      with one difference: the questions and thresholds are chosen from data rather than by an
+      experienced technician.
+    </p>
+    <p>
+      The choice criterion is <strong>information gain</strong>: pick the split that most reduces
+      entropy. That is Chapter 05 &sect;08 doing real work &mdash; information gain is the mutual
+      information between the split and the label, so the tree is greedily choosing the question
+      that tells it the most bits.
+    </p>
+    <div class="mathbox">
+      $$\text{Gain}=H(\text{parent})-\sum_k \frac{n_k}{n}H(\text{child}_k)$$
+    </div>
+    <p>
+      <strong>Gini impurity</strong> \(1-\sum p_i^2\) is a cheaper surrogate that behaves almost
+      identically and avoids computing logarithms.
+    </p>
+
+    <h3>k-nearest neighbours</h3>
+    <p>
+      Classify a point by the majority vote of its \(k\) closest neighbours. No training at all
+      &mdash; the data <em>is</em> the model. And it rests entirely on Chapter 01: the distance
+      metric you choose, and the scaling of your features. Chapter 01 &sect;02's unit-flip
+      demonstration was exactly a k-NN failure, and it is the classic way this method goes wrong.
+    </p>
+
+    <h3>Support vector machines</h3>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; the margin is a factor of safety</div>
+      <p>
+        An SVM does not just find a separating boundary; it finds the one with the largest
+        <strong>margin</strong> &mdash; the greatest clearance to the nearest data point on
+        either side. That is a design philosophy you already hold: do not merely satisfy the
+        constraint, satisfy it with the largest reserve you can afford.
+      </p>
+      <p style="margin-bottom:0">
+        The <strong>support vectors</strong> are the handful of points that touch the margin, and
+        they alone determine the boundary &mdash; move any other point and nothing changes. Those
+        are your <em>binding constraints</em>: in an optimisation under limits, only the active
+        constraints shape the answer. Chapter 03 &sect;07 called them exactly that, and the
+        Lagrange multipliers that solve an SVM are the same multipliers that were rod tensions
+        there.
+      </p>
+    </div>
+
+    <h3>k-means</h3>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; k-means minimises a moment of inertia</div>
+      <p>
+        k-means places \(k\) centres and assigns each point to its nearest, minimising
+      </p>
+      <div class="mathbox">
+        $$J=\sum_{j=1}^{k}\sum_{\mathbf{x}\in C_j}\|\mathbf{x}-\boldsymbol\mu_j\|^2$$
+      </div>
+      <p style="margin-bottom:0">
+        Look at what that sum is. Each cluster contributes the sum of squared distances from its
+        own centroid &mdash; a <strong>second moment of area about a centroidal axis</strong>,
+        exactly as Chapter 04 &sect;01 established. k-means is placing \(k\) centroids to minimise
+        total moment of inertia. This is not a loose reading: scikit-learn's attribute for the
+        converged objective is literally named <code>inertia_</code>. And the algorithm &mdash;
+        assign points, recompute centroids, repeat &mdash; is just alternating between the two
+        halves of a centroid calculation.
+      </p>
+    </div>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/svm_margin.svg" alt="A separating boundary with the maximum margin marked and the support vectors touching it" width="410"></div>
+    <figcaption><b>Fig. 6.1</b> &mdash; The maximum-margin boundary. Only the circled support vectors matter; every other point could move freely without changing the answer. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+  <figure class="col">
+    <div class="paper"><img src="img/kmeans_clustering.svg" alt="Points grouped into clusters around their centroids" width="410"></div>
+    <figcaption><b>Fig. 6.2</b> &mdash; k-means. Read each cluster as a section and its centre as a centroid, and the objective is total second moment. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="ensembles">
+  <div class="col">
+    <div class="sechead"><span class="secnum">03</span><h2>Ensembles are redundancy</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2006%20-%20machine%20learning/01.%20classical%20machine%20learning.md" target="_blank" rel="noopener">src 01. classical &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      <strong>Bagging</strong> trains many models on bootstrap resamples and averages them. A
+      <strong>random forest</strong> is bagged decision trees with an extra twist: each split
+      considers only a random subset of features, which decorrelates the trees.
+      <strong>Boosting</strong> is different in spirit &mdash; each new model is fitted to the
+      residual errors of the ones before it, which is successive approximation, the same idea as
+      iterating a Newton&ndash;Raphson correction.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; this is 2-out-of-3 voting</div>
+      <p>
+        Chapter 05 &sect;03 computed the reliability of redundant systems with majority voting.
+        An ensemble is that, with models in place of sensors. The averaging argument is Chapter
+        04's \(\sqrt{n}\): if \(n\) models each have error variance \(\sigma^2\) and their errors
+        are independent, the average has variance
+      </p>
+      <div class="mathbox">
+        $$\operatorname{Var}\left(\frac1n\sum_i \varepsilon_i\right)=\frac{\sigma^2}{n}$$
+      </div>
+      <p style="margin-bottom:0">
+        That is the standard error again, and it is the entire mathematical case for ensembles.
+        It also carries Chapter 05 &sect;09's warning intact: the \(1/n\) requires
+        <strong>independence</strong>. Correlated models are common-cause failure &mdash; ten
+        trees trained on the same biased data all fail the same way, and averaging them buys
+        almost nothing. Random forests inject randomness into feature selection for precisely
+        this reason: to decorrelate the members, exactly as you would separate redundant sensors
+        onto different power supplies.
+      </p>
+    </div>
+  </div>
+  <figure class="col">
+    <div class="paper"><img src="img/ensemble_methods.svg" alt="Several models combined by voting or averaging into a single prediction" width="410"></div>
+    <figcaption><b>Fig. 6.3</b> &mdash; Bagging and boosting. Bagging averages independent models; boosting fits each new model to what the previous ones got wrong. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="gradient">
+  <div class="col">
+    <div class="sechead"><span class="secnum">04</span><h2>Fitting by gradient</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2006%20-%20machine%20learning/02.%20gradient%20machine%20learning.md" target="_blank" rel="noopener">src 02. gradient &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      <strong>Linear regression</strong> fits \(\hat{y}=\mathbf{w}^T\mathbf{x}+b\) by minimising
+      squared error &mdash; which Chapter 05 &sect;06 showed is maximum likelihood under Gaussian
+      noise. <strong>Logistic regression</strong> handles classification by squashing the same
+      linear combination through a sigmoid to produce a probability:
+    </p>
+    <div class="mathbox">
+      $$\hat{p}=\sigma(\mathbf{w}^T\mathbf{x}+b)=\frac{1}{1+e^{-(\mathbf{w}^T\mathbf{x}+b)}}$$
+    </div>
+    <p>
+      and is trained with cross-entropy loss &mdash; which Chapter 05 &sect;08 showed is the
+      surprisal of the correct answer. Note what the sigmoid is doing physically: it is a
+      <strong>saturating response</strong>. Push the input far either way and the output pins at
+      0 or 1, exactly like a component against a hard stop. That saturation is also why sigmoid
+      units stop learning when driven hard &mdash; the gradient there is nearly zero, which is
+      the vanishing-gradient problem of Chapter 03 &sect;02 arriving from a different direction.
+    </p>
+    <p>
+      The loss you choose encodes what you consider a bad error:
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <thead><tr><th>Loss</th><th>Penalises</th><th>Use when</th></tr></thead>
+      <tbody>
+        <tr><td>Mean squared error</td><td>\(\varepsilon^2\) &mdash; one big error dominates</td><td>Errors are Gaussian, outliers are genuine</td></tr>
+        <tr><td>Mean absolute error</td><td>\(|\varepsilon|\) &mdash; all errors count equally</td><td>Outliers are noise you do not trust</td></tr>
+        <tr><td>Huber</td><td>Squared near zero, linear far out</td><td>You want both &mdash; the practical default</td></tr>
+        <tr><td>Cross-entropy</td><td>\(-\log \hat{p}_{\text{true}}\)</td><td>Classification. Confident and wrong is ruinous</td></tr>
+        <tr><td>Hinge</td><td>Violating the margin</td><td>SVMs &mdash; you want clearance, not probability</td></tr>
+      </tbody>
+      <caption>This is the L1-versus-L2 choice from Chapter 01 &sect;04, now deciding which errors your model is willing to tolerate.</caption>
+    </table>
+  </div>
+</section>
+
+<section id="momentum">
+  <div class="col">
+    <div class="sechead"><span class="secnum">05</span><h2>Momentum is a damped oscillator</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2006%20-%20machine%20learning/02.%20gradient%20machine%20learning.md" target="_blank" rel="noopener">src 02. gradient &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      Chapter 03 &sect;06 left gradient descent in a bad place: on an ill-conditioned problem it
+      zigzags across the valley, and the best possible rate with a constant step is
+      \((\kappa-1)/(\kappa+1)\) per iteration &mdash; \(0.980\) at \(\kappa=100\), which needs
+      about 231 steps to make 1% progress. Momentum fixes this, and it fixes it by being a
+      mechanism you have already analysed.
+    </p>
+    <p>The update rule, in the source's form:</p>
+    <div class="mathbox">
+      $$\mathbf{v}_t=\beta\mathbf{v}_{t-1}+(1-\beta)\nabla\mathcal{L},\qquad
+        \mathbf{w}\leftarrow\mathbf{w}-\eta\,\mathbf{v}_t$$
+    </div>
+    <p>Eliminate \(\mathbf{v}\) and you get a two-step recurrence in \(\mathbf{w}\) alone:</p>
+    <div class="mathbox">
+      $$\mathbf{w}_{t+1}-\mathbf{w}_t=\beta(\mathbf{w}_t-\mathbf{w}_{t-1})-\eta(1-\beta)\nabla\mathcal{L}$$
+    </div>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; that is the equation of motion</div>
+      <p>
+        A second difference in position, a first difference in position, and a force term. Take
+        the continuous limit and it is
+      </p>
+      <div class="mathbox">
+        $$m\ddot{\mathbf{w}}+c\dot{\mathbf{w}}+\nabla\mathcal{L}(\mathbf{w})=\mathbf{0}$$
+      </div>
+      <p>
+        A mass sliding in a potential well against viscous damping. The loss surface is the
+        potential, \(-\nabla\mathcal{L}\) is the restoring force, and the two hyperparameters map
+        onto the two physical quantities: \(\eta\) sets the timestep and \(\beta\) sets the ratio
+        of inertia to damping. Plain gradient descent is the \(\beta=0\) case &mdash; massless,
+        fully overdamped, no memory of where it was going.
+      </p>
+      <p style="margin-bottom:0">
+        Which means the shape of the tuning problem is one you have solved. <strong>Underdamped</strong>
+        (\(\beta\) too high): overshoot and ringing around the minimum, and slow with it.
+        <strong>Overdamped</strong> (\(\beta\) too low): safe, monotonic, slow.
+        <strong>Critically damped</strong>: the fastest approach. Those three regimes are real, the
+        \(\beta\) slider walks you through them, and the readout names which one you are in.
+      </p>
+    </div>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>Where this one stops being true &mdash; &ldquo;momentum cancels the zigzag&rdquo;</div>
+      <p>
+        The usual way this is taught &mdash; and the sentence this page had in an earlier draft
+        &mdash; is that momentum cancels the transverse oscillation: the contributions from
+        opposite walls of the valley annihilate while the downhill component accumulates. It is a
+        satisfying picture. <b>At the optimal tuning it is false</b>, and the panel below shows it
+        plainly, so it is worth being exact about what actually happens.
+      </p>
+      <p>
+        Run \(\kappa=20\) at the optimum and count the crossings. The momentum path changes the
+        sign of its stiff coordinate on <em>every single step</em> &mdash; 40 flips in 40 steps
+        &mdash; which is precisely what plain descent does. It does not cross less. It crosses
+        <em>further</em>: its worst excursion is \(1.71\) against plain descent&rsquo;s \(1.00\).
+        What changes is the rate at which the crossings die, \(0.62\) per step against \(0.90\),
+        and what that buys along the valley: after 20 steps the soft coordinate has fallen 147
+        times further than plain descent managed.
+      </p>
+      <p>
+        So the honest statement is not that momentum damps the zigzag. It is that momentum
+        <b>lets you take a step plain descent could not survive</b> &mdash; the effective step
+        here is \(0.134\), past plain descent&rsquo;s stability limit
+        \(2/\lambda_{\max}=0.100\), the limit Chapter 03 &sect;06 derived &mdash; and then holds
+        the resulting oscillation to a faster decay than that step would otherwise produce. The
+        \(\beta\) term is not there to smooth the path. It is there to buy stability at a step
+        size that would otherwise diverge, and the speed comes from the step.
+      </p>
+    </div>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>Two forms of the same rule &mdash; do not mix their constants</div>
+      <p>
+        The tuning results quoted below and in &sect;14 are stated for the <b>heavy-ball</b> form,
+        \(\mathbf{v}_t=\beta\mathbf{v}_{t-1}+\nabla\mathcal{L}\), \(\mathbf{w}\leftarrow\mathbf{w}-\alpha\mathbf{v}_t\),
+        which has no \((1-\beta)\) factor. The source writes the <b>normalised</b> form above, where
+        \(\mathbf{v}_t\) is a running average of the gradient rather than a running sum. The two
+        generate identical trajectories, but only if you translate the step:
+      </p>
+      <div class="mathbox">
+        $$\alpha=\eta\,(1-\beta)$$
+      </div>
+      <p>
+        This matters in practice. Raising \(\beta\) in the normalised form <i>shrinks</i> the
+        effective step, so turning momentum up while leaving \(\eta\) alone is not the experiment
+        you think you are running. Substituting the optimal \(\alpha^\ast\) and \(\beta^\ast\)
+        from &sect;14 and simplifying gives the optimal \(\eta\) directly:
+      </p>
+      <div class="mathbox">
+        $$\begin{aligned}
+          \eta^\ast=\frac{\alpha^\ast}{1-\beta^\ast}
+            &=\frac{4/(\sqrt{\lambda_{\max}}+\sqrt{\lambda_{\min}})^{2}}
+                   {4\sqrt{\lambda_{\max}\lambda_{\min}}\,/\,(\sqrt{\lambda_{\max}}+\sqrt{\lambda_{\min}})^{2}}\\[5pt]
+            &=\frac{1}{\sqrt{\lambda_{\max}\lambda_{\min}}}
+        \end{aligned}$$
+      </div>
+      <p>
+        That is worth pausing on, because it is the whole square root in one line. Plain gradient
+        descent&rsquo;s best step is \(2/(\lambda_{\max}+\lambda_{\min})\) &mdash; set by the
+        <b>arithmetic</b> mean of the curvature extremes, which the large eigenvalue dominates.
+        Momentum&rsquo;s best step is the reciprocal of their <b>geometric</b> mean. A geometric
+        mean is the square root of a product, so the ratio it produces is
+        \(\sqrt{\lambda_{\max}/\lambda_{\min}}=\sqrt{\kappa}\). The condition number does not
+        go under a square root by accident or by a clever trick; it goes there because the optimal
+        step stops being an average and starts being a geometric mean. At \(\kappa=100\) with
+        \(\lambda_{\min}=1\) this gives \(\eta^\ast=1/\sqrt{100}=0.1\) exactly.
+      </p>
+    </div>
+
+    <p>
+      The payoff is quantitative and large. With optimally tuned momentum the convergence rate on
+      a quadratic improves from \((\kappa-1)/(\kappa+1)\) to
+    </p>
+    <div class="mathbox">
+      $$\rho_{\text{momentum}}=\frac{\sqrt{\kappa}-1}{\sqrt{\kappa}+1}$$
+    </div>
+    <p>
+      The condition number moves under a square root. At \(\kappa=100\) the rate falls from
+      \(0.980\) to \(0.818\), and the steps needed for 1% progress drop from about
+      <strong>231 to 23</strong> &mdash; a tenfold speedup, from adding a mass term. This is why
+      essentially no one runs plain gradient descent.
+    </p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-h"><span class="lab-t">Adding mass to the descent</span><span class="lab-tag">Predict, then tune</span></div>
+    <div class="lab-body">
+      <div class="predict" id="pred1">
+        <div class="predict-h">Commit before you drag</div>
+        <p>
+          Gradient descent is zigzagging violently across a narrow valley. You add momentum
+          &mdash; inertia &mdash; to the update. What happens to the zigzag?
+        </p>
+        <div class="opts">
+          <button class="pbtn" data-p1="worse" type="button">Gets worse</button>
+          <button class="pbtn" data-p1="better" type="button">Gets better</button>
+          <button class="pbtn" data-p1="same" type="button">Unchanged</button>
+          <button class="pbtn" data-p1="dep" type="button">Depends on &beta;</button>
+        </div>
+        <div class="pverdict" id="v1"></div>
+      </div>
+      <svg class="stage" id="sM" viewBox="0 0 480 320" role="img"
+           aria-label="Two descent paths on elliptical contours, one plain and one with momentum, showing momentum cutting across the valley instead of oscillating">
+        <g id="mGrid"></g><g id="mCont"></g>
+        <line id="mAx"/><line id="mAy"/>
+        <path id="mPlain" fill="none" stroke-width="1.8" stroke-dasharray="4 3"/>
+        <path id="mMom" fill="none" stroke-width="2.2"/>
+        <g id="mDots"></g>
+        <circle id="mMin" r="5"/>
+      </svg>
+      <div class="ctl">
+        <label for="betaSl">Momentum <span class="gk">&beta;</span></label>
+        <input type="range" id="betaSl" min="0" max="990" value="0" step="1">
+        <span class="ro-v" id="betaVal" style="min-width:84px">&beta; = 0.000</span>
+        <button class="btn on" data-bp="none" type="button">None</button>
+        <button class="btn" data-bp="crit" type="button">Critical</button>
+        <button class="btn" data-bp="under" type="button">Underdamped</button>
+      </div>
+      <div class="ctl">
+        <label for="lrSl">Step <span class="gk">&eta;</span></label>
+        <input type="range" id="lrSl" min="1" max="8000" value="952" step="1">
+        <span class="ro-v" id="lrVal" style="min-width:66px">0.0952</span>
+        <label for="kapSl" style="margin-left:6px">Condition <span class="gk">&kappa;</span></label>
+        <input type="range" id="kapSl" min="2" max="60" value="20" step="1">
+        <span class="ro-v" id="kapVal" style="min-width:52px">20</span>
+      </div>
+      <div class="readout">
+        <div class="ro"><div class="ro-k">Regime</div><div class="ro-v" id="oReg">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Steps to 1%<br>plain</div><div class="ro-v b" id="oSp">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Steps to 1%<br>momentum</div><div class="ro-v c" id="oSm">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Best rate<br>(<span class="gk">&kappa;</span>&minus;1)/(<span class="gk">&kappa;</span>+1)</div><div class="ro-v" id="oRp">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Best rate<br>(&radic;<span class="gk">&kappa;</span>&minus;1)/(&radic;<span class="gk">&kappa;</span>+1)</div><div class="ro-v a" id="oRm">&mdash;</div></div>
+        <div class="ro"><div class="ro-k"><span class="gk">&eta;</span>&lowast; optimal step<br>1/&radic;(<span class="gk">&lambda;</span><sub class="gk">max</sub><span class="gk">&lambda;</span><sub class="gk">min</sub>)</div><div class="ro-v" id="oEta">&mdash;</div></div>
+        <div class="ro"><div class="ro-k"><span class="gk">&beta;</span>&lowast; critical<br>momentum</div><div class="ro-v" id="oBst">&mdash;</div></div>
+      </div>
+      <div class="legend">
+        <span class="lg"><i style="background:var(--s1)"></i>plain descent, at its own best step 2/(&lambda;<sub>max</sub>+&lambda;<sub>min</sub>)</span>
+        <span class="lg"><i style="background:var(--s2)"></i>with momentum, at the sliders</span>
+      </div>
+    </div>
+    <div class="lab-foot">
+      Same objective as Chapter 03 &sect;06, \(f=\tfrac12(\kappa x^2+y^2)\), so
+      \(\lambda_{\max}=\kappa\) and \(\lambda_{\min}=1\). The <b>dashed</b> reference path always
+      runs plain gradient descent at the <em>best step plain descent can take</em>,
+      \(2/(\lambda_{\max}+\lambda_{\min})\) &mdash; you are competing against its best, not a
+      handicapped version of it. The <b>solid</b> path runs the sliders. <b>None</b> sets
+      \(\beta=0\) at that same step, so the two coincide exactly: momentum with no momentum
+      <em>is</em> plain descent. <b>Critical</b> sets \(\beta^\ast\) and \(\eta^\ast\)
+      together &mdash; both, because \(\beta^\ast\) is only optimal at the matching step, and the
+      \((1-\beta)\) factor means raising \(\beta\) alone quietly shrinks your step. Watch what the path
+      then does, and what it does <em>not</em> do: it keeps crossing the valley on every step,
+      and it swings wider than the dashed path does &mdash; but each swing dies far faster, and
+      it travels down the valley in a fraction of the steps. <b>Underdamped</b>
+      pushes \(\beta\) above \(\beta^\ast\): it overshoots and rings, exactly as a lightly damped
+      system does, and it takes <em>longer</em> than plain descent &mdash; which is the point.
+      Drag \(\eta\) well past \(\eta^\ast\) and it diverges, the same stability limit
+      Chapter 03 &sect;06 found.
+    </div>
+    <div class="lab-foot">
+      <b>One honesty note on the step counts.</b> The two rate readouts are <em>asymptotic</em>
+      rates &mdash; what the error ratio settles to once the transient has died. The observed
+      step counts will not match \(\ln 0.01/\ln\rho\) exactly, and at the <b>Critical</b> preset
+      the observed count runs noticeably <em>above</em> the prediction. That is not a bug in
+      either number. At the optimum the two roots of the iteration coincide &mdash; it is
+      critically damped in the strict sense &mdash; so the error envelope is \(t\,\rho^{t}\),
+      not \(\rho^{t}\), and that extra factor of \(t\) holds the early steps back before the
+      geometric decay takes over. The speedup is real; an asymptotic rate is simply not a
+      step count.
+    </div>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/optimizer_trajectories.svg" alt="Paths taken across a loss surface by several different optimisers" width="420"></div>
+    <figcaption><b>Fig. 6.4</b> &mdash; Optimiser trajectories on the same surface. <b>Nesterov</b> momentum, in the source, evaluates the gradient at the look-ahead position \(\mathbf{w}-\eta\beta\mathbf{v}_{t-1}\) &mdash; anticipating where the mass is heading and correcting early, which is what a lead compensator does in a control loop. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="adam">
+  <div class="col">
+    <div class="sechead"><span class="secnum">06</span><h2>Adam, and annealing</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2006%20-%20machine%20learning/02.%20gradient%20machine%20learning.md" target="_blank" rel="noopener">src 02. gradient &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      Momentum fixes the direction. The other half of the problem is that different parameters
+      need different step sizes &mdash; some sit in steep directions, others in shallow ones, and
+      one global \(\eta\) serves neither well. <strong>Adagrad</strong>, <strong>RMSprop</strong>
+      and <strong>Adam</strong> attack this by tracking a running average of squared gradients per
+      parameter and dividing the step by its square root. Adam combines both ideas:
+    </p>
+    <div class="mathbox">
+      $$\begin{aligned}
+        m_t&=\beta_1 m_{t-1}+(1-\beta_1)g_t\\[2pt]
+        v_t&=\beta_2 v_{t-1}+(1-\beta_2)g_t^2\\[2pt]
+        w&\leftarrow w-\eta\frac{\hat{m}_t}{\sqrt{\hat{v}_t}+\epsilon}
+      \end{aligned}$$
+    </div>
+    <p>
+      \(m_t\) is the momentum of &sect;05; \(v_t\) is a per-parameter scale estimate. Both are
+      exponential moving averages &mdash; the same EMA from Chapter 04 &sect;02. Mechanically,
+      dividing by \(\sqrt{v}\) is <strong>preconditioning</strong>: rescaling each degree of
+      freedom by its own stiffness so that a single step size suits all of them. It is Chapter 03
+      &sect;06's observation that Newton's method is scale-free, approximated cheaply using only
+      the diagonal &mdash; you cannot afford the full Hessian, so you estimate its diagonal from
+      gradient history. <strong>AdamW</strong> corrects how weight decay interacts with this
+      rescaling, and is the practical default for training large models.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; the schedule is annealing, literally</div>
+      <p style="margin-bottom:0">
+        Learning-rate schedules start \(\eta\) high and reduce it &mdash; step decay, cosine
+        decay, warmup then decay. The name is not borrowed loosely: <strong>simulated
+        annealing</strong> was named directly after the metallurgical process, and for the same
+        reason. Cool a metal too fast and it locks into a poor, stressed configuration; cool it
+        slowly and atoms have time to find a low-energy arrangement. High learning rate early lets
+        the optimiser roam the loss surface; lowering it late lets it settle precisely. The
+        <em>warmup</em> phase at the start &mdash; ramping \(\eta\) up from near zero &mdash; has
+        no metallurgical counterpart; it exists because Adam's variance estimates are unreliable
+        in the first few hundred steps.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="biasvar">
+  <div class="col">
+    <div class="sechead"><span class="secnum">07</span><h2>Bias, variance, and why you hold data back</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2006%20-%20machine%20learning/02.%20gradient%20machine%20learning.md" target="_blank" rel="noopener">src 02. gradient &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      <strong>Bias</strong> is systematic error from wrong assumptions &mdash; fitting a straight
+      line to curved data. <strong>Variance</strong> is sensitivity to which particular sample you
+      trained on &mdash; a high-degree polynomial chasing noise. Simple models have high bias and
+      low variance; complex models the reverse.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; accuracy and precision</div>
+      <p style="margin-bottom:0">
+        This is the instrument distinction you were taught in your first measurements lab, and it
+        is exact. <strong>Bias is inaccuracy</strong>: shots grouped tightly but off-centre, a
+        micrometer with a zero error. <strong>Variance is imprecision</strong>: shots scattered
+        around the target, a gauge with poor repeatability. Total expected error decomposes as
+        \(\text{bias}^2+\text{variance}+\text{irreducible noise}\), and that third term is the
+        measurement noise you can never remove &mdash; the Bayes error. You cannot fix a biased
+        instrument by taking more readings, and you cannot fix an imprecise one by recalibrating.
+        Same two failure modes, same two remedies.
+      </p>
+    </div>
+    <p>
+      <strong>Cross-validation</strong> is how you measure the tradeoff without a separate test
+      set: split the data into \(k\) folds, train on \(k-1\), test on the held-out one, rotate.
+      It is the same discipline as reserving test coupons from a heat batch &mdash; you do not
+      certify a material using the specimens you used to set the process.
+    </p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-h"><span class="lab-t">Fitting, and overfitting</span><span class="lab-tag">Predict, then drag</span></div>
+    <div class="lab-body">
+      <div class="predict" id="pred2">
+        <div class="predict-h">Commit before you drag</div>
+        <p>
+          You have 12 noisy measurements from a smooth underlying process. You fit polynomials of
+          rising degree. Which degree will give the lowest error on <b>new, unseen</b> data?
+        </p>
+        <div class="opts">
+          <button class="pbtn" data-p2="1" type="button">Degree 1</button>
+          <button class="pbtn" data-p2="3" type="button">Degree 3&ndash;4</button>
+          <button class="pbtn" data-p2="8" type="button">Degree 8</button>
+          <button class="pbtn" data-p2="11" type="button">Degree 11 &mdash; passes every point</button>
+        </div>
+        <div class="pverdict" id="v2"></div>
+      </div>
+      <svg class="stage" id="sB" viewBox="0 0 480 320" role="img"
+           aria-label="A polynomial fitted to noisy points above, and training against test error as the degree rises below">
+        <g id="bGrid"></g><g id="bFit"></g><g id="bErr"></g><g id="bAx"></g>
+      </svg>
+      <div class="ctl">
+        <label for="degSl">Polynomial degree</label>
+        <input type="range" id="degSl" min="1" max="11" value="1" step="1">
+        <span class="ro-v" id="degVal" style="min-width:56px">1</span>
+        <button class="btn" id="bRoll" type="button">New sample</button>
+      </div>
+      <div class="readout">
+        <div class="ro"><div class="ro-k">Training error</div><div class="ro-v b" id="oTr">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Test error</div><div class="ro-v a" id="oTe">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Verdict</div><div class="ro-v" id="oVd">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Best degree on test</div><div class="ro-v c" id="oBest">&mdash;</div></div>
+      </div>
+      <div class="legend">
+        <span class="lg"><i style="background:var(--s2)"></i>true process</span>
+        <span class="lg"><i style="background:var(--s1)"></i>fitted polynomial</span>
+        <span class="lg"><i style="background:var(--s3)"></i>test error</span>
+      </div>
+    </div>
+    <div class="lab-foot">
+      The lower panel plots both errors against degree. <b>Training error falls monotonically</b>
+      &mdash; more parameters always fit the sample you have better, and at degree 11 it reaches
+      zero because the curve passes through all 12 points exactly. Test error falls, bottoms out,
+      then climbs sharply. That climb is the model memorising noise. This is Chapter 03 &sect;08's
+      claim made visible: the objective you can measure is not the one you care about, and
+      driving it to zero is a failure, not a success.
+    </div>
+  </div>
+</section>
+
+<section id="metrics">
+  <div class="col">
+    <div class="sechead"><span class="secnum">08</span><h2>Precision, recall, and an old debt</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2006%20-%20machine%20learning/02.%20gradient%20machine%20learning.md" target="_blank" rel="noopener">src 02. gradient &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      A classifier's output is a score; turning it into a decision needs a threshold, and where
+      you put that threshold is a choice about which kind of error you prefer. The four counts
+      should look familiar:
+    </p>
+    <div class="mathbox">
+      $$\begin{aligned}
+        \text{Precision}&=\frac{TP}{TP+FP}, &
+        \text{Recall}&=\frac{TP}{TP+FN}\\[4pt]
+        F_1&=\frac{2PR}{P+R}
+      \end{aligned}$$
+    </div>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; you computed these in Chapter 05</div>
+      <p>
+        <strong>Recall is sensitivity.</strong> <strong>Precision is \(P(\text{fault}\mid
+        \text{alarm})\)</strong> &mdash; the posterior from Chapter 05 &sect;05, the number that
+        came out at 16% for the vibration monitor. The whole base-rate lesson transfers intact:
+        on a rare class, precision collapses even for an excellent classifier, and reporting
+        "99% accuracy" hides it. Moving the threshold trades Chapter 04's producer's risk against
+        consumer's risk, and the <strong>ROC curve</strong> is the operating characteristic curve
+        of a sampling plan.
+      </p>
+      <p style="margin-bottom:0">
+        \(F_1\) has its own mechanical reading. It is the <strong>harmonic mean</strong> of
+        precision and recall &mdash; the same average that governs springs in series,
+        \(1/k_{eq}=\sum 1/k_i\), and parallel resistances. Harmonic means are dominated by the
+        smallest term, which is exactly the behaviour you want here: a model with 99% precision
+        and 2% recall scores \(F_1\approx0.039\), not 0.5. One weak link sets the strength of
+        the chain.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab">
+    <div class="lab-h"><span class="lab-t">Moving the threshold</span><span class="lab-tag">Predict, then slide</span></div>
+    <div class="lab-body">
+      <div class="predict" id="pred3">
+        <div class="predict-h">Commit before you slide</div>
+        <p>
+          You lower the alarm threshold so the detector triggers more readily. What happens to
+          precision and recall?
+        </p>
+        <div class="opts">
+          <button class="pbtn" data-p3="both" type="button">Both rise</button>
+          <button class="pbtn" data-p3="ru" type="button">Recall rises, precision falls</button>
+          <button class="pbtn" data-p3="pu" type="button">Precision rises, recall falls</button>
+          <button class="pbtn" data-p3="none" type="button">Neither changes</button>
+        </div>
+        <div class="pverdict" id="v3"></div>
+      </div>
+      <svg class="stage" id="sT" viewBox="0 0 480 300" role="img"
+           aria-label="Two overlapping score distributions with a movable decision threshold, shading the four outcome counts">
+        <g id="tGrid"></g><g id="tShade"></g><g id="tCurves"></g><g id="tAx"></g>
+      </svg>
+      <div class="ctl">
+        <label for="thrSl">Threshold</label>
+        <input type="range" id="thrSl" min="5" max="95" value="50" step="1">
+        <span class="ro-v" id="thrVal" style="min-width:56px">0.50</span>
+        <label for="baseSl" style="margin-left:6px">Positive rate</label>
+        <input type="range" id="baseSl" min="1" max="50" value="20" step="1">
+        <span class="ro-v" id="baseVal" style="min-width:56px">20%</span>
+      </div>
+      <div class="readout">
+        <div class="ro"><div class="ro-k">Precision</div><div class="ro-v a" id="oPr">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Recall &mdash; sensitivity</div><div class="ro-v b" id="oRc">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">F&#8321; &mdash; harmonic mean</div><div class="ro-v c" id="oF1">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Accuracy</div><div class="ro-v" id="oAc">&mdash;</div></div>
+      </div>
+      <div class="legend">
+        <span class="lg"><i style="background:var(--s2)"></i>negatives &mdash; healthy</span>
+        <span class="lg"><i style="background:var(--s1)"></i>positives &mdash; faulty</span>
+      </div>
+    </div>
+    <div class="lab-foot">
+      Watch <b>accuracy</b> while you drag the positive rate down to 1%. It stays near 99%
+      whatever the threshold, because predicting "healthy" every time is right 99% of the time.
+      Accuracy is useless on imbalanced problems, and it is still the number most often quoted.
+      Precision and recall move in opposite directions by construction &mdash; there is no
+      threshold that maximises both, only a choice about which error costs you more.
+    </div>
+  </div>
+</section>
+
+<section id="deep">
+  <div class="col">
+    <div class="sechead"><span class="secnum">09</span><h2>Deep learning</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2006%20-%20machine%20learning/03.%20deep%20learning.md" target="_blank" rel="noopener">src 03. deep learning &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      Chapter 02 &sect;09 established the core fact: stacking linear layers buys nothing, because
+      they collapse into one matrix, exactly as linear springs in series remain one spring. A
+      deep network is layers of \(W\mathbf{x}+\mathbf{b}\) with a nonlinearity between them, and
+      the nonlinearity is what makes depth mean anything.
+    </p>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Activation</th><th>Behaviour</th><th>Mechanical reading</th></tr></thead>
+        <tbody>
+          <tr><td><b>ReLU</b> \(\max(0,z)\)</td><td>Passes positive, blocks negative</td><td>Tension-only member; a gap element in contact</td></tr>
+          <tr><td><b>Sigmoid</b></td><td>Saturates at 0 and 1</td><td>A hard stop; output pins and the gradient dies</td></tr>
+          <tr><td><b>Tanh</b></td><td>Saturates at &plusmn;1, zero-centred</td><td>A symmetric stop</td></tr>
+          <tr><td><b>GELU</b>, <b>Swish</b></td><td>Smooth, near-ReLU</td><td>A fillet rather than a sharp corner &mdash; no kink to worry about</td></tr>
+        </tbody>
+        <caption>GELU is the standard in transformers. Its advantage over ReLU is precisely that it is differentiable at the origin, removing the awkwardness Chapter 03 &sect;08 flagged.</caption>
+      </table>
+    </div>
+    <div class="col" style="padding:0">
+      <p>
+        <strong>Normalisation layers</strong> &mdash; BatchNorm, LayerNorm &mdash; rescale
+        activations to zero mean and unit variance partway through the network. That is Chapter
+        01 &sect;02's standardisation, applied not once to the input but repeatedly inside the
+        model, to stop the scale of signals drifting as they propagate through layers. LayerNorm
+        normalises across features within one sample and is what transformers use.
+      </p>
+      <p>
+        <strong>Weight initialisation</strong> (Xavier, He) sets the starting variance so signal
+        neither explodes nor vanishes across depth &mdash; the same gear-train product from
+        Chapter 03 &sect;02, managed at setup rather than left to chance.
+      </p>
+      <p>
+        <strong>Convolutions</strong> slide a small fixed kernel across the input. Chapter 02
+        &sect;04 already named the structure: a convolution is multiplication by a
+        <strong>Toeplitz matrix</strong>, constant along each diagonal. It is also exactly what
+        a filter does to a vibration signal &mdash; convolution with an impulse response. A CNN
+        learns its filters rather than being handed them.
+      </p>
+      <p>
+        <strong>Skip connections</strong> add a layer's input to its output, \(\mathbf{y}=f(\mathbf{x})+\mathbf{x}\).
+        Mechanically this is a <strong>parallel load path</strong>: if the main path contributes
+        nothing useful, the bypass still carries the signal through, so gradient reaches early
+        layers regardless of what the intervening ones do. Residual networks are redundant
+        structures.
+      </p>
+      <p>
+        <strong>Attention</strong> is Chapter 01 &sect;08's duality pairing: queries measure keys
+        by dot product, softmax turns the scores into weights, and those weights mix the values.
+        Chapter 07 develops it properly.
+      </p>
+    </div>
+  </div>
+  <figure class="col">
+    <div class="paper"><img src="img/activation_functions.svg" alt="ReLU, sigmoid, tanh and GELU plotted together" width="420"></div>
+    <figcaption><b>Fig. 6.5</b> &mdash; The activations. Note where each one saturates: a flat region is a dead gradient, which is why ReLU-family functions replaced sigmoid in deep networks. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="rl">
+  <div class="col">
+    <div class="sechead"><span class="secnum">10</span><h2>Reinforcement learning</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2006%20-%20machine%20learning/04.%20reinforcement%20learning.md" target="_blank" rel="noopener">src 04. reinforcement &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      An agent observes a state, takes an action, receives a reward, and lands in a new state.
+      The formal object is a <strong>Markov decision process</strong> &mdash; Chapter 05's Markov
+      chain with actions and rewards bolted on. The goal is a <strong>policy</strong> maximising
+      expected discounted return.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; this is optimal control</div>
+      <p>
+        The <strong>value function</strong> \(V(s)\) is the expected return from state \(s\)
+        onward, and it satisfies the <strong>Bellman equation</strong>:
+      </p>
+      <div class="mathbox">
+        $$V(s)=\max_a\Big[r(s,a)+\gamma\sum_{s'}P(s'\mid s,a)\,V(s')\Big]$$
+      </div>
+      <p style="margin-bottom:0">
+        If you have met dynamic programming in optimal control, this is the same recursion under
+        a different name &mdash; \(V\) is the <strong>cost-to-go</strong>, and Bellman's principle
+        of optimality is the statement that an optimal path's tail is itself optimal. Reinforcement
+        learning is optimal control for the case where you do <em>not</em> have a model of the
+        plant: \(P(s'\mid s,a)\) is unknown, so instead of solving the recursion you estimate it
+        by acting and observing. <strong>Model-based</strong> RL learns the plant model first;
+        <strong>model-free</strong> methods such as Q-learning skip it and learn the value
+        function directly.
+      </p>
+    </div>
+    <p>
+      <strong>Temporal difference</strong> learning updates estimates toward a bootstrapped target
+      rather than waiting for the episode to end &mdash; an error-driven correction, structurally
+      the same as any recursive estimator. <strong>Exploration versus exploitation</strong> is
+      the design-of-experiments question: spend effort probing conditions you have not tried, or
+      run at the best setting you know? <strong>PPO</strong> constrains how far the policy may
+      move in one update, which is a trust region &mdash; a step limiter, for exactly the reason
+      Chapter 03 &sect;06 limited the learning rate.
+    </p>
+    <p>
+      <strong>RLHF</strong> and <strong>DPO</strong> apply this to language models, using human
+      preference comparisons as the reward signal. That is how a model is tuned to be helpful
+      rather than merely predictive.
+    </p>
+  </div>
+  <figure class="col">
+    <div class="paper"><img src="img/mdp_agent_loop.svg" alt="An agent acting on an environment and receiving state and reward in return" width="400"></div>
+    <figcaption><b>Fig. 6.6</b> &mdash; The agent&ndash;environment loop. Relabel it plant, controller, sensor and setpoint and it is a block diagram from a control course. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="dist">
+  <div class="col">
+    <div class="sechead"><span class="secnum">11</span><h2>Distributed training is an assembly line</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2006%20-%20machine%20learning/05.%20distributed%20deep%20learning.md" target="_blank" rel="noopener">src 05. distributed &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      Training a large model does not fit on one GPU. What has to be split, and how, is a
+      production-engineering problem, and the vocabulary maps almost word for word.
+    </p>
+  </div>
+  <div class="tw">
+    <table>
+      <thead><tr><th>Strategy</th><th>What is split</th><th>Production analogue</th></tr></thead>
+      <tbody>
+        <tr><td><b>Data parallelism</b></td><td>The batch. Every device holds the whole model</td><td>Parallel identical production lines, outputs pooled</td></tr>
+        <tr><td><b>Tensor parallelism</b></td><td>Individual matrices, across devices</td><td>Two operators on one large workpiece at the same station</td></tr>
+        <tr><td><b>Pipeline parallelism</b></td><td>Layers into sequential stages</td><td>A classic assembly line, one station per stage</td></tr>
+        <tr><td><b>ZeRO / FSDP</b></td><td>Optimiser state and gradients, sharded</td><td>Distributed tooling storage &mdash; nobody keeps a full set</td></tr>
+        <tr><td><b>Mixture of Experts</b></td><td>Which sub-model handles which input</td><td>Specialised cells; each part is routed to the right one</td></tr>
+      </tbody>
+      <caption>Chapter 02's observation that matrix multiplication is enormous and perfectly parallel is what makes all of this possible.</caption>
+    </table>
+  </div>
+  <div class="col">
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; pipeline bubbles are line balancing</div>
+      <p style="margin-bottom:0">
+        Split a network into four pipeline stages on four GPUs and the first batch occupies stage
+        1 while stages 2&ndash;4 sit idle; the tail of the batch leaves stages 1&ndash;3 idle. That
+        idle time is called a <strong>bubble</strong>, and it is exactly the start-up and run-out
+        idle time on an assembly line. The fix is the same one a production engineer reaches for:
+        feed <em>micro-batches</em> so several units are in flight at once, and balance the
+        stages so no station is slower than the rest. An unbalanced pipeline is throttled by its
+        slowest stage &mdash; the bottleneck, and Chapter 13's Amdahl's law is the formal version
+        of the same complaint.
+      </p>
+    </div>
+    <p>
+      <strong>Ring all-reduce</strong> is how gradients are averaged across devices: each passes
+      partial sums to its neighbour around a ring, so total communication is independent of device
+      count rather than growing with it. <strong>Mixed precision</strong> stores weights in 16-bit
+      formats while accumulating in 32-bit &mdash; the significant-figures discipline of any
+      numerical calculation, where you carry more digits through intermediate steps than you quote
+      at the end. <strong>Gradient checkpointing</strong> trades compute for memory by discarding
+      intermediate activations and recomputing them during the backward pass.
+    </p>
+  </div>
+  <figure class="col">
+    <div class="paper"><img src="img/data_model_parallelism.svg" alt="Data parallelism replicating the model against model parallelism splitting it" width="420"></div>
+    <figcaption><b>Fig. 6.7</b> &mdash; Data parallelism replicates the model and splits the batch; model parallelism splits the model itself. Large training runs combine both, plus pipelining. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="breaks">
+  <div class="col">
+    <div class="sechead"><span class="secnum">12</span><h2>Where engineering intuition breaks</h2>
+      <span class="srcref nolink" title="Added material, not in the source chapter">beyond the chapter</span>
+    </div>
+    <hr class="rule-h">
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>1 &mdash; There is no correct answer</div>
+      <p style="margin-bottom:0">
+        A statically determinate structure has one solution. Train the same architecture twice
+        with different random seeds and you get two <em>different</em> models &mdash; different
+        weights, different mistakes &mdash; performing about equally well. There is no unique
+        right answer to converge to, only a large set of adequate ones. This is why ML results are
+        reported as means over seeds, and why "it worked on my run" is a weak claim.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>2 &mdash; You cannot draw a free-body diagram of it</div>
+      <p style="margin-bottom:0">
+        When a beam deflects too much you can trace the cause: this load, that section modulus,
+        this span. When a model misclassifies, there is no equivalent trace. The behaviour lives
+        in billions of weights with no individually meaningful interpretation. Tools exist &mdash;
+        saliency maps, SHAP, probing &mdash; but they give approximate, contested explanations,
+        not derivations. For an engineer used to root-causing failures this is the most
+        uncomfortable property of the field, and it is genuinely unsolved.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>3 &mdash; The test set is a proxy that decays</div>
+      <p style="margin-bottom:0">
+        Chapter 04 &sect;09 said a statistic is an estimate. Here it is worse: every time you
+        consult the test set to choose a model, you leak information about it into your decisions,
+        and it becomes a slightly weaker estimate of true performance. Benchmarks that a field
+        optimises against for years stop measuring capability and start measuring benchmark-fit.
+        And a model that scores well on data resembling its training set can fail completely under
+        <strong>distribution shift</strong> &mdash; a new sensor, a new supplier, a new season.
+        The test set is a coupon from the same heat; it says nothing about a different batch.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>4 &mdash; Hyperparameters have no design theory</div>
+      <p style="margin-bottom:0">
+        You select a bearing from a catalogue using a rated-life equation. There is no equivalent
+        for choosing a learning rate, a layer count, or a batch size &mdash; those come from
+        search, folklore and analogy to what worked elsewhere. &sect;05 is a rare exception where
+        real theory exists, which is precisely why it is worth knowing. Most of the rest is
+        empirical, and honest practitioners say so.
+      </p>
+    </div>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>5 &mdash; The damped oscillator is a continuous model, and training is not</div>
+      <p>
+        This one is worth stating carefully, because &sect;05 leans on the oscillator analogy
+        harder than any other bridge in this sheet, and it has an exact edge.
+      </p>
+      <p>
+        A continuous system \(m\ddot{w}+c\dot{w}+kw=0\) has a characteristic equation whose roots
+        are either <em>real and negative</em> &mdash; overdamped, decaying without ever crossing
+        zero &mdash; or a <em>complex pair</em>, ringing at some finite frequency. Those are the
+        only two options, and every intuition you carry from a vibrations course is built on that
+        dichotomy.
+      </p>
+      <p>
+        Gradient descent with momentum is a <em>difference</em> equation, and its characteristic
+        roots live in a different place: they are the roots of \(z^2-(1+\beta-\alpha\lambda)z+\beta\),
+        and decay means \(|z|<1\) rather than a negative real part. That admits a case the
+        continuous model has no name for &mdash; a root that is real and <b>negative</b>, meaning
+        the coordinate flips sign on every step while its magnitude shrinks geometrically. It is
+        oscillation at exactly one half-cycle per step: the fastest alternation a discrete system
+        can express, and a frequency a continuous model cannot represent at all.
+      </p>
+      <p style="margin-bottom:0">
+        And that case is not a curiosity at the edge of the parameter range. It is where the
+        <em>optimum lives</em>: at \(\beta^\ast\), the stiff mode&rsquo;s root is the negative
+        real double root \(-(\sqrt{\kappa}-1)/(\sqrt{\kappa}+1)\), which is why the &sect;05 panel
+        keeps crossing the valley no matter how well you tune it. The analogy gets you the
+        <em>structure</em> &mdash; inertia against damping, three regimes, a trade-off with a
+        sweet spot &mdash; and it is genuinely load-bearing for that. It does not get you the
+        behaviour at the sweet spot. For that you have to look at the roots.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="gaps">
+  <div class="col">
+    <div class="sechead"><span class="secnum">13</span><h2>What is missing &mdash; including from this page</h2>
+      <span class="srcref nolink" title="Added material, not in the source chapter">beyond the chapter</span>
+    </div>
+    <hr class="rule-h">
+    <p>
+      This is the largest chapter in the compendium, five sub-fields in one file, and this page
+      compresses it further. Both compressions should be visible to you.
+    </p>
+    <div class="gap">
+      <div class="gap-h">Compressed on this page &mdash; go to the source for these</div>
+      <ul style="margin-bottom:0">
+        <li><b>Naive Bayes and k-NN details</b> &mdash; the source gives multinomial, Gaussian and Bernoulli variants; here they get a paragraph.</li>
+        <li><b>The optimiser zoo</b> &mdash; Adagrad, RMSprop, LION, Muon, schedule-free methods are all in the source. &sect;06 covers the principle and Adam; the rest are variations on it.</li>
+        <li><b>Generative models</b> &mdash; GANs, VAEs and diffusion appear in the source and are barely touched here. Chapters 08 and 10 develop them properly.</li>
+        <li><b>RNN and LSTM internals</b> &mdash; gate equations are in the source; Chapter 07 covers sequence models in depth.</li>
+        <li><b>RL algorithm detail</b> &mdash; SARSA, target networks, REINFORCE and actor&ndash;critic derivations are in the source.</li>
+      </ul>
+    </div>
+    <div class="gap">
+      <div class="gap-h">Absent from the compendium entirely</div>
+      <ul style="margin-bottom:0">
+        <li><b>Interpretability</b> as a discipline. SHAP and LIME get a mention in Chapter 19; the field is far larger, and &sect;12 argues it is the gap that matters most to an engineer.</li>
+        <li><b>Gaussian processes and Bayesian deep learning</b> &mdash; models that report calibrated uncertainty rather than a bare prediction. For engineering use this is often exactly what you want.</li>
+        <li><b>Causal machine learning</b> &mdash; flagged in Chapter 05 &sect;10 and still absent. Prediction is not intervention, and a model that predicts failure does not tell you what to change.</li>
+        <li><b>Time series</b> as its own subject &mdash; forecasting, seasonality, stationarity. Chapter 19 touches it for finance only.</li>
+        <li><b>Fairness, robustness, adversarial examples</b> &mdash; how models fail under deliberate or structural pressure.</li>
+        <li><b>Active learning and experimental design for ML</b> &mdash; choosing <em>which</em> data to label, which for expensive physical testing is the whole question.</li>
+      </ul>
+    </div>
+    <p style="margin-bottom:0">
+      For you specifically, the two worth chasing are <strong>Gaussian processes</strong> (models
+      that admit when they do not know, which matters when a prediction feeds a safety decision)
+      and <strong>active learning</strong> (each additional test specimen costs money, so which
+      one should you make?).
+    </p>
+  </div>
+</section>
+
+<section id="worked">
+  <div class="col">
+    <div class="sechead"><span class="secnum">14</span><h2>Worked example: what momentum is worth</h2></div>
+    <hr class="rule-h">
+    <p>
+      Take Chapter 03 &sect;09's problem and finish it properly. Minimise
+      \(f=\tfrac12(\kappa x^2+y^2)\) with \(\kappa=100\), so the Hessian eigenvalues are
+      \(\lambda_{\max}=100\) and \(\lambda_{\min}=1\).
+    </p>
+    <h3>Plain gradient descent</h3>
+    <p>The best constant step and the rate it achieves:</p>
+    <div class="mathbox">
+      $$\begin{aligned}
+        \alpha^\ast&=\frac{2}{\lambda_{\max}+\lambda_{\min}}=\frac{2}{101}=0.0198\\[4pt]
+        \rho&=\frac{\kappa-1}{\kappa+1}=\frac{99}{101}=0.9802
+      \end{aligned}$$
+    </div>
+    <p>Steps to reach 1% of the starting error:</p>
+    <div class="mathbox">
+      $$n=\frac{\ln 0.01}{\ln 0.9802}\approx 231$$
+    </div>
+    <h3>With momentum, optimally tuned</h3>
+    <div class="mathbox">
+      $$\begin{aligned}
+        \beta^\ast&=\left(\frac{\sqrt{\kappa}-1}{\sqrt{\kappa}+1}\right)^{2}=\left(\frac{9}{11}\right)^{2}=0.6694\\[4pt]
+        \alpha^\ast&=\frac{4}{(\sqrt{\lambda_{\max}}+\sqrt{\lambda_{\min}})^{2}}=\frac{4}{121}=0.0331
+      \end{aligned}$$
+    </div>
+    <div class="mathbox">
+      $$\rho=\frac{\sqrt{\kappa}-1}{\sqrt{\kappa}+1}=\frac{9}{11}=0.8182,
+        \qquad n=\frac{\ln 0.01}{\ln 0.8182}\approx 23$$
+    </div>
+    <p>
+      If you want to reproduce this in the &sect;05 panel, which runs the source&rsquo;s
+      normalised form, translate the step first:
+    </p>
+    <div class="mathbox">
+      $$\eta^\ast=\frac{\alpha^\ast}{1-\beta^\ast}
+        =\frac{1}{\sqrt{\lambda_{\max}\lambda_{\min}}}=\frac{1}{\sqrt{100}}=0.1$$
+    </div>
+    <p>
+      Set \(\beta=0.669\) with \(\eta=0.1\) &mdash; not \(\beta=0.669\) with \(\eta=0.0331\).
+    </p>
+    <p>
+      <strong>231 steps against 23 &mdash; a tenfold speedup</strong>, from one extra term that
+      remembers the previous step. Note what \(\beta^\ast=0.669\) is and is not: it is the value
+      that makes the two roots of the iteration coincide &mdash; critical damping in the strict
+      sense &mdash; and it is <em>not</em> a promise of no overshoot. At the optimum the stiff
+      mode&rsquo;s root is real and <em>negative</em>, so that coordinate reverses sign on every
+      step while its magnitude falls by \(0.818\). Push \(\beta\) above \(\beta^\ast\) and you do
+      not merely start oscillating &mdash; you were already oscillating; you make the decay slower,
+      which is an underdamped system doing what underdamped systems do.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>The number to remember</div>
+      <p style="margin-bottom:0">
+        Momentum takes the condition number under a square root: \(\kappa \to \sqrt{\kappa}\). At
+        \(\kappa=100\) that is 10&times;; at \(\kappa=10{,}000\) it is 100&times;. Ill-conditioning
+        is the fundamental obstacle to optimisation, and this is the cheapest available remedy
+        &mdash; which is why every optimiser in practical use, Adam included, has a momentum term
+        inside it.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="recall">
+  <div class="col">
+    <div class="sechead"><span class="secnum">15</span><h2>Question bank</h2></div>
+    <hr class="rule-h">
+    <h3 style="margin-top:22px">Tier 1 &mdash; recall</h3>
+  </div>
+  <div class="col">
+    <details class="q"><summary><span class="qn">R1</span><span>Write the momentum update and turn it into an equation of motion.</span></summary>
+      <div class="ans"><p>\(v_t=\beta v_{t-1}+(1-\beta)\nabla\mathcal L\), \(w\leftarrow w-\eta v_t\). Eliminating \(v\): \(w_{t+1}-w_t=\beta(w_t-w_{t-1})-\eta(1-\beta)\nabla\mathcal L\) — a second difference, a first difference and a force, i.e. \(m\ddot w+c\dot w+\nabla\mathcal L=0\). \(\beta\) sets inertia against damping; \(\beta=0\) is massless, fully overdamped gradient descent.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">R2</span><span>What does k-means minimise, and what is that quantity called in mechanics?</span></summary>
+      <div class="ans"><p>\(J=\sum_j\sum_{x\in C_j}\|x-\mu_j\|^2\) — the total second moment about the cluster centroids, i.e. a moment of inertia. scikit-learn names the converged value <code>inertia_</code>.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">R3</span><span>Define bias and variance and give the instrument analogue.</span></summary>
+      <div class="ans"><p>Bias is systematic error from wrong assumptions — inaccuracy, a micrometer with zero error. Variance is sensitivity to the training sample — imprecision, poor repeatability. Total error is \(\text{bias}^2+\text{variance}+\text{irreducible noise}\), the last being the Bayes error.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">R4</span><span>Write precision, recall and F1, and say what F1's average is.</span></summary>
+      <div class="ans"><p>\(P=TP/(TP+FP)\), \(R=TP/(TP+FN)\), \(F_1=2PR/(P+R)\) — the harmonic mean, the same average as springs in series. It is dominated by the smaller term, so 99% precision with 2% recall scores about 0.039.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">R5</span><span>What is information gain, in Chapter 05's language?</span></summary>
+      <div class="ans"><p>The mutual information between a candidate split and the label: \(H(\text{parent})-\sum_k\frac{n_k}{n}H(\text{child}_k)\). A decision tree greedily picks the question that reveals the most bits.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">R6</span><span>Why does an ensemble help, and what does the argument assume?</span></summary>
+      <div class="ans"><p>Averaging \(n\) models with independent errors of variance \(\sigma^2\) gives variance \(\sigma^2/n\) — Chapter 04's standard error. It assumes <b>independence</b>; correlated models are common-cause failure and averaging them gains little. Random forests decorrelate deliberately by randomising feature selection.</p></div>
+    </details>
+  </div>
+  <div class="col"><h3 style="margin-top:26px">Tier 2 &mdash; apply</h3></div>
+  <div class="col">
+    <details class="q"><summary><span class="qn">A1</span><span>At \(\kappa=100\), how many steps does plain descent need for 1%? With optimal momentum?</span></summary>
+      <div class="ans"><p>Plain: \(\rho=(\kappa-1)/(\kappa+1)=0.9802\), \(n=\ln0.01/\ln0.9802\approx231\). Momentum: \(\rho=(\sqrt\kappa-1)/(\sqrt\kappa+1)=9/11=0.8182\), \(n\approx23\). Tenfold, because \(\kappa\) moves under a square root.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">A2</span><span>A detector has 99% precision and 2% recall. Compute F1 and say what it tells you.</span></summary>
+      <div class="ans"><p>\(F_1=2(0.99)(0.02)/(1.01)=0.0392\). The harmonic mean is pinned by the weak term — the detector is nearly useless despite excellent precision, because it finds almost nothing. An arithmetic mean would have said 0.505 and hidden this.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">A3</span><span>Your classifier reports 99% accuracy on a problem with a 1% positive rate. What do you conclude?</span></summary>
+      <div class="ans"><p>Nothing yet — predicting "negative" always achieves 99%. Ask for precision and recall, or the confusion matrix. This is Chapter 05 §09's "99% accurate is not one number", arriving as a model evaluation instead of an instrument spec.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">A4</span><span>Training error is zero and test error is climbing. Diagnose it, and give two fixes.</span></summary>
+      <div class="ans"><p>Overfitting — the model has capacity to memorise the sample including its noise. Fixes: reduce capacity (fewer parameters, lower degree), add regularisation (L1/L2 penalty, which Chapter 05 §06 showed is a prior), stop early, or get more data. Zero training error is a warning sign, not an achievement.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">A5</span><span>Four-stage pipeline, four GPUs, one batch at a time. What fraction of capacity is idle, and what fixes it?</span></summary>
+      <div class="ans"><p>With one batch in flight only one stage works at a time — 75% idle. Split the batch into micro-batches so several units are in flight, exactly as an assembly line keeps every station occupied, and balance the stages so none is slower than the others.</p></div>
+    </details>
+  </div>
+  <div class="col"><h3 style="margin-top:26px">Tier 3 &mdash; judge</h3></div>
+  <div class="col">
+    <details class="q"><summary><span class="qn">J1</span><span>Why does adding inertia reduce rather than amplify the zigzag in a narrow valley?</span></summary>
+      <div class="ans"><p>The transverse component alternates in sign, so successive contributions to the velocity cancel; the axial component is consistent, so it accumulates. Momentum acts as a low-pass filter on the gradient sequence. Push \(\beta\) too high and you cross into underdamped behaviour and ring around the minimum — the same tradeoff as choosing a damping ratio.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">J2</span><span>A colleague reports a model beating the previous best on a public benchmark. What do you ask?</span></summary>
+      <div class="ans"><p>Whether the test set influenced any design choice (leakage through repeated consultation), how many seeds were run and what the spread was (§12: there is no unique answer), whether the gain exceeds that spread, and how it behaves under distribution shift. A benchmark a field has optimised against for years measures benchmark-fit as much as capability.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">J3</span><span>A model predicts bearing failure accurately. Management asks what to change to prevent failures. What is the problem?</span></summary>
+      <div class="ans"><p>Prediction is not intervention. The model has learned correlations that forecast failure; it has not learned which variables <em>cause</em> it, so acting on its inputs may change nothing. That is causal inference, flagged as absent in Chapter 05 §10 and §13 here. A feature can be a reliable predictor precisely because it is a symptom.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">J4</span><span>Ten decision trees trained on the same dataset disagree on 3% of cases. Is the ensemble ten times more reliable?</span></summary>
+      <div class="ans"><p>No. The \(\sigma/\sqrt n\) argument needs independent errors, and trees trained on one dataset share its biases — common-cause failure. Their agreement on the other 97% may reflect a shared blind spot rather than correctness. Bagging and feature randomisation exist to decorrelate them, and even then independence is partial.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">J5</span><span>You need a model whose prediction feeds a safety decision. What does this chapter <em>not</em> give you?</span></summary>
+      <div class="ans"><p>Calibrated uncertainty and an audit trail. A standard model outputs a point prediction with no honest confidence and no derivation you can check — §12's free-body-diagram problem. Gaussian processes and Bayesian deep learning address the first and are absent from the compendium (§13); interpretability addresses the second and is largely unsolved. For a safety case you would want both, plus a conventional analysis the model only advises.</p></div>
+    </details>
+  </div>
+</section>
+
+<section id="next">
+  <div class="col">
+    <div class="sechead"><span class="secnum">16</span><h2>What this chapter feeds</h2></div>
+    <hr class="rule-h">
+  </div>
+  <figure>
+    <div class="paper">
+      <svg viewBox="0 0 780 430" role="img" style="max-width:100%;height:auto"
+           aria-label="Machine learning branches into four capabilities, each feeding a named application area in a later chapter"
+           fill="none" stroke="#1b1b1b" font-family="Archivo Narrow, Arial Narrow, sans-serif">
+        <defs><marker id="cm6" markerWidth="9" markerHeight="7" refX="8.5" refY="3.5" orient="auto">
+          <polygon points="0,0 9,3.5 0,7" fill="#1b1b1b" stroke="none"/></marker></defs>
+        <rect x="18" y="170" width="132" height="76" rx="3" fill="#ffffff" stroke="#1b1b1b" stroke-width="2"/>
+        <text x="84" y="200" text-anchor="middle" font-size="14" font-weight="700" fill="#1b1b1b" stroke="none">Learning from</text>
+        <text x="84" y="220" text-anchor="middle" font-size="14" font-weight="700" fill="#1b1b1b" stroke="none">data</text>
+        <text x="84" y="238" text-anchor="middle" font-size="10" fill="#666" stroke="none">CHAPTER 06</text>
+        <line x1="150" y1="208" x2="190" y2="208" stroke="#1b1b1b" stroke-width="1.5"/>
+        <line x1="190" y1="53" x2="190" y2="341" stroke="#1b1b1b" stroke-width="1.5"/>
+        <line x1="190" y1="53"  x2="226" y2="53"  stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cm6)"/>
+        <line x1="190" y1="149" x2="226" y2="149" stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cm6)"/>
+        <line x1="190" y1="245" x2="226" y2="245" stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cm6)"/>
+        <line x1="190" y1="341" x2="226" y2="341" stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cm6)"/>
+        <rect x="238" y="22" width="170" height="62" rx="3" fill="#ffffff" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="323" y="47" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">Attention</text>
+        <text x="323" y="67" text-anchor="middle" font-size="11" fill="#555" stroke="none">queries measure keys</text>
+        <rect x="238" y="118" width="170" height="62" rx="3" fill="#ffffff" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="323" y="143" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">Convolution</text>
+        <text x="323" y="163" text-anchor="middle" font-size="11" fill="#555" stroke="none">a learned filter</text>
+        <rect x="238" y="214" width="170" height="62" rx="3" fill="#ffffff" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="323" y="239" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">Training at scale</text>
+        <text x="323" y="259" text-anchor="middle" font-size="11" fill="#555" stroke="none">split the work</text>
+        <rect x="238" y="310" width="170" height="62" rx="3" fill="#ffffff" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="323" y="335" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">Sequential decisions</text>
+        <text x="323" y="355" text-anchor="middle" font-size="11" fill="#555" stroke="none">reward, not labels</text>
+        <line x1="408" y1="53"  x2="514" y2="53"  stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cm6)"/>
+        <line x1="408" y1="149" x2="514" y2="149" stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cm6)"/>
+        <line x1="408" y1="245" x2="514" y2="245" stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cm6)"/>
+        <line x1="408" y1="341" x2="514" y2="341" stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cm6)"/>
+        <text x="461" y="45"  text-anchor="middle" font-size="10.5" fill="#666" stroke="none">over tokens</text>
+        <text x="461" y="141" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">over pixels</text>
+        <text x="461" y="237" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">on real hardware</text>
+        <text x="461" y="333" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">in the world</text>
+        <rect x="526" y="22" width="236" height="62" rx="3" fill="#f2f2f0" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="644" y="47" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">Transformers, language models</text>
+        <text x="644" y="67" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">CHAPTER 07</text>
+        <rect x="526" y="118" width="236" height="62" rx="3" fill="#f2f2f0" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="644" y="143" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">Vision, audio, multimodal</text>
+        <text x="644" y="163" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">CHAPTERS 08&#8211;10</text>
+        <rect x="526" y="214" width="236" height="62" rx="3" fill="#f2f2f0" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="644" y="239" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">GPU kernels, inference cost</text>
+        <text x="644" y="259" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">CHAPTERS 16&#8211;17</text>
+        <rect x="526" y="310" width="236" height="62" rx="3" fill="#f2f2f0" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="644" y="335" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">Robots, self-driving, agents</text>
+        <text x="644" y="355" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">CHAPTERS 11 &amp; 19</text>
+      </svg>
+    </div>
+    <figcaption><b>Fig. 6.8</b> &mdash; From here the compendium stops teaching method and starts applying it. Everything after this chapter is one of these four capabilities pointed at a domain.</figcaption>
+  </figure>
+
+  <div class="col">
+    <p>
+      Chapter 07 is computational linguistics, and the single idea it builds on is attention
+      &mdash; which you have now met three times: as a duality pairing in Chapter 01 &sect;08, as
+      a dot product in Chapter 01 &sect;05, and as a layer in &sect;09 here. Chapter 07 is where
+      it becomes a transformer.
+    </p>
+    <div class="note">
+      <div class="note-h"><span class="ic">i</span>Before you move on</div>
+      <p style="margin-bottom:0">
+        Do one thing, and make it this: take any dataset you have &mdash; test results, process
+        logs, anything &mdash; and fit a model with scikit-learn in ten lines, then deliberately
+        overfit it and watch the test score fall. Feeling that happen on your own data is worth
+        more than the &sect;07 panel. Then run the source chapter's coding tasks, which build a
+        neural network from scratch.
+      </p>
+    </div>
+  </div>
+
+  <div class="col" id="provenance" style="scroll-margin-top:calc(env(safe-area-inset-top,0px) + 62px)">
+    <div class="sechead" style="margin-top:40px"><span class="secnum">A</span><h2>Provenance and changes</h2></div>
+    <hr class="rule-h">
+    <p>
+      A derivative work under Apache-2.0, which requires a statement of changes. Source references
+      link to the original files, pinned to commit <code>9850ee5</code>. This chapter is the
+      compendium's largest and this page compresses it; &sect;13 says exactly where.
+    </p>
+  </div>
+  <div class="tw">
+    <table>
+      <thead><tr><th>Section</th><th>Title</th><th>Source</th><th>Verdict</th><th>What changed</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">&sect;00</td><td>The bridge</td><td class="mono">&mdash;</td><td><span class="pv add">added</span></td><td>Mapping table is mine.</td></tr>
+        <tr><td class="mono">&sect;01</td><td>What a model is</td><td class="mono">01</td><td><span class="pv ok">faithful</span></td><td>Framing is mine; the content is the source's opening.</td></tr>
+        <tr><td class="mono">&sect;02</td><td>Classical methods</td><td class="mono">01</td><td><span class="pv corr">compressed</span></td><td>Trees, k-NN, SVM and k-means kept; Naive Bayes and PCA reduced to a line. The k-means inertia identity and the SVM factor-of-safety reading are <b>added</b>.</td></tr>
+        <tr><td class="mono">&sect;03</td><td>Ensembles as redundancy</td><td class="mono">01</td><td><span class="pv ok">expanded</span></td><td>Bagging and boosting as in source. The redundancy reading and the independence warning are <b>added</b>.</td></tr>
+        <tr><td class="mono">&sect;04</td><td>Fitting by gradient</td><td class="mono">02</td><td><span class="pv ok">faithful</span></td><td>Regression, logistic regression and the loss catalogue as in source.</td></tr>
+        <tr><td class="mono">&sect;05</td><td>Momentum is a damper</td><td class="mono">02</td><td><span class="pv ok">expanded</span></td><td>The update rule and the rolling-ball image are the source's. The derivation to an equation of motion, the damping-ratio reading, and the \(\sqrt{\kappa}\) rate result are <b>added</b>.</td></tr>
+        <tr><td class="mono">&sect;06</td><td>Adam &amp; annealing</td><td class="mono">02</td><td><span class="pv corr">compressed</span></td><td>Adam and schedules kept; Adagrad, RMSprop, LION, Muon reduced. The preconditioning and metallurgical-annealing readings are <b>added</b>.</td></tr>
+        <tr><td class="mono">&sect;07</td><td>Bias and variance</td><td class="mono">02</td><td><span class="pv ok">expanded</span></td><td>Source gives the definitions in two sentences. The accuracy/precision reading and the fitting panel are <b>added</b>.</td></tr>
+        <tr><td class="mono">&sect;08</td><td>Precision and recall</td><td class="mono">02</td><td><span class="pv ok">expanded</span></td><td>Metrics and ROC as in source. The link back to Chapter 05's posterior and the harmonic-mean reading are <b>added</b>.</td></tr>
+        <tr><td class="mono">&sect;09</td><td>Deep learning</td><td class="mono">03</td><td><span class="pv corr">compressed</span></td><td>Activations, normalisation, convolution and skip connections kept. GANs, VAEs, diffusion, RNN and LSTM internals deferred to later chapters; flagged in &sect;13.</td></tr>
+        <tr><td class="mono">&sect;10</td><td>Reinforcement learning</td><td class="mono">04</td><td><span class="pv corr">compressed</span></td><td>MDPs, value functions, Bellman, PPO and RLHF kept at concept level; algorithm derivations deferred. The optimal-control reading is <b>added</b>.</td></tr>
+        <tr><td class="mono">&sect;11</td><td>Distributed training</td><td class="mono">05</td><td><span class="pv ok">faithful</span></td><td>All parallelism strategies as in source. The assembly-line and line-balancing readings are <b>added</b>.</td></tr>
+        <tr><td class="mono">&sect;12&ndash;13</td><td>Breaks; what is missing</td><td class="mono">&mdash;</td><td><span class="pv add">added</span></td><td>Entirely mine. &sect;13 audits both the source's gaps and this page's compressions.</td></tr>
+        <tr><td class="mono">&sect;14</td><td>Worked example</td><td class="mono">&mdash;</td><td><span class="pv add">added</span></td><td>Mine; every value checked in <code>verify_claims.py</code>.</td></tr>
+      </tbody>
+      <caption>
+        <b>faithful</b> follows the source &middot; <b>expanded</b> keeps it and adds &middot;
+        <b>added</b> has no source counterpart &middot; <b>compressed</b> deliberately covers less
+        than the source, with the omission named in &sect;13.
+      </caption>
+    </table>
+  </div>
+
+  <div class="col endnote">
+    <p>
+      Companion to <b>Chapter 06 &mdash; Machine Learning</b> of the Maths, CS &amp; AI Compendium
+      by Henry Ndubuaku. Figures marked <i>from the compendium</i> are reproduced from the
+      repository. &sect;&sect;12 and 13 are added material and are marked as such.
+    </p>
+    <p style="margin-bottom:0">Sheet 6 of 20. Built for a mechanical engineer with GATE-level mathematics and no prior CS.</p>
+  </div>
+</section>
+
+</main>
+</div>
+
+<style>
+#mGrid line, #bGrid line, #tGrid line{stroke:var(--rule)}
+#mAx, #mAy{stroke:var(--rule-strong); stroke-width:1.25}
+#mPlain{stroke:var(--s1)} #mMom{stroke:var(--s2)} #mMin{fill:var(--s3)}
+.cont{fill:none; stroke:var(--rule-strong); stroke-width:1}
+.mdot{fill:var(--s2); stroke:var(--sheet); stroke-width:.8}
+.axl{stroke:var(--rule-strong); stroke-width:1.4}
+.tk{fill:var(--ink-3); font-family:'IBM Plex Mono',monospace; font-size:10px}
+.al{fill:var(--ink-2); font-family:'Archivo Narrow',sans-serif; font-size:11px; letter-spacing:.07em}
+.truec{fill:none; stroke:var(--s2); stroke-width:2; stroke-dasharray:5 4}
+.fitc{fill:none; stroke:var(--s1); stroke-width:2.5}
+.pt{fill:var(--ink-2)}
+.etr{fill:none; stroke:var(--s1); stroke-width:2}
+.ete{fill:none; stroke:var(--s3); stroke-width:2}
+.emark{fill:var(--s3)}
+.cneg{fill:none; stroke:var(--s2); stroke-width:2.5}
+.cpos{fill:none; stroke:var(--s1); stroke-width:2.5}
+.shTP{fill:var(--s1); fill-opacity:.42} .shFP{fill:var(--s2); fill-opacity:.42}
+.thr{stroke:var(--ink); stroke-width:2; stroke-dasharray:5 4}
+</style>
+
+<script>
+(function(){
+  'use strict';
+  var root=document.documentElement;
+  function dk(){var t=root.getAttribute('data-theme');
+    return t?t==='dark':(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);}
+  try{var sv=localStorage.getItem('ch06-theme'); if(sv==='dark'||sv==='light') root.setAttribute('data-theme',sv);}catch(e){}
+  var tb=document.getElementById('themebtn');
+  if(tb) tb.addEventListener('click',function(){var n=dk()?'light':'dark';
+    root.setAttribute('data-theme',n); try{localStorage.setItem('ch06-theme',n);}catch(e){}});
+  function $(id){return document.getElementById(id);}
+  function fmt(n,d){d=d===undefined?2:d; return (Math.abs(n)<5e-5?0:n).toFixed(d);}
+  function clamp(v,a,b){return v<a?a:v>b?b:v;}
+  function grid(g,w,h,s){var o='';for(var x=0;x<=w;x+=s)o+='<line x1="'+x+'" y1="0" x2="'+x+'" y2="'+h+'"/>';
+    for(var y=0;y<=h;y+=s)o+='<line x1="0" y1="'+y+'" x2="'+w+'" y2="'+y+'"/>'; g.innerHTML=o;}
+  function erf(x){var s=x<0?-1:1;x=Math.abs(x);
+    var a1=.254829592,a2=-.284496736,a3=1.421413741,a4=-1.453152027,a5=1.061405429,p=.3275911;
+    var t=1/(1+p*x); return s*(1-((((a5*t+a4)*t+a3)*t+a2)*t+a1)*t*Math.exp(-x*x));}
+  function Phi(z){return .5*(1+erf(z/Math.SQRT2));}
+  function predict(attr,vid,ans){
+    document.querySelectorAll('['+attr+']').forEach(function(b){
+      b.addEventListener('click',function(){
+        document.querySelectorAll('['+attr+']').forEach(function(o){o.classList.remove('picked');});
+        b.classList.add('picked');
+        var v=$(vid); v.innerHTML=ans[b.getAttribute(attr)]; v.classList.add('show');
+      });
+    });
+  }
+  predict('data-p1','v1',{
+    worse:'<b>The intuitive answer, and wrong.</b> Inertia in an oscillating system sounds like it should amplify the oscillation. Drag &beta; up and watch: the zigzag <i>shrinks</i>.',
+    better:'<b>Correct.</b> The transverse component alternates in sign so successive contributions cancel; the axial component is consistent so it accumulates. Momentum is a low-pass filter on the gradient sequence.',
+    same:'<b>No &mdash; it changes a great deal.</b> The whole point is that it converts an oscillating path into one that runs along the valley floor.',
+    dep:'<b>Half right, and the more careful answer.</b> Up to the critical value it helps, dramatically. Beyond it you cross into underdamped behaviour and start ringing around the minimum. Try the two presets.'
+  });
+  predict('data-p2','v2',{
+    '1':'<b>Too simple.</b> A straight line cannot follow the curvature &mdash; that is high bias, and the test error will be high for the same reason the training error is.',
+    '3':'<b>Correct, or very close.</b> Enough flexibility to follow the real curve, not enough to chase the noise. Watch where the green test curve bottoms out.',
+    '8':'<b>Past the sweet spot.</b> The extra terms start fitting noise; training error keeps falling while test error climbs.',
+    '11':'<b>This is the trap.</b> With 12 points a degree-11 polynomial passes through every one exactly &mdash; training error is <i>zero</i> &mdash; and it is the worst possible model for new data. Zero training error is a warning, not an achievement.'
+  });
+  predict('data-p3','v3',{
+    both:'<b>Not possible.</b> They trade off by construction: catching more positives means accepting more false ones.',
+    ru:'<b>Correct.</b> A lower bar catches more true positives (recall up) but also admits more false ones (precision down). There is no threshold that maximises both.',
+    pu:'<b>Backwards.</b> That is what happens when you <i>raise</i> the threshold &mdash; you alarm only when very confident, so precision rises and recall falls.',
+    none:'<b>The threshold is the only thing you control here,</b> and it moves both. Slide it and watch.'
+  });
+
+  /* ---------- LAB 1 : momentum ---------- */
+  var MCX=240, MCY=160, MS=112;
+  function mpx(x){return MCX+x*MS;} function mpy(y){return MCY-y*MS;}
+  function run(kap,eta,beta,N){
+    var x=1,y=1,vx=0,vy=0,pts=[[x,y]],hit=-1,esc=false,i;
+    for(i=0;i<N;i++){
+      var gx=kap*x, gy=y;
+      vx=beta*vx+(1-beta)*gx; vy=beta*vy+(1-beta)*gy;
+      x-=eta*vx; y-=eta*vy;
+      if(!isFinite(x)||!isFinite(y)||Math.abs(x)>4||Math.abs(y)>4){pts.push([x,y]); esc=true; break;}
+      pts.push([x,y]);
+      if(hit<0 && Math.hypot(x,y)<0.01*Math.SQRT2) hit=i+1;
+    }
+    return {pts:pts,steps:hit,escaped:esc};
+  }
+  function drawM(){
+    var beta=parseInt($('betaSl').value,10)/1000;
+    var eta=parseInt($('lrSl').value,10)/10000;
+    var kap=parseInt($('kapSl').value,10);
+    /* lambda_max = kappa, lambda_min = 1 for f = (1/2)(kappa x^2 + y^2) */
+    /* quantised to the slider's own resolution, so that the None preset makes
+       the two paths coincide exactly rather than to within a rounding error */
+    var etaPlain=Math.round(2/(kap+1)*1e4)/1e4;   /* best step plain descent can take */
+    var etaStar=1/Math.sqrt(kap);    /* = 1/sqrt(lmax*lmin): momentum optimum */
+    $('betaVal').textContent='β = '+fmt(beta,3);
+    $('lrVal').textContent=fmt(eta,4); $('kapVal').textContent=String(kap);
+    var cs='';
+    [0.06,0.2,0.45,0.8,1.25].forEach(function(c){
+      cs+='<ellipse class="cont" cx="'+MCX+'" cy="'+MCY+'" rx="'+(Math.sqrt(2*c/kap)*MS).toFixed(1)
+        +'" ry="'+(Math.sqrt(2*c)*MS).toFixed(1)+'"/>';
+    });
+    $('mCont').innerHTML=cs;
+    function path(r){var d='',k;
+      for(k=0;k<r.pts.length;k++){var p=r.pts[k];
+        if(Math.abs(p[0])>4||Math.abs(p[1])>4||!isFinite(p[0])) break;
+        d+=(k?'L':'M')+mpx(p[0]).toFixed(1)+' '+mpy(p[1]).toFixed(1);}
+      return d;}
+    var rp=run(kap,etaPlain,0,400), rm=run(kap,eta,beta,400);
+    $('mPlain').setAttribute('d',path(rp)); $('mMom').setAttribute('d',path(rm));
+    var dots='',k2;
+    for(k2=0;k2<Math.min(rm.pts.length,30);k2++){var q=rm.pts[k2];
+      if(Math.abs(q[0])>4||Math.abs(q[1])>4) break;
+      dots+='<circle class="mdot" cx="'+mpx(q[0]).toFixed(1)+'" cy="'+mpy(q[1]).toFixed(1)+'" r="2.4"/>';}
+    $('mDots').innerHTML=dots;
+    $('mMin').setAttribute('cx',MCX); $('mMin').setAttribute('cy',MCY);
+    var bstar=Math.pow((Math.sqrt(kap)-1)/(Math.sqrt(kap)+1),2);
+    var reg = rm.escaped ? '<span class="flag bad">diverging &mdash; step too large</span>'
+      : (beta<bstar*0.72 ? '<span class="flag">overdamped</span>'
+      : (beta<bstar*1.12 ? '<span class="flag ok">near critical</span>'
+      : '<span class="flag bad">underdamped</span>'));
+    $('oReg').innerHTML=reg;
+    $('oSp').textContent = rp.steps>0?String(rp.steps):'>400';
+    $('oSm').textContent = rm.escaped?'diverged':(rm.steps>0?String(rm.steps):'>400');
+    $('oRp').textContent=fmt((kap-1)/(kap+1),4);
+    $('oRm').textContent=fmt((Math.sqrt(kap)-1)/(Math.sqrt(kap)+1),4);
+    $('oEta').textContent=fmt(etaStar,4);
+    $('oBst').textContent=fmt(bstar,3);
+  }
+  /* A preset sets beta AND eta together: the optimal beta is only optimal at
+     the matching step, and the two move together as kappa changes. */
+  function applyPreset(name){
+    var kap=parseInt($('kapSl').value,10);
+    var bstar=Math.pow((Math.sqrt(kap)-1)/(Math.sqrt(kap)+1),2);
+    var b,e;
+    if(name==='crit'){ b=bstar;            e=1/Math.sqrt(kap); }
+    else if(name==='under'){ b=Math.min(0.96,Math.max(0.90,bstar+0.35)); e=1/Math.sqrt(kap); }
+    else { b=0;                            e=2/(kap+1); }   /* 'none' = plain descent */
+    $('betaSl').value=String(Math.round(b*1000));
+    $('lrSl').value=String(Math.max(1,Math.min(8000,Math.round(e*10000))));
+    document.querySelectorAll('[data-bp]').forEach(function(o){
+      o.classList.toggle('on', o.getAttribute('data-bp')===name);});
+    drawM();
+  }
+  ['betaSl','lrSl'].forEach(function(id){$(id).addEventListener('input',function(){
+    document.querySelectorAll('[data-bp]').forEach(function(o){o.classList.remove('on');}); drawM();});});
+  $('kapSl').addEventListener('input',function(){
+    var act=document.querySelector('[data-bp].on');
+    if(act) applyPreset(act.getAttribute('data-bp')); else drawM();});
+  document.querySelectorAll('[data-bp]').forEach(function(b){
+    b.addEventListener('click',function(){applyPreset(b.getAttribute('data-bp'));});
+  });
+  $('mAx').setAttribute('x1',8); $('mAx').setAttribute('y1',MCY);
+  $('mAx').setAttribute('x2',472); $('mAx').setAttribute('y2',MCY);
+  $('mAy').setAttribute('x1',MCX); $('mAy').setAttribute('y1',8);
+  $('mAy').setAttribute('x2',MCX); $('mAy').setAttribute('y2',312);
+  grid($('mGrid'),480,320,30); applyPreset('none');
+
+  /* ---------- LAB 2 : bias / variance ---------- */
+  var TRUEF=function(x){return 0.9*Math.sin(2.5*x);}, NOISE=0.20;
+  var trX=[],trY=[],teX=[],teY=[],seed=7;
+  function rnd(){seed=(seed*1103515245+12345)&0x7fffffff; return seed/0x7fffffff;}
+  function gau(){return Math.sqrt(-2*Math.log(rnd()||1e-9))*Math.cos(2*Math.PI*rnd());}
+  function sample(){
+    trX=[];trY=[];teX=[];teY=[];
+    var i;
+    for(i=0;i<12;i++){var x=-1+2*i/11; trX.push(x); trY.push(TRUEF(x)+gau()*NOISE);}
+    for(i=0;i<60;i++){var xt=-1+2*rnd(); teX.push(xt); teY.push(TRUEF(xt)+gau()*NOISE);}
+  }
+  function solveN(A,b,n){
+    var i,j,c,r;
+    for(i=0;i<n;i++) A[i][i]+=1e-8;
+    for(c=0;c<n;c++){
+      var piv=c; for(r=c+1;r<n;r++) if(Math.abs(A[r][c])>Math.abs(A[piv][c])) piv=r;
+      var t=A[c];A[c]=A[piv];A[piv]=t; var tb=b[c];b[c]=b[piv];b[piv]=tb;
+      if(Math.abs(A[c][c])<1e-13) continue;
+      for(r=c+1;r<n;r++){var f=A[r][c]/A[c][c];
+        for(j=c;j<n;j++) A[r][j]-=f*A[c][j]; b[r]-=f*b[c];}
+    }
+    var x=new Array(n).fill(0);
+    for(i=n-1;i>=0;i--){var s=b[i]; for(j=i+1;j<n;j++) s-=A[i][j]*x[j];
+      x[i]=Math.abs(A[i][i])<1e-13?0:s/A[i][i];}
+    return x;
+  }
+  function polyfit(xs,ys,deg){
+    var n=deg+1,A=[],bv=[],i,j,k;
+    for(i=0;i<n;i++){A.push(new Array(n).fill(0)); bv.push(0);
+      for(k=0;k<xs.length;k++){bv[i]+=Math.pow(xs[k],i)*ys[k];
+        for(j=0;j<n;j++) A[i][j]+=Math.pow(xs[k],i+j);}}
+    return solveN(A,bv,n);
+  }
+  function eval_(c,x){var s=0,i; for(i=0;i<c.length;i++) s+=c[i]*Math.pow(x,i); return s;}
+  function rmse(c,xs,ys){var s=0,i; for(i=0;i<xs.length;i++){var d=eval_(c,xs[i])-ys[i]; s+=d*d;}
+    return Math.sqrt(s/xs.length);}
+  var BX0=46,BX1=458,FY0=32,FY1=150,EY0=196,EY1=282;
+  function bx(x){return BX0+(x+1)/2*(BX1-BX0);}
+  function by(y){return (FY0+FY1)/2 - y/1.7*((FY1-FY0)/2);}
+  function drawB(){
+    var deg=parseInt($('degSl').value,10);
+    $('degVal').textContent=String(deg);
+    var errs=[],d;
+    for(d=1;d<=11;d++){var cc=polyfit(trX,trY,d); errs.push([rmse(cc,trX,trY),rmse(cc,teX,teY)]);}
+    var c=polyfit(trX,trY,deg);
+    var s='',i,x;
+    var dt='',df='';
+    for(i=0;i<=200;i++){x=-1+2*i/200;
+      dt+=(i?'L':'M')+bx(x).toFixed(1)+' '+by(TRUEF(x)).toFixed(1);
+      df+=(i?'L':'M')+bx(x).toFixed(1)+' '+by(clamp(eval_(c,x),-1.7,1.7)).toFixed(1);}
+    s+='<path class="truec" d="'+dt+'"/><path class="fitc" d="'+df+'"/>';
+    for(i=0;i<trX.length;i++) s+='<circle class="pt" cx="'+bx(trX[i]).toFixed(1)+'" cy="'+by(clamp(trY[i],-1.7,1.7)).toFixed(1)+'" r="3"/>';
+    $('bFit').innerHTML=s;
+    var mx=0; errs.forEach(function(e){mx=Math.max(mx,e[0],Math.min(e[1],1.2));});
+    mx=Math.max(mx,0.35);
+    function ey(v){return EY1-clamp(v,0,mx)/mx*(EY1-EY0);}
+    function ex(dd){return BX0+(dd-1)/10*(BX1-BX0);}
+    var p1='',p2='';
+    for(d=1;d<=11;d++){p1+=(d>1?'L':'M')+ex(d).toFixed(1)+' '+ey(errs[d-1][0]).toFixed(1);
+      p2+=(d>1?'L':'M')+ex(d).toFixed(1)+' '+ey(errs[d-1][1]).toFixed(1);}
+    var best=1,bv=1e9;
+    for(d=1;d<=11;d++) if(errs[d-1][1]<bv){bv=errs[d-1][1];best=d;}
+    $('bErr').innerHTML='<path class="etr" d="'+p1+'"/><path class="ete" d="'+p2+'"/>'
+      +'<circle class="emark" cx="'+ex(best).toFixed(1)+'" cy="'+ey(bv).toFixed(1)+'" r="4"/>'
+      +'<line class="thr" x1="'+ex(deg).toFixed(1)+'" y1="'+EY0+'" x2="'+ex(deg).toFixed(1)+'" y2="'+EY1+'"/>';
+    var ax='<line class="axl" x1="'+BX0+'" y1="'+by(0)+'" x2="'+BX1+'" y2="'+by(0)+'"/>'
+      +'<line class="axl" x1="'+BX0+'" y1="'+EY1+'" x2="'+BX1+'" y2="'+EY1+'"/>'
+      +'<text class="al" x="'+BX0+'" y="24">FIT &#183; 12 noisy points</text>'
+      +'<text class="al" x="'+BX0+'" y="188">ERROR vs DEGREE</text>'
+      +'<text class="tk" x="'+BX0+'" y="'+(EY1+15)+'">1</text>'
+      +'<text class="tk" x="'+ex(11)+'" y="'+(EY1+15)+'" text-anchor="end">11</text>'
+      +'<text class="tk" x="'+(BX0-6)+'" y="'+(EY0+4)+'" text-anchor="end">'+fmt(mx,2)+'</text>';
+    $('bAx').innerHTML=ax;
+    $('oTr').textContent=fmt(errs[deg-1][0],4);
+    $('oTe').textContent=fmt(errs[deg-1][1],4);
+    $('oBest').textContent=String(best);
+    $('oVd').innerHTML = errs[deg-1][1]>bv*1.35 ? (deg>best?'<span class="flag bad">overfitting</span>':'<span class="flag bad">underfitting</span>')
+      : '<span class="flag ok">about right</span>';
+  }
+  $('degSl').addEventListener('input',drawB);
+  $('bRoll').addEventListener('click',function(){seed=(seed*7919+13)&0x7fffffff; sample(); drawB();});
+  grid($('bGrid'),480,320,30); sample(); drawB();
+
+  /* ---------- LAB 3 : threshold ---------- */
+  var TX0=46,TX1=458,TY=238,TH=170,MUN=0.35,MUP=0.65,SD=0.13;
+  function tx(v){return TX0+v*(TX1-TX0);}
+  function drawT(){
+    var thr=parseInt($('thrSl').value,10)/100, base=parseInt($('baseSl').value,10)/100;
+    $('thrVal').textContent=fmt(thr,2); $('baseVal').textContent=fmt(base*100,0)+'%';
+    var tp=base*(1-Phi((thr-MUP)/SD)), fn=base*Phi((thr-MUP)/SD);
+    var fp=(1-base)*(1-Phi((thr-MUN)/SD)), tn=(1-base)*Phi((thr-MUN)/SD);
+    function pdf(v,m,sc){return sc*Math.exp(-.5*Math.pow((v-m)/SD,2));}
+    function curve(m,sc){var d='',i,v;
+      for(i=0;i<=240;i++){v=i/240; d+=(i?'L':'M')+tx(v).toFixed(1)+' '+(TY-pdf(v,m,sc)*TH).toFixed(1);}
+      return d;}
+    function area(m,sc,a,b){var d='M'+tx(a).toFixed(1)+' '+TY,i,v;
+      for(i=0;i<=120;i++){v=a+i/120*(b-a); d+='L'+tx(v).toFixed(1)+' '+(TY-pdf(v,m,sc)*TH).toFixed(1);}
+      return d+'L'+tx(b).toFixed(1)+' '+TY+'Z';}
+    var sn=(1-base), sp=base;
+    $('tShade').innerHTML='<path class="shFP" d="'+area(MUN,sn,thr,1)+'"/><path class="shTP" d="'+area(MUP,sp,thr,1)+'"/>';
+    $('tCurves').innerHTML='<path class="cneg" d="'+curve(MUN,sn)+'"/><path class="cpos" d="'+curve(MUP,sp)+'"/>';
+    $('tAx').innerHTML='<line class="axl" x1="'+TX0+'" y1="'+TY+'" x2="'+TX1+'" y2="'+TY+'"/>'
+      +'<line class="thr" x1="'+tx(thr).toFixed(1)+'" y1="40" x2="'+tx(thr).toFixed(1)+'" y2="'+TY+'"/>'
+      +'<text class="tk" x="'+tx(thr).toFixed(1)+'" y="34" text-anchor="middle">threshold</text>'
+      +'<text class="al" x="'+((TX0+TX1)/2)+'" y="'+(TY+32)+'" text-anchor="middle">model score &#8594; alarm if above the threshold</text>';
+    var pr=(tp+fp)>0?tp/(tp+fp):0, rc=(tp+fn)>0?tp/(tp+fn):0;
+    $('oPr').textContent=fmt(pr,3); $('oRc').textContent=fmt(rc,3);
+    $('oF1').textContent=(pr+rc)>0?fmt(2*pr*rc/(pr+rc),3):'0.000';
+    $('oAc').textContent=fmt(tp+tn,3);
+  }
+  ['thrSl','baseSl'].forEach(function(id){$(id).addEventListener('input',drawT);});
+  grid($('tGrid'),480,300,30); drawT();
+
+  /* ---------- rail ---------- */
+  (function(){
+    var links=Array.prototype.slice.call(document.querySelectorAll('.rail a'));
+    if(!links.length||!window.IntersectionObserver) return;
+    var map={}; links.forEach(function(a){map[a.getAttribute('href').slice(1)]=a;});
+    var seen={};
+    var io=new IntersectionObserver(function(es){
+      es.forEach(function(e){seen[e.target.id]=e.isIntersecting;});
+      var ids=Object.keys(map),act=null;
+      for(var i=0;i<ids.length;i++) if(seen[ids[i]]){act=ids[i];break;}
+      if(!act) return;
+      links.forEach(function(a){a.classList.toggle('on',a===map[act]);});
+    },{rootMargin:'-70px 0px -65% 0px',threshold:0});
+    Object.keys(map).forEach(function(id){var el=document.getElementById(id); if(el) io.observe(el);});
+  })();
+})();
+</script>
+<script>
+/* Safety net: if the MathJax bundle cannot be reached, degrade the TeX to
+   readable Unicode instead of leaving raw backslash markup on the page. */
+(function () {
+  'use strict';
+  var GREEK = { theta:'θ', sigma:'σ', delta:'δ', mu:'μ', pi:'π',
+                infty:'∞', alpha:'α', beta:'β', lambda:'λ' };
+  var SUB = { '1':'₁','2':'₂','3':'₃','i':'ᵢ','j':'ⱼ','n':'ₙ','p':'ₚ','x':'ₓ','y':'ᵧ' };
+  var SUP = { '2':'²','3':'³','n':'ⁿ','p':'ᵖ','*':'*' };
+
+  function degrade(t) {
+    t = t.replace(/\$\$/g, '').replace(/\\[()[\]]/g, '');
+    t = t.replace(/\\(?:left|right|textstyle|displaystyle|!|,|;|:)/g, '');
+    t = t.replace(/\\q?quad/g, ' ');
+    t = t.replace(/\\mathbb\{R\}/g, 'ℝ').replace(/\\mathbb\{Z\}/g, 'ℤ')
+         .replace(/\\mathbb\{N\}/g, 'ℕ').replace(/\\mathbb\{Q\}/g, 'ℚ');
+    t = t.replace(/\\(?:mathbf|mathrm|text|textbf|operatorname)\{([^{}]*)\}/g, '$1');
+    t = t.replace(/\\hat\{([^{}]*)\}/g, '$1̂').replace(/\\bar\{([^{}]*)\}/g, '$1̄');
+    t = t.replace(/\\sqrt\{([^{}]*)\}/g, '√($1)');
+    t = t.replace(/\\t?frac\{([^{}]*)\}\{([^{}]*)\}/g, '($1)/($2)');
+    t = t.replace(/\\binom\{([^{}]*)\}\{([^{}]*)\}/g, 'C($1,$2)');
+    t = t.replace(/\\([a-zA-Z]+)/g, function (m, w) {
+      if (GREEK[w]) return GREEK[w];
+      switch (w) {
+        case 'cdot': return '·';
+        case 'times': return '×';
+        case 'le': case 'leq': return '≤';
+        case 'ge': case 'geq': return '≥';
+        case 'neq': return '≠';
+        case 'approx': return '≈';
+        case 'in': return '∈';
+        case 'pm': return '±';
+        case 'to': case 'rightarrow': return '→';
+        case 'Rightarrow': return '⇒';
+        case 'iff': return '⇔';
+        case 'parallel': return '∥';
+        case 'perp': return '⊥';
+        case 'sum': return 'Σ';
+        case 'langle': return '⟨';
+        case 'rangle': return '⟩';
+        case 'wedge': return '∧';
+        case 'ast': return '*';
+        case 'cdots': case 'ldots': case 'dots': return '…';
+        case 'max': case 'min': case 'cos': case 'sin': case 'log': case 'exp': return w;
+        default: return w;
+      }
+    });
+    t = t.replace(/\\\|/g, '‖').replace(/\|\|/g, '‖');
+    t = t.replace(/_\{?([0-9ijnpxy])\}?/g, function (m, c) { return SUB[c] || ('_' + c); });
+    t = t.replace(/\^\{?([23np*])\}?/g, function (m, c) { return SUP[c] || ('^' + c); });
+    t = t.replace(/[{}]/g, '');
+    return t.replace(/[ \t]{2,}/g, ' ');
+  }
+
+  function run() {
+    if (window.MathJax && window.MathJax.startup && window.MathJax.startup.document) return;
+    var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+      acceptNode: function (n) {
+        if (!n.nodeValue || n.nodeValue.indexOf('\\') < 0 && n.nodeValue.indexOf('$$') < 0)
+          return NodeFilter.FILTER_REJECT;
+        var p = n.parentNode;
+        while (p && p !== document.body) {
+          var tag = p.nodeName;
+          if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'CODE' || tag === 'PRE')
+            return NodeFilter.FILTER_REJECT;
+          p = p.parentNode;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    var hits = [], n;
+    while ((n = walker.nextNode())) hits.push(n);
+    hits.forEach(function (node) { node.nodeValue = degrade(node.nodeValue); });
+    document.querySelectorAll('.mathbox').forEach(function (el) {
+      el.style.fontFamily = "'IBM Plex Mono', monospace";
+      el.style.fontSize = '15px';
+      el.style.textAlign = 'center';
+      el.style.padding = '10px 0';
+    });
+  }
+  setTimeout(run, 6000);
+})();
+</script>
+
+<script>
+/* Long display equations can be wider than their container - especially inside a
+   callout box, which is narrower than the main column. After the typesetter
+   finishes, measure each one and shrink it just enough to fit. Only ever shrinks,
+   never grows, and never below a readable floor - so the worst case is the
+   scrollbar we already had. */
+(function () {
+  'use strict';
+  var MIN_SCALE = 0.70;   /* below this, scrolling beats illegible text */
+
+  function fitOne(box) {
+    try {
+      var c = box.querySelector('mjx-container[display="true"]');
+      if (!c) return;
+      var svg = c.querySelector('svg');
+      if (!svg) return;
+      c.style.fontSize = '';
+      var avail = box.clientWidth;
+      if (!avail) return;
+      var w = svg.getBoundingClientRect().width;
+      if (!w || w <= avail) return;
+      var k = Math.max(MIN_SCALE, (avail / w) * 0.98);
+      c.style.fontSize = (k * 100).toFixed(1) + '%';
+      var w2 = svg.getBoundingClientRect().width;      /* one refinement pass */
+      if (w2 > avail) {
+        k = Math.max(MIN_SCALE, k * (avail / w2) * 0.98);
+        c.style.fontSize = (k * 100).toFixed(1) + '%';
+      }
+    } catch (e) { /* leave the equation exactly as it was */ }
+  }
+
+  /* Inline math cannot wrap and is not inside a scrollable .mathbox, so a long
+     inline expression pushes the whole page sideways.  Shrink any that is wider
+     than the text column it sits in; the ex-based sizing keeps the baseline. */
+  function fitInline(c) {
+    try {
+      var svg = c.querySelector('svg'); if (!svg) return;
+      c.style.fontSize = '';
+      var host = c.parentElement; if (!host) return;
+      var avail = host.clientWidth; if (!avail) return;
+      var w = svg.getBoundingClientRect().width;
+      if (!w || w <= avail) return;
+      c.style.fontSize = (Math.max(MIN_SCALE, (avail / w) * 0.98) * 100).toFixed(1) + '%';
+    } catch (e) { /* leave the expression exactly as it was */ }
+  }
+
+  function fitAll() {
+    try { document.querySelectorAll('.mathbox').forEach(fitOne); } catch (e) {}
+    try {
+      document.querySelectorAll('mjx-container:not([display="true"])').forEach(fitInline);
+    } catch (e) {}
+  }
+
+  function start() {
+    fitAll();
+    var t;
+    window.addEventListener('resize', function () {
+      clearTimeout(t); t = setTimeout(fitAll, 160);
+    });
+  }
+
+  function waitForTypesetter(n) {
+    if (window.MathJax && window.MathJax.startup && window.MathJax.startup.promise) {
+      window.MathJax.startup.promise.then(start, start);
+      return;
+    }
+    if (n > 60) return;            /* typesetter never arrived - nothing to fit */
+    setTimeout(function () { waitForTypesetter(n + 1); }, 200);
+  }
+  waitForTypesetter(0);
+})();
+</script>

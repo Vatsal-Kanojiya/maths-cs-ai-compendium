@@ -5,7 +5,7 @@ minutes instead of re-deriving decisions already made.
 
 ## State
 
-Branch `claude/blissful-euler-0c6xih`, latest commit carries sheets 1–5 of 20.
+Branch `claude/blissful-euler-0c6xih`, latest commit carries sheets 1–6 of 20.
 
 | # | Chapter | Folder | Published |
 |---|---------|--------|-----------|
@@ -14,8 +14,9 @@ Branch `claude/blissful-euler-0c6xih`, latest commit carries sheets 1–5 of 20.
 | 03 | Calculus | `ch03-calculus/` | https://claude.ai/artifact/DhK5wG1RE9YMnRxSHizngC |
 | 04 | Statistics | `ch04-statistics/` | https://claude.ai/artifact/XWetUvsAH8Mw25LRxecCKU |
 | 05 | Probability | `ch05-probability/` | https://claude.ai/artifact/DDbGs67DwJPTwCYWFyTUMW |
+| 06 | Machine Learning | `ch06-machine-learning/` | https://claude.ai/artifact/AazU1pknayKewgpJQhzo3Z |
 
-Next up: **Chapter 06 — Machine Learning**.
+Next up: **Chapter 07 — Computational Linguistics**.
 
 ## The reader
 
@@ -169,11 +170,73 @@ as genuine surveys and mark them clearly as not derived from the compendium.
 
 ## Known issues
 
-- The equation auto-fitter could not be verified against a real typesetter in this
-  environment, only against a stub. If a reader reports a clipped equation, split it at
-  source with `\begin{aligned}`.
+- ~~The equation auto-fitter could not be verified against a real typesetter.~~
+  **Resolved at Chapter 06** — see "Browser probe" below. Equations are now checked
+  against real MathJax at five viewport widths.
 - Inline source panels (approach C) exist in Chapter 01 only, as a trial.
 - Upstream bugs found but **not** fixed, because they were out of scope: `mkdocs.yml`
   has `docs_dir: .` which aborts the build on mkdocs 1.6, and all 104 nav paths plus all
   104 `llms.txt` paths still use the pre-rename `chapter NN:` spelling. Worth raising
   upstream.
+
+
+## Browser probe — set this up before touching a chapter (added at Chapter 06)
+
+cdnjs is blocked by the egress proxy, so MathJax will not load in a headless browser
+and every equation check silently passes on unrendered TeX. npm is *not* blocked:
+
+```bash
+cd "$SCRATCH" && ln -sfn /opt/node22/lib/node_modules node_modules
+(cd vendor && npm pack mathjax@3.2.2 --silent && tar xzf mathjax-3.2.2.tgz)
+cp -r vendor/package/es5 chNN/vendor          # the WHOLE es5 tree, not just the
+                                              # bundle: it lazy-loads extensions
+python3 -c "import io,re; s=io.open('chNN/index.html').read(); \
+  io.open('chNN/_probe.html','w').write(re.sub(r'https://cdnjs[^\"]+','vendor/tex-mml-svg.js',s))"
+npx --offline http-server chNN -p 8607 -s &   # then point Playwright at _probe.html
+```
+
+Do not ship `vendor/` or `_probe.html`; they are probe-only.
+
+What the probe must check, at widths 1180 / 900 / 700 / 480 / 390:
+
+1. `mjx-container` count > 100 — otherwise MathJax did not run and nothing below counts.
+2. No display equation wider than its `.mathbox`.
+3. `documentElement.scrollWidth == clientWidth` — no horizontal page scroll.
+4. No `.ro-k` / `.lg` label with `scrollWidth > clientWidth` (clipped label).
+5. Every slider swept end to end, every preset clicked, every predict button clicked,
+   with `pageerror` collected throughout.
+
+## Traps that have now bitten more than once
+
+- **Greek letters inside uppercased labels.** `.ro-k`, `<label>`, `.lab-t`, `.note-h`
+  and `thead th` all carry `text-transform:uppercase`, which turns `&beta;` into a
+  capital Beta — the Latin letter **B** on screen. Likewise `&eta;`→H, `&kappa;`→K,
+  `&lambda;`→Λ. Sliders read "MOMENTUM B", "STEP H". Every Greek entity in those
+  elements must be wrapped in `<span class="gk">`, and `.gk{text-transform:none}`
+  must be in the stylesheet. This was live in all five published chapters before
+  Chapter 06 caught it; 31 labels were fixed retrospectively.
+- **The head-extraction recipe drops `</style>`.** `sed -n '1,339p'` ends *inside*
+  the first `<style>` block, and Part 1 then opens a second one. Chapters 04, 05 and
+  06 all shipped with unbalanced style tags. Always assert
+  `count('<style>') == count('</style>')` before publishing.
+- **Long *inline* math forces page scroll.** The auto-fitter only ever looked at
+  `display="true"` containers inside `.mathbox`. Inline math cannot wrap and is not in
+  a scrollable box, so one long `\(...\)` pushes the whole page sideways. `fitInline()`
+  now handles it — keep it when copying the tail into a new chapter. Better still,
+  promote any inline expression longer than about 40 characters to a display equation.
+- **A `\qquad`-joined pair of equations overflows below ~480px.** Split with
+  `\begin{aligned}` and `&=` alignment; it reads better on desktop anyway.
+
+## The Chapter 06 lesson worth generalising
+
+The momentum lab was built to illustrate "momentum cancels the transverse oscillation",
+which is how every textbook draws it. Simulating it showed the claim is **false at the
+optimal tuning**: the momentum path flips the sign of its stiff coordinate on every
+single step, exactly as plain descent does, and overshoots *further* (1.71 vs 1.00). The
+gain is a faster decay per crossing (0.62 vs 0.90) bought by a step size that plain
+descent could not survive.
+
+Nothing in the prose was wrong in a way a reader could catch. It took building the thing
+and running it. **If a page asserts a picture, make the lab draw that picture, and if the
+lab draws something else, the prose is what is wrong.** The corrected version is in
+§05 and break item 5, and the numbers are in `verify_claims.py` under `[Ch06 s05]`.

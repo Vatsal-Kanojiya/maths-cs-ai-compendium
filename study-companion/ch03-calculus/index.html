@@ -171,6 +171,10 @@ section{padding-block:38px 0; scroll-margin-top:calc(env(safe-area-inset-top,0px
   border:1px solid var(--rule); border-left:3px solid var(--accent);
   background:var(--sheet); border-radius:2px; padding:16px 18px; margin:22px 0;
 }
+/* Greek letters must never be uppercased: text-transform turns beta into
+   a capital Beta, which is the Latin letter B on screen -- likewise eta->H,
+   kappa->K, lambda->A-shape.  Any Greek inside an uppercased label wears .gk. */
+.gk{text-transform:none}
 .note.bridge{border-left-color:var(--bridge); background:var(--bridge-soft)}
 .note.brk{border-left-color:var(--brk); background:var(--brk-soft)}
 .note-h{
@@ -902,7 +906,7 @@ a.srcref:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 
   <div class="tw col">
     <table>
-      <thead><tr><th class="mono">Amplitude &theta;&#8320;</th><th class="mono">True period / T&#8320;</th><th>Error in the SHM answer</th></tr></thead>
+      <thead><tr><th class="mono">Amplitude <span class="gk">&theta;</span>&#8320;</th><th class="mono">True period / T&#8320;</th><th>Error in the SHM answer</th></tr></thead>
       <tbody>
         <tr><td class="mono">5&deg;</td><td class="mono">1.0005</td><td>0.05% &mdash; unmeasurable</td></tr>
         <tr><td class="mono">30&deg;</td><td class="mono">1.0174</td><td>1.7% &mdash; visible on a stopwatch</td></tr>
@@ -1056,20 +1060,20 @@ a.srcref:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
         <circle id="minGD" r="5"/>
       </svg>
       <div class="ctl">
-        <label for="lrSl">Learning rate &alpha;</label>
+        <label for="lrSl">Learning rate <span class="gk">&alpha;</span></label>
         <input type="range" id="lrSl" min="1" max="130" value="30" step="1">
         <span class="ro-v" id="lrVal" style="min-width:74px">0.30</span>
       </div>
       <div class="ctl">
-        <label for="kSl">Condition &kappa;</label>
+        <label for="kSl">Condition <span class="gk">&kappa;</span></label>
         <input type="range" id="kSl" min="1" max="40" value="8" step="1">
         <span class="ro-v" id="kVal" style="min-width:56px">8</span>
       </div>
       <div class="readout">
-        <div class="ro"><div class="ro-k">Stability limit 2/&lambda;max</div><div class="ro-v c" id="oLim">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Stability limit 2/<span class="gk">&lambda;</span>max</div><div class="ro-v c" id="oLim">&mdash;</div></div>
         <div class="ro"><div class="ro-k">Status</div><div class="ro-v" id="oStat">&mdash;</div></div>
         <div class="ro"><div class="ro-k">Steps to 1% of start</div><div class="ro-v a" id="oSteps">&mdash;</div></div>
-        <div class="ro"><div class="ro-k">Best-case rate (&kappa;&minus;1)/(&kappa;+1)</div><div class="ro-v" id="oRate">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Best-case rate (<span class="gk">&kappa;</span>&minus;1)/(<span class="gk">&kappa;</span>+1)</div><div class="ro-v" id="oRate">&mdash;</div></div>
       </div>
     </div>
     <div class="lab-foot">
@@ -1303,7 +1307,7 @@ a.srcref:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
   <div class="tw col">
     <table>
       <thead>
-        <tr><th class="mono">k</th><th class="mono">&alpha; = 0.18 &nbsp;(x, y)</th><th class="mono">&alpha; = 0.21 &nbsp;(x, y)</th></tr>
+        <tr><th class="mono">k</th><th class="mono"><span class="gk">&alpha;</span> = 0.18 &nbsp;(x, y)</th><th class="mono"><span class="gk">&alpha;</span> = 0.21 &nbsp;(x, y)</th></tr>
       </thead>
       <tbody>
         <tr><td class="mono">0</td><td class="mono">(1.000, 1.000)</td><td class="mono">(1.000, 1.000)</td></tr>

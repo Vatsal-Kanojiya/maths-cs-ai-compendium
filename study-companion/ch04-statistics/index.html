@@ -171,6 +171,10 @@ section{padding-block:38px 0; scroll-margin-top:calc(env(safe-area-inset-top,0px
   border:1px solid var(--rule); border-left:3px solid var(--accent);
   background:var(--sheet); border-radius:2px; padding:16px 18px; margin:22px 0;
 }
+/* Greek letters must never be uppercased: text-transform turns beta into
+   a capital Beta, which is the Latin letter B on screen -- likewise eta->H,
+   kappa->K, lambda->A-shape.  Any Greek inside an uppercased label wears .gk. */
+.gk{text-transform:none}
 .note.bridge{border-left-color:var(--bridge); background:var(--bridge-soft)}
 .note.brk{border-left-color:var(--brk); background:var(--brk-soft)}
 .note-h{
@@ -338,6 +342,7 @@ details.q .ans p:last-child{margin-bottom:0}
 .srcref{text-decoration:none}
 a.srcref{color:var(--ink-2); transition:none}
 
+</style>
 <style>
 .srcref{text-decoration:none}
 a.srcref{color:var(--ink-2)}
@@ -548,7 +553,7 @@ a.srcref:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
     </div>
 
     <div class="note bridge">
-      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; &sigma; is a radius of gyration</div>
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; <span class="gk">&sigma;</span> is a radius of gyration</div>
       <p>
         The radius of gyration answers a specific question: <em>at what single distance could I
         concentrate the entire area and still get the same second moment?</em>
@@ -592,9 +597,9 @@ a.srcref:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
       <div class="readout">
         <div class="ro"><div class="ro-k">Mean &mdash; centroid</div><div class="ro-v a" id="oMu">&mdash;</div></div>
         <div class="ro"><div class="ro-k">Variance &mdash; I&#772;/A</div><div class="ro-v" id="oVar">&mdash;</div></div>
-        <div class="ro"><div class="ro-k">&sigma; &mdash; radius of gyration</div><div class="ro-v c" id="oSig">&mdash;</div></div>
+        <div class="ro"><div class="ro-k"><span class="gk">&sigma;</span> &mdash; radius of gyration</div><div class="ro-v c" id="oSig">&mdash;</div></div>
         <div class="ro"><div class="ro-k">E[X&sup2;] &mdash; I&#8338;/A</div><div class="ro-v" id="oEx2">&mdash;</div></div>
-        <div class="ro"><div class="ro-k">&mu;&sup2; &mdash; shift d&sup2;</div><div class="ro-v" id="oMu2">&mdash;</div></div>
+        <div class="ro"><div class="ro-k"><span class="gk">&mu;</span>&sup2; &mdash; shift d&sup2;</div><div class="ro-v" id="oMu2">&mdash;</div></div>
         <div class="ro"><div class="ro-k">Parallel axis check</div><div class="ro-v" id="oPax">&mdash;</div></div>
       </div>
     </div>
@@ -853,9 +858,9 @@ a.srcref:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
         <button class="btn" id="cRoll" type="button">Resample</button>
       </div>
       <div class="readout">
-        <div class="ro"><div class="ro-k">Population &sigma;</div><div class="ro-v a" id="oPs">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Population <span class="gk">&sigma;</span></div><div class="ro-v a" id="oPs">&mdash;</div></div>
         <div class="ro"><div class="ro-k">Measured SE of means</div><div class="ro-v b" id="oSe">&mdash;</div></div>
-        <div class="ro"><div class="ro-k">Theory &sigma;/&radic;n</div><div class="ro-v c" id="oSeT">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Theory <span class="gk">&sigma;</span>/&radic;n</div><div class="ro-v c" id="oSeT">&mdash;</div></div>
         <div class="ro"><div class="ro-k">Skewness of means</div><div class="ro-v" id="oSk">&mdash;</div></div>
       </div>
       <div class="legend">
@@ -950,15 +955,15 @@ a.srcref:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
         <label for="nnSl">Sample size n</label>
         <input type="range" id="nnSl" min="4" max="200" value="36" step="1">
         <span class="ro-v" id="nnVal" style="min-width:56px">36</span>
-        <label for="aSl" style="margin-left:6px">&alpha;</label>
+        <label for="aSl" style="margin-left:6px"><span class="gk">&alpha;</span></label>
         <input type="range" id="aSl" min="1" max="20" value="5" step="1">
         <span class="ro-v" id="aVal" style="min-width:56px">0.05</span>
       </div>
       <div class="readout">
         <div class="ro"><div class="ro-k">Standard error</div><div class="ro-v" id="oSE">&mdash;</div></div>
-        <div class="ro"><div class="ro-k">&alpha; &mdash; producer's risk</div><div class="ro-v b" id="oAl">&mdash;</div></div>
-        <div class="ro"><div class="ro-k">&beta; &mdash; consumer's risk</div><div class="ro-v" id="oBe">&mdash;</div></div>
-        <div class="ro"><div class="ro-k">Power 1&minus;&beta;</div><div class="ro-v c" id="oPw">&mdash;</div></div>
+        <div class="ro"><div class="ro-k"><span class="gk">&alpha;</span> &mdash; producer's risk</div><div class="ro-v b" id="oAl">&mdash;</div></div>
+        <div class="ro"><div class="ro-k"><span class="gk">&beta;</span> &mdash; consumer's risk</div><div class="ro-v" id="oBe">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Power 1&minus;<span class="gk">&beta;</span></div><div class="ro-v c" id="oPw">&mdash;</div></div>
         <div class="ro"><div class="ro-k">z for x&#772; = true mean</div><div class="ro-v a" id="oZ">&mdash;</div></div>
       </div>
       <div class="legend">

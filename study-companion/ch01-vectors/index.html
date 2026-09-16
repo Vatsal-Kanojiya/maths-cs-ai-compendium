@@ -171,6 +171,10 @@ section{padding-block:38px 0; scroll-margin-top:calc(env(safe-area-inset-top,0px
   border:1px solid var(--rule); border-left:3px solid var(--accent);
   background:var(--sheet); border-radius:2px; padding:16px 18px; margin:22px 0;
 }
+/* Greek letters must never be uppercased: text-transform turns beta into
+   a capital Beta, which is the Latin letter B on screen -- likewise eta->H,
+   kappa->K, lambda->A-shape.  Any Greek inside an uppercased label wears .gk. */
+.gk{text-transform:none}
 .note.bridge{border-left-color:var(--bridge); background:var(--bridge-soft)}
 .note.brk{border-left-color:var(--brk); background:var(--brk-soft)}
 .note-h{
@@ -612,7 +616,7 @@ details.srcbox summary:focus-visible{outline:2px solid var(--accent); outline-of
         <div class="ro"><div class="ro-k">F2 (N)</div><div class="ro-v b" id="oB">&mdash;</div></div>
         <div class="ro"><div class="ro-k">Resultant R</div><div class="ro-v c" id="oR">&mdash;</div></div>
         <div class="ro"><div class="ro-k">|R| (N)</div><div class="ro-v c" id="oRm">&mdash;</div></div>
-        <div class="ro"><div class="ro-k">&theta; from x-axis</div><div class="ro-v" id="oRa">&mdash;</div></div>
+        <div class="ro"><div class="ro-k"><span class="gk">&theta;</span> from x-axis</div><div class="ro-v" id="oRa">&mdash;</div></div>
       </div>
       <div class="legend">
         <span class="lg"><i style="background:var(--s2)"></i>F1</span>
@@ -1377,9 +1381,9 @@ $$d(\mathbf{u}, \mathbf{v}) = \sqrt{(u_1 - v_1)^2 + (u_2 - v_2)^2 + \cdots + (u_
         <div class="ro"><div class="ro-k">F</div><div class="ro-v a" id="oC1">&mdash;</div></div>
         <div class="ro"><div class="ro-k">d</div><div class="ro-v b" id="oC2">&mdash;</div></div>
         <div class="ro"><div class="ro-k">F &middot; d</div><div class="ro-v" id="oCdot">&mdash;</div></div>
-        <div class="ro"><div class="ro-k">&#8741;F&#8741;&#8741;d&#8741;cos&theta;</div><div class="ro-v" id="oCgeo">&mdash;</div></div>
-        <div class="ro"><div class="ro-k">&theta;</div><div class="ro-v" id="oCang">&mdash;</div></div>
-        <div class="ro"><div class="ro-k">cos &theta; (similarity)</div><div class="ro-v c" id="oCcos">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">&#8741;F&#8741;&#8741;d&#8741;cos<span class="gk">&theta;</span></div><div class="ro-v" id="oCgeo">&mdash;</div></div>
+        <div class="ro"><div class="ro-k"><span class="gk">&theta;</span></div><div class="ro-v" id="oCang">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">cos <span class="gk">&theta;</span> (similarity)</div><div class="ro-v c" id="oCcos">&mdash;</div></div>
       </div>
       <div class="legend">
         <span class="lg"><i style="background:var(--s3);opacity:.5"></i>projection of F onto d</span>
@@ -1891,8 +1895,8 @@ $$P^{-1} = \frac{1}{2}\begin{bmatrix} 1 &amp; 1 \\ -1 &amp; 1 \end{bmatrix} \qua
         <button class="btn" id="dRoll" type="button">Resample</button>
       </div>
       <div class="readout">
-        <div class="ro"><div class="ro-k">Mean |cos &theta;|</div><div class="ro-v" id="oEm">&mdash;</div></div>
-        <div class="ro"><div class="ro-k">Std dev of cos &theta;</div><div class="ro-v a" id="oEs">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Mean |cos <span class="gk">&theta;</span>|</div><div class="ro-v" id="oEm">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Std dev of cos <span class="gk">&theta;</span></div><div class="ro-v a" id="oEs">&mdash;</div></div>
         <div class="ro"><div class="ro-k">Theory: 1/&radic;d</div><div class="ro-v c" id="oEt">&mdash;</div></div>
         <div class="ro"><div class="ro-k">Within &plusmn;0.1 of &perp;</div><div class="ro-v" id="oEp">&mdash;</div></div>
       </div>

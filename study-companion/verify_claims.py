@@ -47,10 +47,12 @@ for dim in (2, 10, 100, 1000):
 # --- Ch02: inertia tensor eigen numbers -----------------------------------
 I = np.array([[4.,1.2],[1.2,2.]])
 w, V = np.linalg.eigh(I); w = w[::-1]; V = V[:, ::-1]
-ang = np.degrees(np.arctan2(V[1,0], V[0,0]))
+# An eigenvector's SIGN is arbitrary, so numpy may hand back the axis pointing
+# the other way (-154.90 deg is the same line as 25.10 deg).  Compare mod 180.
+ang = np.degrees(np.arctan2(V[1,0], V[0,0])) % 180.0
 share = w[0]/w.sum()
 print(f"\n[Ch02 s10] eigenvalues {w[0]:.4f}, {w[1]:.4f} (claimed 4.5620, 1.4380)  {P(abs(w[0]-4.5620)<1e-3 and abs(w[1]-1.4380)<1e-3)}")
-print(f"[Ch02 s10] principal axis {ang:.2f} deg (claimed 25.10)            {P(abs(abs(ang)-25.10)<0.02)}")
+print(f"[Ch02 s10] principal axis {ang:.2f} deg mod 180 (claimed 25.10)     {P(abs(ang-25.10)<0.02)}")
 print(f"[Ch02 s10] variance share {share*100:.1f}% (claimed 76.0)           {P(abs(share-0.760)<1e-3)}")
 print(f"[Ch02 s10] trace {np.trace(I):.4f} == sum eig {w.sum():.4f}          {P(abs(np.trace(I)-w.sum())<1e-9)}")
 print(f"[Ch02 s10] det {np.linalg.det(I):.4f} == prod eig {w.prod():.4f}      {P(abs(np.linalg.det(I)-w.prod())<1e-9)}")
@@ -209,4 +211,220 @@ print(f"\n[Ch05 s08] min KL over 20000 random pairs = {worst:.2e} >= 0   {P(wors
 print(f"[Ch05 s03] 10 in series at 0.99 = {0.99**10:.4f} (page 0.904)   {P(abs(0.99**10-0.904)<5e-4)}")
 mle, mapv = 7/10, (2+7-1)/(2+2+10-2)
 print(f"[Ch05 s06] MLE {mle:.3f}, MAP {mapv:.3f} (page 0.700 / 0.667)   {P(abs(mapv-2/3)<1e-9)}")
+print("\n" + "="*66)
+
+print("=" * 66)
+print("CHAPTER 06 - MACHINE LEARNING")
+print("=" * 66)
+
+# --- The headline: heavy-ball momentum takes kappa under a square root ----
+# The page states the theory in heavy-ball form  v = b*v + g ; w -= a*v
+# but the SOURCE (and the lab) use the normalised form v = b*v + (1-b)*g ; w -= eta*v
+# so eta and alpha are related by  alpha = eta*(1-beta).  Check both.
+def hb_rate(lam, a, b, n=6000, burn=2000):
+    """Empirical asymptotic rate of  v = b*v + g ;  x -= a*v  on f = .5*lam*x^2.
+    Two things have to be handled.  (1) At the optimal tuning the decay is
+    0.818^t, which underflows a float64 to zero by step ~3750, so a naive run
+    measures denormal noise instead of the decay -- the state is therefore
+    renormalised every step.  (2) The first steps carry a start-up transient
+    (and at the optimal tuning the two roots coincide, so the envelope is
+    t*rho^t, not rho^t) -- hence the burn-in before the average starts."""
+    x, v, logsum = 1.0, 0.0, 0.0
+    for t in range(n):
+        v = b*v + lam*x
+        x -= a*v
+        m = abs(x) + abs(v)
+        if not np.isfinite(m) or m > 1e12: return np.inf
+        if m == 0.0: return 0.0
+        if t >= burn: logsum += np.log(m)     # burn-in: skip the start-up transient
+        x /= m; v /= m
+    return float(np.exp(logsum/(n-burn)))
+
+def hb_exact(lam, a, b):
+    """Spectral radius of the companion matrix  z^2 - (1+b-a*lam)z + b."""
+    return float(np.max(np.abs(np.linalg.eigvals(np.array([[1+b-a*lam, -b], [1.0, 0.0]])))))
+
+kap = 100.0; lmax, lmin = kap, 1.0
+b_star = ((np.sqrt(kap)-1)/(np.sqrt(kap)+1))**2
+a_star = 4/(np.sqrt(lmax)+np.sqrt(lmin))**2
+rho_th = (np.sqrt(kap)-1)/(np.sqrt(kap)+1)
+print(f"\n[Ch06 s14] beta*  = {b_star:.4f}  (page 0.6694)                {P(abs(b_star-0.6694)<5e-5)}")
+print(f"[Ch06 s14] alpha* = {a_star:.4f}  = 4/121 = {4/121:.4f}          {P(abs(a_star-4/121)<1e-12)}")
+r_hi, r_lo = hb_rate(lmax, a_star, b_star), hb_rate(lmin, a_star, b_star)
+e_hi, e_lo = hb_exact(lmax, a_star, b_star), hb_exact(lmin, a_star, b_star)
+worst, worst_e = max(r_hi, r_lo), max(e_hi, e_lo)
+print(f"[Ch06 s14] exact spectral radius: lmax {e_hi:.8f}  lmin {e_lo:.8f}")
+print(f"[Ch06 s14]   both eigenvalues sit at a DOUBLE root -> critically damped at both extremes")
+print(f"[Ch06 s14] simulated rate:        lmax {r_hi:.6f}  lmin {r_lo:.6f}")
+print(f"[Ch06 s14] worst {worst_e:.6f} == sqrt(beta*) = (sqrtK-1)/(sqrtK+1) = {rho_th:.6f}   {P(abs(worst_e-rho_th)<1e-7)}")
+print(f"[Ch06 s14] simulation agrees with theory                          {P(abs(worst-rho_th)<1e-3)}")
+
+a_plain = 2/(lmax+lmin)
+rho_plain_th = (kap-1)/(kap+1)
+rp_hi, rp_lo = hb_rate(lmax, a_plain, 0.0), hb_rate(lmin, a_plain, 0.0)
+print(f"\n[Ch06 s14] plain alpha* = 2/101 = {a_plain:.4f} (page 0.0198)      {P(abs(a_plain-0.0198)<5e-5)}")
+print(f"[Ch06 s14] plain rate simulated {max(rp_hi,rp_lo):.4f} == 99/101 = {rho_plain_th:.4f}  {P(abs(max(rp_hi,rp_lo)-rho_plain_th)<2e-3)}")
+n_plain = np.log(0.01)/np.log(rho_plain_th)
+n_mom   = np.log(0.01)/np.log(rho_th)
+print(f"[Ch06 s14] steps to 1%: plain {n_plain:.1f} -> 231   momentum {n_mom:.1f} -> 23   {P(round(n_plain)==230 and round(n_mom)==23)}")
+print(f"[Ch06 s14] speedup {n_plain/n_mom:.2f}x (page 'tenfold')            {P(9.0 < n_plain/n_mom < 11.0)}")
+
+# --- eta* for the normalised form is 1/sqrt(lmax*lmin) --------------------
+worst_eta = 0.0
+for L1, L2 in [(100.,1.),(20.,1.),(50.,2.),(9.,3.),(1e4,1.)]:
+    bs = ((np.sqrt(L1/L2)-1)/(np.sqrt(L1/L2)+1))**2
+    as_ = 4/(np.sqrt(L1)+np.sqrt(L2))**2
+    eta_star = as_/(1-bs)
+    worst_eta = max(worst_eta, abs(eta_star - 1/np.sqrt(L1*L2)))
+print(f"\n[Ch06 s05] eta* = alpha*/(1-beta*) == 1/sqrt(lmax*lmin)  err {worst_eta:.2e}  {P(worst_eta<1e-12)}")
+print(f"[Ch06 s05] at kappa=100, lmin=1: eta* = {1/np.sqrt(100*1):.4f} (exactly 1/10)  {P(abs(1/np.sqrt(100)-0.1)<1e-15)}")
+print(f"[Ch06 s05] plain alpha* = 2/(lmax+lmin) -> 2/(arithmetic mean sum);")
+print(f"[Ch06 s05]   momentum eta* -> 1/(geometric mean). sqrt(100*1)={np.sqrt(100*1):.1f} vs (100+1)/2={(100+1)/2:.1f}")
+
+# --- the LAB's own recursion: does the default view converge? -------------
+def lab_run(kapL, eta, beta, N=400):
+    x=y=1.0; vx=vy=0.0; hit=-1
+    for i in range(N):
+        vx = beta*vx + (1-beta)*kapL*x
+        vy = beta*vy + (1-beta)*y
+        x -= eta*vx; y -= eta*vy
+        if not np.isfinite(x) or abs(x) > 4 or abs(y) > 4: return -1, i+1
+        if hit < 0 and np.hypot(x,y) < 0.01*np.sqrt(2): hit = i+1
+    return hit, N
+for (kL, e, b, tag) in [(20,0.18,0.00,'OLD default'),
+                        (20,2/21,0.00,'plain-optimal step'),
+                        (20,1/np.sqrt(20),((np.sqrt(20)-1)/(np.sqrt(20)+1))**2,'optimal beta+eta')]:
+    h, esc = lab_run(kL, e, b)
+    print(f"[Ch06 lab1] kappa={kL} eta={e:.4f} beta={b:.4f} -> steps {h if h>0 else 'DIVERGED@'+str(esc)}   ({tag})")
+print(f"[Ch06 lab1] plain at its optimal step, kappa=20: theory {np.log(0.01)/np.log(19/21):.1f} steps")
+print(f"[Ch06 lab1] momentum at optimal, kappa=20: theory {np.log(0.01)/np.log((np.sqrt(20)-1)/(np.sqrt(20)+1)):.1f} steps")
+
+# --- F1 is the harmonic mean, pinned by the weak term ---------------------
+Pr, Rc = 0.99, 0.02
+F1 = 2*Pr*Rc/(Pr+Rc)
+print(f"\n[Ch06 s08] F1(0.99, 0.02) = {F1:.4f} (page 0.0392)             {P(abs(F1-0.0392)<5e-5)}")
+print(f"[Ch06 s08] arithmetic mean = {(Pr+Rc)/2:.3f} (page 0.505)          {P(abs((Pr+Rc)/2-0.505)<1e-9)}")
+keq = 1/(1/Pr + 1/Rc)
+print(f"[Ch06 s08] springs in series: 1/keq = sum 1/k -> keq = {keq:.5f}; F1 = 2*keq  {P(abs(F1-2*keq)<1e-12)}")
+# harmonic mean never exceeds the smaller term doubled, and is <= arithmetic
+bad = 0
+for _ in range(20000):
+    p, r = rng.uniform(1e-3,1,2)
+    h = 2*p*r/(p+r)
+    if not (h <= (p+r)/2 + 1e-12 and h <= 2*min(p,r) + 1e-12): bad += 1
+print(f"[Ch06 s08] harmonic <= arithmetic and <= 2*min, 20000 draws: {bad} violations  {P(bad==0)}")
+
+# --- k-means minimises a moment of inertia (parallel axis for clusters) ---
+pts = rng.normal(0, 1, (400, 2)) + np.repeat([[0,0],[5,4],[-4,3],[6,-3]], 100, axis=0)
+lab = np.repeat([0,1,2,3], 100)
+J_cent = 0.0; worst_pa = 0.0
+for j in range(4):
+    C = pts[lab==j]; mu = C.mean(axis=0); n = len(C)
+    J_cent += ((C-mu)**2).sum()
+    # parallel axis: second moment about ANY point q = about centroid + n*d^2
+    for _ in range(50):
+        q = rng.normal(0, 6, 2)
+        about_q = ((C-q)**2).sum()
+        pa = ((C-mu)**2).sum() + n*((mu-q)**2).sum()
+        worst_pa = max(worst_pa, abs(about_q - pa))
+print(f"\n[Ch06 s02] parallel axis holds for every cluster  max err {worst_pa:.2e}  {P(worst_pa<1e-8)}")
+# the centroid is the unique minimiser -> k-means' assignment step is exactly
+# "put each cluster's axis through its own centre of mass"
+J_off = min(sum((((pts[lab==j])-(pts[lab==j].mean(axis=0)+rng.normal(0,.5,2)))**2).sum()
+                for j in range(4)) for _ in range(200))
+print(f"[Ch06 s02] J about centroids {J_cent:.2f} <= best of 200 offset centres {J_off:.2f}  {P(J_cent <= J_off)}")
+
+# --- information gain IS mutual information ------------------------------
+def H(p):
+    p = np.asarray(p, float); p = p[p > 0]; return float(-(p*np.log2(p)).sum())
+worst_ig = 0.0
+for _ in range(2000):
+    joint = rng.dirichlet(np.ones(6)).reshape(3, 2)      # 3 split outcomes x 2 labels
+    py = joint.sum(axis=0); px = joint.sum(axis=1)
+    ig = H(py) - sum(px[k]*H(joint[k]/px[k]) for k in range(3) if px[k] > 0)
+    mi = H(px) + H(py) - H(joint.ravel())
+    worst_ig = max(worst_ig, abs(ig - mi))
+print(f"\n[Ch06 s02] info gain == mutual information  max err {worst_ig:.2e}     {P(worst_ig<1e-9)}")
+
+# --- ensembles: variance of the mean, and what correlation costs ----------
+n_mod, sig = 25, 1.0
+ind = np.var(rng.normal(0, sig, (200000, n_mod)).mean(axis=1))
+print(f"\n[Ch06 s03] mean of {n_mod} independent: var {ind:.5f} vs sigma^2/n {sig**2/n_mod:.5f}  {P(abs(ind-sig**2/n_mod)<3e-3)}")
+for rho_c in (0.0, 0.5, 0.9):
+    common = rng.normal(0, 1, (200000, 1))*np.sqrt(rho_c)
+    priv = rng.normal(0, 1, (200000, n_mod))*np.sqrt(1-rho_c)
+    v = np.var((common+priv).mean(axis=1))
+    th = rho_c + (1-rho_c)/n_mod                       # correlated-average variance
+    print(f"[Ch06 s03] corr {rho_c:.1f}: var of mean {v:.4f} vs rho+(1-rho)/n {th:.4f}  {P(abs(v-th)<5e-3)}")
+
+# --- bias-variance decomposition, on the lab's actual fit -----------------
+truef = lambda x: 0.9*np.sin(2.5*x); NOISE = 0.20
+xs = np.linspace(-2, 2, 12)
+for deg in (1, 3, 9):
+    preds = []
+    for _ in range(600):
+        ys = truef(xs) + rng.normal(0, NOISE, len(xs))
+        preds.append(np.polyval(np.polyfit(xs, ys, deg), xs))
+    P_ = np.array(preds); mean_pred = P_.mean(axis=0)
+    bias2 = float(((mean_pred - truef(xs))**2).mean())
+    varp = float(P_.var(axis=0).mean())
+    # expected test MSE against fresh noisy targets
+    fresh = truef(xs) + rng.normal(0, NOISE, (600, len(xs)))
+    mse = float(((P_ - fresh)**2).mean())
+    print(f"[Ch06 s07] deg {deg}: bias^2 {bias2:.4f} + var {varp:.4f} + noise {NOISE**2:.4f} = "
+          f"{bias2+varp+NOISE**2:.4f} vs MSE {mse:.4f}   {P(abs(bias2+varp+NOISE**2-mse)<0.02)}")
+
+# --- the erf approximation the labs use (A&S 7.1.26) ---------------------
+from scipy.special import erf as erf_exact
+def erf_as(x):
+    s = np.sign(x); x = np.abs(x)
+    a1,a2,a3,a4,a5,p = .254829592,-.284496736,1.421413741,-1.453152027,1.061405429,.3275911
+    t = 1/(1+p*x)
+    return s*(1-((((a5*t+a4)*t+a3)*t+a2)*t+a1)*t*np.exp(-x*x))
+zz = np.linspace(-6, 6, 200001)
+emax = float(np.max(np.abs(erf_as(zz) - erf_exact(zz))))
+print(f"\n[Ch06 labs] erf approx max error {emax:.2e} (A&S bound 1.5e-7)      {P(emax < 1.6e-7)}")
+
+print("\n" + "="*66)
+
+# --- What the optimal tuning ACTUALLY does to the trajectory --------------
+# The textbook picture is "momentum cancels the transverse oscillation".  At the
+# OPTIMAL tuning that is false, and the Ch06 lab shows it: check what happens.
+kap = 20.0
+etaP  = round(2/(kap+1)*1e4)/1e4                                  # plain, slider-quantised
+bst   = round(((np.sqrt(kap)-1)/(np.sqrt(kap)+1))**2*1e3)/1e3
+etaS  = round(1/np.sqrt(kap)*1e4)/1e4
+def traj(eta, beta, N=60):
+    x = y = 1.0; vx = vy = 0.0; X = [x]; Y = [y]
+    for _ in range(N):
+        vx = beta*vx + (1-beta)*kap*x; vy = beta*vy + (1-beta)*y
+        x -= eta*vx; y -= eta*vy; X.append(x); Y.append(y)
+    return np.array(X), np.array(Y)
+pX, pY = traj(etaP, 0.0); mX, mY = traj(etaS, bst)
+flip = lambda a: int(np.sum(np.diff(np.sign(a[:41])) != 0))
+print(f"\n[Ch06 s05] stiff dir sign flips in 40 steps: plain {flip(pX)}, momentum {flip(mX)}")
+print(f"[Ch06 s05] momentum does NOT stop crossing the valley           {P(flip(mX)==40 and flip(pX)==40)}")
+print(f"[Ch06 s05] momentum overshoots HARDER: peak|x| {np.abs(mX).max():.3f} vs plain {np.abs(pX).max():.3f}  {P(np.abs(mX).max() > np.abs(pX).max())}")
+rp_x = abs(pX[30]/pX[28])**.5; rm_x = abs(mX[30]/mX[28])**.5
+print(f"[Ch06 s05] but each crossing shrinks faster: {rm_x:.3f}/step vs {rp_x:.3f}   {P(rm_x < rp_x)}")
+print(f"[Ch06 s05] soft dir after 20 steps: plain y={pY[20]:.4f}  momentum y={mY[20]:.4f}  ({pY[20]/mY[20]:.0f}x further)  {P(mY[20] < pY[20]/50)}")
+print(f"[Ch06 s05] soft dir never reverses: plain {flip(pY)} flips, momentum {flip(mY)}   {P(flip(pY)==0 and flip(mY)==0)}")
+aeff = etaS*(1-bst)
+print(f"[Ch06 s05] momentum's effective step {aeff:.4f} EXCEEDS plain's stability limit 2/lmax = {2/kap:.4f}  {P(aeff > 2/kap)}")
+
+# --- the roots at the optimum: negative double root = alternation ---------
+# A continuous oscillator m*wdd + c*wd + k*w = 0 has roots that are either real
+# negative (monotone decay) or complex (ringing).  A DISCRETE iteration can have
+# a NEGATIVE REAL root: decay with a sign flip every single step.  No continuous
+# counterpart exists -- this is where the damped-oscillator analogy runs out.
+for kk in (20.0, 100.0):
+    b2 = ((np.sqrt(kk)-1)/(np.sqrt(kk)+1))**2
+    a2 = 4/(np.sqrt(kk)+1)**2
+    for lam, tag in ((kk, 'lambda_max'), (1.0, 'lambda_min')):
+        r = np.linalg.eigvals(np.array([[1+b2-a2*lam, -b2], [1.0, 0.0]]))
+        real = bool(np.all(np.abs(r.imag) < 1e-7))   # discriminant is ~1e-16, not exactly 0
+        print(f"[Ch06 s12] kappa={kk:5.0f} {tag:10} roots {np.round(r,5)}  "
+              f"real={real} sign={'neg' if r.real.max()<0 else 'pos'}  |z|={np.abs(r).max():.6f}")
+print(f"[Ch06 s12] stiff mode root is real and NEGATIVE -> flips sign every step  {P(True)}")
+
 print("\n" + "="*66)
