@@ -895,10 +895,16 @@ details.q .ans p:last-child{margin-bottom:0}
       <tbody>
         <tr><td class="mono">5&deg;</td><td class="mono">1.0005</td><td>0.05% &mdash; unmeasurable</td></tr>
         <tr><td class="mono">30&deg;</td><td class="mono">1.0174</td><td>1.7% &mdash; visible on a stopwatch</td></tr>
-        <tr><td class="mono">60&deg;</td><td class="mono">1.0728</td><td>7.3% &mdash; the model is misleading</td></tr>
-        <tr><td class="mono">90&deg;</td><td class="mono">1.1760</td><td>17.6% &mdash; the model is wrong</td></tr>
+        <tr><td class="mono">60&deg;</td><td class="mono">1.0732</td><td>7.3% &mdash; the model is misleading</td></tr>
+        <tr><td class="mono">90&deg;</td><td class="mono">1.1803</td><td>18.0% &mdash; the model is wrong</td></tr>
       </tbody>
-      <caption>The cost of keeping one Taylor term. Know the number, and the approximation is a tool; ignore it, and it is a trap.</caption>
+      <caption>
+        The cost of keeping one Taylor term. These are exact values, from
+        \(T/T_0=\frac{2}{\pi}K\!\left(\sin^2\frac{\theta_0}{2}\right)\) with \(K\) the
+        complete elliptic integral &mdash; not the two-term series above, which itself drifts
+        (it gives 1.1760 at 90&deg;, understating the error by 0.4 points). Even the correction
+        needs a correction, which is the whole lesson.
+      </caption>
     </table>
   </div>
 
