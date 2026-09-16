@@ -4,7 +4,7 @@ rng = np.random.default_rng(7)
 P = lambda ok: "PASS" if ok else "*** FAIL ***"
 
 print("=" * 66)
-print("VERIFYING THE LOAD-BEARING CLAIMS IN CHAPTERS 01-03")
+print("VERIFYING THE LOAD-BEARING CLAIMS IN CHAPTERS 01-07")
 print("=" * 66)
 
 # --- Ch02/Ch01: von Mises = (1/sqrt2)||d||_2 and Tresca = ||d||_inf -------
@@ -426,5 +426,151 @@ for kk in (20.0, 100.0):
         print(f"[Ch06 s12] kappa={kk:5.0f} {tag:10} roots {np.round(r,5)}  "
               f"real={real} sign={'neg' if r.real.max()<0 else 'pos'}  |z|={np.abs(r).max():.6f}")
 print(f"[Ch06 s12] stiff mode root is real and NEGATIVE -> flips sign every step  {P(True)}")
+
+
+# ===================== CHAPTER 07 - COMPUTATIONAL LINGUISTICS =====================
+from scipy.linalg import expm
+
+# --- Ch07 s01: each BPE merge drops the token count by exactly the pair freq ---
+def bpe_steps(corpus, n_steps):
+    out = []
+    for _ in range(n_steps):
+        cnt, order = {}, []
+        for w, k in corpus.items():
+            for i in range(len(w) - 1):
+                pr = (w[i], w[i + 1])
+                if pr not in cnt:
+                    cnt[pr] = 0; order.append(pr)
+                cnt[pr] += k
+        if not order: break
+        mx = max(cnt.values())
+        best = next(pr for pr in order if cnt[pr] == mx)   # tie -> first encountered
+        before = sum(len(w) * k for w, k in corpus.items())
+        new = {}
+        for w, k in corpus.items():
+            o, i = [], 0
+            while i < len(w):
+                if i < len(w) - 1 and (w[i], w[i + 1]) == best:
+                    o.append(w[i] + w[i + 1]); i += 2
+                else:
+                    o.append(w[i]); i += 1
+            new[tuple(o)] = k
+        corpus = new
+        after = sum(len(w) * k for w, k in corpus.items())
+        out.append((best, mx, before, after))
+    return out
+
+CORP = {("l","o","w","</w>"): 5, ("l","o","w","e","r","</w>"): 2,
+        ("n","e","w","e","s","t","</w>"): 6, ("w","i","d","e","s","t","</w>"): 3}
+steps = bpe_steps(dict(CORP), 6)
+inv_ok = all(before - after == freq for (_, freq, before, after) in steps)
+seq = [("".join(pr), f) for (pr, f, _, _) in steps]
+counts = [sum(len(w) * k for w, k in CORP.items())] + [a for (_, _, _, a) in steps]
+print()
+for (pr, f, b, a) in steps:
+    print(f"[Ch07 s01] merge {''.join(pr):<9} freq {f:2d}   tokens {b:3d} -> {a:3d}   drop {b-a:2d}   {P(b-a == f)}")
+print(f"[Ch07 s01] token count drops by exactly the pair frequency, every merge   {P(inv_ok)}")
+print(f"[Ch07 s01] sequence {[s for s,_ in seq][:3]} matches the source's sketch (es, est)  "
+      f"{P(seq[0][0] == 'es' and seq[1][0] == 'est')}")
+print(f"[Ch07 s01] counts {counts} (page claims 95 -> 86 after one merge)  "
+      f"{P(counts[0] == 95 and counts[1] == 86)}")
+
+# --- Ch07 s03: perplexity is exponentiated cross-entropy -------------------
+V, N = 10000, 5000
+lp = rng.normal(-7.0, 1.5, N)                      # arbitrary per-token log-probs
+H_ = -lp.mean()
+ppl_direct = np.exp(-lp.mean())
+ppl_prod = np.exp(-np.sum(lp) / N)                 # P(w)^(-1/N) computed in log space
+print(f"\n[Ch07 s03] PPL = exp(H): {ppl_direct:.6f} vs {ppl_prod:.6f}   "
+      f"{P(abs(ppl_direct - ppl_prod) < 1e-9)}")
+unif = np.full(N, -np.log(V))
+print(f"[Ch07 s03] uniform model over V={V} scores PPL = {np.exp(-unif.mean()):.4f}   "
+      f"{P(abs(np.exp(-unif.mean()) - V) < 1e-6)}")
+
+# --- Ch07 s05: SD of the attention score grows as sqrt(d_k) ---------------
+print()
+for dk in (8, 64, 512):
+    q = rng.normal(0, 1, (40000, dk)); k = rng.normal(0, 1, (40000, dk))
+    sd = (q * k).sum(1).std()
+    print(f"[Ch07 s05] d_k={dk:4d}  SD of q.k = {sd:8.4f}   sqrt(d_k) = {np.sqrt(dk):8.4f}   "
+          f"{P(abs(sd - np.sqrt(dk)) < 0.05 * np.sqrt(dk))}")
+
+# --- Ch07 s06: RoPE - the score depends only on the position difference ----
+def R(a):
+    return np.array([[np.cos(a), -np.sin(a)], [np.sin(a), np.cos(a)]])
+th = 0.5
+worst_rope = 0.0
+for _ in range(2000):
+    q, k = rng.normal(0, 1, 2), rng.normal(0, 1, 2)
+    m, n = rng.integers(0, 200), rng.integers(0, 200)
+    both = (R(m * th) @ q) @ (R(n * th) @ k)       # rotate both, then pair
+    gap = q @ (R((n - m) * th) @ k)                # rotate one, by the gap
+    worst_rope = max(worst_rope, abs(both - gap))
+print(f"\n[Ch07 s06] q'.k' == q.R(n-m).k over 2000 random (q,k,m,n)   max err {worst_rope:.2e}   "
+      f"{P(worst_rope < 1e-9)}")
+shift_err = 0.0
+for _ in range(500):
+    q, k = rng.normal(0, 1, 2), rng.normal(0, 1, 2)
+    m, n, s = 3, 8, int(rng.integers(1, 500))
+    shift_err = max(shift_err, abs((R(m*th) @ q) @ (R(n*th) @ k) - (R((m+s)*th) @ q) @ (R((n+s)*th) @ k)))
+print(f"[Ch07 s06] shifting BOTH positions by s leaves the score unchanged  max err {shift_err:.2e}   "
+      f"{P(shift_err < 1e-9)}")
+
+# --- Ch07 s07 / s13: the SSM kernel IS the discrete impulse response -------
+m_, c_, k_, dt = 1.0, 0.4, 4.0, 0.1
+wn = np.sqrt(k_ / m_); zt = c_ / (2 * np.sqrt(k_ * m_)); wd = wn * np.sqrt(1 - zt ** 2)
+A = np.array([[0., 1.], [-k_ / m_, -c_ / m_]]); B = np.array([[0.], [1. / m_]]); C = np.array([[1., 0.]])
+Ab = expm(dt * A)
+Bb = np.linalg.solve(A, (Ab - np.eye(2)) @ B)
+Bb_src = np.linalg.solve(dt * A, (Ab - np.eye(2))) @ (dt * B)   # the source's form
+print(f"\n[Ch07 s07] wn={wn:.3f} rad/s  zeta={zt:.3f}  dt={dt}")
+print(f"[Ch07 s07] the two ZOH forms of B_bar agree (the factors of dt cancel)  max err "
+      f"{np.abs(Bb - Bb_src).max():.2e}   {P(np.allclose(Bb, Bb_src))}")
+Nn = 60
+u = rng.normal(0, 1, Nn)
+x = np.zeros((2, 1)); y_rec = []
+for t in range(Nn):
+    x = Ab @ x + Bb * u[t]; y_rec.append((C @ x)[0, 0])
+y_rec = np.array(y_rec)
+K = []; Pw = np.eye(2)
+for i in range(Nn):
+    K.append((C @ Pw @ Bb)[0, 0]); Pw = Pw @ Ab
+K = np.array(K)
+y_conv = np.array([np.dot(K[:t + 1][::-1], u[:t + 1]) for t in range(Nn)])
+print(f"[Ch07 s07] recurrence output == convolution with K_bar   max err "
+      f"{np.abs(y_rec - y_conv).max():.2e}   {P(np.allclose(y_rec, y_conv))}")
+x = np.zeros((2, 1)); imp = np.zeros(Nn); imp[0] = 1.0; y_imp = []
+for t in range(Nn):
+    x = Ab @ x + Bb * imp[t]; y_imp.append((C @ x)[0, 0])
+y_imp = np.array(y_imp)
+print(f"[Ch07 s07] K_bar == the discrete impulse response       max err "
+      f"{np.abs(K - y_imp).max():.2e}   {P(np.allclose(K, y_imp))}")
+print(f"[Ch07 s07] first taps {np.round(K[:4], 6)} (page claims .004918 .014303 .022761)  "
+      f"{P(abs(K[0]-0.004918) < 5e-7 and abs(K[1]-0.014303) < 5e-7 and abs(K[2]-0.022761) < 5e-7)}")
+
+# the CORRECTION on the page: K_bar is NOT dt * the continuous impulse response
+tt = np.arange(8) * dt
+h = (1 / (m_ * wd)) * np.exp(-zt * wn * tt) * np.sin(wd * tt)
+ratio = K[1:8] / (dt * h[1:8])
+print(f"[Ch07 s13] K_bar[0]={K[0]:.6f} but dt*h(0)={dt*h[0]:.6f}: a held pulse is not a delta  "
+      f"{P(K[0] > 1e-4 and abs(dt * h[0]) < 1e-12)}")
+print(f"[Ch07 s13] ratio K/(dt*h) = {np.round(ratio, 4)} -> converges to 1, not equal  "
+      f"{P(ratio[0] > 1.4 and abs(ratio[-1] - 1) < 0.01)}")
+
+# --- Ch07 s09: speculative decoding leaves the output distribution alone ---
+print()
+Vv = 8
+pt = rng.random(Vv) + 0.05; pt /= pt.sum()
+drafts = {"aligned": None, "poor": None, "adversarial": pt[::-1].copy()}
+drafts["aligned"] = (pt + 0.15 * rng.random(Vv)); drafts["aligned"] /= drafts["aligned"].sum()
+drafts["poor"] = rng.random(Vv) + 0.05; drafts["poor"] /= drafts["poor"].sum()
+for name, pd in drafts.items():
+    emitted = np.minimum(pd, pt) + np.maximum(0, pt - pd)   # accept path + resample path
+    acc = np.minimum(pd, pt).sum()
+    tv = 0.5 * np.abs(pt - pd).sum()
+    print(f"[Ch07 s09] {name:12} emitted == target  max err {np.abs(emitted - pt).max():.2e}   "
+          f"{P(np.allclose(emitted, pt))}")
+    print(f"[Ch07 s09] {name:12} acceptance {acc:.6f} == 1 - TV {1 - tv:.6f}   "
+          f"{P(abs(acc - (1 - tv)) < 1e-12)}")
 
 print("\n" + "="*66)

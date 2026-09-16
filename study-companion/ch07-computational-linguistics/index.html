@@ -1,0 +1,2124 @@
+<title>Tokens, Attention, State</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(', '\\)']], displayMath: [['$$', '$$']], processEscapes: true },
+  svg: { fontCache: 'global', scale: 1.0 },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-svg.js" id="MathJax-script" async></script>
+
+<style>
+/* ============ TOKENS: light is complete and authoritative ============ */
+:root{
+  --ground:#F0F2F1;
+  --sheet:#FBFCFB;
+  --sheet-2:#F4F6F5;
+  --ink:#14181A;
+  --ink-2:#4E575B;
+  --ink-3:#77838A;
+  --rule:#D3DAD7;
+  --rule-strong:#A8B4B0;
+  --accent:#12507E;
+  --accent-ink:#0E4267;
+  --accent-soft:#E4EEF6;
+  --bridge:#1F8A4C;
+  --bridge-soft:#E4F2EA;
+  --brk:#A8500F;
+  --brk-soft:#FAEBDF;
+  --s1:#BF5B00;
+  --s2:#0F74C7;
+  --s3:#1F8A4C;
+  --paper:#FFFFFF;            /* pasted-drawing ground, both themes */
+  --paper-ink:#1b1b1b;
+  --shadow:0 1px 2px rgba(20,24,26,.06), 0 6px 18px rgba(20,24,26,.05);
+  --f-disp:'Archivo Narrow', 'Arial Narrow', Helvetica, sans-serif;
+  --f-body:'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --f-mono:'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+    --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+    --rule:#293134; --rule-strong:#3F494C;
+    --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+    --bridge:#35AC63; --bridge-soft:#11281B;
+    --brk:#E0913F; --brk-soft:#2E2012;
+    --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+  --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+  --rule:#293134; --rule-strong:#3F494C;
+  --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+  --bridge:#35AC63; --bridge-soft:#11281B;
+  --brk:#E0913F; --brk-soft:#2E2012;
+  --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:var(--f-body); font-size:17px; line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ============ TITLE BLOCK (engineering drawing header) ============ */
+.titleblock{
+  position:sticky; top:env(safe-area-inset-top,0px); z-index:40;
+  background:var(--sheet); border-bottom:1px solid var(--rule-strong);
+}
+.tb-in{
+  max-width:1240px; margin:0 auto; padding:0 16px;
+  display:flex; align-items:stretch; gap:0; min-height:46px;
+}
+.tb-cell{
+  display:flex; flex-direction:column; justify-content:center;
+  padding:5px 14px; border-right:1px solid var(--rule);
+  font-family:var(--f-disp);
+}
+.tb-cell:first-child{padding-left:0}
+.tb-cell:last-child{border-right:0; margin-left:auto; padding-right:0}
+.tb-k{
+  font-size:8.5px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); line-height:1.4;
+}
+.tb-v{font-size:13px; font-weight:700; letter-spacing:.02em; color:var(--ink); line-height:1.3}
+.tb-v.accent{color:var(--accent)}
+.tb-hide{display:none}
+@media (min-width:680px){ .tb-hide{display:flex} }
+
+.themebtn{
+  appearance:none; background:transparent; border:1px solid var(--rule-strong);
+  color:var(--ink-2); font-family:var(--f-disp); font-size:10px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:6px 10px; border-radius:2px;
+  cursor:pointer; align-self:center; white-space:nowrap;
+}
+.themebtn:hover{border-color:var(--accent); color:var(--accent)}
+.themebtn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+/* ============ SHELL ============ */
+.shell{max-width:1240px; margin:0 auto; padding:0 16px; padding-block:0 64px}
+@media (min-width:1080px){
+  .shell{display:grid; grid-template-columns:212px minmax(0,1fr); gap:44px; align-items:start}
+}
+.rail{display:none}
+@media (min-width:1080px){
+  .rail{
+    display:block; position:sticky; top:calc(env(safe-area-inset-top,0px) + 70px);
+    padding-block:28px; font-family:var(--f-disp); font-size:12.5px;
+  }
+}
+.rail-h{
+  font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-3);
+  padding-bottom:8px; border-bottom:1px solid var(--rule); margin-bottom:10px;
+}
+.rail a{
+  display:flex; gap:9px; padding:4px 0; color:var(--ink-2); text-decoration:none;
+  border-left:2px solid transparent; padding-left:9px; margin-left:-11px; line-height:1.35;
+}
+.rail a:hover{color:var(--accent)}
+.rail a.on{color:var(--accent); border-left-color:var(--accent); font-weight:700}
+.rail a .n{font-family:var(--f-mono); font-size:10.5px; color:var(--ink-3); flex:none; padding-top:1px}
+.rail a.on .n{color:var(--accent)}
+
+main{min-width:0; padding-block:0 0}
+.col{max-width:70ch}
+
+/* ============ TYPE ============ */
+h1,h2,h3,h4{font-family:var(--f-disp); text-wrap:balance; margin:0; line-height:1.14}
+h1{font-size:clamp(34px,7vw,58px); font-weight:700; letter-spacing:-.015em}
+h2{font-size:clamp(25px,4.2vw,34px); font-weight:700; letter-spacing:-.01em}
+h3{font-size:19px; font-weight:700; letter-spacing:.005em; margin-top:2px}
+h4{font-size:14px; font-weight:700; letter-spacing:.06em; text-transform:uppercase}
+p{margin:0 0 1.05em}
+a{color:var(--accent-ink)}
+strong{font-weight:600}
+em{font-style:italic}
+code{font-family:var(--f-mono); font-size:.87em; background:var(--sheet-2); padding:1px 5px; border-radius:2px; border:1px solid var(--rule)}
+.lead{font-size:19.5px; line-height:1.56; color:var(--ink-2)}
+.eyebrow{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--ink-3); margin:0 0 10px;
+}
+.srcref{
+  font-family:var(--f-mono); font-size:11px; color:var(--ink-3);
+  border:1px solid var(--rule); border-radius:2px; padding:2px 7px; display:inline-block;
+  background:var(--sheet-2); white-space:nowrap;
+}
+
+/* ============ SECTION ============ */
+section{padding-block:38px 0; scroll-margin-top:calc(env(safe-area-inset-top,0px) + 62px)}
+.sechead{display:flex; align-items:baseline; gap:13px; margin-bottom:6px; flex-wrap:wrap}
+.secnum{
+  font-family:var(--f-mono); font-size:12px; font-weight:600; color:var(--accent);
+  border:1px solid var(--accent); border-radius:2px; padding:2px 7px; flex:none;
+  background:var(--accent-soft);
+}
+.rule-h{border:0; border-top:1px solid var(--rule); margin:0 0 22px}
+.rule-d{border:0; border-top:1px dashed var(--rule-strong); margin:34px 0}
+
+/* ============ CALLOUTS ============ */
+.note{
+  border:1px solid var(--rule); border-left:3px solid var(--accent);
+  background:var(--sheet); border-radius:2px; padding:16px 18px; margin:22px 0;
+}
+/* Greek letters must never be uppercased: text-transform turns beta into
+   a capital Beta, which is the Latin letter B on screen -- likewise eta->H,
+   kappa->K, lambda->A-shape.  Any Greek inside an uppercased label wears .gk. */
+.gk{text-transform:none}
+.note.bridge{border-left-color:var(--bridge); background:var(--bridge-soft)}
+.note.brk{border-left-color:var(--brk); background:var(--brk-soft)}
+.note-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; margin-bottom:7px; display:flex; align-items:center; gap:8px;
+}
+.note.bridge .note-h{color:var(--bridge)}
+.note.brk .note-h{color:var(--brk)}
+.note .note-h{color:var(--accent)}
+.note p:last-child, .note ul:last-child{margin-bottom:0}
+.note-h .ic{
+  width:15px; height:15px; border-radius:50%; border:1.5px solid currentColor; flex:none;
+  display:grid; place-items:center; font-size:9.5px; font-weight:700; font-family:var(--f-mono);
+}
+ul,ol{margin:0 0 1.05em; padding-left:1.25em}
+li{margin-bottom:.4em}
+li::marker{color:var(--ink-3)}
+
+/* ============ DEFINITION BLOCK ============ */
+.defn{
+  background:var(--sheet); border:1px solid var(--rule); border-radius:3px;
+  padding:18px 20px; margin:22px 0; box-shadow:var(--shadow);
+}
+.defn-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:10px;
+  padding-bottom:8px; border-bottom:1px solid var(--rule);
+}
+.defn p:last-child{margin-bottom:0}
+
+/* ============ TABLES ============ */
+.tw{overflow-x:auto; margin:22px 0; border:1px solid var(--rule); border-radius:3px; background:var(--sheet)}
+table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:480px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule); vertical-align:top}
+thead th{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); background:var(--sheet-2); font-weight:700; white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:0}
+td.mono,th.mono{font-family:var(--f-mono); font-size:13px; font-variant-numeric:tabular-nums}
+.tw caption{
+  caption-side:bottom; text-align:left; padding:9px 14px; font-size:12.5px;
+  color:var(--ink-3); border-top:1px solid var(--rule); font-family:var(--f-disp);
+}
+
+/* ============ FIGURES ============ */
+figure{margin:24px 0}
+.paper{
+  background:var(--paper); border:1px solid var(--rule-strong); border-radius:3px;
+  padding:16px; display:flex; justify-content:center; box-shadow:var(--shadow);
+}
+.paper img{max-width:100%; height:auto; display:block}
+figcaption{
+  font-family:var(--f-disp); font-size:12.5px; color:var(--ink-3); margin-top:9px;
+  line-height:1.45; padding-left:2px;
+}
+figcaption b{color:var(--ink-2); font-weight:700; letter-spacing:.04em}
+
+/* ============ INTERACTIVE PANELS ============ */
+.lab{
+  background:var(--sheet); border:1px solid var(--rule-strong); border-radius:3px;
+  margin:26px 0; overflow:hidden; box-shadow:var(--shadow);
+}
+.lab-h{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:11px 16px; border-bottom:1px solid var(--rule); background:var(--sheet-2);
+}
+.lab-t{font-family:var(--f-disp); font-size:13px; font-weight:700; letter-spacing:.05em; text-transform:uppercase}
+.lab-tag{
+  font-family:var(--f-mono); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--accent); border:1px solid var(--accent); border-radius:2px; padding:2px 6px;
+  margin-left:auto; white-space:nowrap;
+}
+.lab-body{padding:16px}
+.lab-foot{
+  padding:11px 16px; border-top:1px solid var(--rule); background:var(--sheet-2);
+  font-size:13.5px; color:var(--ink-2); line-height:1.5;
+}
+.lab-foot b{color:var(--ink)}
+.stage{width:100%; max-width:560px; height:auto; display:block; margin-inline:auto; touch-action:none; cursor:grab}
+.stage.drag{cursor:grabbing}
+
+/* Dividers are drawn as cell borders rather than as 1px grid gaps over a grey
+   backdrop: when the item count does not fill the last row, a gap-based grid
+   leaves the backdrop showing as an empty grey block. */
+.readout{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr)); gap:0;
+  background:var(--sheet); border:1px solid var(--rule); border-radius:2px;
+  margin-top:14px; overflow:hidden;
+}
+.ro{background:var(--sheet); padding:8px 11px;
+  border-right:1px solid var(--rule); border-bottom:1px solid var(--rule)}
+.ro-k{
+  font-family:var(--f-disp); font-size:9px; letter-spacing:.13em; text-transform:uppercase;
+  color:var(--ink-3); margin-bottom:2px;
+  /* was white-space:nowrap, which clipped the longer keys instead of wrapping */
+  white-space:normal; overflow-wrap:break-word; line-height:1.3; min-height:2.6em;
+}
+.ro-v{
+  font-family:var(--f-mono); font-size:15px; font-weight:500; font-variant-numeric:tabular-nums;
+  color:var(--ink); line-height:1.25;
+}
+.ro-v.a{color:var(--s2)} .ro-v.b{color:var(--s1)} .ro-v.c{color:var(--s3)}
+
+.ctl{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:14px}
+.ctl label{
+  font-family:var(--f-disp); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-2); white-space:nowrap;
+}
+input[type=range]{
+  -webkit-appearance:none; appearance:none; height:22px; background:transparent;
+  flex:1 1 160px; min-width:130px; cursor:pointer;
+}
+input[type=range]:focus-visible{outline:2px solid var(--accent); outline-offset:3px}
+input[type=range]::-webkit-slider-runnable-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-moz-range-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:16px; height:16px; border-radius:50%;
+  background:var(--accent); border:2px solid var(--sheet); margin-top:-6.5px;
+}
+input[type=range]::-moz-range-thumb{
+  width:16px; height:16px; border-radius:50%; background:var(--accent);
+  border:2px solid var(--sheet);
+}
+.btn{
+  appearance:none; font-family:var(--f-disp); font-size:11px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:7px 13px; border-radius:2px;
+  border:1px solid var(--rule-strong); background:var(--sheet); color:var(--ink-2); cursor:pointer;
+}
+.btn:hover{border-color:var(--accent); color:var(--accent)}
+.btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.btn.on{background:var(--accent); border-color:var(--accent); color:var(--sheet)}
+
+.legend{display:flex; gap:16px; flex-wrap:wrap; margin-top:12px}
+.lg{display:flex; align-items:center; gap:7px; font-family:var(--f-disp); font-size:12px; color:var(--ink-2)}
+.lg i{width:15px; height:3px; border-radius:2px; flex:none; display:block}
+
+/* ============ MISC ============ */
+.mathbox{overflow-x:auto; overflow-y:hidden; margin:18px 0}
+mjx-container[display="true"]{margin:0 !important}
+.kv{display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:15px; margin:16px 0}
+.kv dt{font-family:var(--f-mono); font-size:13px; color:var(--accent); white-space:nowrap}
+.kv dd{margin:0; color:var(--ink-2)}
+
+details.q{
+  border:1px solid var(--rule); border-radius:3px; background:var(--sheet);
+  margin-bottom:9px; overflow:hidden;
+}
+details.q summary{
+  cursor:pointer; padding:12px 15px; font-weight:600; list-style:none;
+  display:flex; gap:11px; align-items:flex-start; font-size:15.5px;
+}
+details.q summary::-webkit-details-marker{display:none}
+details.q summary::after{
+  content:'+'; margin-left:auto; font-family:var(--f-mono); color:var(--accent);
+  font-size:17px; line-height:1; flex:none; padding-top:2px;
+}
+details.q[open] summary::after{content:'\2212'}
+details.q summary:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
+details.q summary .qn{
+  font-family:var(--f-mono); font-size:12px; color:var(--ink-3); flex:none; padding-top:3px;
+}
+details.q .ans{padding:0 15px 14px 41px; font-size:15.5px; color:var(--ink-2); border-top:1px solid var(--rule); padding-top:13px}
+details.q .ans p:last-child{margin-bottom:0}
+
+.endnote{
+  margin-top:44px; padding-top:20px; border-top:1px solid var(--rule-strong);
+  font-size:13.5px; color:var(--ink-3); font-family:var(--f-disp); line-height:1.55;
+}
+.endnote a{color:var(--accent)}
+
+.srcref{text-decoration:none}
+a.srcref{color:var(--ink-2); transition:none}
+
+</style>
+<style>
+.srcref{text-decoration:none}
+a.srcref{color:var(--ink-2)}
+a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(--accent-soft)}
+.srcref.nolink{opacity:.75; font-style:italic}
+.pv{font-family:var(--f-disp); font-size:9.5px; font-weight:700; letter-spacing:.1em;
+    text-transform:uppercase; padding:2px 7px; border-radius:2px; white-space:nowrap}
+.pv.ok{background:var(--bridge-soft); color:var(--bridge)}
+.pv.add{background:var(--accent-soft); color:var(--accent)}
+.pv.corr{background:var(--brk-soft); color:var(--brk)}
+.flag{display:inline-block; padding:1px 7px; border-radius:2px; font-family:var(--f-disp);
+      font-size:10px; letter-spacing:.1em; text-transform:uppercase; font-weight:700}
+.flag.ok{background:var(--bridge-soft); color:var(--bridge)}
+.flag.bad{background:var(--brk-soft); color:var(--brk)}
+.predict{border:1px solid var(--rule-strong); border-left:3px solid var(--brk);
+  background:var(--brk-soft); border-radius:2px; padding:13px 15px; margin:0 0 14px}
+.predict-h{font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--brk); margin-bottom:6px}
+.predict p{margin:0 0 10px; font-size:15px}
+.predict .opts{display:flex; gap:8px; flex-wrap:wrap}
+.pbtn{appearance:none; font-family:var(--f-disp); font-size:12px; font-weight:600;
+  padding:6px 12px; border-radius:2px; border:1px solid var(--rule-strong);
+  background:var(--sheet); color:var(--ink-2); cursor:pointer}
+.pbtn:hover{border-color:var(--brk); color:var(--brk)}
+.pbtn.picked{background:var(--brk); border-color:var(--brk); color:var(--sheet)}
+.pverdict{margin-top:10px; font-size:14.5px; color:var(--ink-2); display:none}
+.pverdict.show{display:block}
+.pverdict b{color:var(--ink)}
+.gap{border:1px solid var(--rule); border-left:3px solid var(--ink-3); background:var(--sheet-2);
+  border-radius:2px; padding:14px 16px; margin:18px 0}
+.gap-h{font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:7px}
+</style>
+<style>
+/* ---- chapter 07 lab graphics ---- */
+#kGrid line, #rGrid line, #sGrid line{stroke:var(--rule)}
+.axl{stroke:var(--rule-strong); stroke-width:1.4}
+.tk{fill:var(--ink-3); font-family:'IBM Plex Mono',monospace; font-size:10px}
+.al{fill:var(--ink-2); font-family:'Archivo Narrow',sans-serif; font-size:11px; letter-spacing:.07em}
+/* BPE lab */
+.tok{font-family:'IBM Plex Mono',monospace; font-size:12.5px; fill:var(--paper-ink)}
+.tokbox{fill:var(--sheet-2); stroke:var(--rule-strong); stroke-width:1}
+.tokbox.merged{fill:var(--accent-soft); stroke:var(--accent)}
+.tokbox.hot{fill:var(--brk-soft); stroke:var(--brk); stroke-width:1.6}
+.pairlab{font-family:'IBM Plex Mono',monospace; font-size:11px; fill:var(--ink-2)}
+/* RoPE lab */
+.rcirc{fill:none; stroke:var(--rule-strong); stroke-width:1; stroke-dasharray:3 3}
+.qvec{stroke:var(--s2); stroke-width:2.5; marker-end:url(#ah2)}
+.kvec{stroke:var(--s1); stroke-width:2.5; marker-end:url(#ah1)}
+.arc{fill:none; stroke:var(--ink-3); stroke-width:1.2}
+.spanline{stroke:var(--s3); stroke-width:2.5}
+/* speculative decoding lab */
+.barT{fill:var(--s2)} .barD{fill:var(--s1)} .barE{fill:var(--s3)}
+.baro{fill:none; stroke:var(--rule-strong); stroke-width:.8}
+.lgd{font-family:'Archivo Narrow',sans-serif; font-size:11px; fill:var(--ink-2)}
+</style>
+
+<header class="titleblock">
+  <div class="tb-in">
+    <div class="tb-cell"><span class="tb-k">Chapter</span><span class="tb-v accent">07 &middot; Computational Linguistics</span></div>
+    <div class="tb-cell tb-hide"><span class="tb-k">Sheet</span><span class="tb-v">7 of 20</span></div>
+    <div class="tb-cell tb-hide"><span class="tb-k">Reader</span><span class="tb-v">B.E. Mechanical</span></div>
+    <div class="tb-cell tb-hide"><span class="tb-k">Prerequisite</span><span class="tb-v">Sheets 1&ndash;6</span></div>
+    <div class="tb-cell"><button class="themebtn" id="themebtn" type="button" aria-label="Switch colour theme">Theme</button></div>
+  </div>
+</header>
+
+<div class="shell">
+
+<nav class="rail" aria-label="Chapter contents">
+  <div class="rail-h">Contents</div>
+  <a href="#bridge" class="on"><span class="n">00</span><span>The bridge</span></a>
+  <a href="#token"><span class="n">01</span><span>What a token is</span></a>
+  <a href="#geom"><span class="n">02</span><span>Meaning as geometry</span></a>
+  <a href="#count"><span class="n">03</span><span>Counting, then predicting</span></a>
+  <a href="#state"><span class="n">04</span><span>Sequences as state</span></a>
+  <a href="#attn"><span class="n">05</span><span>Attention is a pairing</span></a>
+  <a href="#rope"><span class="n">06</span><span>Position by rotation</span></a>
+  <a href="#ssm"><span class="n">07</span><span>The state-space return</span></a>
+  <a href="#scale"><span class="n">08</span><span>Scale and sparsity</span></a>
+  <a href="#fast"><span class="n">09</span><span>Making it faster</span></a>
+  <a href="#judge"><span class="n">10</span><span>Judging the output</span></a>
+  <a href="#breaks"><span class="n">11</span><span>Where it breaks</span></a>
+  <a href="#gaps"><span class="n">12</span><span>What is missing</span></a>
+  <a href="#worked"><span class="n">13</span><span>Worked example</span></a>
+  <a href="#recall"><span class="n">14</span><span>Question bank</span></a>
+  <a href="#next"><span class="n">15</span><span>What this feeds</span></a>
+  <a href="#provenance"><span class="n">A</span><span>Provenance</span></a>
+</nav>
+
+<main>
+
+<section id="top" style="padding-top:44px">
+  <div class="col">
+    <p class="eyebrow">Maths, CS &amp; AI Compendium &middot; Chapter 07</p>
+    <h1>Tokens, Attention, State</h1>
+    <p class="lead" style="margin-top:18px">
+      This chapter looks, at first glance, like the one with no mechanical content at all.
+      Language is not a material. It has no stiffness, no mass, no conservation law. Nothing
+      here is going to be a beam.
+    </p>
+    <p>
+      And yet the two architectures that define modern language modelling turn out to be
+      objects you were handed in your second and third years. Attention is a duality pairing
+      &mdash; the same structure as virtual work, which Chapter 01 &sect;08 already showed you
+      have been computing since statics. And the state-space model, the architecture that is
+      currently the most credible challenger to the transformer, is the linear
+      state-space system from control theory, discretised by zero-order hold, exactly as you
+      would digitise a controller.
+    </p>
+    <p>
+      The headline is in <a href="#ssm">&sect;07</a> and it is worth carrying with you from the
+      start. <strong>The convolution kernel of a state-space language model is the discrete
+      impulse response function.</strong> Not an analogy. The same sequence of numbers,
+      computed the same way, from \(\bar{K}=(C\bar{B},\,C\bar{A}\bar{B},\,C\bar{A}^2\bar{B},\ldots)\).
+      You have plotted that kernel for a damped oscillator. Mamba plots it for a sentence.
+    </p>
+    <p>
+      Where this chapter is genuinely foreign, it says so. Tokenisation, the distributional
+      hypothesis and pragmatics have no mechanical counterpart worth forcing, and
+      <a href="#breaks">&sect;11</a> is blunt about which bridges here are load-bearing and
+      which are decoration.
+    </p>
+  </div>
+</section>
+
+<section id="bridge">
+  <div class="col">
+    <div class="sechead"><span class="secnum">00</span><h2>The bridge</h2></div>
+    <hr class="rule-h">
+    <p>
+      The honest verdict column matters more in this chapter than in any previous one. Several
+      rows are exact; several are merely suggestive; one is here specifically to be shot down.
+    </p>
+  </div>
+  <div class="tw">
+    <table>
+      <thead><tr><th>What you already know</th><th>What NLP calls it</th><th>How good is the match?</th></tr></thead>
+      <tbody>
+        <tr><td>State-space form \(\dot{x}=Ax+Bu,\ y=Cx+Du\)</td><td>SSM layer (S4, Mamba)</td><td><b style="color:var(--bridge)">Identical.</b> Same equations, same ZOH discretisation. See &sect;07.</td></tr>
+        <tr><td>Impulse response of a discrete system</td><td>SSM convolution kernel \(\bar{K}\)</td><td><b style="color:var(--bridge)">The same sequence of numbers.</b> See &sect;07.</td></tr>
+        <tr><td>Virtual work \(\delta W=\mathbf{F}\cdot\delta\mathbf{r}\) (Ch 01 &sect;08)</td><td>Attention score \(q^{\mathsf T}k\)</td><td><b style="color:var(--bridge)">Same structure.</b> Query is the ruler. See &sect;05.</td></tr>
+        <tr><td>Plane rotation / Mohr's circle (Ch 01 &sect;07)</td><td>RoPE positional encoding</td><td><b style="color:var(--bridge)">Exact.</b> Same \(2\times2\) rotation, same group property. See &sect;06.</td></tr>
+        <tr><td>Difference equation \(x_k=ax_{k-1}+bu_k\)</td><td>Recurrent network (RNN)</td><td><b style="color:var(--bridge)">Exact,</b> with a nonlinearity inserted. See &sect;04.</td></tr>
+        <tr><td>Fourier series &mdash; a signal as summed harmonics</td><td>Sinusoidal positional encoding</td><td><b style="color:var(--bridge)">Same basis,</b> used as an address rather than a decomposition. See &sect;06.</td></tr>
+        <tr><td>Low-rank update to a matrix (Ch 02 &sect;05)</td><td>LoRA fine-tuning</td><td><b style="color:var(--bridge)">Exact.</b> \(W'=W+BA\) with \(r\ll d\). See &sect;08.</td></tr>
+        <tr><td>Assembly-line balancing, idle stations</td><td>MoE expert load balancing</td><td><b style="color:var(--bridge)">Identical problem.</b> See &sect;08.</td></tr>
+        <tr><td>Acceptance sampling with rectification</td><td>Speculative decoding</td><td><b style="color:var(--bridge)">Same accept/reject algebra.</b> See &sect;09.</td></tr>
+        <tr><td>Feature vector with physical components (Ch 01 &sect;02)</td><td>Word embedding</td><td><b style="color:var(--brk)">Structure yes, meaning no.</b> The axes mean nothing. See &sect;02.</td></tr>
+        <tr><td>Markov chain (Ch 05)</td><td>N-gram language model</td><td><b style="color:var(--bridge)">Exact</b> &mdash; it is a Markov chain over words. See &sect;03.</td></tr>
+        <tr><td>Cross-entropy (Ch 05 &sect;05)</td><td>Perplexity</td><td><b style="color:var(--bridge)">Exact identity:</b> \(\mathrm{PPL}=e^{H}\). See &sect;03.</td></tr>
+        <tr><td>Thermodynamic entropy \(S=k\ln W\)</td><td>Shannon entropy in NLP</td><td><b style="color:var(--brk)">Related, not the same.</b> Do not push this. See &sect;11.</td></tr>
+        <tr><td>A system with a governing equation</td><td>A language model</td><td><b style="color:var(--brk)">Nothing like it.</b> Language has no conservation law. See &sect;11.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="token">
+  <div class="col">
+    <div class="sechead"><span class="secnum">01</span><h2>What a token is, and why it is not a word</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2007%20-%20computational%20linguistics/02.%20text%20processing%20and%20classic%20NLP.md" target="_blank" rel="noopener">src 02. text processing &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      Every numerical method you have ever used began with a discretisation choice. Before you
+      can solve a beam you must decide what an element is; before you can run an FFT you must
+      choose a sample rate. The choice is not neutral &mdash; mesh too coarse and you lose the
+      stress concentration, sample too slowly and you alias.
+    </p>
+    <p>
+      Tokenisation is that choice, for text. And it is the one step in this chapter with
+      <em>no</em> mechanical counterpart, because the discretisation is not chosen by the
+      engineer from physical reasoning. It is <em>learned from the corpus by counting</em>.
+    </p>
+    <p>
+      The naive choices both fail. Splitting on whitespace makes &ldquo;run&rdquo;,
+      &ldquo;runs&rdquo;, &ldquo;running&rdquo; and &ldquo;ran&rdquo; four unrelated symbols,
+      and cannot handle Chinese, which has no spaces. Splitting into characters handles
+      anything but makes sequences enormously long and forces the model to relearn spelling
+      from scratch.
+    </p>
+    <p>
+      <strong>Byte-pair encoding</strong> (BPE) sits between them. Start with characters. Count
+      every adjacent pair. Merge the most frequent pair into a new symbol. Repeat. After a few
+      thousand merges, common words are single tokens and rare words decompose into frequent
+      pieces &mdash; a statistical approximation to the morphology of &sect;01 of the source,
+      arrived at without any linguistic input at all.
+    </p>
+    <div class="defn">
+      <div class="defn-h">The merge invariant</div>
+      <p style="margin-bottom:0">
+        Each merge replaces every occurrence of one adjacent pair with a single symbol. So each
+        merge reduces the corpus token count by <em>exactly</em> the frequency of the pair it
+        merged, and grows the vocabulary by exactly one. Compression and vocabulary size trade
+        off one-for-one, and the trade is completely explicit. That is the whole algorithm.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab">
+    <div class="lab-h"><span class="lab-t">Building a vocabulary by counting</span><span class="lab-tag">Predict, then merge</span></div>
+    <div class="lab-body">
+      <div class="predict" id="pred1">
+        <div class="predict-h">Commit before you click</div>
+        <p>
+          The corpus below holds 95 character tokens. You are about to merge the most frequent
+          adjacent pair, which occurs 9 times. After that single merge, the total token count
+          will fall to&hellip;
+        </p>
+        <div class="opts">
+          <button class="pbtn" data-p1="a" type="button">94 &mdash; one new symbol</button>
+          <button class="pbtn" data-p1="b" type="button">86 &mdash; down by 9</button>
+          <button class="pbtn" data-p1="c" type="button">Depends on the words</button>
+          <button class="pbtn" data-p1="d" type="button">About half</button>
+        </div>
+        <div class="pverdict" id="pv1"></div>
+      </div>
+      <div class="stage">
+        <svg id="bpeSvg" viewBox="0 0 640 250" width="100%" role="img" aria-label="Four words shown as sequences of token boxes, merging step by step">
+          <g id="bpeRows"></g>
+        </svg>
+      </div>
+      <div class="ctl">
+        <button class="btn" id="bpeStep" type="button">Merge next pair</button>
+        <button class="btn" id="bpeReset" type="button">Reset</button>
+      </div>
+      <div class="readout">
+        <div class="ro"><div class="ro-k">Merges<br>applied</div><div class="ro-v" id="bpeM">0</div></div>
+        <div class="ro"><div class="ro-k">Total<br>tokens</div><div class="ro-v" id="bpeT">95</div></div>
+        <div class="ro"><div class="ro-k">Vocabulary<br>size</div><div class="ro-v" id="bpeV">10</div></div>
+        <div class="ro"><div class="ro-k">Next<br>merge</div><div class="ro-v" id="bpeN">&ldquo;e&rdquo;+&ldquo;s&rdquo; &times;9</div></div>
+      </div>
+      <div class="lab-foot">
+        Corpus: <code>low</code>&times;5, <code>lower</code>&times;2,
+        <code>newest</code>&times;6, <code>widest</code>&times;3, each with
+        an end-of-word marker <code>&lt;/w&gt;</code>. Ties in pair frequency are
+        broken by first appearance. The first two merges reproduce the source chapter's worked
+        sketch (<code>es</code>, then <code>est</code>); the source
+        omits the end-of-word marker, which real implementations require to tell
+        <code>est</code> in &ldquo;newest&rdquo; from <code>est</code>
+        in &ldquo;estimate&rdquo;.
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="note">
+      <div class="note-h"><span class="ic">!</span>Where the analogy breaks</div>
+      <p>
+        A mesh is chosen from the physics: you refine where the gradient is steep, and you can
+        check convergence by refining further and watching the answer stop moving. Tokenisation
+        has no such test. Refining the vocabulary does not converge to a &ldquo;true&rdquo;
+        tokenisation, because there is no underlying continuum being approximated. The corpus
+        statistics <em>are</em> the ground truth.
+      </p>
+      <p style="margin-bottom:0">
+        This has a consequence with no mechanical parallel at all: the tokeniser is frozen
+        before pre-training and cannot be changed afterwards without retraining the model.
+        A digit split awkwardly, or a language under-represented in the merge corpus, is a
+        permanent handicap baked into the model's input layer. There is no mesh refinement
+        study available after the fact.
+      </p>
+    </div>
+    <figure>
+      <div class="paper"><img src="img/tokenisation_comparison.svg" alt="Word-level, character-level and subword tokenisation of the words unhappiness and transformers compared" width="410"></div>
+      <figcaption><b>Fig. 7.1</b> &mdash; Word, character and subword tokenisation compared. <i>Figure from the compendium.</i></figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="geom">
+  <div class="col">
+    <div class="sechead"><span class="secnum">02</span><h2>Meaning as geometry</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2007%20-%20computational%20linguistics/03.%20embeddings%20and%20sequence%20models.md" target="_blank" rel="noopener">src 03. embeddings &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      Chapter 01 &sect;02 made the case that a vector is any list of numbers you can add and
+      scale, and that the entries need not be lengths. A state vector holding
+      \((\text{pressure},\ \text{temperature},\ \text{flow rate})\) is a perfectly good vector
+      even though its components carry different units. Word embeddings take that licence to
+      its limit.
+    </p>
+    <p>
+      The justification is the <strong>distributional hypothesis</strong> (Firth, 1957): you
+      shall know a word by the company it keeps. Words appearing in similar contexts tend to
+      mean similar things. Make that operational and you get a recipe: assign each word a dense
+      vector, and fit those vectors so that words sharing contexts end up close together.
+    </p>
+    <p>
+      <strong>Word2Vec</strong> does this with a deliberately shallow network. <em>Skip-gram</em>
+      takes a word and predicts its neighbours; <em>CBOW</em> averages the neighbours and
+      predicts the word. Training over the whole vocabulary would mean a softmax over
+      \(V\approx10^5\) terms per step, so <strong>negative sampling</strong> replaces it with
+      binary classification against a handful of random decoys:
+    </p>
+    <div class="mathbox">
+      $$\mathcal{L}=\log\sigma\!\left(v_{w_O}^{\mathsf T}v_{w_I}\right)+\sum_{i=1}^{k}\mathbb{E}_{w_i\sim P_n}\left[\log\sigma\!\left(-v_{w_i}^{\mathsf T}v_{w_I}\right)\right]$$
+    </div>
+    <p>
+      That looks like a heuristic, and for a year everyone treated it as one. It is not. Levy
+      and Goldberg (2014) showed that at convergence this objective is implicitly factorising a
+      shifted pointwise-mutual-information matrix:
+    </p>
+    <div class="mathbox">
+      $$v_w^{\mathsf T}v_c\;\approx\;\mathrm{PMI}(w,c)-\log k,\qquad \mathrm{PMI}(w,c)=\log\frac{P(w,c)}{P(w)P(c)}$$
+    </div>
+    <p>
+      This is worth pausing on, because it collapses an apparent novelty back into machinery you
+      already have. PMI is an information-theoretic quantity from Chapter 05. Factorising a
+      matrix into a product of two thin ones is the truncated SVD of Chapter 02 &sect;05. So
+      Word2Vec is a low-rank factorisation of a co-occurrence statistic &mdash; the same thing
+      classical latent semantic analysis did in the 1990s, reached by a cheaper, online route.
+      <strong>GloVe</strong> makes the factorisation explicit, fitting
+      \(w_i^{\mathsf T}\tilde{w}_j+b_i+\tilde{b}_j=\log X_{ij}\) against the global
+      co-occurrence count \(X_{ij}\) directly.
+    </p>
+    <p>
+      The celebrated consequence is that analogies become vector arithmetic:
+      \(v_{\text{king}}-v_{\text{man}}+v_{\text{woman}}\) lands near \(v_{\text{queen}}\).
+      Semantic relations are, approximately, translations &mdash; a single displacement vector
+      that carries you from one word to its counterpart, the same displacement wherever in the
+      space you apply it.
+    </p>
+    <div class="note">
+      <div class="note-h"><span class="ic">!</span>Where the analogy breaks</div>
+      <p>
+        A feature vector in mechanics has <em>interpretable axes</em>. The second entry is the
+        temperature; it has a unit, a sign convention, and a meaning independent of the other
+        entries. You can hold one fixed and vary another, and ask a physical question about the
+        result.
+      </p>
+      <p>
+        An embedding has none of that. Dimension 237 of a 768-dimensional embedding means
+        nothing whatsoever on its own. The space is only defined up to an arbitrary rotation
+        &mdash; replace every vector \(v\) by \(Qv\) for any orthogonal \(Q\) and every dot
+        product, hence every prediction, is unchanged. There is no privileged basis, so there is
+        nothing to interpret axis by axis.
+      </p>
+      <p style="margin-bottom:0">
+        What survives rotation is exactly what carries the meaning: lengths, angles, and
+        differences between vectors. This is the one place in this chapter where the right
+        mechanical instinct is the <em>tensor</em> one &mdash; care about the invariants, not
+        the components. The analogy result is a statement about displacements, which is why it
+        survives; a claim about &ldquo;the gender dimension&rdquo; would not.
+      </p>
+    </div>
+    <figure>
+      <div class="paper"><img src="img/word2vec_architectures.svg" alt="Skip-gram and CBOW architectures side by side" width="410"></div>
+      <figcaption><b>Fig. 7.2</b> &mdash; CBOW predicts the centre word from context; skip-gram does the reverse. <i>Figure from the compendium.</i></figcaption>
+    </figure>
+    <p>
+      <strong>FastText</strong> patches the biggest practical hole. Word2Vec and GloVe assign
+      vectors to word <em>types</em>, so a word absent from training has no vector at all.
+      FastText represents a word as the sum of its character n-grams, so
+      &ldquo;whereabouts&rdquo; inherits structure from &ldquo;where&rdquo; even if it never
+      appeared. For the agglutinative languages of source file 01 &mdash; Turkish, Finnish
+      &mdash; where a single root generates hundreds of inflected forms, this is the difference
+      between a usable model and an unusable one.
+    </p>
+  </div>
+</section>
+
+<section id="count">
+  <div class="col">
+    <div class="sechead"><span class="secnum">03</span><h2>Counting, then predicting</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2007%20-%20computational%20linguistics/02.%20text%20processing%20and%20classic%20NLP.md" target="_blank" rel="noopener">src 02. text processing &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      A language model assigns a probability to a sequence. By the chain rule this is exact:
+    </p>
+    <div class="mathbox">
+      $$P(w_1,\ldots,w_n)=\prod_{i=1}^{n}P(w_i\mid w_1,\ldots,w_{i-1})$$
+    </div>
+    <p>
+      and completely useless, because the conditioning history grows without bound. The fix is
+      the <strong>Markov assumption</strong> of Chapter 05: truncate the history to the last
+      \(k-1\) words. That is all an <strong>n-gram model</strong> is &mdash; a Markov chain whose
+      state is the last few words, with transition probabilities estimated by counting. No
+      training, no gradients, just a table of counts.
+    </p>
+    <div class="defn">
+      <div class="defn-h">Perplexity is exponentiated cross-entropy</div>
+      <p>
+        The standard score for a language model is <strong>perplexity</strong>, the inverse
+        probability of the test set normalised by length:
+      </p>
+      <div class="mathbox">
+        $$\mathrm{PPL}=P(w_1,\ldots,w_N)^{-1/N}=\exp\!\left(-\frac{1}{N}\sum_{i=1}^{N}\log P(w_i\mid w_{<i})\right)=e^{H}$$
+      </div>
+      <p style="margin-bottom:0">
+        The exponent is precisely the cross-entropy \(H\) of Chapter 05 &sect;05. So perplexity
+        is not a new quantity &mdash; it is cross-entropy in different clothing, and minimising
+        the training loss <em>is</em> minimising perplexity. The unit is interpretable:
+        a perplexity of 200 means the model is, on average, as uncertain as if it were choosing
+        uniformly among 200 words. A uniform model over a vocabulary of \(V\) scores exactly
+        \(V\).
+      </p>
+    </div>
+    <p>
+      The failure mode of counting is the zero. An n-gram never seen in training gets
+      probability zero, which drives the probability of the whole sentence to zero &mdash; one
+      unseen bigram and the model declares a perfectly ordinary sentence impossible.
+      <strong>Smoothing</strong> moves probability mass to unseen events. Add-one (Laplace)
+      smoothing is the crude version and is far too aggressive on a large vocabulary.
+    </p>
+    <p>
+      <strong>Kneser&ndash;Ney</strong> is the good version, and its key idea is genuinely
+      clever. Rather than asking how often a word appears, it asks <em>in how many distinct
+      contexts</em> it appears:
+    </p>
+    <div class="mathbox">
+      $$P_{\text{cont}}(w_i)=\frac{\left|\{w':\mathrm{count}(w',w_i)>0\}\right|}{\left|\{(w',w''):\mathrm{count}(w',w'')>0\}\right|}$$
+    </div>
+    <p>
+      &ldquo;Francisco&rdquo; is frequent, but almost always preceded by &ldquo;San&rdquo;. Its
+      versatility is low, so it should not be predicted in a novel context merely because it is
+      common. &ldquo;The&rdquo; follows almost anything, so its versatility is high. Raw
+      frequency cannot distinguish these; continuation counts can. It is a reliability
+      engineer's instinct &mdash; a part that has only ever been tested in one fixture is not
+      qualified for general service.
+    </p>
+    <div class="note">
+      <div class="note-h"><span class="ic">!</span>Where the analogy breaks</div>
+      <p style="margin-bottom:0">
+        Smoothing looks like regularisation and it is not. When you add a regularisation term to
+        a structural optimisation you are encoding a real prior belief &mdash; that the design
+        should be smooth, or light, or compliant &mdash; and you can defend it physically.
+        Smoothing a language model encodes the belief that unseen word sequences are possible,
+        which is true, but the <em>amount</em> of mass to move is fixed by held-out
+        cross-validation and nothing else. There is no physical argument available for the
+        discount \(d\approx0.75\). It is what worked.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="state">
+  <div class="col">
+    <div class="sechead"><span class="secnum">04</span><h2>Sequences as state</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2007%20-%20computational%20linguistics/03.%20embeddings%20and%20sequence%20models.md" target="_blank" rel="noopener">src 03. embeddings &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      A <strong>recurrent network</strong> reads one token at a time and carries a hidden state
+      forward. Stripped of notation, the update is:
+    </p>
+    <div class="mathbox">
+      $$h_t=\tanh\!\left(W_h h_{t-1}+W_x x_t+b\right)$$
+    </div>
+    <p>
+      Delete the \(\tanh\) and this is a first-order linear difference equation with an input
+      term &mdash; the discrete-time recurrence you get from any lumped-parameter system after
+      a finite-difference or zero-order-hold discretisation. You have written
+      \(x_k=ax_{k-1}+bu_k\) for a thermal mass, an RC circuit, a settling tank. The state
+      compresses the entire past into a fixed-size summary, and the eigenvalues of \(W_h\)
+      decide whether that summary decays, persists, or blows up &mdash; precisely the stability
+      question you ask of \(|a|<1\).
+    </p>
+    <p>
+      That last point is not a loose parallel. The vanishing and exploding gradient problem,
+      which made early RNNs nearly untrainable on long sequences, <em>is</em> the statement that
+      the product of many Jacobians behaves like \(a^n\): decay to nothing if the spectral
+      radius is below one, divergence if above. LSTMs and GRUs fix it by building a path along
+      which the effective multiplier is held near one &mdash; an integrator with a controlled
+      leak, gated so the model can choose when to hold and when to forget.
+    </p>
+    <p>
+      The <strong>sequence-to-sequence</strong> architecture stacks two of these: an encoder
+      reads the input and hands its final state to a decoder that generates the output. It was
+      the breakthrough for machine translation, and it has an obvious structural weakness. The
+      entire input must survive in one fixed-size vector. This is a bottleneck in the literal
+      sense &mdash; a single cross-section through which all the information must pass &mdash;
+      and performance degrades with sentence length exactly as you would expect.
+    </p>
+    <figure>
+      <div class="paper"><img src="img/seq2seq_architecture.svg" alt="Encoder-decoder architecture: encoder RNN reads input, final hidden state initialises the decoder RNN" width="410"></div>
+      <figcaption><b>Fig. 7.3</b> &mdash; Seq2seq: everything the decoder knows about the input arrives through one vector. <i>Figure from the compendium.</i></figcaption>
+    </figure>
+    <p>
+      Attention was invented to remove that bottleneck, and it is the subject of the next
+      section. Note the shape of the fix before you meet it: instead of one summary computed
+      once, the decoder is allowed to reach back and take a <em>different</em> weighted
+      combination of the encoder states at every output step.
+    </p>
+  </div>
+</section>
+
+<section id="attn">
+  <div class="col">
+    <div class="sechead"><span class="secnum">05</span><h2>Attention is a duality pairing</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2007%20-%20computational%20linguistics/04.%20transformers%20and%20language%20models.md" target="_blank" rel="noopener">src 04. transformers &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      Chapter 01 &sect;08 made an argument that probably felt like a curiosity at the time:
+      forces are not really vectors. They are <em>covectors</em> &mdash; rulers that eat a
+      displacement and return a number. Virtual work \(\delta W=\mathbf{F}\cdot\delta\mathbf{r}\)
+      is that pairing, and you have been computing it since your second year.
+    </p>
+    <p>
+      Attention is the same object. The core operation is
+    </p>
+    <div class="mathbox">
+      $$\mathrm{Attention}(Q,K,V)=\mathrm{softmax}\!\left(\frac{QK^{\mathsf T}}{\sqrt{d_k}}\right)V$$
+    </div>
+    <p>
+      and the quantity inside, \(q^{\mathsf T}k\), is a pairing of exactly the kind Chapter 01
+      described. The <strong>query is the ruler</strong>: it is not an object in the space being
+      measured, it is the instrument asking &ldquo;how much of what I am looking for do you
+      have?&rdquo; The key is what gets measured. The score is the reading. The softmax turns a
+      row of readings into weights summing to one, and the output is the correspondingly
+      weighted blend of values.
+    </p>
+    <p>
+      There is a second reading, closer to structures. In the flexibility formulation you build
+      a matrix of influence coefficients \(f_{ij}\) &mdash; the deflection at \(i\) caused by a
+      unit load at \(j\) &mdash; and the response at any point is the weighted sum of
+      contributions from everywhere else. The attention matrix is an influence matrix of that
+      shape: row \(t\) says how much each input position contributes to output position \(t\).
+      Bahdanau's original formulation makes this explicit, calling \(\alpha_{ti}\) an
+      <em>alignment</em>.
+    </p>
+    <figure>
+      <div class="paper"><img src="img/attention_alignment.svg" alt="Attention alignment heatmap between a source sentence and its translation" width="410"></div>
+      <figcaption><b>Fig. 7.4</b> &mdash; An alignment heatmap: which source word each target word draws from. <i>Figure from the compendium.</i></figcaption>
+    </figure>
+    <div class="note">
+      <div class="note-h"><span class="ic">!</span>Where the analogy breaks</div>
+      <p>
+        A flexibility matrix is fixed by the geometry and the material. Compute it once for a
+        structure and it is a property of that structure, valid for every load case you will
+        ever apply. That is exactly what makes it useful.
+      </p>
+      <p style="margin-bottom:0">
+        The attention matrix is recomputed <em>from the input, for every input</em>. There is no
+        fixed matrix to extract and reuse, because the weights are a function of the very data
+        being processed. This is the single most important structural difference between
+        attention and every linear operator in your training, and it is the reason a transformer
+        cannot be characterised the way a structure can. Ask &ldquo;what is the influence matrix
+        of this model?&rdquo; and the honest answer is: there is one per sentence.
+      </p>
+    </div>
+    <p>
+      One detail in that formula repays attention, because it is the kind of thing Chapter 01
+      &sect;09 prepared you for. Why divide by \(\sqrt{d_k}\)? If the entries of \(q\) and \(k\)
+      are roughly independent with unit variance, the dot product \(q^{\mathsf T}k\) sums
+      \(d_k\) such products, so its variance grows like \(d_k\) and its typical magnitude like
+      \(\sqrt{d_k}\). Feed scores of that size into a softmax and it saturates &mdash; one
+      weight goes to 1, the rest to 0, and the gradient dies. Dividing by \(\sqrt{d_k}\)
+      holds the score distribution at a workable width regardless of dimension. It is
+      dimensional housekeeping, and it is load-bearing.
+    </p>
+  </div>
+</section>
+
+<section id="rope">
+  <div class="col">
+    <div class="sechead"><span class="secnum">06</span><h2>Position by rotation</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2007%20-%20computational%20linguistics/04.%20transformers%20and%20language%20models.md" target="_blank" rel="noopener">src 04. transformers &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      Attention as defined in &sect;05 has a problem: it is permutation-equivariant. Shuffle the
+      input tokens and the set of outputs is merely shuffled to match. The mechanism has no idea
+      what order anything came in. Position must be injected deliberately.
+    </p>
+    <p>
+      The original transformer added a <strong>sinusoidal</strong> vector to each token's
+      embedding, with each dimension a sine or cosine of the position at a different frequency.
+      That is a Fourier basis being used as an address rather than as a decomposition &mdash;
+      the same harmonics you would use to represent a signal, repurposed to label where in the
+      sequence you are. Low-frequency components distinguish coarse position, high-frequency
+      ones distinguish neighbours.
+    </p>
+    <p>
+      <strong>Rotary position embedding</strong> (RoPE) does something better, and it is a
+      construction you already own. Split the query and key vectors into
+      \(d/2\) two-dimensional subspaces. In each one, rotate by an angle proportional to the
+      token's position:
+    </p>
+    <div class="mathbox">
+      $$\begin{bmatrix}q'_{2i}\\ q'_{2i+1}\end{bmatrix}=\begin{bmatrix}\cos m\theta_i & -\sin m\theta_i\\ \sin m\theta_i & \cos m\theta_i\end{bmatrix}\begin{bmatrix}q_{2i}\\ q_{2i+1}\end{bmatrix},\qquad \theta_i=10000^{-2i/d}$$
+    </div>
+    <p>
+      That matrix is the plane rotation of Chapter 01 &sect;07 &mdash; the one you use to
+      transform a stress state onto a rotated plane, the algebra behind Mohr's circle.
+      Nothing has been invented here. And the payoff comes straight out of the group property
+      of rotations, \(R_m^{\mathsf T}R_n=R_{n-m}\):
+    </p>
+    <div class="mathbox">
+      $$q'^{\mathsf T}k'=(R_m q)^{\mathsf T}(R_n k)=q^{\mathsf T}R_m^{\mathsf T}R_n\,k=q^{\mathsf T}R_{n-m}\,k$$
+    </div>
+    <p>
+      The attention score between two tokens depends <em>only on how far apart they are</em>,
+      never on where the pair sits in the sequence. Absolute position went in; relative position
+      came out; no parameters were learned to make it happen. A model given RoPE has a built-in
+      notion of distance, and the same pair of words fifty tokens later scores identically.
+    </p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-h"><span class="lab-t">Rotate both, and nothing moves</span><span class="lab-tag">Predict, then drag</span></div>
+    <div class="lab-body">
+      <div class="predict" id="pred2">
+        <div class="predict-h">Commit before you drag</div>
+        <p>
+          Two tokens sit at positions \(m\) and \(n\). You slide <em>both</em> of them five
+          places later in the sentence, keeping the gap between them the same. What happens to
+          the attention score between them?
+        </p>
+        <div class="opts">
+          <button class="pbtn" data-p2="a" type="button">Falls off with distance</button>
+          <button class="pbtn" data-p2="b" type="button">Exactly unchanged</button>
+          <button class="pbtn" data-p2="c" type="button">Changes unpredictably</button>
+          <button class="pbtn" data-p2="d" type="button">Rotates by five steps</button>
+        </div>
+        <div class="pverdict" id="pv2"></div>
+      </div>
+      <div class="stage">
+        <svg id="ropeSvg" viewBox="0 0 640 300" width="100%" role="img" aria-label="Query and key vectors rotating on a circle by an angle proportional to token position">
+          <defs>
+            <marker id="ah1" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="var(--s1)"/></marker>
+            <marker id="ah2" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="var(--s2)"/></marker>
+          </defs>
+          <g id="rGrid"></g>
+          <circle id="rCirc" class="rcirc" cx="150" cy="150" r="105"/>
+          <line id="rAxX" class="axl" x1="30" y1="150" x2="270" y2="150"/>
+          <line id="rAxY" class="axl" x1="150" y1="30" x2="150" y2="270"/>
+          <path id="rArc" class="arc"></path>
+          <line id="rQ" class="qvec" x1="150" y1="150" x2="255" y2="150"/>
+          <line id="rK" class="kvec" x1="150" y1="150" x2="255" y2="150"/>
+          <text class="al" x="300" y="56">Score as a function of gap</text>
+          <g id="rPlot"></g>
+          <line id="rSpan" class="spanline" x1="320" y1="230" x2="360" y2="230"/>
+        </svg>
+      </div>
+      <div class="ctl">
+        <label for="mSl">Position m</label><input id="mSl" type="range" min="0" max="24" step="1" value="3">
+        <label for="nSl">Position n</label><input id="nSl" type="range" min="0" max="24" step="1" value="8">
+        <button class="btn" id="rShift" type="button">Shift both +5</button>
+      </div>
+      <div class="readout">
+        <div class="ro"><div class="ro-k">Gap<br>n &minus; m</div><div class="ro-v" id="rGap">5</div></div>
+        <div class="ro"><div class="ro-k">Score from<br>rotated q, k</div><div class="ro-v" id="rS1">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Score from<br>gap alone</div><div class="ro-v" id="rS2">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Difference</div><div class="ro-v" id="rD">&mdash;</div></div>
+      </div>
+      <div class="lab-foot">
+        One 2-D subspace is drawn, with <span class="gk">&theta;</span> = 0.5 radians per
+        position, so a full turn takes about 12.6 tokens. A real model carries \(d/2\) such
+        subspaces with \(\theta_i=10000^{-2i/d}\), spanning four orders of magnitude &mdash;
+        the fastest wraps every few tokens, the slowest barely turns across the whole context.
+        The two score readouts are computed by genuinely different routes: one rotates both
+        vectors and takes the dot product, the other rotates a single vector by the gap. They
+        agree to floating-point precision, which is the group property doing its work.
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <figure>
+      <div class="paper"><img src="img/rope_rotation.svg" alt="RoPE rotates query and key vectors by an angle proportional to position in 2D subspaces" width="410"></div>
+      <figcaption><b>Fig. 7.5</b> &mdash; Each position rotates the pair by a different angle; the score sees only the difference. <i>Figure from the compendium.</i></figcaption>
+    </figure>
+    <div class="note">
+      <div class="note-h"><span class="ic">!</span>Where the analogy breaks</div>
+      <p>
+        Mohr's circle rotates a stress state in <em>physical space</em>. The angle is an angle
+        you could measure with a protractor on the actual component, and the transformed
+        components are the tractions on a real plane you could cut.
+      </p>
+      <p style="margin-bottom:0">
+        RoPE's rotation happens in an abstract embedding subspace where, as &sect;02 established,
+        the axes mean nothing. The angle is not an angle in any space you can point at, and the
+        pairing of dimensions \((2i,2i+1)\) into planes is an arbitrary convention. What
+        transfers is the <em>algebra</em> of rotations &mdash; orthogonality, the group property,
+        preservation of inner products &mdash; and that transfers exactly. What does not transfer
+        is any geometric interpretation of the plane being rotated in.
+      </p>
+    </div>
+    <p>
+      The practical consequence shows up when models are stretched to longer contexts than they
+      were trained on. Because RoPE encodes distance as an angle, positions beyond the training
+      length present the model with rotation angles it has never seen.
+      <strong>Interpolation</strong> divides the position indices down so the angles stay in
+      the familiar range, at the cost of resolution between adjacent positions;
+      <strong>extrapolation</strong> keeps going and degrades quickly.
+      <strong>YaRN</strong> splits the difference by noticing that the two ends of the frequency
+      spectrum deserve different treatment: fast-rotating dimensions have already seen every
+      angle many times and extrapolate fine, while slow ones have not and must be interpolated.
+    </p>
+  </div>
+</section>
+
+<section id="ssm">
+  <div class="col">
+    <div class="sechead"><span class="secnum">07</span><h2>The state-space return</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2007%20-%20computational%20linguistics/05.%20advanced%20text%20generation.md" target="_blank" rel="noopener">src 05. advanced generation &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p class="lead">
+      This is the section to read twice. The most serious current challenger to the transformer
+      is a linear state-space system, discretised by zero-order hold, and its convolution kernel
+      is the discrete impulse response function. You have all of this already.
+    </p>
+    <p>
+      A <strong>state space model</strong> maps an input signal \(u(t)\) to an output \(y(t)\)
+      through a latent state:
+    </p>
+    <div class="mathbox">
+      $$\dot{x}(t)=Ax(t)+Bu(t),\qquad y(t)=Cx(t)+Du(t)$$
+    </div>
+    <p>
+      There is nothing to translate. That is the state-space form from control theory, the one
+      you wrote for every vibrating system, every servo loop, every thermal network. \(A\) is
+      the state transition matrix, \(B\) the input map, \(C\) the output map, \(D\) the direct
+      feedthrough.
+    </p>
+    <p>
+      Tokens are discrete, so the continuous system must be discretised with a step
+      \(\Delta\). The standard <strong>zero-order hold</strong> gives
+    </p>
+    <div class="mathbox">
+      $$\bar{A}=\exp(\Delta A),\qquad \bar{B}=A^{-1}\!\left(\exp(\Delta A)-I\right)B$$
+    </div>
+    <p>
+      which is the formula you would use to digitise a controller. The source chapter writes
+      \(\bar{B}=(\Delta A)^{-1}(\exp(\Delta A)-I)\cdot\Delta B\); the two factors of \(\Delta\)
+      cancel and the forms are identical, which is worth checking once and then forgetting.
+      The discrete system is
+      \(x_k=\bar{A}x_{k-1}+\bar{B}u_k,\ y_k=Cx_k+Du_k\) &mdash; a difference equation, exactly
+      as in &sect;04, but now with no nonlinearity at all.
+    </p>
+    <div class="defn">
+      <div class="defn-h">The dual view, and why it matters</div>
+      <p>
+        Because the system is <em>linear</em>, the recurrence can be unrolled into a
+        convolution. Substituting repeatedly gives
+        \(y_k=\sum_{j} \bar{K}_j\,u_{k-j}\) with
+      </p>
+      <div class="mathbox">
+        $$\bar{K}=\left(C\bar{B},\;C\bar{A}\bar{B},\;C\bar{A}^2\bar{B},\;\ldots\right)$$
+      </div>
+      <p style="margin-bottom:0">
+        These are two computations of the same function. The recurrence costs \(O(1)\) per step
+        with fixed memory, which is what you want when generating one token at a time. The
+        convolution can be evaluated for a whole sequence at once with an FFT in
+        \(O(n\log n)\), which is what you want when training on a million sentences in parallel.
+        Recurrence for inference, convolution for training &mdash; the same model, run two ways.
+        That is the central trick of the architecture.
+      </p>
+    </div>
+    <p>
+      Now look at \(\bar{K}\) again. Feed the system a unit impulse &mdash;
+      \(u_0=1\) and \(u_k=0\) thereafter &mdash; and step the recurrence. You get \(C\bar{B}\),
+      then \(C\bar{A}\bar{B}\), then \(C\bar{A}^2\bar{B}\). <strong>The convolution kernel is
+      the impulse response.</strong> The list of numbers a state-space language model convolves
+      with is the same list you would plot to characterise a damped oscillator, computed by the
+      same formula.
+    </p>
+    <p>
+      This is checked numerically in <code>verify_claims.py</code> under <code>[Ch07 s07]</code>
+      for a spring&ndash;mass&ndash;damper with \(\omega_n=2\) rad/s, \(\zeta=0.1\) and
+      \(\Delta=0.1\) s: the recurrence output and the convolution output agree to
+      \(1.4\times10^{-16}\), and the kernel matches the impulse response to
+      \(6.9\times10^{-18}\). The first kernel taps are
+      \(0.004918,\ 0.014303,\ 0.022761,\ldots\) &mdash; the opening of a lightly damped rise,
+      because that is precisely what it is.
+    </p>
+    <figure>
+      <div class="paper"><img src="img/ssm_dual_view.svg" alt="SSM dual view: recurrence for inference, convolution for training, and Mamba's selective extension" width="410"></div>
+      <figcaption><b>Fig. 7.6</b> &mdash; The same layer as a recurrence and as a convolution. <i>Figure from the compendium.</i></figcaption>
+    </figure>
+    <p>
+      One difficulty stands between this idea and a working model. A randomly chosen \(A\) gives
+      dynamics that either decay to nothing within a few steps or diverge &mdash; the stability
+      problem of &sect;04 in matrix form. <strong>S4</strong> solves it by initialising \(A\)
+      with the <strong>HiPPO</strong> matrix, derived from the theory of optimal polynomial
+      approximation, which provably keeps the state acting as a compressed running
+      approximation of the entire input history. In your vocabulary: it is a filter bank
+      designed so that the state holds a Legendre-polynomial fit to the signal so far, rather
+      than whatever the initialisation happened to give.
+    </p>
+    <p>
+      <strong>Mamba</strong> adds the piece that made these competitive with transformers.
+      In S4 the matrices are fixed &mdash; the same dynamics apply to every token, whatever it
+      says. Mamba makes \(B\), \(C\) and the step size \(\Delta\) functions of the current
+      input:
+    </p>
+    <div class="mathbox">
+      $$B_k=\mathrm{Linear}(u_k),\qquad C_k=\mathrm{Linear}(u_k),\qquad \Delta_k=\mathrm{softplus}\!\left(\mathrm{Linear}(u_k)\right)$$
+    </div>
+    <p>
+      The step size becomes a gate with a clean physical reading: a large \(\Delta_k\) advances
+      the continuous dynamics a long way in one jump, effectively flushing the state and
+      writing in the current input; a small \(\Delta_k\) barely advances it, preserving what is
+      already stored. The model learns, per token, whether to remember or overwrite.
+    </p>
+    <div class="note">
+      <div class="note-h"><span class="ic">!</span>Where the analogy breaks</div>
+      <p>
+        Everything above the word &ldquo;Mamba&rdquo; is a linear time-invariant system and
+        every tool you own applies: transfer functions, poles and zeros, frequency response,
+        superposition, stability from the spectral radius of \(\bar{A}\).
+      </p>
+      <p>
+        Selectivity destroys all of it. Once \(B\), \(C\) and \(\Delta\) depend on the input,
+        the system is no longer time-invariant and no longer linear in the input &mdash; there
+        is no transfer function, no impulse response that characterises it, no superposition.
+        Feed it two signals and the response to the sum is not the sum of the responses. The
+        very property that made the convolution view possible is the one Mamba gives up, which
+        is why it cannot use FFT training and needs a parallel scan instead.
+      </p>
+      <p style="margin-bottom:0">
+        So the bridge is exact right up to the point where the architecture becomes good, and
+        then it ends. That is a fair summary of this entire chapter, and it is worth sitting
+        with rather than glossing: the mechanical intuition gets you to S4 and no further.
+      </p>
+    </div>
+    <p>
+      The current practical answer is to use both. <strong>Hybrid</strong> models such as Jamba
+      and Zamba interleave state-space layers with occasional attention layers, on the reading
+      that the two do complementary jobs &mdash; state-space layers propagate information
+      smoothly over long distances at \(O(1)\) memory per step, while attention does precise
+      content-addressed lookup. A cheap channel for the bulk of the work and an expensive one
+      for the part that needs precision is a familiar engineering compromise.
+    </p>
+  </div>
+</section>
+
+<section id="scale">
+  <div class="col">
+    <div class="sechead"><span class="secnum">08</span><h2>Scale and sparsity</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2007%20-%20computational%20linguistics/04.%20transformers%20and%20language%20models.md" target="_blank" rel="noopener">src 04. transformers &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      Three ideas in this section are straightforwardly things you know under other names.
+    </p>
+    <p>
+      <strong>LoRA</strong> is a low-rank update. Fine-tuning a large model normally means
+      updating every weight, which for a 175-billion-parameter model means hundreds of gigabytes
+      of optimiser state. LoRA freezes \(W\) and learns a correction constrained to rank \(r\):
+    </p>
+    <div class="mathbox">
+      $$W'=W+BA,\qquad B\in\mathbb{R}^{d\times r},\ A\in\mathbb{R}^{r\times d},\ r\ll d$$
+    </div>
+    <p>
+      This is the truncated-SVD thinking of Chapter 02 &sect;05 applied to a <em>change</em>
+      rather than to a matrix: the claim is that adapting a model to a new task is an
+      intrinsically low-dimensional operation, so a rank-8 or rank-64 correction captures it.
+      Because the update is a product of thin matrices, it can be folded back into \(W\) after
+      training and costs nothing at inference &mdash; a shim that disappears once fitted.
+    </p>
+    <figure>
+      <div class="paper"><img src="img/lora_decomposition.svg" alt="LoRA: frozen weight matrix W bypassed by a low-rank path through small matrices A and B" width="410"></div>
+      <figcaption><b>Fig. 7.7</b> &mdash; The frozen weight and its low-rank correction. <i>Figure from the compendium.</i></figcaption>
+    </figure>
+    <p>
+      <strong>Mixture of experts</strong> is line balancing. Replace one large feed-forward
+      block with \(E\) smaller ones and a router that sends each token to the top \(k\), and
+      the parameter count rises by a factor of \(E\) while the compute per token rises only by
+      \(k\). DeepSeek-V3 runs 256 experts with top-8 routing; Mixtral runs 8 with top-2.
+    </p>
+    <p>
+      The failure mode is the one any production engineer would predict. If the router sends
+      most tokens to a few popular experts, those become the bottleneck while the rest sit idle
+      &mdash; a line with one overloaded station and nine starved ones. The classical fix is an
+      auxiliary <strong>load-balancing loss</strong> pushing utilisation towards uniform:
+    </p>
+    <div class="mathbox">
+      $$\mathcal{L}_{\text{balance}}=E\cdot\sum_{i=1}^{E}f_i\,p_i$$
+    </div>
+    <p>
+      with \(f_i\) the fraction of tokens routed to expert \(i\) and \(p_i\) its mean routing
+      probability; the product is minimised when both are \(1/E\). DeepSeek-V3 reports that this
+      auxiliary term degrades quality and replaces it with a per-expert bias nudged up or down
+      each step according to load &mdash; feedback control on the queue length rather than a
+      penalty in the objective. An engineer who has balanced a line will recognise the
+      preference.
+    </p>
+    <figure>
+      <div class="paper"><img src="img/moe_layer.svg" alt="MoE layer: router computes scores, top-2 experts selected, outputs weighted and summed" width="410"></div>
+      <figcaption><b>Fig. 7.8</b> &mdash; A router, a handful of active experts, and the load-balancing problem. <i>Figure from the compendium.</i></figcaption>
+    </figure>
+    <p>
+      <strong>Scaling laws</strong> are empirical power laws relating loss to parameters \(N\),
+      data \(D\) and compute \(C\). Kaplan et al. (2020) found \(L\propto N^{-\alpha}\) holding
+      over orders of magnitude; the <strong>Chinchilla</strong> correction (Hoffmann et al.,
+      2022) showed the early recommendation had been badly wrong about the allocation, and that
+      for a fixed budget model size and data should scale together:
+    </p>
+    <div class="mathbox">
+      $$N_{\text{opt}}\propto C^{0.5},\qquad D_{\text{opt}}\propto C^{0.5}$$
+    </div>
+    <p>
+      Double the compute and you should take \(\sqrt{2}\) more parameters and \(\sqrt{2}\) more
+      data, not \(2\times\) the parameters. Chinchilla at 70B parameters and 1.4T tokens matched
+      Gopher at 280B and 300B tokens on the same budget: the larger model was starved, not
+      superior. The working rule is roughly twenty tokens per parameter.
+    </p>
+    <div class="note">
+      <div class="note-h"><span class="ic">!</span>Where the analogy breaks</div>
+      <p style="margin-bottom:0">
+        A power law fitted over several decades is a familiar object &mdash; S&ndash;N curves,
+        Paris law, friction factor correlations all look like this. But those rest on a physical
+        mechanism that tells you where the correlation stops being valid, and dimensional
+        analysis tells you which groups can appear. Scaling laws have neither. They are
+        extrapolations from observed runs with no derivation and no established domain of
+        validity, which is exactly why Kaplan's exponents could be materially wrong for two
+        years before anyone noticed. Treat them as fitted correlations of unknown range, not as
+        laws.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="fast">
+  <div class="col">
+    <div class="sechead"><span class="secnum">09</span><h2>Making it faster without changing the answer</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2007%20-%20computational%20linguistics/05.%20advanced%20text%20generation.md" target="_blank" rel="noopener">src 05. advanced generation &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      Autoregressive generation is sequential by construction: token \(t+1\) cannot be computed
+      until token \(t\) exists. On modern hardware this wastes almost everything, because a
+      single token's forward pass leaves the accelerator mostly idle &mdash; the work is memory-
+      bound, not compute-bound.
+    </p>
+    <p>
+      <strong>Speculative decoding</strong> exploits that idle capacity. A small, fast
+      <em>draft</em> model proposes \(k\) tokens ahead. The large <em>target</em> model then
+      scores all \(k\) in a single batched pass, which costs it barely more than scoring one.
+      Each proposed token is accepted with probability
+      \(\min\!\left(1,\ p_{\text{target}}(t)/p_{\text{draft}}(t)\right)\), and on rejection a
+      replacement is drawn from the normalised residual
+      \(\max\!\left(0,\ p_{\text{target}}-p_{\text{draft}}\right)\).
+    </p>
+    <p>
+      The claim attached to this scheme is strong enough to be worth verifying rather than
+      believing: <strong>the tokens emitted are distributed exactly as the target model alone
+      would emit them</strong>. Not approximately. The draft model changes the speed and nothing
+      else.
+    </p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-h"><span class="lab-t">A bad draft costs speed, not quality</span><span class="lab-tag">Predict, then degrade</span></div>
+    <div class="lab-body">
+      <div class="predict" id="pred3">
+        <div class="predict-h">Commit before you drag</div>
+        <p>
+          You swap the draft model for a much worse one &mdash; so bad its predictions are
+          nearly unrelated to the target's. What happens to the <em>quality</em> of the text
+          that comes out?
+        </p>
+        <div class="opts">
+          <button class="pbtn" data-p3="a" type="button">Degrades with the draft</button>
+          <button class="pbtn" data-p3="b" type="button">Degrades a little</button>
+          <button class="pbtn" data-p3="c" type="button">Identical, just slower</button>
+          <button class="pbtn" data-p3="d" type="button">Identical and same speed</button>
+        </div>
+        <div class="pverdict" id="pv3"></div>
+      </div>
+      <div class="stage">
+        <svg id="specSvg" viewBox="0 0 640 290" width="100%" role="img" aria-label="Target, draft and emitted token distributions as bar charts">
+          <g id="sGrid"></g>
+          <g id="sBars"></g>
+          <g id="sLegend"></g>
+        </svg>
+      </div>
+      <div class="ctl">
+        <label for="qSl">Draft quality</label><input id="qSl" type="range" min="0" max="100" step="1" value="75">
+        <button class="btn" id="sRun" type="button">Draw 40,000 more</button>
+        <button class="btn" id="sReset" type="button">Reset counts</button>
+      </div>
+      <div class="readout">
+        <div class="ro"><div class="ro-k">Acceptance<br>rate</div><div class="ro-v" id="sAcc">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">1 &minus; total<br>variation</div><div class="ro-v" id="sTV">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Samples<br>drawn</div><div class="ro-v" id="sN">0</div></div>
+        <div class="ro"><div class="ro-k">Max error<br>vs target</div><div class="ro-v" id="sErr">&mdash;</div></div>
+      </div>
+      <div class="lab-foot">
+        Blue is the target distribution, orange the draft, green outline the empirical
+        distribution of tokens actually emitted. Drag the draft quality down to zero and watch
+        two things: the acceptance rate collapses, and the green outline stays locked to blue.
+        The acceptance rate tracks the second readout exactly, because accepting with
+        probability \(\min(1,p_t/p_d)\) succeeds with probability
+        \(\sum_u\min\!\left(p_d(u),p_t(u)\right)\), which is \(1-\mathrm{TV}(p_d,p_t)\).
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="defn">
+      <div class="defn-h">Why the output distribution is untouched</div>
+      <p>
+        A token \(t\) can be emitted two ways: proposed and accepted, or substituted after a
+        rejection. The first contributes
+        \(p_d(t)\cdot\min\!\left(1,p_t(t)/p_d(t)\right)=\min\!\left(p_d(t),p_t(t)\right)\).
+        The rejection probability is
+        \(1-\sum_u\min\!\left(p_d(u),p_t(u)\right)\), which is exactly the normalising constant
+        of the residual \(\max(0,p_t-p_d)\) &mdash; so the second path contributes precisely
+        \(\max\!\left(0,p_t(t)-p_d(t)\right)\). Adding them:
+      </p>
+      <div class="mathbox">
+        $$\min\!\left(p_d(t),p_t(t)\right)+\max\!\left(0,\,p_t(t)-p_d(t)\right)=p_t(t)$$
+      </div>
+      <p style="margin-bottom:0">
+        for every \(t\), whatever \(p_d\) is. This is the acceptance&ndash;rejection argument of
+        Chapter 05, and it is the same reasoning that justifies rectifying inspection in
+        acceptance sampling: screen with a cheap test, correct the rejects properly, and the
+        outgoing quality is set by the correction step, not by the screen. Verified in
+        <code>verify_claims.py</code> under <code>[Ch07 s09]</code>, including against a draft
+        deliberately built as the reverse of the target.
+      </p>
+    </div>
+    <figure>
+      <div class="paper"><img src="img/speculative_decoding.svg" alt="Speculative decoding: draft model proposes tokens, target model verifies in one pass" width="410"></div>
+      <figcaption><b>Fig. 7.9</b> &mdash; Draft proposes, target verifies, rejects are corrected. <i>Figure from the compendium.</i></figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="judge">
+  <div class="col">
+    <div class="sechead"><span class="secnum">10</span><h2>Judging the output</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2007%20-%20computational%20linguistics/04.%20transformers%20and%20language%20models.md" target="_blank" rel="noopener">src 04. transformers &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      Chapter 06 &sect;08 established precision and recall as producer's and consumer's risk,
+      and \(F_1\) as a harmonic mean &mdash; the same combination rule as springs in series,
+      where the compliant member dominates. All of that carries over unchanged to token-level
+      NLP tasks such as named-entity recognition, and will not be repeated here.
+    </p>
+    <p>
+      What is new in this chapter is harder, and it is a measurement problem rather than a
+      statistics problem. <strong>There is no gold standard.</strong> A translation can be
+      correct in many genuinely different ways; a summary can be excellent while sharing almost
+      no words with the reference. The reference is one sample from a large space of acceptable
+      answers, not a calibrated master.
+    </p>
+    <p>
+      <strong>BLEU</strong>, the classic machine-translation metric, measures clipped n-gram
+      overlap with a brevity penalty:
+    </p>
+    <div class="mathbox">
+      $$\mathrm{BLEU}=\mathrm{BP}\cdot\exp\!\left(\sum_{n=1}^{N}w_n\log p_n\right),\qquad \mathrm{BP}=\min\!\left(1,\ e^{1-r/c}\right)$$
+    </div>
+    <p>
+      The clipping stops a candidate of &ldquo;the the the the&rdquo; scoring well, and the
+      brevity penalty stops a model winning on precision by saying almost nothing. It still
+      misses paraphrase entirely: &ldquo;the cat is on the mat&rdquo; and &ldquo;a feline sits
+      atop the rug&rdquo; share no bigrams and mean the same thing.
+      <strong>ROUGE</strong> reorients towards recall for summarisation, and
+      <strong>chrF</strong> works over character n-grams, which matters for the morphologically
+      rich languages of source file 01, where word-level matching is hopeless.
+    </p>
+    <p>
+      <strong>BERTScore</strong> replaces surface matching with similarity between contextual
+      embeddings, so &ldquo;automobile&rdquo; and &ldquo;car&rdquo; score well despite sharing
+      no characters. <strong>LLM-as-judge</strong> goes further and asks a strong model to rate
+      or compare outputs, aggregating pairwise verdicts into Elo ratings borrowed from chess.
+      Both replace a crude instrument with a more sensitive one that is itself a learned model,
+      with its own biases &mdash; judges favour the response shown first, and favour longer
+      answers.
+    </p>
+    <div class="note">
+      <div class="note-h"><span class="ic">!</span>Where the analogy breaks</div>
+      <p>
+        Every measurement you have ever made was traceable. A dial gauge is calibrated against
+        slip gauges, which are calibrated against a national standard, and the chain terminates
+        at a definition. Uncertainty is quantified and propagated, and two labs measuring the
+        same part agree within stated bounds.
+      </p>
+      <p style="margin-bottom:0">
+        NLP evaluation has no such chain. The metric is validated by <em>correlation with human
+        judgement</em>, and human judgement is itself variable, culture-dependent, and
+        measured only through inter-annotator agreement. There is no terminating definition.
+        This is why benchmark scores deserve less trust than instrument readings of the same
+        apparent precision, why <strong>contamination</strong> &mdash; test data leaking into
+        training &mdash; can silently invalidate a comparison, and why a saturated benchmark
+        stops carrying information long before people stop quoting it.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="breaks">
+  <div class="col">
+    <div class="sechead"><span class="secnum">11</span><h2>Where it breaks &mdash; the honest inventory</h2></div>
+    <hr class="rule-h">
+    <p>
+      Each section carried its own break box. This is the summary, ordered by how much damage
+      the mistake would do if you carried it forward.
+    </p>
+    <div class="tw">
+      <table>
+        <thead><tr><th>The tempting claim</th><th>Status</th><th>What is actually true</th></tr></thead>
+        <tbody>
+          <tr><td>An SSM layer is a state-space system</td><td><span class="flag ok">holds</span></td><td>Exactly true for S4 and for Mamba's underlying form. Untrue of Mamba as used &mdash; selectivity makes it neither linear in the input nor time-invariant, so no transfer function exists.</td></tr>
+          <tr><td>RoPE is a rotation</td><td><span class="flag ok">holds</span></td><td>Exactly &mdash; same matrix, same group property. But the space rotated in has no geometry you can point at, unlike Mohr's circle.</td></tr>
+          <tr><td>Attention is an influence matrix</td><td><span class="flag bad">partly</span></td><td>The structure matches; the permanence does not. A flexibility matrix is a property of the structure. An attention matrix exists only for one input.</td></tr>
+          <tr><td>An embedding is a feature vector</td><td><span class="flag bad">partly</span></td><td>It is a vector, and differences between embeddings carry meaning. Individual axes do not &mdash; the space is defined only up to rotation.</td></tr>
+          <tr><td>Shannon entropy is thermodynamic entropy</td><td><span class="flag bad">do not</span></td><td>They are formally connected through \(S=k\ln W\) and share a functional form, but the units differ, the ensembles differ, and nothing in a language model's cross-entropy is a physical quantity. The compendium's own information-theory material (Ch 05) is the right level of commitment; going further is where people get into trouble.</td></tr>
+          <tr><td>Scaling laws are physical laws</td><td><span class="flag bad">do not</span></td><td>Fitted correlations with no derivation and no established domain of validity. Kaplan's exponents stood for two years before Chinchilla showed the allocation was wrong.</td></tr>
+          <tr><td>A language model has a governing equation</td><td><span class="flag bad">do not</span></td><td>There is no conservation law, no constitutive relation, no equilibrium. The weights are the model; there is no compact description they approximate.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      The last row is the one worth dwelling on, because it is the deepest difference between
+      this chapter and every previous one. A beam has a governing equation, and the finite
+      element model is an <em>approximation</em> to it &mdash; refine the mesh and you converge
+      towards a thing that exists independently of your model. Language has no such object
+      underneath. There is no exact solution that a bigger model approaches. The distribution
+      over text that a model fits is defined by the corpus, and a different corpus defines a
+      different truth. Every instinct you have about convergence, mesh independence and
+      validation against theory needs re-examining before use here.
+    </p>
+  </div>
+</section>
+
+<section id="gaps">
+  <div class="col">
+    <div class="sechead"><span class="secnum">12</span><h2>What this chapter does not cover</h2></div>
+    <hr class="rule-h">
+    <p>
+      The source chapter is five files and roughly two thousand lines. This page is a bridge,
+      not a replacement, and the following are either compressed to a sentence or absent
+      entirely. Where the correspondence to mechanical engineering was weak, the material was
+      cut rather than padded with a forced analogy.
+    </p>
+    <div class="gap">
+      <div class="gap-h">Compressed here, substantial in the source</div>
+      <p style="margin-bottom:0">
+        <strong>Linguistics proper</strong> &mdash; morphology, constituency and dependency
+        parsing, CYK, valency, speech acts, implicature, coreference, discourse structure.
+        Source file 01 is almost entirely this, and has no mechanical counterpart worth
+        inventing. Read it directly; it is the best-written file in the chapter.
+        <strong>Classical NLP</strong> &mdash; POS tagging with HMMs, CRFs and the forward
+        algorithm, TF-IDF and BM25, edit distance. <strong>Evaluation</strong> &mdash; the
+        benchmark survey in source file 04 names roughly thirty benchmarks; &sect;10 above
+        covers the measurement principle and none of the catalogue.
+        <strong>Alignment</strong> &mdash; RLHF, DPO and the Bradley&ndash;Terry derivation,
+        constitutional AI, GRPO and RL-trained reasoning. This is a large and important part of
+        source file 05 and is represented here only by a mention.
+      </p>
+    </div>
+    <div class="gap">
+      <div class="gap-h">Absent here</div>
+      <p style="margin-bottom:0">
+        Text diffusion (D3PM, MDLM), OCR and CTC, retrieval-augmented generation and dense
+        passage retrieval, long-context engineering beyond the RoPE discussion, GQA and MLA
+        cache compression, multi-token prediction, FP8 training, knowledge distillation, and
+        the frontier-model survey that closes source file 05. The figures for several of these
+        are reproduced in the source; none is discussed here.
+      </p>
+    </div>
+    <p>
+      Twenty chapters cannot cover this field, and a page that implied otherwise would be
+      lying. What this page claims is narrower and, I hope, more useful: that four specific
+      structures &mdash; the duality pairing, the plane rotation, the difference equation and
+      the state-space system &mdash; are things you already own, and that owning them gets you
+      further into modern NLP than you would expect.
+    </p>
+  </div>
+</section>
+
+<section id="worked">
+  <div class="col">
+    <div class="sechead"><span class="secnum">13</span><h2>Worked example: one problem, solved twice</h2></div>
+    <hr class="rule-h">
+    <p>
+      Take a spring&ndash;mass&ndash;damper with \(m=1\) kg, \(c=0.4\) N&middot;s/m,
+      \(k=4\) N/m, sampled at \(\Delta=0.1\) s. Then
+      \(\omega_n=2\) rad/s and \(\zeta=0.1\) &mdash; lightly damped, a damped period of
+      \(3.157\) s, about 31.6 samples.
+    </p>
+    <h4>Solved as mechanics</h4>
+    <p>
+      Put it in state-space form with \(x=[\,\text{displacement},\ \text{velocity}\,]^{\mathsf T}\):
+    </p>
+    <div class="mathbox">
+      $$A=\begin{bmatrix}0 & 1\\ -k/m & -c/m\end{bmatrix}=\begin{bmatrix}0 & 1\\ -4 & -0.4\end{bmatrix},\qquad B=\begin{bmatrix}0\\ 1\end{bmatrix},\qquad C=\begin{bmatrix}1 & 0\end{bmatrix}$$
+    </div>
+    <p>
+      Digitise with a zero-order hold, because the forcing is applied and held over each sample
+      interval:
+    </p>
+    <div class="mathbox">
+      $$\bar{A}=\exp(\Delta A)=\begin{bmatrix}0.980330 & 0.097374\\ -0.389497 & 0.941380\end{bmatrix},\qquad \bar{B}=\begin{bmatrix}0.004918\\ 0.097374\end{bmatrix}$$
+    </div>
+    <p>
+      Hit it with a unit sample and step \(x_k=\bar{A}x_{k-1}+\bar{B}u_k\), reading off
+      \(y_k=Cx_k\). The first eight values of the discrete impulse response are:
+    </p>
+    <div class="mathbox">
+      $$0.004918,\ 0.014303,\ 0.022761,\ 0.029998,\ 0.035778,\ 0.039934,\ 0.042367,\ 0.043048$$
+    </div>
+    <p></p>
+    <h4>Solved as a language model layer</h4>
+    <p>
+      Now forget the spring. Take the same \(\bar{A},\bar{B},C\) as the parameters of one SSM
+      layer in a sequence model, and build its convolution kernel the way S4 does:
+    </p>
+    <div class="mathbox">
+      $$\bar{K}=\left(C\bar{B},\;C\bar{A}\bar{B},\;C\bar{A}^2\bar{B},\;\ldots\right)$$
+    </div>
+    <p>
+      Evaluating term by term gives:
+    </p>
+    <div class="mathbox">
+      $$0.004918,\ 0.014303,\ 0.022761,\ 0.029998,\ 0.035778,\ 0.039934,\ 0.042367,\ 0.043048$$
+    </div>
+    <p></p>
+    <p>
+      The same eight numbers. Not similar &mdash; identical, because
+      \(C\bar{A}^{\,j}\bar{B}\) <em>is</em> what stepping the recurrence from an impulse
+      computes. Convolving a token sequence with this kernel and running the recurrence over
+      that sequence produce the same output to \(1.4\times10^{-16}\), which is the dual view of
+      &sect;07 stated as arithmetic.
+    </p>
+    <div class="note">
+      <div class="note-h"><span class="ic">!</span>The correction worth making</div>
+      <p>
+        It is tempting to go one step further and say this kernel is the impulse response
+        function \(h(t)=\frac{1}{m\omega_d}e^{-\zeta\omega_n t}\sin(\omega_d t)\) you would
+        quote from a vibrations table, sampled and scaled by \(\Delta\). It is not, and the
+        discrepancy is instructive.
+      </p>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Step \(j\)</th><th>Kernel \(\bar{K}_j\)</th><th>\(\Delta\,h(j\Delta)\)</th><th>Ratio</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">0</td><td class="mono">0.004918</td><td class="mono">0.000000</td><td class="mono">&mdash;</td></tr>
+            <tr><td class="mono">1</td><td class="mono">0.014303</td><td class="mono">0.009737</td><td class="mono">1.4688</td></tr>
+            <tr><td class="mono">2</td><td class="mono">0.022761</td><td class="mono">0.018712</td><td class="mono">1.2163</td></tr>
+            <tr><td class="mono">3</td><td class="mono">0.029998</td><td class="mono">0.026604</td><td class="mono">1.1275</td></tr>
+            <tr><td class="mono">5</td><td class="mono">0.039934</td><td class="mono">0.038138</td><td class="mono">1.0471</td></tr>
+            <tr><td class="mono">7</td><td class="mono">0.043048</td><td class="mono">0.042998</td><td class="mono">1.0012</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="margin-bottom:0">
+        A discrete unit sample is not a Dirac delta. It is a rectangular pulse of height 1 held
+        for one sample period &mdash; that is what &ldquo;zero-order hold&rdquo; means &mdash;
+        so \(\bar{K}\) is the response to a pulse, not to an impulse. The kernel is non-zero at
+        \(j=0\) where \(h(0)=0\), and the ratio converges to 1 only after several steps as the
+        pulse width stops mattering. The identity in &sect;07 is between the kernel and the
+        <em>discrete</em> impulse response of the discretised system, which is exact. The
+        identity with the textbook continuous \(h(t)\) is approximate and gets worse as
+        \(\Delta\) grows. Stating the first and meaning the second is the kind of error this
+        page exists to avoid.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="recall">
+  <div class="col">
+    <div class="sechead"><span class="secnum">14</span><h2>Question bank</h2></div>
+    <hr class="rule-h">
+    <p>
+      Twenty-four prompts in three tiers. The recall tier checks you read it; the apply tier
+      checks you can use it; the judge tier has no clean answer and is where the thinking is.
+      Answer aloud before opening anything.
+    </p>
+    <h4>Tier 1 &mdash; recall</h4>
+    <details><summary>By how much does one BPE merge reduce the corpus token count?</summary><p>By exactly the frequency of the pair it merged, while adding exactly one symbol to the vocabulary.</p></details>
+    <details><summary>Why is the attention score divided by \(\sqrt{d_k}\)?</summary><p>The dot product of two \(d_k\)-dimensional vectors with unit-variance entries has standard deviation \(\sqrt{d_k}\). Without the division the softmax saturates as dimension grows and gradients vanish.</p></details>
+    <details><summary>State the relationship between perplexity and cross-entropy.</summary><p>\(\mathrm{PPL}=e^{H}\) where \(H\) is the mean negative log-likelihood per token. They are the same quantity on different scales.</p></details>
+    <details><summary>What does RoPE make the attention score depend on?</summary><p>Only the difference of positions \(n-m\), via \(R_m^{\mathsf T}R_n=R_{n-m}\). Absolute position cancels.</p></details>
+    <details><summary>Write the SSM state equation and its zero-order-hold discretisation.</summary><p>\(\dot{x}=Ax+Bu,\ y=Cx+Du\); discretised, \(\bar{A}=\exp(\Delta A)\) and \(\bar{B}=A^{-1}(\exp(\Delta A)-I)B\).</p></details>
+    <details><summary>What are the two views of an SSM layer, and what is each good for?</summary><p>Recurrence, \(O(1)\) per step, for autoregressive inference; convolution with kernel \(\bar{K}\), \(O(n\log n)\) by FFT, for parallel training.</p></details>
+    <details><summary>What does the Chinchilla result say about allocating a compute budget?</summary><p>Model size and training tokens should scale together as \(C^{0.5}\), roughly twenty tokens per parameter &mdash; not parameters ahead of data.</p></details>
+    <details><summary>In Kneser&ndash;Ney smoothing, what does the continuation probability count?</summary><p>How many <em>distinct</em> contexts a word appears in, not how often it appears.</p></details>
+    <h4>Tier 2 &mdash; apply</h4>
+    <details><summary>A corpus merge has frequency 12 and the corpus holds 500 tokens. After the merge, how many tokens and how many new symbols?</summary><p>488 tokens, one new symbol. The trade is always one-for-one and completely explicit.</p></details>
+    <details><summary>You rotate every embedding in a trained model by the same orthogonal \(Q\). What changes?</summary><p>Nothing observable. All dot products, hence all attention scores and all outputs, are preserved. This is why individual embedding axes cannot be interpreted.</p></details>
+    <details><summary>Two tokens are 5 apart at positions 3 and 8, then the sentence gains a 20-word preamble. What happens to their RoPE attention score?</summary><p>Nothing. The gap is still 5, and the score depends only on the gap.</p></details>
+    <details><summary>Your draft model in speculative decoding is replaced by one half as accurate. What degrades?</summary><p>Only throughput. The acceptance rate falls, so more target-model passes are needed, but the emitted distribution is unchanged &mdash; exactly, not approximately.</p></details>
+    <details><summary>Compute the first kernel tap \(\bar{K}_0\) for an SSM layer, given \(C\) and \(\bar{B}\).</summary><p>\(\bar{K}_0=C\bar{B}\). For the worked example this is 0.004918 &mdash; note it is non-zero, unlike the continuous impulse response at \(t=0\).</p></details>
+    <details><summary>An MoE model has 64 experts with top-2 routing. How do parameters and compute scale relative to dense?</summary><p>Roughly 64&times; the expert parameters, about 2&times; the expert compute. The gap is the entire point, and load balancing is what makes it achievable.</p></details>
+    <details><summary>A model scores 0.9 precision and 0.3 recall on entity extraction. What is \(F_1\), and which failure does it reflect?</summary><p>\(F_1=2(0.9)(0.3)/1.2=0.45\). The harmonic mean is dragged towards the weaker term &mdash; the model is missing most entities while being careful about the ones it reports.</p></details>
+    <details><summary>Why can a bidirectional RNN tag parts of speech but not do language modelling?</summary><p>Tagging may use both sides of a word. Language modelling must predict the next token without seeing it, and a backward pass has already read it.</p></details>
+    <h4>Tier 3 &mdash; judge</h4>
+    <details><summary>Is it fair to call an attention matrix a flexibility matrix?</summary><p>Structurally yes, permanently no. The shape and the weighted-sum semantics match; the permanence does not. A flexibility matrix characterises a structure for all load cases. An attention matrix exists only for one input, so there is no model-level object to extract.</p></details>
+    <details><summary>Mamba is described as a state-space model. When is that description misleading?</summary><p>Once selectivity is switched on. Input-dependent \(B,C,\Delta\) make it neither linear in the input nor time-invariant, so transfer functions, frequency response and superposition all fail. The description is exact for S4 and for Mamba's underlying parameterisation, and misleading about Mamba as deployed.</p></details>
+    <details><summary>Is perplexity a good measure of a language model?</summary><p>It is exact, cheap and comparable only within one tokenisation &mdash; different tokenisers change \(N\) and make the numbers incommensurable. It also measures prediction of held-out text, which is not the same as usefulness. Bits-per-byte fixes the tokenisation problem; nothing fixes the second.</p></details>
+    <details><summary>Should you trust a benchmark score the way you trust a micrometer reading?</summary><p>No, and the reason is structural, not a matter of precision. A micrometer is traceable to a definition. A benchmark is validated by correlation with human judgement, which has no terminating standard, and can be silently invalidated by contamination.</p></details>
+    <details><summary>Scaling laws look like S&ndash;N curves. How far does that take you?</summary><p>Both are power laws fitted over decades. An S&ndash;N curve rests on a fatigue mechanism that bounds its validity; a scaling law has no derivation and no known domain. Kaplan's exponents were accepted for two years before Chinchilla showed the allocation was wrong.</p></details>
+    <details><summary>Where is the tokeniser a permanent design commitment, and what is the mechanical analogue?</summary><p>It is frozen before pre-training and cannot change without retraining. The closest analogue is a datum scheme or a fixture design chosen early &mdash; not because the maths matches, but because both are cheap to choose and ruinous to revisit.</p></details>
+    <details><summary>The chapter claims four structures transfer exactly. Which is on the weakest ground?</summary><p>The duality reading of attention. The pairing is real, but nothing about virtual work predicts a softmax, multiple heads, or learned projections. It is the correct <em>category</em> for \(q^{\mathsf T}k\) and no more &mdash; whereas the rotation and state-space correspondences are identities you can check numerically.</p></details>
+    <details><summary>What would convince you that mechanical intuition is being over-extended in this chapter?</summary><p>A worthwhile test: if a claim survives only for the linear, time-invariant, non-learned special case, it is probably decoration. &sect;07 is the honest instance &mdash; the bridge is exact up to the point where the architecture becomes good, and then it ends.</p></details>
+  </div>
+</section>
+
+<section id="next">
+  <div class="col">
+    <div class="sechead"><span class="secnum">15</span><h2>What this feeds</h2></div>
+    <hr class="rule-h">
+    <div class="tw">
+      <table>
+        <thead><tr><th>From this chapter</th><th>Where it is used next</th></tr></thead>
+        <tbody>
+          <tr><td>Attention, transformer blocks</td><td>Ch 08 vision transformers; Ch 10 vision&ndash;language models; Ch 17 inference and KV caching</td></tr>
+          <tr><td>Tokenisation and embeddings</td><td>Ch 10 image and video tokenisation &mdash; the same idea applied to patches</td></tr>
+          <tr><td>State-space models, the dual view</td><td>Ch 17 AI inference; Ch 20 bleeding-edge architectures</td></tr>
+          <tr><td>Sequence models, CTC, difference equations</td><td>Ch 09 speech recognition, where the alignment problem is identical</td></tr>
+          <tr><td>MoE routing and load balancing</td><td>Ch 15 production engineering; Ch 16 GPU programming; Ch 18 ML systems design</td></tr>
+          <tr><td>Speculative decoding, batching</td><td>Ch 17 AI inference &mdash; latency against throughput, cycle time against takt time</td></tr>
+          <tr><td>Evaluation without a gold standard</td><td>Ch 19 applied AI, where this becomes the central practical difficulty</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note">
+      <div class="note-h"><span class="ic">i</span>Before you move on</div>
+      <p style="margin-bottom:0">
+        Do one thing, and make it this: take the \(\bar{A},\bar{B},C\) from &sect;13, write ten
+        lines that step the recurrence and ten that convolve with \(\bar{K}\), and watch the
+        two outputs agree. Then set \(\Delta\) to 0.5 and watch the agreement with the
+        continuous \(h(t)\) fall apart while the agreement between recurrence and convolution
+        holds exactly. Feeling which identity is exact and which is an approximation is worth
+        more than re-reading &sect;07.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="col" id="provenance" style="scroll-margin-top:calc(env(safe-area-inset-top,0px) + 62px)">
+    <div class="sechead" style="margin-top:40px"><span class="secnum">A</span><h2>Provenance and changes</h2></div>
+    <hr class="rule-h">
+    <p>
+      A derivative work under Apache-2.0, which requires a statement of changes. Source
+      references link to the original files, pinned to commit <code>9850ee5</code>. This chapter
+      is compressed heavily &mdash; five source files reduced to four load-bearing
+      correspondences &mdash; and &sect;12 is an explicit inventory of what was dropped.
+    </p>
+  </div>
+  <div class="tw">
+    <table>
+      <thead><tr><th>Section</th><th>Title</th><th>Source</th><th>Verdict</th><th>What changed</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">&sect;00</td><td>The bridge</td><td class="mono">&mdash;</td><td><span class="pv add">added</span></td><td>Mapping table is mine.</td></tr>
+        <tr><td class="mono">&sect;01</td><td>What a token is</td><td class="mono">02</td><td><span class="pv ok">expanded</span></td><td>BPE as in source. The merge invariant &mdash; each merge drops the token count by exactly the pair frequency &mdash; is <b>added</b> and verified. The lab uses an end-of-word marker, which the source's sketch omits; noted on the page.</td></tr>
+        <tr><td class="mono">&sect;02</td><td>Meaning as geometry</td><td class="mono">03</td><td><span class="pv ok">faithful</span></td><td>Word2Vec, negative sampling, the PMI factorisation result and GloVe as in source. The rotation-invariance argument against interpreting axes is <b>added</b>.</td></tr>
+        <tr><td class="mono">&sect;03</td><td>Counting, then predicting</td><td class="mono">02</td><td><span class="pv corr">compressed</span></td><td>N-grams, perplexity and Kneser&ndash;Ney kept. POS tagging, HMMs, CRFs, TF-IDF, parsing and edit distance dropped &mdash; see &sect;12.</td></tr>
+        <tr><td class="mono">&sect;04</td><td>Sequences as state</td><td class="mono">03</td><td><span class="pv ok">faithful</span></td><td>RNN, bidirectional, seq2seq and the bottleneck as in source. The difference-equation and spectral-radius reading is <b>added</b>.</td></tr>
+        <tr><td class="mono">&sect;05</td><td>Attention is a pairing</td><td class="mono">04</td><td><span class="pv ok">expanded</span></td><td>Scaled dot-product attention as in source. The duality reading, the influence-matrix reading and the variance argument for \(\sqrt{d_k}\) are <b>added</b>.</td></tr>
+        <tr><td class="mono">&sect;06</td><td>Position by rotation</td><td class="mono">04</td><td><span class="pv ok">faithful</span></td><td>RoPE and the relative-position derivation follow the source closely, including its \(R_m^{\mathsf T}R_n=R_{n-m}\) step. The Mohr's-circle identification and the lab are <b>added</b>.</td></tr>
+        <tr><td class="mono">&sect;07</td><td>The state-space return</td><td class="mono">05</td><td><span class="pv ok">expanded</span></td><td>SSM, ZOH, dual view, HiPPO, Mamba selectivity as in source. The identification of \(\bar{K}\) with the impulse response, and the observation that the source's \(\bar{B}\) formula has cancelling factors of \(\Delta\), are <b>added</b> and verified.</td></tr>
+        <tr><td class="mono">&sect;08</td><td>Scale and sparsity</td><td class="mono">04</td><td><span class="pv corr">compressed</span></td><td>LoRA, MoE, load balancing and Chinchilla kept. Adapters, prefix tuning, prompt engineering, GQA and MLA dropped.</td></tr>
+        <tr><td class="mono">&sect;09</td><td>Making it faster</td><td class="mono">05</td><td><span class="pv ok">expanded</span></td><td>Speculative decoding as in source. The proof that the emitted distribution is exactly the target's, and the result that the acceptance rate equals \(1-\mathrm{TV}(p_d,p_t)\), are <b>added</b> and verified.</td></tr>
+        <tr><td class="mono">&sect;10</td><td>Judging the output</td><td class="mono">04</td><td><span class="pv corr">compressed</span></td><td>The measurement principle kept; the benchmark catalogue &mdash; roughly thirty named benchmarks &mdash; dropped. The traceability argument is <b>added</b>.</td></tr>
+        <tr><td class="mono">&sect;11</td><td>Where it breaks</td><td class="mono">&mdash;</td><td><span class="pv add">added</span></td><td>Mine. The entropy caution follows the source's own restraint in Ch 05.</td></tr>
+        <tr><td class="mono">&sect;12</td><td>What is missing</td><td class="mono">&mdash;</td><td><span class="pv add">added</span></td><td>Mine.</td></tr>
+        <tr><td class="mono">&sect;13</td><td>Worked example</td><td class="mono">05</td><td><span class="pv corr">corrected</span></td><td><b>The correction on this page.</b> The natural claim &mdash; that the SSM kernel is the sampled continuous impulse response scaled by \(\Delta\) &mdash; is false. A discrete unit sample is a held pulse, not a Dirac delta, so the kernel is non-zero at \(j=0\) where \(h(0)=0\) and the ratio reaches 1 only after several steps. The identity holds against the <i>discrete</i> impulse response, exactly. The source does not make the false claim; this page makes the distinction explicit because the wrong version is the tempting one.</td></tr>
+        <tr><td class="mono">&sect;14</td><td>Question bank</td><td class="mono">&mdash;</td><td><span class="pv add">added</span></td><td>Mine, in the three tiers agreed at Ch 05.</td></tr>
+        <tr><td class="mono">&sect;15</td><td>What this feeds</td><td class="mono">&mdash;</td><td><span class="pv add">added</span></td><td>Mine.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p class="endnote">
+      Figures marked <i>from the compendium</i> are reproduced unmodified from the source
+      repository's <code>images/</code> directory. All numeric claims on this page are checked
+      independently in <code>study-companion/verify_claims.py</code> under the
+      <code>[Ch07 &hellip;]</code> tags; the checks cover the BPE merge invariant, the RoPE
+      relative-position identity, the SSM recurrence&ndash;convolution equivalence, the
+      kernel&ndash;impulse-response identity, the speculative-decoding distribution proof, and
+      the perplexity&ndash;cross-entropy identity. Research findings and figures that go stale
+      &mdash; expert counts, context lengths, benchmark scores &mdash; are reported as of the
+      source, not asserted as current.
+    </p>
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  var root=document.documentElement;
+  function dk(){var t=root.getAttribute('data-theme');
+    return t?t==='dark':(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);}
+  try{var sv=localStorage.getItem('ch07-theme'); if(sv==='dark'||sv==='light') root.setAttribute('data-theme',sv);}catch(e){}
+  var tb=document.getElementById('themebtn');
+  if(tb) tb.addEventListener('click',function(){var n=dk()?'light':'dark';
+    root.setAttribute('data-theme',n); try{localStorage.setItem('ch07-theme',n);}catch(e){}});
+  function $(id){return document.getElementById(id);}
+  function fmt(n,d){d=d===undefined?4:d; return (Math.abs(n)<5e-7?0:n).toFixed(d);}
+  function esc(s){return s.replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+  /* ---------- predict panels ---------- */
+  function wire(box,key,right,txt){
+    var b=$(box); if(!b) return;
+    b.querySelectorAll('.pbtn').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        b.querySelectorAll('.pbtn').forEach(function(o){o.classList.remove('picked');});
+        btn.classList.add('picked');
+        var v=btn.getAttribute('data-'+key), pv=$('pv'+key.slice(-1));
+        pv.innerHTML=(v===right?'<b>Correct.</b> ':'<b>Not quite.</b> ')+txt;
+        pv.classList.add('show');
+      });
+    });
+  }
+  wire('pred1','p1','b','Each merge replaces every occurrence of one pair with one symbol, so the '+
+    'count falls by exactly the pair frequency &mdash; 9 here, giving 86. Vocabulary grows by exactly one. '+
+    'The compression-for-vocabulary trade is one-for-one and fully explicit.');
+  wire('pred2','p2','b','Exactly unchanged. The rotation group gives '+
+    'R(m)&#7488;R(n) = R(n&minus;m), so the score sees only the gap. Drag both sliders together below '+
+    'and watch the difference readout stay at zero.');
+  wire('pred3','p3','c','Identical text, drawn from exactly the target distribution &mdash; the accept/reject '+
+    'correction guarantees it whatever the draft does. A worse draft lowers the acceptance rate, so you '+
+    'pay in speed and nothing else.');
+
+  /* ---------- lab 1: BPE ---------- */
+  var BASE=[[['l','o','w','</w>'],5],[['l','o','w','e','r','</w>'],2],
+            [['n','e','w','e','s','t','</w>'],6],[['w','i','d','e','s','t','</w>'],3]];
+  var corpus,nMerge;
+  function clone(){return BASE.map(function(r){return [r[0].slice(),r[1]];});}
+  function totalTokens(){var t=0;corpus.forEach(function(r){t+=r[0].length*r[1];});return t;}
+  function vocab(){var s={};corpus.forEach(function(r){r[0].forEach(function(x){s[x]=1;});});return Object.keys(s).length;}
+  function bestPair(){
+    var c={},order=[];
+    corpus.forEach(function(r){
+      for(var i=0;i<r[0].length-1;i++){
+        var k=r[0][i]+'~~'+r[0][i+1];
+        if(!(k in c)){c[k]=0;order.push(k);}
+        c[k]+=r[1];
+      }
+    });
+    if(!order.length) return null;
+    var mx=0;order.forEach(function(k){if(c[k]>mx)mx=c[k];});
+    for(var j=0;j<order.length;j++) if(c[order[j]]===mx) return {pair:order[j].split('~~'),n:mx};
+    return null;
+  }
+  function applyMerge(bp){
+    corpus=corpus.map(function(r){
+      var w=r[0],out=[],i=0;
+      while(i<w.length){
+        if(i<w.length-1&&w[i]===bp.pair[0]&&w[i+1]===bp.pair[1]){out.push(w[i]+w[i+1]);i+=2;}
+        else{out.push(w[i]);i++;}
+      }
+      return [out,r[1]];
+    });
+  }
+  function drawBPE(){
+    var g=$('bpeRows'); if(!g) return;
+    var bp=bestPair(),s='',y=26;
+    corpus.forEach(function(r){
+      var x=14;
+      s+='<text class="pairlab" x="'+x+'" y="'+(y+15)+'">&times;'+r[1]+'</text>';
+      x=54;
+      r[0].forEach(function(tok,i){
+        var w=Math.max(26,tok.length*8.5+14),hot=false;
+        if(bp&&i<r[0].length-1&&r[0][i]===bp.pair[0]&&r[0][i+1]===bp.pair[1]) hot=true;
+        var cls=tok.length>1?'tokbox merged':'tokbox';
+        if(hot) cls='tokbox hot';
+        s+='<rect class="'+cls+'" x="'+x+'" y="'+y+'" width="'+w+'" height="24" rx="2"/>';
+        s+='<text class="tok" x="'+(x+w/2)+'" y="'+(y+16)+'" text-anchor="middle">'+esc(tok)+'</text>';
+        x+=w+5;
+      });
+      y+=42;
+    });
+    g.innerHTML=s;
+    $('bpeM').textContent=nMerge;
+    $('bpeT').textContent=totalTokens();
+    $('bpeV').textContent=vocab();
+    $('bpeN').innerHTML=bp?('&ldquo;'+esc(bp.pair[0])+'&rdquo;+&ldquo;'+esc(bp.pair[1])+'&rdquo; &times;'+bp.n):'none left';
+  }
+  function resetBPE(){corpus=clone();nMerge=0;drawBPE();}
+  if($('bpeStep')){
+    $('bpeStep').addEventListener('click',function(){
+      var bp=bestPair(); if(!bp) return;
+      applyMerge(bp); nMerge++; drawBPE();
+    });
+    $('bpeReset').addEventListener('click',resetBPE);
+    resetBPE();
+  }
+
+  /* ---------- lab 2: RoPE ---------- */
+  var TH=0.5, QB=[1.0,0.35], KB=[0.8,-0.5];
+  function rot(v,a){var c=Math.cos(a),s=Math.sin(a);return [c*v[0]-s*v[1],s*v[0]+c*v[1]];}
+  function dot(a,b){return a[0]*b[0]+a[1]*b[1];}
+  function ropeScore(m,n){return dot(rot(QB,m*TH),rot(KB,n*TH));}
+  function ropeScoreGap(g){return dot(QB,rot(KB,g*TH));}
+  function drawRope(){
+    if(!$('ropeSvg')) return;
+    var m=+$('mSl').value,n=+$('nSl').value,R=105,cx=150,cy=150;
+    var qv=rot(QB,m*TH),kv=rot(KB,n*TH);
+    var Lq=Math.sqrt(dot(QB,QB)),Lk=Math.sqrt(dot(KB,KB));
+    function px(v,L){return [cx+v[0]/L*R, cy-v[1]/L*R];}
+    var p=px(qv,Lq); $('rQ').setAttribute('x2',p[0].toFixed(2)); $('rQ').setAttribute('y2',p[1].toFixed(2));
+    p=px(kv,Lk); $('rK').setAttribute('x2',p[0].toFixed(2)); $('rK').setAttribute('y2',p[1].toFixed(2));
+    var s1=ropeScore(m,n),s2=ropeScoreGap(n-m);
+    $('rGap').textContent=(n-m);
+    $('rS1').textContent=fmt(s1,6);
+    $('rS2').textContent=fmt(s2,6);
+    $('rD').textContent=Math.abs(s1-s2)<1e-12?'0 (exact)':fmt(Math.abs(s1-s2),12);
+    var x0=310,x1=620,y0=80,y1=250,gmin=-24,gmax=24,pts='',mid=(y0+y1)/2;
+    for(var g=gmin;g<=gmax;g++){
+      var xx=x0+(g-gmin)/(gmax-gmin)*(x1-x0);
+      var yy=mid-ropeScoreGap(g)*((y1-y0)/2)/1.05;
+      pts+=(g===gmin?'M':'L')+xx.toFixed(1)+' '+yy.toFixed(1)+' ';
+    }
+    var gx=x0+((n-m)-gmin)/(gmax-gmin)*(x1-x0);
+    var gy=mid-s1*((y1-y0)/2)/1.05;
+    $('rPlot').innerHTML='<line class="axl" x1="'+x0+'" y1="'+mid+'" x2="'+x1+'" y2="'+mid+'"/>'+
+      '<path d="'+pts+'" fill="none" stroke="var(--s3)" stroke-width="2"/>'+
+      '<circle cx="'+gx.toFixed(1)+'" cy="'+gy.toFixed(1)+'" r="4.5" fill="var(--s2)" stroke="var(--sheet)" stroke-width="1.2"/>'+
+      '<text class="tk" x="'+x0+'" y="'+(y1+18)+'">gap '+gmin+'</text>'+
+      '<text class="tk" x="'+(x1-46)+'" y="'+(y1+18)+'">gap +'+gmax+'</text>';
+    $('rSpan').setAttribute('x1',gx.toFixed(1));$('rSpan').setAttribute('x2',gx.toFixed(1));
+    $('rSpan').setAttribute('y1',mid);$('rSpan').setAttribute('y2',gy.toFixed(1));
+  }
+  if($('mSl')){
+    ['mSl','nSl'].forEach(function(id){$(id).addEventListener('input',drawRope);});
+    $('rShift').addEventListener('click',function(){
+      var m=+$('mSl').value,n=+$('nSl').value;
+      if(n+5>24||m+5>24){$('mSl').value=Math.max(0,m-5);$('nSl').value=Math.max(0,n-5);}
+      else{$('mSl').value=m+5;$('nSl').value=n+5;}
+      drawRope();
+    });
+    drawRope();
+  }
+
+  /* ---------- lab 3: speculative decoding ---------- */
+  var PT=[0.24,0.18,0.15,0.12,0.11,0.09,0.07,0.04], NV=PT.length;
+  var counts=new Array(NV), drawn=0;
+  function resetCounts(){for(var i=0;i<NV;i++)counts[i]=0;drawn=0;}
+  function draftDist(q){
+    var rev=PT.slice().reverse(),d=[],s=0,i;
+    for(i=0;i<NV;i++){d.push(q*PT[i]+(1-q)*rev[i]);s+=d[i];}
+    for(i=0;i<NV;i++)d[i]/=s;
+    return d;
+  }
+  function pick(p){var r=Math.random(),a=0;for(var i=0;i<NV;i++){a+=p[i];if(r<a)return i;}return NV-1;}
+  function runSpec(N){
+    var q=+$('qSl').value/100,pd=draftDist(q),resid=[],Z=0,i,j;
+    for(i=0;i<NV;i++){var rr=Math.max(0,PT[i]-pd[i]);resid.push(rr);Z+=rr;}
+    for(i=0;i<N;i++){
+      var t=pick(pd);
+      if(Math.random()<Math.min(1,PT[t]/pd[t])) counts[t]++;
+      else if(Z>1e-12){
+        var r2=Math.random()*Z,a=0;
+        for(j=0;j<NV;j++){a+=resid[j];if(r2<a)break;}
+        counts[Math.min(j,NV-1)]++;
+      } else counts[t]++;
+    }
+    drawn+=N;
+  }
+  function drawSpec(){
+    if(!$('specSvg')) return;
+    var q=+$('qSl').value/100,pd=draftDist(q),i;
+    var acc=0,tv=0;
+    for(i=0;i<NV;i++){acc+=Math.min(pd[i],PT[i]);tv+=Math.abs(PT[i]-pd[i]);}
+    tv*=0.5;
+    var x0=48,yb=232,H=176,BW=62,s='';
+    for(i=0;i<NV;i++){
+      var x=x0+i*BW;
+      s+='<rect class="barT" x="'+x+'" y="'+(yb-PT[i]*H/0.3).toFixed(1)+'" width="24" height="'+(PT[i]*H/0.3).toFixed(1)+'"/>';
+      s+='<rect class="barD" x="'+(x+26)+'" y="'+(yb-pd[i]*H/0.3).toFixed(1)+'" width="24" height="'+(pd[i]*H/0.3).toFixed(1)+'"/>';
+      if(drawn>0){
+        var e=counts[i]/drawn;
+        s+='<rect x="'+(x-2)+'" y="'+(yb-e*H/0.3).toFixed(1)+'" width="54" height="'+(e*H/0.3).toFixed(1)+'" stroke="var(--s3)" stroke-width="2" fill="none"/>';
+      }
+      s+='<text class="tk" x="'+(x+25)+'" y="'+(yb+16)+'" text-anchor="middle">t'+(i+1)+'</text>';
+    }
+    s+='<line class="axl" x1="'+(x0-8)+'" y1="'+yb+'" x2="'+(x0+NV*BW)+'" y2="'+yb+'"/>';
+    $('sBars').innerHTML=s;
+    $('sLegend').innerHTML=
+      '<rect class="barT" x="48" y="14" width="14" height="12"/><text class="lgd" x="68" y="24">target</text>'+
+      '<rect class="barD" x="130" y="14" width="14" height="12"/><text class="lgd" x="150" y="24">draft</text>'+
+      '<rect x="205" y="14" width="14" height="12" fill="none" stroke="var(--s3)" stroke-width="2"/>'+
+      '<text class="lgd" x="225" y="24">emitted</text>';
+    $('sAcc').textContent=fmt(acc,4);
+    $('sTV').textContent=fmt(1-tv,4);
+    $('sN').textContent=drawn.toLocaleString();
+    if(drawn>0){
+      var mx=0;for(i=0;i<NV;i++)mx=Math.max(mx,Math.abs(counts[i]/drawn-PT[i]));
+      $('sErr').textContent=fmt(mx,4);
+    } else $('sErr').innerHTML='&mdash;';
+  }
+  if($('qSl')){
+    resetCounts();
+    $('qSl').addEventListener('input',function(){resetCounts();drawSpec();});
+    $('sRun').addEventListener('click',function(){runSpec(40000);drawSpec();});
+    $('sReset').addEventListener('click',function(){resetCounts();drawSpec();});
+    runSpec(40000); drawSpec();
+  }
+
+  /* ---------- rail ---------- */
+  (function(){
+    var links=Array.prototype.slice.call(document.querySelectorAll('.rail a'));
+    if(!links.length||!window.IntersectionObserver) return;
+    var map={}; links.forEach(function(a){map[a.getAttribute('href').slice(1)]=a;});
+    var seen={};
+    var io=new IntersectionObserver(function(es){
+      es.forEach(function(e){seen[e.target.id]=e.isIntersecting;});
+      var ids=Object.keys(map),act=null;
+      for(var i=0;i<ids.length;i++) if(seen[ids[i]]){act=ids[i];break;}
+      if(!act) return;
+      links.forEach(function(a){a.classList.toggle('on',a===map[act]);});
+    },{rootMargin:'-70px 0px -65% 0px',threshold:0});
+    Object.keys(map).forEach(function(id){var el=document.getElementById(id); if(el) io.observe(el);});
+  })();
+})();
+</script>
+<script>
+/* Safety net: if the MathJax bundle cannot be reached, degrade the TeX to
+   readable Unicode instead of leaving raw backslash markup on the page. */
+(function () {
+  'use strict';
+  var GREEK = { theta:'θ', sigma:'σ', delta:'δ', mu:'μ', pi:'π',
+                infty:'∞', alpha:'α', beta:'β', lambda:'λ' };
+  var SUB = { '1':'₁','2':'₂','3':'₃','i':'ᵢ','j':'ⱼ','n':'ₙ','p':'ₚ','x':'ₓ','y':'ᵧ' };
+  var SUP = { '2':'²','3':'³','n':'ⁿ','p':'ᵖ','*':'*' };
+
+  function degrade(t) {
+    t = t.replace(/\$\$/g, '').replace(/\\[()[\]]/g, '');
+    t = t.replace(/\\(?:left|right|textstyle|displaystyle|!|,|;|:)/g, '');
+    t = t.replace(/\\q?quad/g, ' ');
+    t = t.replace(/\\mathbb\{R\}/g, 'ℝ').replace(/\\mathbb\{Z\}/g, 'ℤ')
+         .replace(/\\mathbb\{N\}/g, 'ℕ').replace(/\\mathbb\{Q\}/g, 'ℚ');
+    t = t.replace(/\\(?:mathbf|mathrm|text|textbf|operatorname)\{([^{}]*)\}/g, '$1');
+    t = t.replace(/\\hat\{([^{}]*)\}/g, '$1̂').replace(/\\bar\{([^{}]*)\}/g, '$1̄');
+    t = t.replace(/\\sqrt\{([^{}]*)\}/g, '√($1)');
+    t = t.replace(/\\t?frac\{([^{}]*)\}\{([^{}]*)\}/g, '($1)/($2)');
+    t = t.replace(/\\binom\{([^{}]*)\}\{([^{}]*)\}/g, 'C($1,$2)');
+    t = t.replace(/\\([a-zA-Z]+)/g, function (m, w) {
+      if (GREEK[w]) return GREEK[w];
+      switch (w) {
+        case 'cdot': return '·';
+        case 'times': return '×';
+        case 'le': case 'leq': return '≤';
+        case 'ge': case 'geq': return '≥';
+        case 'neq': return '≠';
+        case 'approx': return '≈';
+        case 'in': return '∈';
+        case 'pm': return '±';
+        case 'to': case 'rightarrow': return '→';
+        case 'Rightarrow': return '⇒';
+        case 'iff': return '⇔';
+        case 'parallel': return '∥';
+        case 'perp': return '⊥';
+        case 'sum': return 'Σ';
+        case 'langle': return '⟨';
+        case 'rangle': return '⟩';
+        case 'wedge': return '∧';
+        case 'ast': return '*';
+        case 'cdots': case 'ldots': case 'dots': return '…';
+        case 'max': case 'min': case 'cos': case 'sin': case 'log': case 'exp': return w;
+        default: return w;
+      }
+    });
+    t = t.replace(/\\\|/g, '‖').replace(/\|\|/g, '‖');
+    t = t.replace(/_\{?([0-9ijnpxy])\}?/g, function (m, c) { return SUB[c] || ('_' + c); });
+    t = t.replace(/\^\{?([23np*])\}?/g, function (m, c) { return SUP[c] || ('^' + c); });
+    t = t.replace(/[{}]/g, '');
+    return t.replace(/[ \t]{2,}/g, ' ');
+  }
+
+  function run() {
+    if (window.MathJax && window.MathJax.startup && window.MathJax.startup.document) return;
+    var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+      acceptNode: function (n) {
+        if (!n.nodeValue || n.nodeValue.indexOf('\\') < 0 && n.nodeValue.indexOf('$$') < 0)
+          return NodeFilter.FILTER_REJECT;
+        var p = n.parentNode;
+        while (p && p !== document.body) {
+          var tag = p.nodeName;
+          if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'CODE' || tag === 'PRE')
+            return NodeFilter.FILTER_REJECT;
+          p = p.parentNode;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    var hits = [], n;
+    while ((n = walker.nextNode())) hits.push(n);
+    hits.forEach(function (node) { node.nodeValue = degrade(node.nodeValue); });
+    document.querySelectorAll('.mathbox').forEach(function (el) {
+      el.style.fontFamily = "'IBM Plex Mono', monospace";
+      el.style.fontSize = '15px';
+      el.style.textAlign = 'center';
+      el.style.padding = '10px 0';
+    });
+  }
+  setTimeout(run, 6000);
+})();
+</script>
+
+<script>
+/* Long display equations can be wider than their container - especially inside a
+   callout box, which is narrower than the main column. After the typesetter
+   finishes, measure each one and shrink it just enough to fit. Only ever shrinks,
+   never grows, and never below a readable floor - so the worst case is the
+   scrollbar we already had. */
+(function () {
+  'use strict';
+  var MIN_SCALE = 0.70;   /* below this, scrolling beats illegible text */
+
+  function fitOne(box) {
+    try {
+      var c = box.querySelector('mjx-container[display="true"]');
+      if (!c) return;
+      var svg = c.querySelector('svg');
+      if (!svg) return;
+      c.style.fontSize = '';
+      var avail = box.clientWidth;
+      if (!avail) return;
+      var w = svg.getBoundingClientRect().width;
+      if (!w || w <= avail) return;
+      var k = Math.max(MIN_SCALE, (avail / w) * 0.98);
+      c.style.fontSize = (k * 100).toFixed(1) + '%';
+      var w2 = svg.getBoundingClientRect().width;      /* one refinement pass */
+      if (w2 > avail) {
+        k = Math.max(MIN_SCALE, k * (avail / w2) * 0.98);
+        c.style.fontSize = (k * 100).toFixed(1) + '%';
+      }
+    } catch (e) { /* leave the equation exactly as it was */ }
+  }
+
+  /* Inline math cannot wrap and is not inside a scrollable .mathbox, so a long
+     inline expression pushes the whole page sideways.  Shrink any that is wider
+     than the text column it sits in; the ex-based sizing keeps the baseline. */
+  function fitInline(c) {
+    try {
+      var svg = c.querySelector('svg'); if (!svg) return;
+      c.style.fontSize = '';
+      var host = c.parentElement; if (!host) return;
+      var avail = host.clientWidth; if (!avail) return;
+      var w = svg.getBoundingClientRect().width;
+      if (!w || w <= avail) return;
+      c.style.fontSize = (Math.max(MIN_SCALE, (avail / w) * 0.98) * 100).toFixed(1) + '%';
+    } catch (e) { /* leave the expression exactly as it was */ }
+  }
+
+  function fitAll() {
+    try { document.querySelectorAll('.mathbox').forEach(fitOne); } catch (e) {}
+    try {
+      document.querySelectorAll('mjx-container:not([display="true"])').forEach(fitInline);
+    } catch (e) {}
+  }
+
+  function start() {
+    fitAll();
+    var t;
+    window.addEventListener('resize', function () {
+      clearTimeout(t); t = setTimeout(fitAll, 160);
+    });
+  }
+
+  function waitForTypesetter(n) {
+    if (window.MathJax && window.MathJax.startup && window.MathJax.startup.promise) {
+      window.MathJax.startup.promise.then(start, start);
+      return;
+    }
+    if (n > 60) return;            /* typesetter never arrived - nothing to fit */
+    setTimeout(function () { waitForTypesetter(n + 1); }, 200);
+  }
+  waitForTypesetter(0);
+})();
+</script>

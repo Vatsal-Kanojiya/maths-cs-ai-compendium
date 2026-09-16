@@ -5,7 +5,7 @@ minutes instead of re-deriving decisions already made.
 
 ## State
 
-Branch `claude/blissful-euler-0c6xih`, latest commit carries sheets 1–6 of 20.
+Branch `claude/blissful-euler-0c6xih`, latest commit carries sheets 1–7 of 20.
 
 | # | Chapter | Folder | Published |
 |---|---------|--------|-----------|
@@ -15,8 +15,12 @@ Branch `claude/blissful-euler-0c6xih`, latest commit carries sheets 1–6 of 20.
 | 04 | Statistics | `ch04-statistics/` | https://claude.ai/artifact/XWetUvsAH8Mw25LRxecCKU |
 | 05 | Probability | `ch05-probability/` | https://claude.ai/artifact/DDbGs67DwJPTwCYWFyTUMW |
 | 06 | Machine Learning | `ch06-machine-learning/` | https://claude.ai/artifact/AazU1pknayKewgpJQhzo3Z |
+| 07 | Computational Linguistics | `ch07-computational-linguistics/` | *not yet published* |
 
-Next up: **Chapter 07 — Computational Linguistics**.
+Next up: **Chapter 08 — Computer Vision**.
+
+Chapter 07 is written, probed and verified but **not published** — the artifact link is the
+only thing outstanding. Publish it and fill the row in, here and in `README.md`.
 
 ## The reader
 
@@ -174,10 +178,13 @@ as genuine surveys and mark them clearly as not derived from the compendium.
   **Resolved at Chapter 06** — see "Browser probe" below. Equations are now checked
   against real MathJax at five viewport widths.
 - Inline source panels (approach C) exist in Chapter 01 only, as a trial.
-- Upstream bugs found but **not** fixed, because they were out of scope: `mkdocs.yml`
-  has `docs_dir: .` which aborts the build on mkdocs 1.6, and all 104 nav paths plus all
-  104 `llms.txt` paths still use the pre-rename `chapter NN:` spelling. Worth raising
-  upstream.
+- ~~Upstream bugs found but **not** fixed: `mkdocs.yml` has `docs_dir: .` which aborts the
+  build on mkdocs 1.6, and all 104 nav paths plus all 104 `llms.txt` paths still use the
+  pre-rename `chapter NN:` spelling.~~ **Both fixed** on this branch. `docs_dir` now points
+  at the `docs/` symlink farm the deploy workflow already builds, and all 208 paths were
+  rewritten. Verified with mkdocs 1.6.1: the build went from aborting to emitting 105 pages
+  with no nav warnings. Not yet contributed upstream to `HenryNdubuaku/…`, which is a
+  separate PR against a different repository.
 
 
 ## Browser probe — set this up before touching a chapter (added at Chapter 06)
@@ -195,7 +202,22 @@ python3 -c "import io,re; s=io.open('chNN/index.html').read(); \
 npx --offline http-server chNN -p 8607 -s &   # then point Playwright at _probe.html
 ```
 
-Do not ship `vendor/` or `_probe.html`; they are probe-only.
+Do not ship `vendor/` or `_probe.html`; they are probe-only. Simplest is to build the whole
+probe in a scratch directory — copy `index.html` and `img/` there, add `vendor/`, and the
+repository never sees either.
+
+Environment specifics that cost time at Chapter 07:
+
+- Chromium is at `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`. The unversioned
+  `/opt/pw-browsers/chromium/` path in `PLAYWRIGHT_BROWSERS_PATH` is **not** a launchable
+  binary. Playwright itself is `/opt/node22/lib/node_modules/playwright`.
+- **Google Fonts is blocked too**, not just cdnjs — `fonts.googleapis.com` fails with
+  `ERR_CERT_AUTHORITY_INVALID`. This is environmental: the already-published Chapter 06
+  fails identically when probed. Do not chase it. The stack has `Arial Narrow`/Georgia
+  fallbacks and degrades cleanly.
+- `curl` to the probe server needs `--noproxy '*'`, and `http-server` needs a moment before
+  its first request succeeds — a readiness loop with no delay will report connection refused
+  against a server that is starting fine.
 
 What the probe must check, at widths 1180 / 900 / 700 / 480 / 390:
 
@@ -216,9 +238,11 @@ What the probe must check, at widths 1180 / 900 / 700 / 480 / 390:
   must be in the stylesheet. This was live in all five published chapters before
   Chapter 06 caught it; 31 labels were fixed retrospectively.
 - **The head-extraction recipe drops `</style>`.** `sed -n '1,339p'` ends *inside*
-  the first `<style>` block, and Part 1 then opens a second one. Chapters 04, 05 and
-  06 all shipped with unbalanced style tags. Always assert
-  `count('<style>') == count('</style>')` before publishing.
+  the first `<style>` block. **The correct boundary is `sed -n '1,385p'`** — line 352
+  closes the token block and 353–385 is a second, equally necessary block (`.srcref`,
+  `.predict`, `.pbtn`, `.flag`, `.gap`). Every chapter on disk is balanced now, so the
+  earlier damage has been repaired; keep asserting
+  `count('<style>') == count('</style>')` before publishing anyway.
 - **Long *inline* math forces page scroll.** The auto-fitter only ever looked at
   `display="true"` containers inside `.mathbox`. Inline math cannot wrap and is not in
   a scrollable box, so one long `\(...\)` pushes the whole page sideways. `fitInline()`
@@ -226,6 +250,28 @@ What the probe must check, at widths 1180 / 900 / 700 / 480 / 390:
   promote any inline expression longer than about 40 characters to a display equation.
 - **A `\qquad`-joined pair of equations overflows below ~480px.** Split with
   `\begin{aligned}` and `&=` alignment; it reads better on desktop anyway.
+- **An `<img>` outside `.paper` overflows the page.** There is no bare `img{max-width:100%}`
+  rule in the design system — only `.paper img`. A compendium figure written as
+  `<figure><img …></figure>` renders at its intrinsic SVG width and forces horizontal page
+  scroll at 700px and below. The pattern is
+  `<figure><div class="paper"><img … width="410"></div><figcaption>…</figcaption></figure>`,
+  and the caption convention is `<b>Fig. N.M</b> — text <i>Figure from the compendium.</i>`
+  This cost a full probe cycle at Chapter 07.
+- **`.mono` is table-only.** It is defined as `td.mono,th.mono`, so `<span class="mono">` in
+  prose renders unstyled. There is zero precedent for it in chapters 01–06. Inline code in
+  prose is `<code>`, which is styled and which MathJax skips.
+- **The uppercased set is 17 selectors, not five.** The full list that carries
+  `text-transform:uppercase`, and therefore needs `.gk` around any Greek entity, is:
+  `.btn`, `.ctl label`, `.defn-h`, `.eyebrow`, `.flag`, `.gap-h`, `.lab-tag`, `.lab-t`,
+  `.note-h`, `.predict-h`, `.pv`, `.rail-h`, `.ro-k`, `.tb-k`, `.themebtn`, `h4`, `thead th`.
+  `.pbtn` is *not* uppercased, so Greek in a predict button is safe.
+- **A list of numbers in inline math will overflow a phone.** Eight six-decimal values render
+  about 434px wide and cannot wrap. The ~40-character rule is about *rendered* width, not
+  source length — `\min\!\left(1,p_t/p_d\right)` is 78 source characters and renders short,
+  while a number list is short in source and wide on screen. Promote number lists to display.
+- **Ship only the figures the page uses.** Chapters 05 and 06 both ship exactly as many SVGs
+  as they reference. Copy the chapter's full figure set into the workspace while drafting,
+  then prune before committing.
 
 ## The Chapter 06 lesson worth generalising
 
@@ -240,3 +286,28 @@ Nothing in the prose was wrong in a way a reader could catch. It took building t
 and running it. **If a page asserts a picture, make the lab draw that picture, and if the
 lab draws something else, the prose is what is wrong.** The corrected version is in
 §05 and break item 5, and the numbers are in `verify_claims.py` under `[Ch06 s05]`.
+
+## The Chapter 07 lesson worth generalising
+
+Chapter 07 looked, going in, like the chapter with no mechanical content. It turned out to
+have the most exact correspondence in the series so far: a state-space model *is* a
+state-space model, and the SSM convolution kernel is the discrete impulse response, verified
+to `7e-18`. The lesson is not "look harder for analogies" — it is that the strongest bridges
+were found by reading the *newest* material, not the oldest. Mamba (2023) landed on control
+theory; the 1950s linguistics in source file 01 has no bridge at all.
+
+The second lesson is sharper and is now the chapter's own summary: **the bridge is exact
+right up to the point where the architecture becomes good, and then it ends.** Everything in
+§07 is linear and time-invariant, so poles, transfer functions and superposition all apply —
+until selectivity makes `B`, `C` and `Δ` input-dependent, at which point every one of those
+tools fails. A bridge that holds only for the linear, non-learned special case is worth
+stating *and* worth bounding, in the same breath. The break box is not a disclaimer attached
+to a good analogy; it is half the content.
+
+Third, the correction in §13 is the kind the numeric checks exist to catch. The tempting
+claim — that the SSM kernel is the textbook impulse response `h(t)` sampled and scaled by
+`Δ` — is false, because a discrete unit sample is a pulse held for one step, not a Dirac
+delta. The kernel is non-zero at `j=0` where `h(0)=0`, and the ratio only converges to 1
+after several steps. Nothing in the prose would have caught this; computing both columns did.
+The true statement (kernel == *discrete* impulse response, exactly) is stronger and more
+useful than the false one, which is usually how these go.
