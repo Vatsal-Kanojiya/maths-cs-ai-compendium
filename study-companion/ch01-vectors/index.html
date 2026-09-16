@@ -1,0 +1,2123 @@
+<title>Vectors for the Mechanical Mind</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(', '\\)']], displayMath: [['$$', '$$']], processEscapes: true },
+  svg: { fontCache: 'global', scale: 1.0 },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-svg.js" id="MathJax-script" async></script>
+
+<style>
+/* ============ TOKENS: light is complete and authoritative ============ */
+:root{
+  --ground:#F0F2F1;
+  --sheet:#FBFCFB;
+  --sheet-2:#F4F6F5;
+  --ink:#14181A;
+  --ink-2:#4E575B;
+  --ink-3:#77838A;
+  --rule:#D3DAD7;
+  --rule-strong:#A8B4B0;
+  --accent:#12507E;
+  --accent-ink:#0E4267;
+  --accent-soft:#E4EEF6;
+  --bridge:#1F8A4C;
+  --bridge-soft:#E4F2EA;
+  --brk:#A8500F;
+  --brk-soft:#FAEBDF;
+  --s1:#BF5B00;
+  --s2:#0F74C7;
+  --s3:#1F8A4C;
+  --paper:#FFFFFF;            /* pasted-drawing ground, both themes */
+  --paper-ink:#1b1b1b;
+  --shadow:0 1px 2px rgba(20,24,26,.06), 0 6px 18px rgba(20,24,26,.05);
+  --f-disp:'Archivo Narrow', 'Arial Narrow', Helvetica, sans-serif;
+  --f-body:'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --f-mono:'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+    --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+    --rule:#293134; --rule-strong:#3F494C;
+    --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+    --bridge:#35AC63; --bridge-soft:#11281B;
+    --brk:#E0913F; --brk-soft:#2E2012;
+    --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+  --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+  --rule:#293134; --rule-strong:#3F494C;
+  --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+  --bridge:#35AC63; --bridge-soft:#11281B;
+  --brk:#E0913F; --brk-soft:#2E2012;
+  --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:var(--f-body); font-size:17px; line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ============ TITLE BLOCK (engineering drawing header) ============ */
+.titleblock{
+  position:sticky; top:env(safe-area-inset-top,0px); z-index:40;
+  background:var(--sheet); border-bottom:1px solid var(--rule-strong);
+}
+.tb-in{
+  max-width:1240px; margin:0 auto; padding:0 16px;
+  display:flex; align-items:stretch; gap:0; min-height:46px;
+}
+.tb-cell{
+  display:flex; flex-direction:column; justify-content:center;
+  padding:5px 14px; border-right:1px solid var(--rule);
+  font-family:var(--f-disp);
+}
+.tb-cell:first-child{padding-left:0}
+.tb-cell:last-child{border-right:0; margin-left:auto; padding-right:0}
+.tb-k{
+  font-size:8.5px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); line-height:1.4;
+}
+.tb-v{font-size:13px; font-weight:700; letter-spacing:.02em; color:var(--ink); line-height:1.3}
+.tb-v.accent{color:var(--accent)}
+.tb-hide{display:none}
+@media (min-width:680px){ .tb-hide{display:flex} }
+
+.themebtn{
+  appearance:none; background:transparent; border:1px solid var(--rule-strong);
+  color:var(--ink-2); font-family:var(--f-disp); font-size:10px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:6px 10px; border-radius:2px;
+  cursor:pointer; align-self:center; white-space:nowrap;
+}
+.themebtn:hover{border-color:var(--accent); color:var(--accent)}
+.themebtn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+/* ============ SHELL ============ */
+.shell{max-width:1240px; margin:0 auto; padding:0 16px; padding-block:0 64px}
+@media (min-width:1080px){
+  .shell{display:grid; grid-template-columns:212px minmax(0,1fr); gap:44px; align-items:start}
+}
+.rail{display:none}
+@media (min-width:1080px){
+  .rail{
+    display:block; position:sticky; top:calc(env(safe-area-inset-top,0px) + 70px);
+    padding-block:28px; font-family:var(--f-disp); font-size:12.5px;
+  }
+}
+.rail-h{
+  font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-3);
+  padding-bottom:8px; border-bottom:1px solid var(--rule); margin-bottom:10px;
+}
+.rail a{
+  display:flex; gap:9px; padding:4px 0; color:var(--ink-2); text-decoration:none;
+  border-left:2px solid transparent; padding-left:9px; margin-left:-11px; line-height:1.35;
+}
+.rail a:hover{color:var(--accent)}
+.rail a.on{color:var(--accent); border-left-color:var(--accent); font-weight:700}
+.rail a .n{font-family:var(--f-mono); font-size:10.5px; color:var(--ink-3); flex:none; padding-top:1px}
+.rail a.on .n{color:var(--accent)}
+
+main{min-width:0; padding-block:0 0}
+.col{max-width:70ch}
+
+/* ============ TYPE ============ */
+h1,h2,h3,h4{font-family:var(--f-disp); text-wrap:balance; margin:0; line-height:1.14}
+h1{font-size:clamp(34px,7vw,58px); font-weight:700; letter-spacing:-.015em}
+h2{font-size:clamp(25px,4.2vw,34px); font-weight:700; letter-spacing:-.01em}
+h3{font-size:19px; font-weight:700; letter-spacing:.005em; margin-top:2px}
+h4{font-size:14px; font-weight:700; letter-spacing:.06em; text-transform:uppercase}
+p{margin:0 0 1.05em}
+a{color:var(--accent-ink)}
+strong{font-weight:600}
+em{font-style:italic}
+code{font-family:var(--f-mono); font-size:.87em; background:var(--sheet-2); padding:1px 5px; border-radius:2px; border:1px solid var(--rule)}
+.lead{font-size:19.5px; line-height:1.56; color:var(--ink-2)}
+.eyebrow{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--ink-3); margin:0 0 10px;
+}
+.srcref{
+  font-family:var(--f-mono); font-size:11px; color:var(--ink-3);
+  border:1px solid var(--rule); border-radius:2px; padding:2px 7px; display:inline-block;
+  background:var(--sheet-2); white-space:nowrap;
+}
+
+/* ============ SECTION ============ */
+section{padding-block:38px 0; scroll-margin-top:calc(env(safe-area-inset-top,0px) + 62px)}
+.sechead{display:flex; align-items:baseline; gap:13px; margin-bottom:6px; flex-wrap:wrap}
+.secnum{
+  font-family:var(--f-mono); font-size:12px; font-weight:600; color:var(--accent);
+  border:1px solid var(--accent); border-radius:2px; padding:2px 7px; flex:none;
+  background:var(--accent-soft);
+}
+.rule-h{border:0; border-top:1px solid var(--rule); margin:0 0 22px}
+.rule-d{border:0; border-top:1px dashed var(--rule-strong); margin:34px 0}
+
+/* ============ CALLOUTS ============ */
+.note{
+  border:1px solid var(--rule); border-left:3px solid var(--accent);
+  background:var(--sheet); border-radius:2px; padding:16px 18px; margin:22px 0;
+}
+.note.bridge{border-left-color:var(--bridge); background:var(--bridge-soft)}
+.note.brk{border-left-color:var(--brk); background:var(--brk-soft)}
+.note-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; margin-bottom:7px; display:flex; align-items:center; gap:8px;
+}
+.note.bridge .note-h{color:var(--bridge)}
+.note.brk .note-h{color:var(--brk)}
+.note .note-h{color:var(--accent)}
+.note p:last-child, .note ul:last-child{margin-bottom:0}
+.note-h .ic{
+  width:15px; height:15px; border-radius:50%; border:1.5px solid currentColor; flex:none;
+  display:grid; place-items:center; font-size:9.5px; font-weight:700; font-family:var(--f-mono);
+}
+ul,ol{margin:0 0 1.05em; padding-left:1.25em}
+li{margin-bottom:.4em}
+li::marker{color:var(--ink-3)}
+
+/* ============ DEFINITION BLOCK ============ */
+.defn{
+  background:var(--sheet); border:1px solid var(--rule); border-radius:3px;
+  padding:18px 20px; margin:22px 0; box-shadow:var(--shadow);
+}
+.defn-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:10px;
+  padding-bottom:8px; border-bottom:1px solid var(--rule);
+}
+.defn p:last-child{margin-bottom:0}
+
+/* ============ TABLES ============ */
+.tw{overflow-x:auto; margin:22px 0; border:1px solid var(--rule); border-radius:3px; background:var(--sheet)}
+table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:480px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule); vertical-align:top}
+thead th{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); background:var(--sheet-2); font-weight:700; white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:0}
+td.mono,th.mono{font-family:var(--f-mono); font-size:13px; font-variant-numeric:tabular-nums}
+.tw caption{
+  caption-side:bottom; text-align:left; padding:9px 14px; font-size:12.5px;
+  color:var(--ink-3); border-top:1px solid var(--rule); font-family:var(--f-disp);
+}
+
+/* ============ FIGURES ============ */
+figure{margin:24px 0}
+.paper{
+  background:var(--paper); border:1px solid var(--rule-strong); border-radius:3px;
+  padding:16px; display:flex; justify-content:center; box-shadow:var(--shadow);
+}
+.paper img{max-width:100%; height:auto; display:block}
+figcaption{
+  font-family:var(--f-disp); font-size:12.5px; color:var(--ink-3); margin-top:9px;
+  line-height:1.45; padding-left:2px;
+}
+figcaption b{color:var(--ink-2); font-weight:700; letter-spacing:.04em}
+
+/* ============ INTERACTIVE PANELS ============ */
+.lab{
+  background:var(--sheet); border:1px solid var(--rule-strong); border-radius:3px;
+  margin:26px 0; overflow:hidden; box-shadow:var(--shadow);
+}
+.lab-h{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:11px 16px; border-bottom:1px solid var(--rule); background:var(--sheet-2);
+}
+.lab-t{font-family:var(--f-disp); font-size:13px; font-weight:700; letter-spacing:.05em; text-transform:uppercase}
+.lab-tag{
+  font-family:var(--f-mono); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--accent); border:1px solid var(--accent); border-radius:2px; padding:2px 6px;
+  margin-left:auto; white-space:nowrap;
+}
+.lab-body{padding:16px}
+.lab-foot{
+  padding:11px 16px; border-top:1px solid var(--rule); background:var(--sheet-2);
+  font-size:13.5px; color:var(--ink-2); line-height:1.5;
+}
+.lab-foot b{color:var(--ink)}
+.stage{width:100%; max-width:560px; height:auto; display:block; margin-inline:auto; touch-action:none; cursor:grab}
+.stage.drag{cursor:grabbing}
+
+.readout{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr)); gap:1px;
+  background:var(--rule); border:1px solid var(--rule); border-radius:2px; margin-top:14px;
+}
+.ro{background:var(--sheet); padding:8px 11px}
+.ro-k{
+  font-family:var(--f-disp); font-size:9px; letter-spacing:.13em; text-transform:uppercase;
+  color:var(--ink-3); margin-bottom:2px; white-space:nowrap;
+}
+.ro-v{
+  font-family:var(--f-mono); font-size:15px; font-weight:500; font-variant-numeric:tabular-nums;
+  color:var(--ink); line-height:1.25;
+}
+.ro-v.a{color:var(--s2)} .ro-v.b{color:var(--s1)} .ro-v.c{color:var(--s3)}
+
+.ctl{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:14px}
+.ctl label{
+  font-family:var(--f-disp); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-2); white-space:nowrap;
+}
+input[type=range]{
+  -webkit-appearance:none; appearance:none; height:22px; background:transparent;
+  flex:1 1 160px; min-width:130px; cursor:pointer;
+}
+input[type=range]:focus-visible{outline:2px solid var(--accent); outline-offset:3px}
+input[type=range]::-webkit-slider-runnable-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-moz-range-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:16px; height:16px; border-radius:50%;
+  background:var(--accent); border:2px solid var(--sheet); margin-top:-6.5px;
+}
+input[type=range]::-moz-range-thumb{
+  width:16px; height:16px; border-radius:50%; background:var(--accent);
+  border:2px solid var(--sheet);
+}
+.btn{
+  appearance:none; font-family:var(--f-disp); font-size:11px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:7px 13px; border-radius:2px;
+  border:1px solid var(--rule-strong); background:var(--sheet); color:var(--ink-2); cursor:pointer;
+}
+.btn:hover{border-color:var(--accent); color:var(--accent)}
+.btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.btn.on{background:var(--accent); border-color:var(--accent); color:var(--sheet)}
+
+.legend{display:flex; gap:16px; flex-wrap:wrap; margin-top:12px}
+.lg{display:flex; align-items:center; gap:7px; font-family:var(--f-disp); font-size:12px; color:var(--ink-2)}
+.lg i{width:15px; height:3px; border-radius:2px; flex:none; display:block}
+
+/* ============ MISC ============ */
+.mathbox{overflow-x:auto; overflow-y:hidden; margin:18px 0}
+mjx-container[display="true"]{margin:0 !important}
+.kv{display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:15px; margin:16px 0}
+.kv dt{font-family:var(--f-mono); font-size:13px; color:var(--accent); white-space:nowrap}
+.kv dd{margin:0; color:var(--ink-2)}
+
+details.q{
+  border:1px solid var(--rule); border-radius:3px; background:var(--sheet);
+  margin-bottom:9px; overflow:hidden;
+}
+details.q summary{
+  cursor:pointer; padding:12px 15px; font-weight:600; list-style:none;
+  display:flex; gap:11px; align-items:flex-start; font-size:15.5px;
+}
+details.q summary::-webkit-details-marker{display:none}
+details.q summary::after{
+  content:'+'; margin-left:auto; font-family:var(--f-mono); color:var(--accent);
+  font-size:17px; line-height:1; flex:none; padding-top:2px;
+}
+details.q[open] summary::after{content:'\2212'}
+details.q summary:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
+details.q summary .qn{
+  font-family:var(--f-mono); font-size:12px; color:var(--ink-3); flex:none; padding-top:3px;
+}
+details.q .ans{padding:0 15px 14px 41px; font-size:15.5px; color:var(--ink-2); border-top:1px solid var(--rule); padding-top:13px}
+details.q .ans p:last-child{margin-bottom:0}
+
+.endnote{
+  margin-top:44px; padding-top:20px; border-top:1px solid var(--rule-strong);
+  font-size:13.5px; color:var(--ink-3); font-family:var(--f-disp); line-height:1.55;
+}
+.endnote a{color:var(--accent)}
+
+@media (prefers-reduced-motion:reduce){*{animation:none !important; transition:none !important}}
+</style>
+
+<header class="titleblock">
+  <div class="tb-in">
+    <div class="tb-cell">
+      <span class="tb-k">Chapter</span>
+      <span class="tb-v accent">01 &middot; Vectors</span>
+    </div>
+    <div class="tb-cell tb-hide">
+      <span class="tb-k">Sheet</span>
+      <span class="tb-v">1 of 20</span>
+    </div>
+    <div class="tb-cell tb-hide">
+      <span class="tb-k">Reader</span>
+      <span class="tb-v">B.E. Mechanical</span>
+    </div>
+    <div class="tb-cell tb-hide">
+      <span class="tb-k">Projection</span>
+      <span class="tb-v">First angle</span>
+    </div>
+    <div class="tb-cell">
+      <button class="themebtn" id="themebtn" type="button" aria-label="Switch colour theme">Theme</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+
+<nav class="rail" aria-label="Chapter contents">
+  <div class="rail-h">Contents</div>
+  <a href="#bridge" class="on"><span class="n">00</span><span>The bridge</span></a>
+  <a href="#spaces"><span class="n">01</span><span>Vector spaces</span></a>
+  <a href="#leap"><span class="n">02</span><span>The dimensional leap</span></a>
+  <a href="#magnitude"><span class="n">03</span><span>Magnitude &amp; direction</span></a>
+  <a href="#norms"><span class="n">04</span><span>Norms &amp; metrics</span></a>
+  <a href="#dot"><span class="n">05</span><span>The dot product</span></a>
+  <a href="#cross"><span class="n">06</span><span>The cross product</span></a>
+  <a href="#basis"><span class="n">07</span><span>Basis &amp; Mohr's circle</span></a>
+  <a href="#dual"><span class="n">08</span><span>Duality</span></a>
+  <a href="#highdim"><span class="n">09</span><span>High-dimensional reality</span></a>
+  <a href="#worked"><span class="n">10</span><span>Worked example</span></a>
+  <a href="#recall"><span class="n">11</span><span>Shadow reading</span></a>
+  <a href="#next"><span class="n">12</span><span>What this feeds</span></a>
+</nav>
+
+<main>
+
+<section id="top" style="padding-top:44px">
+  <div class="col">
+    <p class="eyebrow">Maths, CS &amp; AI Compendium &middot; Chapter 01</p>
+    <h1>Vectors for the Mechanical Mind</h1>
+    <p class="lead" style="margin-top:18px">
+      You have already solved every problem in this chapter. In Engineering Mechanics you
+      resolved forces into components, took moments about a point, and rotated a stress
+      element until the shear vanished. That is nearly the whole of Chapter 01, under
+      different names.
+    </p>
+    <p>
+      So this page does two jobs. First it hands you the dictionary: each tool you drilled
+      for GATE, next to the name machine learning gives it. Second &mdash; and this matters
+      more &mdash; it marks precisely where the dictionary <em>stops working</em>. Every
+      analogy here comes with a box showing you its failure point, because the places your
+      mechanical intuition breaks are exactly where machine learning starts doing something
+      genuinely new. An analogy you cannot see the edge of is a trap, not a teaching aid.
+    </p>
+  </div>
+</section>
+
+<section id="bridge">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">00</span>
+      <h2>The bridge</h2>
+    </div>
+    <hr class="rule-h">
+    <p>
+      Read this table as a claim to be tested, not a summary. The right-hand column is the
+      honest part: some of these are the same object with two names, some share only a
+      structure, and one of them does not survive the crossing at all.
+    </p>
+  </div>
+
+  <div class="tw">
+    <table>
+      <thead>
+        <tr><th>What you did for GATE</th><th>What ML calls it</th><th>How good is the match?</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Resolving \(\mathbf{F}\) into \(F_x, F_y, F_z\)</td>
+          <td>Feature vector / embedding</td>
+          <td><b style="color:var(--brk)">Same algebra, different meaning.</b> See &sect;02 &mdash; this is the big one.</td>
+        </tr>
+        <tr>
+          <td>Parallelogram law of forces</td>
+          <td>Vector addition</td>
+          <td><b style="color:var(--bridge)">Identical.</b> Same axiom, same picture.</td>
+        </tr>
+        <tr>
+          <td>Direction cosines \(l, m, n\)</td>
+          <td>L2 normalisation, unit vector</td>
+          <td><b style="color:var(--bridge)">Identical.</b> \(l^2+m^2+n^2=1\) is \(\|\hat{\mathbf{a}}\|_2=1\).</td>
+        </tr>
+        <tr>
+          <td>Work \(W = \mathbf{F}\cdot\mathbf{d}\)</td>
+          <td>Dot product, attention score</td>
+          <td><b style="color:var(--bridge)">Identical operation.</b> Interpretation differs.</td>
+        </tr>
+        <tr>
+          <td>Moment \(\mathbf{M} = \mathbf{r}\times\mathbf{F}\)</td>
+          <td>Cross product</td>
+          <td><b style="color:var(--brk)">Identical &mdash; and it does not generalise.</b> See &sect;06.</td>
+        </tr>
+        <tr>
+          <td>von Mises vs. Tresca yield criterion</td>
+          <td>L2 vs. L&infin; norm</td>
+          <td><b style="color:var(--bridge)">Same structure.</b> One state, two size functions.</td>
+        </tr>
+        <tr>
+          <td>Rotating to principal axes (Mohr)</td>
+          <td>Change of basis, PCA</td>
+          <td><b style="color:var(--bridge)">Same structure.</b> Orthonormality is the catch.</td>
+        </tr>
+        <tr>
+          <td>Virtual work \(\delta W = \mathbf{F}\cdot\delta\mathbf{r}\)</td>
+          <td>Duality, covectors</td>
+          <td><b style="color:var(--bridge)">Identical, and deeper than you were told.</b></td>
+        </tr>
+        <tr>
+          <td>Sparse banded stiffness matrix in FEM</td>
+          <td>Sparse vectors</td>
+          <td><b style="color:var(--bridge)">Same property,</b> same reason to exploit it.</td>
+        </tr>
+      </tbody>
+      <caption>The dictionary for Chapter 01. Sections below work down this table in order.</caption>
+    </table>
+  </div>
+
+  <div class="col">
+    <div class="note">
+      <div class="note-h"><span class="ic">i</span>How to use this page</div>
+      <p style="margin-bottom:0">
+        The compendium's own study method is <em>shadow reading</em>: read a heading, close
+        the page, write the explanation from memory, then re-read only what you missed.
+        The interactive panels here are built for the second half of that loop &mdash; predict
+        the number before you drag, then drag and check. &sect;11 is a set of prompts to
+        shadow-read against.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="spaces">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">01</span>
+      <h2>Vector spaces</h2>
+      <span class="srcref">01. vector spaces.md</span>
+    </div>
+    <hr class="rule-h">
+    <p>
+      A <strong>vector space</strong> is a set of objects you can add together and scale by
+      numbers, such that you never land outside the set. That closure requirement is not
+      bookkeeping &mdash; it is the whole definition doing real work.
+    </p>
+    <p>
+      You have verified these axioms before without being told that is what you were doing.
+      When you added two forces by the parallelogram law and got a third force &mdash; not a
+      moment, not a pressure, but another force in the same space &mdash; you used closure
+      under addition. When you doubled a load and the resultant doubled, that was closure
+      under scalar multiplication.
+    </p>
+
+    <div class="defn">
+      <div class="defn-h">Definition &mdash; vector space</div>
+      <p>
+        A set \(V\) over a field of scalars \(F\) (take \(F = \mathbb{R}\)) with two
+        operations, addition and scalar multiplication, satisfying:
+      </p>
+      <div class="mathbox">
+        $$\begin{aligned}
+        &\textbf{Closure:} && \mathbf{u}+\mathbf{v}\in V, \quad c\mathbf{v}\in V \\
+        &\textbf{Commutativity:} && \mathbf{u}+\mathbf{v}=\mathbf{v}+\mathbf{u} \\
+        &\textbf{Associativity:} && (cd)\mathbf{v}=c(d\mathbf{v}) \\
+        &\textbf{Zero:} && \mathbf{v}+\mathbf{0}=\mathbf{v} \\
+        &\textbf{Inverse:} && \mathbf{v}+(-\mathbf{v})=\mathbf{0} \\
+        &\textbf{Distributivity:} && c(\mathbf{u}+\mathbf{v})=c\mathbf{u}+c\mathbf{v}, \quad (c+d)\mathbf{v}=c\mathbf{v}+d\mathbf{v} \\
+        &\textbf{Identity:} && 1\mathbf{v}=\mathbf{v}
+        \end{aligned}$$
+      </div>
+      <p style="margin-bottom:0">
+        A useful non-example: the integers \(\mathbb{Z}\) are <em>not</em> a vector space over
+        \(\mathbb{R}\). Scale \(3\) by \(0.5\) and you get \(1.5\), which has left the set.
+      </p>
+    </div>
+
+    <p>
+      The payoff is that anything obeying these rules inherits every theorem of linear
+      algebra for free. A \(28\times28\) greyscale image is 784 numbers, so it is a vector in
+      \(\mathbb{R}^{784}\): adding two images blends them, scaling one brightens it. A
+      one-second audio clip at 44.1 kHz is a vector with 44,100 entries, and mixing two clips
+      is vector addition. Polynomials form a vector space too. Vectors do not have to look
+      like arrows.
+    </p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-h">
+      <span class="lab-t">Parallelogram of forces</span>
+      <span class="lab-tag">Drag the arrowheads</span>
+    </div>
+    <div class="lab-body">
+      <svg class="stage" id="sA" viewBox="0 0 480 310" role="img"
+           aria-label="Two force vectors and their resultant, shown with the parallelogram construction">
+        <defs>
+          <marker id="hA" markerWidth="9" markerHeight="7" refX="8.5" refY="3.5" orient="auto">
+            <polygon points="0,0 9,3.5 0,7" fill="var(--s2)"/>
+          </marker>
+          <marker id="hB" markerWidth="9" markerHeight="7" refX="8.5" refY="3.5" orient="auto">
+            <polygon points="0,0 9,3.5 0,7" fill="var(--s1)"/>
+          </marker>
+          <marker id="hR" markerWidth="9" markerHeight="7" refX="8.5" refY="3.5" orient="auto">
+            <polygon points="0,0 9,3.5 0,7" fill="var(--s3)"/>
+          </marker>
+        </defs>
+        <g id="gridA" stroke="var(--rule)" stroke-width="1"></g>
+        <line id="axAx" stroke="var(--rule-strong)" stroke-width="1.25"/>
+        <line id="axAy" stroke="var(--rule-strong)" stroke-width="1.25"/>
+        <polygon id="pgram" fill="var(--s3)" fill-opacity="0.07" stroke="var(--rule-strong)"
+                 stroke-width="1" stroke-dasharray="4 4"/>
+        <line id="vR" stroke="var(--s3)" stroke-width="3" marker-end="url(#hR)"/>
+        <line id="vA" stroke="var(--s2)" stroke-width="2.5" marker-end="url(#hA)"/>
+        <line id="vB" stroke="var(--s1)" stroke-width="2.5" marker-end="url(#hB)"/>
+        <text id="lA" fill="var(--s2)" font-size="13" font-weight="700" font-family="IBM Plex Mono, monospace">F1</text>
+        <text id="lB" fill="var(--s1)" font-size="13" font-weight="700" font-family="IBM Plex Mono, monospace">F2</text>
+        <text id="lR" fill="var(--s3)" font-size="13" font-weight="700" font-family="IBM Plex Mono, monospace">R</text>
+        <circle id="hdA" r="8" fill="var(--s2)" stroke="var(--sheet)" stroke-width="2" style="cursor:grab"/>
+        <circle id="hdB" r="8" fill="var(--s1)" stroke="var(--sheet)" stroke-width="2" style="cursor:grab"/>
+      </svg>
+      <div class="readout">
+        <div class="ro"><div class="ro-k">F1 (N)</div><div class="ro-v a" id="oA">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">F2 (N)</div><div class="ro-v b" id="oB">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Resultant R</div><div class="ro-v c" id="oR">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">|R| (N)</div><div class="ro-v c" id="oRm">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">&theta; from x-axis</div><div class="ro-v" id="oRa">&mdash;</div></div>
+      </div>
+      <div class="legend">
+        <span class="lg"><i style="background:var(--s2)"></i>F1</span>
+        <span class="lg"><i style="background:var(--s1)"></i>F2</span>
+        <span class="lg"><i style="background:var(--s3)"></i>Resultant R = F1 + F2</span>
+      </div>
+    </div>
+    <div class="lab-foot">
+      The dashed parallelogram is the construction you were taught in statics. Tail-to-tip
+      in either order lands on the same corner &mdash; that is the
+      <b>commutativity axiom</b>, \(\mathbf{u}+\mathbf{v}=\mathbf{v}+\mathbf{u}\), not a
+      separate rule about forces.
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>Where the analogy breaks &mdash; bound, sliding and free vectors</div>
+      <p>
+        Mechanics quietly distinguishes three kinds of vector. A <strong>bound</strong> vector
+        has a fixed point of application (a load at a specific node). A <strong>sliding</strong>
+        vector may move along its line of action (a force on a rigid body &mdash; the principle
+        of transmissibility). A <strong>free</strong> vector may be moved anywhere
+        (a couple, a uniform velocity).
+      </p>
+      <p style="margin-bottom:0">
+        Linear algebra has only the third kind. Every vector in \(V\) is a free vector: a
+        displacement from the origin, position irrelevant. This is why the compendium
+        insists a <strong>subspace must pass through the origin</strong> &mdash; an off-centre
+        plane is an affine set, not a subspace, because it has no zero vector. When you
+        applied transmissibility to slide a force along its line of action, you were using
+        structure that lives in mechanics, not in \(V\). Do not expect ML objects to carry a
+        point of application.
+      </p>
+    </div>
+  </div>
+
+  <figure class="col">
+    <div class="paper">
+      <img src="img/subspaces.svg" alt="A line and a plane, both through the origin, drawn inside a 3D space" width="380">
+    </div>
+    <figcaption><b>Fig. 1.1</b> &mdash; Subspaces of \(\mathbb{R}^3\): a line (1-D) and a plane (2-D), both through the origin. Shift either off-centre and it stops being a subspace. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+
+  <figure class="col">
+    <div class="paper">
+      <img src="img/scalar_multiplication.svg" alt="A vector v, its double 2v, and its reverse minus v" width="380">
+    </div>
+    <figcaption><b>Fig. 1.2</b> &mdash; Scalar multiplication: \(2\mathbf{v}\) stretches, \(-\mathbf{v}\) reverses. Direction is preserved up to sign; only magnitude changes. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="leap">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">02</span>
+      <h2>The dimensional leap</h2>
+      <span class="srcref">01. vector spaces.md</span>
+    </div>
+    <hr class="rule-h">
+    <p>
+      Here is the first genuinely new move. In mechanics your vectors had three components
+      because space has three dimensions. In machine learning a vector has as many components
+      as you have <em>features</em>, and that number is set by the problem, not by geometry.
+      A person might be \([\text{height}, \text{weight}, \text{age}]\) in \(\mathbb{R}^3\), a
+      thumbnail image is \(\mathbb{R}^{784}\), and a sentence embedding is routinely
+      \(\mathbb{R}^{768}\) or \(\mathbb{R}^{4096}\).
+    </p>
+  </div>
+
+  <figure class="col">
+    <div class="paper">
+      <img src="img/human_vectors.svg" alt="Three people plotted as vectors, where Alice and Carol sit close together and Bob sits far away" width="400">
+    </div>
+    <figcaption><b>Fig. 1.3</b> &mdash; Three people as feature vectors. Proximity in the space is being asked to stand for similarity between the people. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+
+  <div class="col">
+    <p>
+      The algebra is unchanged &mdash; every axiom in &sect;01 still holds. What changes is what
+      the numbers <em>mean</em>, and that change is severe enough to deserve the longest
+      warning on this page.
+    </p>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>Where the analogy breaks &mdash; feature vectors are not physical vectors</div>
+      <p>
+        Every vector you added in four years of mechanics had <strong>homogeneous units</strong>.
+        You added newtons to newtons. You would have been marked wrong for computing
+        \(\sqrt{F_x^2 + v_y^2}\), because force and velocity do not belong in the same
+        Pythagorean sum.
+      </p>
+      <p>
+        Now look at the compendium's own example, \(\mathbf{h} = [185\,\text{cm},\ 75\,\text{kg},\ 30\,\text{yr}]\), and its magnitude:
+      </p>
+      <div class="mathbox">
+        $$\|\mathbf{h}\|_2=\sqrt{185^2+75^2+30^2}=\sqrt{34225+5625+900}\approx 201.9\ \ (\textbf{units: none})$$
+      </div>
+      <p>
+        That number is dimensionally meaningless. It is a sum of squared centimetres, squared
+        kilograms and squared years. Physical vectors are also <strong>rotation-covariant</strong>:
+        rotate your axes and the components transform together, because they are three
+        projections of one arrow. Rotating a feature space mixes kilograms into centimetres
+        &mdash; legal arithmetic, physical nonsense.
+      </p>
+      <p style="margin-bottom:0">
+        This is not a pedantic footnote. It is the reason feature scaling exists, and skipping
+        it silently changes your answers. Watch it change one below.
+      </p>
+    </div>
+
+    <h3>The unit trap, in numbers</h3>
+    <p>
+      Three people. Ask the simplest ML question there is: <em>which one is A most similar
+      to?</em> Answer it with plain Euclidean distance, first measuring height in centimetres,
+      then in metres. Nothing about the people changes &mdash; only the ruler.
+    </p>
+  </div>
+
+  <div class="tw col">
+    <table>
+      <thead>
+        <tr><th>Person</th><th class="mono">Height</th><th class="mono">Mass</th><th class="mono">d(A, &middot;) in cm, kg</th><th class="mono">d(A, &middot;) in m, kg</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><b>A</b></td><td class="mono">180 cm</td><td class="mono">80 kg</td><td class="mono">&mdash;</td><td class="mono">&mdash;</td></tr>
+        <tr><td><b>B</b></td><td class="mono">150 cm</td><td class="mono">81 kg</td><td class="mono">30.02</td><td class="mono" style="color:var(--bridge);font-weight:600">1.04 &larr; nearest</td></tr>
+        <tr><td><b>C</b></td><td class="mono">179 cm</td><td class="mono">90 kg</td><td class="mono" style="color:var(--bridge);font-weight:600">10.05 &larr; nearest</td><td class="mono">10.00</td></tr>
+      </tbody>
+      <caption>
+        In centimetres, A's nearest neighbour is C. In metres, it is B. Same people, same
+        formula, opposite conclusion.
+      </caption>
+    </table>
+  </div>
+
+  <div class="col">
+    <p>
+      Work it through once by hand. In centimetres,
+      \(d(A,B)=\sqrt{30^2+1^2}=\sqrt{901}\approx 30.02\) while
+      \(d(A,C)=\sqrt{1^2+10^2}=\sqrt{101}\approx 10.05\), so C wins. Convert height to metres
+      and the height gap shrinks by a factor of 100 while the mass gap does not:
+      \(d(A,B)=\sqrt{0.30^2+1^2}\approx 1.04\) against
+      \(d(A,C)=\sqrt{0.01^2+10^2}\approx 10.00\), so B wins.
+    </p>
+    <p>
+      A \(k\)-nearest-neighbour classifier, a \(k\)-means clustering, a recommendation
+      engine &mdash; all of them would return a different answer purely because someone typed
+      <code>1.80</code> instead of <code>180</code>. The fix is <strong>standardisation</strong>:
+      replace each feature \(x_j\) by \(z_j=(x_j-\mu_j)/\sigma_j\) so every axis is measured in
+      standard deviations, a dimensionless unit that no longer depends on your choice of cm or m.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer</div>
+      <p style="margin-bottom:0">
+        You have met this before: <strong>non-dimensionalisation</strong>. Reynolds number,
+        Nusselt number, the Buckingham &pi; theorem &mdash; the entire habit of stripping units
+        before comparing regimes. Feature standardisation is the same instinct applied to data.
+        A mechanical engineer should find this the most natural preprocessing step in ML,
+        not the most mysterious.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="magnitude">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">03</span>
+      <h2>Magnitude, direction, independence</h2>
+      <span class="srcref">02. vector properties.md</span>
+    </div>
+    <hr class="rule-h">
+    <p>
+      <strong>Magnitude</strong> is Pythagoras in \(n\) dimensions, and
+      <strong>direction</strong> is what survives when you divide magnitude out:
+    </p>
+    <div class="mathbox">
+      $$\|\mathbf{a}\|=\sqrt{a_1^2+a_2^2+\cdots+a_n^2}, \qquad
+        \hat{\mathbf{a}}=\frac{\mathbf{a}}{\|\mathbf{a}\|}, \qquad \|\hat{\mathbf{a}}\|=1$$
+    </div>
+    <p>
+      That second operation has a name you already know. The components of \(\hat{\mathbf{a}}\)
+      in three dimensions are the <strong>direction cosines</strong> \(l, m, n\), and the
+      identity you memorised for GATE,
+    </p>
+    <div class="mathbox">
+      $$l^2+m^2+n^2=1,$$
+    </div>
+    <p>
+      is nothing other than the statement \(\|\hat{\mathbf{a}}\|_2 = 1\). When an ML paper says
+      it "L2-normalises the embeddings", it is computing direction cosines in 768 dimensions.
+      No new idea, just more axes.
+    </p>
+  </div>
+
+  <figure class="col">
+    <div class="paper">
+      <img src="img/magnitude_direction.svg" alt="On the left, v and 2v share a direction but differ in magnitude; on the right, two vectors share a magnitude but differ in direction" width="420">
+    </div>
+    <figcaption><b>Fig. 1.4</b> &mdash; Magnitude and direction vary independently. Normalisation throws away the left-hand distinction and keeps only the right-hand one. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+
+  <div class="col">
+    <h3>Parallel, orthogonal, independent</h3>
+    <p>
+      Two vectors are <strong>parallel</strong> when one is a scalar multiple of the other,
+      \(\mathbf{a}=k\mathbf{b}\); they lie on one line through the origin and carry no new
+      directional information between them. They are <strong>orthogonal</strong> when moving
+      along one produces zero progress along the other &mdash; walking north never moves you east.
+    </p>
+    <p>
+      A set is <strong>linearly dependent</strong> if some member can be built from the others
+      by scaling and adding, and <strong>linearly independent</strong> if none can. Orthogonal
+      vectors are always independent; parallel vectors never are; any set containing
+      \(\mathbf{0}\) is dependent.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; you have solved dependence before</div>
+      <p style="margin-bottom:0">
+        A 3-D rigid body gives you six independent equilibrium equations. Write a seventh by
+        summing moments about a different point and it will be a linear combination of the
+        six &mdash; it adds a row but no information, and the system stays unsolvable. That is
+        linear dependence, and it is the same failure mode as feeding a model two features
+        that are exact multiples of each other. The compendium makes the data-side point:
+        dependent samples skew a model toward whatever was oversampled.
+      </p>
+    </div>
+  </div>
+
+  <figure class="col">
+    <div class="paper">
+      <img src="img/orthogonal_vectors.svg" alt="Two vectors u and v meeting at a right angle" width="300">
+    </div>
+    <figcaption><b>Fig. 1.5</b> &mdash; Orthogonality. In &sect;05 this becomes a one-line arithmetic test rather than a picture. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+
+  <div class="col">
+    <h3>Sparsity</h3>
+    <p>
+      A vector is <strong>sparse</strong> when most components are zero,
+      \(\mathbf{s}=[0,0,3,0,0,0,1,0,0,0]\), and <strong>dense</strong> otherwise. Sparsity is
+      not a geometric property &mdash; it is a storage and compute property, and it is worth real
+      money: store only the nonzero positions and values, and both memory and arithmetic drop
+      with the count of nonzeros rather than the dimension.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; the FEM stiffness matrix</div>
+      <p style="margin-bottom:0">
+        If you have assembled a global stiffness matrix, you have already exploited this. \(K\)
+        is sparse and banded because each node couples only to its neighbours, and no finite
+        element code ever stores the zeros. The reasoning that makes a banded solver fast is
+        exactly the reasoning behind sparse vector formats in ML.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="norms">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">04</span>
+      <h2>Norms and metrics</h2>
+      <span class="srcref">03. norms and metrics.md</span>
+    </div>
+    <hr class="rule-h">
+    <p>
+      "How big is this vector?" has more than one defensible answer, and choosing between them
+      changes what your model concludes. A <strong>norm</strong> measures one vector; a
+      <strong>metric</strong> measures the gap between two.
+    </p>
+    <div class="mathbox">
+      $$\|\mathbf{v}\|_1=\sum_i |v_i| \qquad
+        \|\mathbf{v}\|_2=\sqrt{\textstyle\sum_i v_i^2} \qquad
+        \|\mathbf{v}\|_\infty=\max_i |v_i|$$
+    </div>
+    <p>
+      All three are cases of the general \(L^p\) norm
+      \(\|\mathbf{v}\|_p=\left(\sum_i |v_i|^p\right)^{1/p}\). As \(p\) grows the largest
+      component contributes more and more, until in the limit only it matters.
+    </p>
+
+    <div class="defn">
+      <div class="defn-h">The rules a norm must obey</div>
+      <ul style="margin-bottom:0">
+        <li><b>Non-negativity:</b> \(\|\mathbf{v}\|\ge 0\), with equality only for \(\mathbf{0}\).</li>
+        <li><b>Absolute homogeneity:</b> \(\|c\mathbf{v}\|=|c|\,\|\mathbf{v}\|\).</li>
+        <li><b>Triangle inequality:</b> \(\|\mathbf{u}+\mathbf{v}\|\le\|\mathbf{u}\|+\|\mathbf{v}\|\) &mdash; the shortcut is never longer than the detour.</li>
+      </ul>
+    </div>
+
+    <p>
+      Every norm induces a metric by \(d(\mathbf{u},\mathbf{v})=\|\mathbf{u}-\mathbf{v}\|\),
+      which adds symmetry and the identity of indiscernibles to that list. The converse fails:
+      <strong>Hamming distance</strong>, the count of positions where two vectors differ, is a
+      perfectly good metric that comes from no norm.
+    </p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-h">
+      <span class="lab-t">The unit ball as p varies</span>
+      <span class="lab-tag">Drag the slider</span>
+    </div>
+    <div class="lab-body">
+      <svg class="stage" id="sB" viewBox="0 0 480 330" role="img"
+           aria-label="The set of vectors of norm one, plotted for L1, L2, L-infinity and an adjustable p">
+        <g id="gridB"></g>
+        <path id="ballInf" fill="none" stroke="var(--s3)" stroke-width="2" stroke-dasharray="5 4" opacity="0.55"/>
+        <path id="ball1" fill="none" stroke="var(--s1)" stroke-width="2" stroke-dasharray="5 4" opacity="0.55"/>
+        <path id="ball2" fill="none" stroke="var(--s2)" stroke-width="2" stroke-dasharray="5 4" opacity="0.55"/>
+        <path id="ballP" fill="var(--accent)" fill-opacity="0.10" stroke="var(--accent)" stroke-width="3"/>
+      </svg>
+      <div class="ctl">
+        <label for="pSlider">Exponent p</label>
+        <input type="range" id="pSlider" min="100" max="800" value="200" step="5">
+        <span class="ro-v" id="pVal" style="min-width:74px">p = 2.00</span>
+        <button class="btn" id="pInf" type="button">Jump to &infin;</button>
+      </div>
+      <div class="readout">
+        <div class="ro"><div class="ro-k">&#8741;v&#8741;&#8321; &nbsp;(L1)</div><div class="ro-v b">8.000</div></div>
+        <div class="ro"><div class="ro-k">&#8741;v&#8741;&#8322; &nbsp;(L2)</div><div class="ro-v a">5.099</div></div>
+        <div class="ro"><div class="ro-k">&#8741;v&#8741;&#8342; &nbsp;(current p)</div><div class="ro-v" id="oLp">5.099</div></div>
+        <div class="ro"><div class="ro-k">&#8741;v&#8741;&#8734; &nbsp;(L&infin;)</div><div class="ro-v c">4.000</div></div>
+      </div>
+      <div class="legend">
+        <span class="lg"><i style="background:var(--s1)"></i>p = 1 &middot; diamond</span>
+        <span class="lg"><i style="background:var(--s2)"></i>p = 2 &middot; circle</span>
+        <span class="lg"><i style="background:var(--s3)"></i>p = &infin; &middot; square</span>
+        <span class="lg"><i style="background:var(--accent)"></i>current p</span>
+      </div>
+    </div>
+    <div class="lab-foot">
+      Each curve is the set of vectors whose norm equals 1 &mdash; the <b>unit ball</b> of that
+      norm. The numeric readout tracks \(\mathbf{v}=(3,-4,1)\) from the compendium's coding
+      task: \(\|\mathbf{v}\|_p\) falls from 8 toward 4 as \(p\) rises, converging on the
+      largest component.
+    </div>
+  </div>
+
+  <div class="col">
+    <h3>You have chosen between norms before</h3>
+    <p>
+      In machine design you were handed two yield criteria for the same stress state and told
+      they disagree. That disagreement is a norm choice, and the correspondence is exact rather
+      than poetic. Collect the three principal-stress differences into one vector:
+    </p>
+    <div class="mathbox">
+      $$\mathbf{d}=(\sigma_1-\sigma_2,\ \sigma_2-\sigma_3,\ \sigma_3-\sigma_1)$$
+    </div>
+    <p>Then the two criteria you drilled are literally two norms of that same vector:</p>
+    <div class="mathbox">
+      $$\sigma_{\text{vM}}=\sqrt{\tfrac{1}{2}\big[(\sigma_1-\sigma_2)^2+(\sigma_2-\sigma_3)^2+(\sigma_3-\sigma_1)^2\big]}=\tfrac{1}{\sqrt{2}}\|\mathbf{d}\|_2$$
+    </div>
+    <div class="mathbox">
+      $$\sigma_{\text{Tresca}}=\sigma_{\max}-\sigma_{\min}=\max\big(|\sigma_1-\sigma_2|,|\sigma_2-\sigma_3|,|\sigma_3-\sigma_1|\big)=\|\mathbf{d}\|_\infty$$
+    </div>
+    <p>
+      von Mises is an L2 norm. Tresca is an L&infin; norm. Same stress state, same vector,
+      two different notions of "how big", and therefore two different safe/unsafe verdicts
+      near the boundary &mdash; which is precisely why Tresca is the conservative one. The
+      picture you memorised, a Tresca hexagon inscribed inside the von Mises ellipse, is the
+      picture in the panel above: the L&infin; ball inscribed in the L2 ball.
+    </p>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>Where the analogy breaks &mdash; hexagon, not square</div>
+      <p style="margin-bottom:0">
+        The correspondence above is exact, but the drawing needs one correction. The three
+        components of \(\mathbf{d}\) sum to zero by construction, so \(\mathbf{d}\) is confined
+        to a 2-D plane inside \(\mathbb{R}^3\) &mdash; the deviatoric, or &pi;, plane. The
+        L&infin; unit ball in \(\mathbb{R}^3\) is a cube; sliced by that plane it gives a
+        <em>hexagon</em>, which is exactly the Tresca surface you drew. The panel above shows
+        the plain \(\mathbb{R}^2\) balls, so it renders a square. The norms are the same; the
+        shapes differ because the yield surfaces live on a constrained slice.
+      </p>
+    </div>
+
+    <h3>Why ML cares: L1 and sparsity</h3>
+    <p>
+      Look at the diamond in the panel. Its extreme points sit <em>on the axes</em>, where one
+      coordinate is zero. The circle has no such corners &mdash; it bulges equally in every
+      direction. This geometric difference is the entire reason an L1 penalty (Lasso) drives
+      coefficients to exactly zero and an L2 penalty (Ridge) only shrinks them toward zero:
+      an optimisation pushed against a diamond tends to land on a corner, and a corner
+      <em>is</em> a sparse solution.
+    </p>
+    <p>
+      The same logic governs distance. L2 squares each difference before summing, so one large
+      discrepancy dominates; L1 sums absolute differences, so no single one takes over. If your
+      data has outliers, that choice is a modelling decision, not a formatting detail.
+    </p>
+  </div>
+</section>
+
+<section id="dot">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">05</span>
+      <h2>The dot product</h2>
+      <span class="srcref">04. products.md</span>
+    </div>
+    <hr class="rule-h">
+    <p>
+      Two vectors in, one number out. Multiply matching components and add:
+    </p>
+    <div class="mathbox">
+      $$\mathbf{a}\cdot\mathbf{b}=a_1b_1+a_2b_2+\cdots+a_nb_n
+        \;=\;\|\mathbf{a}\|\,\|\mathbf{b}\|\cos\theta$$
+    </div>
+    <p>
+      That those two expressions are equal is the most useful fact in the chapter: the
+      left-hand side is cheap arithmetic that scales to any dimension, and the right-hand side
+      says the answer is really about the <em>angle</em>. You have used this identity for
+      years under the name <strong>work done</strong>, \(W=\mathbf{F}\cdot\mathbf{d}=Fd\cos\theta\),
+      and again as <strong>power</strong>, \(P=\mathbf{F}\cdot\mathbf{v}\). The component form
+      is how you computed it; the cosine form is why a force perpendicular to the motion does
+      no work.
+    </p>
+    <div class="kv">
+      <dt>&theta; = 0&deg;</dt><dd>\(\cos\theta = 1\) &mdash; maximum agreement, dot product largest.</dd>
+      <dt>&theta; = 90&deg;</dt><dd>\(\cos\theta = 0\) &mdash; orthogonal. An exact arithmetic test: \(\mathbf{a}\cdot\mathbf{b}=0\).</dd>
+      <dt>&theta; = 180&deg;</dt><dd>\(\cos\theta=-1\) &mdash; opposed, dot product most negative.</dd>
+      <dt>a &middot; a</dt><dd>\(=\|\mathbf{a}\|^2\). Magnitude is a dot product in disguise.</dd>
+    </div>
+  </div>
+
+  <div class="lab">
+    <div class="lab-h">
+      <span class="lab-t">Projection, angle and work</span>
+      <span class="lab-tag">Drag either arrowhead</span>
+    </div>
+    <div class="lab-body">
+      <svg class="stage" id="sC" viewBox="0 0 480 310" role="img"
+           aria-label="Two vectors with the angle between them, the projection of one onto the other, and the resulting dot product">
+        <defs>
+          <marker id="hC1" markerWidth="9" markerHeight="7" refX="8.5" refY="3.5" orient="auto">
+            <polygon points="0,0 9,3.5 0,7" fill="var(--s2)"/>
+          </marker>
+          <marker id="hC2" markerWidth="9" markerHeight="7" refX="8.5" refY="3.5" orient="auto">
+            <polygon points="0,0 9,3.5 0,7" fill="var(--s1)"/>
+          </marker>
+        </defs>
+        <g id="gridC" stroke="var(--rule)" stroke-width="1"></g>
+        <line id="axCx" stroke="var(--rule-strong)" stroke-width="1.25"/>
+        <line id="axCy" stroke="var(--rule-strong)" stroke-width="1.25"/>
+        <path id="arcC" fill="none" stroke="var(--ink-3)" stroke-width="1.5"/>
+        <text id="angC" fill="var(--ink-2)" font-size="12" font-family="IBM Plex Mono, monospace"></text>
+        <line id="dropC" stroke="var(--ink-3)" stroke-width="1.25" stroke-dasharray="4 3"/>
+        <line id="projC" stroke="var(--s3)" stroke-width="6" opacity="0.5" stroke-linecap="round"/>
+        <line id="vC1" stroke="var(--s2)" stroke-width="2.5" marker-end="url(#hC1)"/>
+        <line id="vC2" stroke="var(--s1)" stroke-width="2.5" marker-end="url(#hC2)"/>
+        <text id="lC1" fill="var(--s2)" font-size="13" font-weight="700" font-family="IBM Plex Mono, monospace">F</text>
+        <text id="lC2" fill="var(--s1)" font-size="13" font-weight="700" font-family="IBM Plex Mono, monospace">d</text>
+        <circle id="hdC1" r="8" fill="var(--s2)" stroke="var(--sheet)" stroke-width="2" style="cursor:grab"/>
+        <circle id="hdC2" r="8" fill="var(--s1)" stroke="var(--sheet)" stroke-width="2" style="cursor:grab"/>
+      </svg>
+      <div class="readout">
+        <div class="ro"><div class="ro-k">F</div><div class="ro-v a" id="oC1">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">d</div><div class="ro-v b" id="oC2">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">F &middot; d</div><div class="ro-v" id="oCdot">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">&#8741;F&#8741;&#8741;d&#8741;cos&theta;</div><div class="ro-v" id="oCgeo">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">&theta;</div><div class="ro-v" id="oCang">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">cos &theta; (similarity)</div><div class="ro-v c" id="oCcos">&mdash;</div></div>
+      </div>
+      <div class="legend">
+        <span class="lg"><i style="background:var(--s3);opacity:.5"></i>projection of F onto d</span>
+      </div>
+    </div>
+    <div class="lab-foot">
+      The two middle readouts are computed by completely different routes &mdash; component
+      arithmetic on one side, \(\|F\|\|d\|\cos\theta\) on the other &mdash; and they agree to
+      the last digit for every position you can drag to. Get them orthogonal and the dot
+      product reads <b>0.000</b>: the force does no work.
+    </div>
+  </div>
+
+  <figure class="col">
+    <div class="paper">
+      <img src="img/dot_product.svg" alt="Vector a projected onto vector b, with the angle theta and the projection length marked" width="380">
+    </div>
+    <figcaption><b>Fig. 1.6</b> &mdash; The projection \(\text{proj}_{\mathbf{b}}(\mathbf{a})=\frac{\mathbf{a}\cdot\mathbf{b}}{\|\mathbf{b}\|^2}\mathbf{b}\) is the shadow \(\mathbf{a}\) casts on \(\mathbf{b}\)'s line. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+
+  <div class="col">
+    <h3>Cosine similarity</h3>
+    <p>
+      Divide the magnitudes out and you are left with the angle alone:
+    </p>
+    <div class="mathbox">
+      $$\cos\theta=\frac{\mathbf{a}\cdot\mathbf{b}}{\|\mathbf{a}\|\,\|\mathbf{b}\|}\in[-1,1]$$
+    </div>
+    <p>
+      This is the workhorse comparison in ML &mdash; for documents, embeddings, user preferences,
+      retrieval. It asks "do these point the same way?" while refusing to care how long they
+      are. In &sect;09 you will see the specific high-dimensional pathology that makes this the
+      right default and plain Euclidean distance the wrong one.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>Where the analogy breaks &mdash; a number without units or meaning</div>
+      <p style="margin-bottom:0">
+        \(\mathbf{F}\cdot\mathbf{d}\) is work, measured in joules, and it is conserved,
+        auditable, physical. An attention score in a transformer is the same arithmetic on two
+        learned vectors, and it means whatever training made it mean. Nothing guarantees a high
+        cosine similarity corresponds to what <em>you</em> would call similar &mdash; embeddings
+        reproduce whatever regularities, including biases, sat in their training data. The
+        operation transfers perfectly. The interpretation has to be earned every time.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="cross">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">06</span>
+      <h2>The cross product</h2>
+      <span class="srcref">04. products.md</span>
+    </div>
+    <hr class="rule-h">
+    <p>
+      Two vectors in, a <em>vector</em> out &mdash; perpendicular to both, with magnitude equal to
+      the area of the parallelogram they span:
+    </p>
+    <div class="mathbox">
+      $$\mathbf{a}\times\mathbf{b}=(a_2b_3-a_3b_2,\;a_3b_1-a_1b_3,\;a_1b_2-a_2b_1),
+        \qquad \|\mathbf{a}\times\mathbf{b}\|=\|\mathbf{a}\|\,\|\mathbf{b}\|\sin\theta$$
+    </div>
+    <p>
+      You know this as the <strong>moment of a force</strong>, \(\mathbf{M}=\mathbf{r}\times\mathbf{F}\),
+      and as angular momentum and torque. The right-hand rule, the anticommutativity
+      \(\mathbf{a}\times\mathbf{b}=-(\mathbf{b}\times\mathbf{a})\), the vanishing of the product
+      for parallel vectors &mdash; all of it carries over unchanged, because it <em>is</em> the same
+      operation.
+    </p>
+    <p>
+      Note the pairing: the dot product carries \(\cos\theta\) and measures alignment; the cross
+      product carries \(\sin\theta\) and measures the failure to align. The
+      <strong>scalar triple product</strong> \(\mathbf{a}\cdot(\mathbf{b}\times\mathbf{c})\)
+      gives the volume of the parallelepiped, and reads zero exactly when the three vectors are
+      coplanar.
+    </p>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>Where the analogy breaks &mdash; this one does not make the crossing</div>
+      <p>
+        The cross product exists <strong>only in three dimensions</strong>. There is no
+        \(\mathbf{a}\times\mathbf{b}\) in \(\mathbb{R}^{768}\), and no amount of notation will
+        produce one. Of every vector tool you drilled for GATE, this is the one that does not
+        come with you into machine learning.
+      </p>
+      <p>
+        The honest reason is worth knowing, because it explains why 3-D felt special. The
+        general operation is the <strong>wedge product</strong> \(\mathbf{a}\wedge\mathbf{b}\),
+        which returns a <em>bivector</em> &mdash; an oriented patch of area &mdash; with
+        \(\binom{n}{2}=n(n-1)/2\) independent components. In \(\mathbb{R}^3\) that count is
+        \(3\), coincidentally the same as the dimension, so the bivector can be disguised as a
+        vector and handed a direction by the right-hand rule. In \(\mathbb{R}^4\) the count is
+        \(6\neq 4\), and the disguise fails immediately.
+      </p>
+      <p style="margin-bottom:0">
+        So the moment vector you have drawn a thousand times is really an oriented plane of
+        rotation wearing a normal vector as a costume, and the costume only fits in 3-D.
+        (\(\mathbb{R}^7\) admits an exceptional cross product via the octonions &mdash; a genuine
+        curiosity, and of no use in ML.)
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="basis">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">07</span>
+      <h2>Basis, and why Mohr's circle was PCA</h2>
+      <span class="srcref">05. basis and duality.md</span>
+    </div>
+    <hr class="rule-h">
+    <p>
+      A <strong>basis</strong> is a set of vectors that is linearly independent and spans the
+      space: enough to build everything, with nothing redundant. Its size is the dimension. The
+      <strong>standard basis</strong> \(\hat{\mathbf{i}},\hat{\mathbf{j}},\hat{\mathbf{k}}\) is
+      the obvious choice but not the only one &mdash; in \(\mathbb{R}^2\), \((1,1)\) and
+      \((-1,1)\) work just as well.
+    </p>
+    <p>
+      A <strong>change of basis</strong> re-describes the same vector in a different set of
+      building blocks. The vector does not move. Only the description changes. Stack the new
+      basis vectors as columns of \(P\); then \(P\) converts new coordinates into old, and
+      \(P^{-1}\) converts old into new:
+    </p>
+    <div class="mathbox">
+      $$P=\begin{bmatrix}1&-1\\1&1\end{bmatrix},\qquad
+        P\begin{bmatrix}2.5\\-0.5\end{bmatrix}=\begin{bmatrix}3\\2\end{bmatrix},\qquad
+        P^{-1}\begin{bmatrix}3\\2\end{bmatrix}=\begin{bmatrix}2.5\\-0.5\end{bmatrix}$$
+    </div>
+    <p>
+      \((3,2)\) and \((2.5,-0.5)\) are two names for one point, and \(P\) is the dictionary.
+    </p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-h">
+      <span class="lab-t">One point, two coordinate systems</span>
+      <span class="lab-tag">Drag the point</span>
+    </div>
+    <div class="lab-body">
+      <svg class="stage" id="sD" viewBox="0 0 480 320" role="img"
+           aria-label="A single point read off in the standard basis and in a rotated alternative basis">
+        <defs>
+          <marker id="hD1" markerWidth="8" markerHeight="6" refX="7.5" refY="3" orient="auto">
+            <polygon points="0,0 8,3 0,6" fill="var(--s1)"/>
+          </marker>
+        </defs>
+        <g id="gridD1" stroke="var(--rule)" stroke-width="1"></g>
+        <g id="gridD2" stroke="var(--s1)" stroke-width="1" opacity="0.32"></g>
+        <line id="axDx" stroke="var(--rule-strong)" stroke-width="1.25"/>
+        <line id="axDy" stroke="var(--rule-strong)" stroke-width="1.25"/>
+        <line id="b1D" stroke="var(--s1)" stroke-width="2.5" marker-end="url(#hD1)"/>
+        <line id="b2D" stroke="var(--s1)" stroke-width="2.5" marker-end="url(#hD1)"/>
+        <text id="lb1" fill="var(--s1)" font-size="12" font-weight="700" font-family="IBM Plex Mono, monospace">b1</text>
+        <text id="lb2" fill="var(--s1)" font-size="12" font-weight="700" font-family="IBM Plex Mono, monospace">b2</text>
+        <line id="ptline" stroke="var(--s2)" stroke-width="2" stroke-dasharray="4 3"/>
+        <circle id="hdD" r="9" fill="var(--s2)" stroke="var(--sheet)" stroke-width="2.5" style="cursor:grab"/>
+      </svg>
+      <div class="readout">
+        <div class="ro"><div class="ro-k">Standard basis</div><div class="ro-v a" id="oD1">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Basis b1=(1,1), b2=(&minus;1,1)</div><div class="ro-v b" id="oD2">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Check: rebuilt point</div><div class="ro-v" id="oD3">&mdash;</div></div>
+      </div>
+    </div>
+    <div class="lab-foot">
+      The orange grid is the alternative basis drawn as a coordinate mesh. The point never
+      moves; both readouts describe it at all times, and the third rebuilds it from the orange
+      coordinates as \(c_1\mathbf{b}_1+c_2\mathbf{b}_2\) to prove they agree.
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; principal stresses are a change of basis</div>
+      <p>
+        Take a stress element with \(\sigma_x,\sigma_y,\tau_{xy}\) and rotate it until the shear
+        faces read zero. What you get is \(\sigma_1,\sigma_2\) on a new pair of axes. You did
+        not change the stress state &mdash; you changed the basis you describe it in, and you
+        chose the basis in which the description is <em>diagonal</em>, with all the
+        off-diagonal (shear) terms gone.
+      </p>
+      <p style="margin-bottom:0">
+        That is precisely what <strong>PCA</strong> does. It takes the covariance matrix of a
+        dataset and finds the basis in which it is diagonal &mdash; axes along which the data
+        varies independently, with all the cross-correlation terms eliminated. Principal
+        stresses, principal axes of inertia, and principal components are the same mathematical
+        act: an eigendecomposition of a symmetric matrix. Mohr's circle was your first
+        eigenvalue problem, and nobody told you.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="dual">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">08</span>
+      <h2>Duality: forces were never vectors</h2>
+      <span class="srcref">05. basis and duality.md</span>
+    </div>
+    <hr class="rule-h">
+    <p>
+      The compendium warns you this part is abstract. It has a mechanical anchor so exact that
+      it is not really an analogy at all &mdash; it is the same statement in two vocabularies.
+    </p>
+    <p>
+      A <strong>linear functional</strong> is a function that eats a vector and returns a single
+      number, respecting addition and scaling:
+    </p>
+    <div class="mathbox">
+      $$f(\mathbf{u}+\mathbf{v})=f(\mathbf{u})+f(\mathbf{v}),\qquad f(c\mathbf{v})=c\,f(\mathbf{v})$$
+    </div>
+    <p>
+      The set of all such functionals on \(V\) is the <strong>dual space</strong> \(V^*\). The
+      compendium's image is right: vectors are the objects, functionals are the honest rulers
+      that measure them.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; virtual work</div>
+      <p style="margin-bottom:0">
+        Recall the principle of virtual work: \(\delta W=\mathbf{F}\cdot\delta\mathbf{r}\). Feed
+        it a virtual displacement and it returns a number, linearly. The force is not playing
+        the role of an object here &mdash; it is playing the role of the <em>ruler</em> that
+        measures displacements. This is literally true in analytical mechanics: displacements
+        are vectors, and forces are covectors that act on them to produce work. Lagrangian
+        mechanics makes it explicit with generalised coordinates \(q_i\) and generalised forces
+        \(Q_i\), which live in dual spaces. You have been computing duality pairings since your
+        second year.
+      </p>
+    </div>
+
+    <p>
+      Every basis comes with a matched set of rulers, the <strong>dual basis</strong>, calibrated
+      by the Kronecker delta &mdash; each ruler reads \(1\) on its own basis vector and \(0\) on
+      every other:
+    </p>
+    <div class="mathbox">
+      $$\mathbf{e}_i^*(\mathbf{e}_j)=\delta_{ij}=\begin{cases}1 & i=j\\ 0 & i\neq j\end{cases}$$
+    </div>
+    <p>
+      Linearity does the rest. Reading the first coordinate of \(\mathbf{v}=3\mathbf{e}_1+2\mathbf{e}_2\):
+      \(\mathbf{e}_1^*(\mathbf{v})=3\cdot 1+2\cdot 0=3\). <strong>Coordinates are dual basis
+      readings.</strong> And concretely, the rulers are the <em>rows of \(P^{-1}\)</em>, which is
+      why \(P^{-1}P=I\) is the Kronecker delta written out as a table.
+    </p>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>Where the analogy breaks &mdash; the orthonormality trap</div>
+      <p>
+        It is tempting to assume the ruler for \(\mathbf{b}_1=(1,1)\) is \(\mathbf{b}_1\)
+        itself. Test it on the point \((3,2)\), whose coordinate in that basis is \(2.5\):
+      </p>
+      <div class="mathbox">
+        $$\mathbf{b}_1\cdot(3,2)=1\cdot 3+1\cdot 2=5 \neq 2.5$$
+      </div>
+      <p style="margin-bottom:0">
+        Off by a factor of two. The true ruler is the first row of \(P^{-1}\), namely
+        \((0.5, 0.5)\), and \((0.5)(3)+(0.5)(2)=2.5\). Dotting with a basis vector recovers its
+        own coordinate <em>only when the basis is orthonormal</em>. Your mechanical training
+        was conducted almost entirely in orthonormal frames &mdash; principal axes are mutually
+        perpendicular because the stress tensor is symmetric &mdash; so this distinction never
+        had to surface. ML bases are frequently not orthonormal, and then vectors and covectors
+        genuinely part company.
+      </p>
+    </div>
+    <p>
+      One forward pointer: attention in a transformer works by having one set of vectors
+      (queries) measure another set (keys) through dot products. That is a duality pairing, and
+      Chapter 07 will build on exactly this.
+    </p>
+  </div>
+</section>
+
+<section id="highdim">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">09</span>
+      <h2>High-dimensional reality check</h2>
+      <span class="srcref">beyond the chapter</span>
+    </div>
+    <hr class="rule-h">
+    <p>
+      Everything so far said "the algebra is identical, there are just more axes". True &mdash;
+      and yet the <em>geometry</em> of many dimensions behaves in ways your 3-D intuition will
+      actively mislead you about. This section is not in Chapter 01, but you should meet it
+      here, because it is the reason several later choices in the compendium look arbitrary
+      when they are not.
+    </p>
+    <p>
+      Pick two directions at random in 3-D and they are usually at some ordinary angle &mdash;
+      30&deg;, 70&deg;, whatever. Do it in 500 dimensions and they are almost certainly close to
+      perpendicular. Drag the dimension slider and watch the distribution collapse onto zero.
+    </p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-h">
+      <span class="lab-t">Angle between two random directions</span>
+      <span class="lab-tag">Drag the dimension</span>
+    </div>
+    <div class="lab-body">
+      <svg class="stage" id="sE" viewBox="0 0 480 300" role="img"
+           aria-label="Histogram of cosine similarity between random vector pairs, which concentrates at zero as dimension increases">
+        <g id="gridE"></g>
+        <g id="barsE"></g>
+        <g id="axE"></g>
+      </svg>
+      <div class="ctl">
+        <label for="dSlider">Dimension d</label>
+        <input type="range" id="dSlider" min="1" max="10" value="1" step="1">
+        <span class="ro-v" id="dVal" style="min-width:64px">d = 2</span>
+        <button class="btn" id="dRoll" type="button">Resample</button>
+      </div>
+      <div class="readout">
+        <div class="ro"><div class="ro-k">Mean |cos &theta;|</div><div class="ro-v" id="oEm">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Std dev of cos &theta;</div><div class="ro-v a" id="oEs">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Theory: 1/&radic;d</div><div class="ro-v c" id="oEt">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Within &plusmn;0.1 of &perp;</div><div class="ro-v" id="oEp">&mdash;</div></div>
+      </div>
+    </div>
+    <div class="lab-foot">
+      2,000 random directions, resampled live in your browser. For random directions in
+      \(\mathbb{R}^d\), \(\cos\theta\) has mean \(0\) and standard deviation \(1/\sqrt{d}\)
+      &mdash; the measured value tracks the theoretical one as you drag.
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>Where the analogy breaks &mdash; your 3-D eye is not a guide</div>
+      <p>
+        Two consequences follow, and both shape real ML practice:
+      </p>
+      <ul>
+        <li>
+          <b>Almost everything is almost orthogonal.</b> In high dimensions you can pack
+          enormous numbers of nearly-orthogonal directions into one space. That is good news
+          &mdash; it is why a 768-dimensional embedding can hold so many distinguishable
+          concepts &mdash; but it means "these two vectors are perpendicular" stops being
+          the strong statement it was in \(\mathbb{R}^3\).
+        </li>
+        <li>
+          <b>Distances concentrate.</b> As \(d\) grows, the distance from a query point to its
+          nearest neighbour and to its farthest neighbour converge toward each other. "Nearest"
+          becomes a weaker and weaker distinction, which is why naive Euclidean
+          \(k\)-NN degrades in high dimensions and why cosine similarity &mdash; which throws
+          away magnitude and keeps only direction &mdash; is so often the better choice.
+        </li>
+      </ul>
+      <p style="margin-bottom:0">
+        None of the algebra in &sect;&sect;01&ndash;08 is wrong here. The formulas hold exactly.
+        It is the <em>pictures</em> that stop being representative, and pictures are what you
+        have been reasoning with since first year.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="worked">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">10</span>
+      <h2>One worked example, two readings</h2>
+    </div>
+    <hr class="rule-h">
+    <p>
+      A bracket is bolted to a frame. A force \(\mathbf{F}=(120,\,-90,\,200)\ \text{N}\) acts at
+      a point \(\mathbf{r}=(0.3,\,0.15,\,0)\ \text{m}\) from the bolt centre, and the bracket
+      deflects by \(\mathbf{d}=(0.5,\,0,\,0.2)\ \text{m}\). Work it as a statics problem, then
+      read the identical arithmetic as machine learning.
+    </p>
+
+    <h3>Reading one &mdash; mechanics</h3>
+    <div class="mathbox">
+      $$\|\mathbf{F}\|=\sqrt{120^2+90^2+200^2}=\sqrt{62500}=250\ \text{N}$$
+    </div>
+    <p>Direction cosines &mdash; the unit vector along the line of action:</p>
+    <div class="mathbox">
+      $$\hat{\mathbf{F}}=\tfrac{1}{250}(120,-90,200)=(0.48,\,-0.36,\,0.80),\qquad
+        0.48^2+0.36^2+0.80^2=1$$
+    </div>
+    <p>Work done through the deflection:</p>
+    <div class="mathbox">
+      $$W=\mathbf{F}\cdot\mathbf{d}=(120)(0.5)+(-90)(0)+(200)(0.2)=60+0+40=100\ \text{J}$$
+    </div>
+    <p>Moment about the bolt:</p>
+    <div class="mathbox">
+      $$\mathbf{M}=\mathbf{r}\times\mathbf{F}=\big(30,\,-60,\,-45\big)\ \text{N}\!\cdot\!\text{m},
+        \qquad \|\mathbf{M}\|=\sqrt{6525}\approx 80.8\ \text{N}\!\cdot\!\text{m}$$
+    </div>
+    <p>
+      Check the result is perpendicular to both inputs, as the cross product guarantees:
+      \(\mathbf{M}\cdot\mathbf{F}=3600+5400-9000=0\) and
+      \(\mathbf{M}\cdot\mathbf{r}=9-9+0=0\). Both vanish exactly.
+    </p>
+
+    <h3>Reading two &mdash; machine learning</h3>
+    <p>
+      Now forget the newtons. \(\mathbf{F}\) and \(\mathbf{d}\) are just two points in
+      \(\mathbb{R}^3\), and every step above has an ML name:
+    </p>
+  </div>
+
+  <div class="tw col">
+    <table>
+      <thead>
+        <tr><th>Step</th><th>Mechanics name</th><th>ML name</th><th class="mono">Value</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>\(\|\mathbf{F}\|\)</td><td>Magnitude of force</td><td>L2 norm of the feature vector</td><td class="mono">250</td></tr>
+        <tr><td>\(\hat{\mathbf{F}}\)</td><td>Direction cosines</td><td>L2-normalised embedding</td><td class="mono">(0.48, &minus;0.36, 0.80)</td></tr>
+        <tr><td>\(\mathbf{F}\cdot\mathbf{d}\)</td><td>Work done</td><td>Unnormalised attention score</td><td class="mono">100</td></tr>
+        <tr><td>\(\frac{\mathbf{F}\cdot\mathbf{d}}{\|\mathbf{F}\|\|\mathbf{d}\|}\)</td><td>\(\cos\theta\) in \(W=Fd\cos\theta\)</td><td>Cosine similarity</td><td class="mono">0.743</td></tr>
+        <tr><td>\(\theta\)</td><td>Angle to line of action</td><td>Angular distance</td><td class="mono">42.0&deg;</td></tr>
+        <tr><td>\(\mathbf{r}\times\mathbf{F}\)</td><td>Moment about the bolt</td><td><b style="color:var(--brk)">no ML counterpart</b></td><td class="mono">(30, &minus;60, &minus;45)</td></tr>
+      </tbody>
+      <caption>
+        Identical arithmetic throughout. Only the last row fails to cross, for the reason given
+        in &sect;06.
+      </caption>
+    </table>
+  </div>
+
+  <div class="col">
+    <p>
+      The cosine works out as
+      \(\|\mathbf{d}\|=\sqrt{0.5^2+0.2^2}=\sqrt{0.29}\approx 0.5385\), so
+      \(\cos\theta=100/(250\times 0.5385)\approx 0.743\) and \(\theta\approx 42.0^\circ\).
+      Note what this says physically: the deflection is 42&deg; off the line of action, and only
+      the aligned component does work.
+    </p>
+  </div>
+</section>
+
+<section id="recall">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">11</span>
+      <h2>Shadow reading</h2>
+    </div>
+    <hr class="rule-h">
+    <p>
+      The compendium's Phase 2 method: read the prompt, close the page, write your answer out
+      in full, <em>then</em> open it. Writing it down is the part that works &mdash; recognising
+      an answer feels like knowing and is not.
+    </p>
+  </div>
+
+  <div class="col">
+    <details class="q"><summary><span class="qn">Q1</span><span>Why is an off-centre plane in \(\mathbb{R}^3\) not a subspace?</span></summary>
+      <div class="ans"><p>Because it does not contain the zero vector, so the additive-identity axiom fails; closure fails too, since scaling any vector on it by \(0\) lands off the plane. It is an affine set. The mechanical echo: linear algebra knows only free vectors, never bound ones.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">Q2</span><span>\(\|\mathbf{h}\|_2\) for \(\mathbf{h}=[185\,\text{cm},75\,\text{kg},30\,\text{yr}]\) is about 201.9. What are its units, and why does that matter?</span></summary>
+      <div class="ans"><p>It has none &mdash; it sums squared centimetres, kilograms and years. It matters because the value, and every distance built from it, depends on the units you happened to choose. Switching height from cm to m can change which point is a given point's nearest neighbour (&sect;02), flipping the output of kNN, k-means and retrieval. Standardisation, \(z=(x-\mu)/\sigma\), removes the dependence.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">Q3</span><span>State the identity \(l^2+m^2+n^2=1\) in the language of norms.</span></summary>
+      <div class="ans"><p>\(\|\hat{\mathbf{a}}\|_2=1\). The direction cosines are the components of the unit vector, so the identity just says a normalised vector has L2 norm one. "L2-normalising an embedding" is computing direction cosines in \(n\) dimensions.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">Q4</span><span>Express von Mises and Tresca as norms of a single vector.</span></summary>
+      <div class="ans"><p>Let \(\mathbf{d}=(\sigma_1-\sigma_2,\ \sigma_2-\sigma_3,\ \sigma_3-\sigma_1)\). Then \(\sigma_{\text{vM}}=\tfrac{1}{\sqrt 2}\|\mathbf{d}\|_2\) and \(\sigma_{\text{Tresca}}=\|\mathbf{d}\|_\infty\). One stress state, two norms, two yield surfaces &mdash; the L&infin; ball sits inside the L2 ball, which is why Tresca is conservative.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">Q5</span><span>Why does an L1 penalty produce exactly-zero coefficients when L2 does not?</span></summary>
+      <div class="ans"><p>Geometry of the unit ball. The L1 ball is a diamond whose extreme points lie on the coordinate axes, where some coordinates are exactly zero; an optimum pushed against it tends to land on a corner, and a corner is a sparse solution. The L2 ball is round with no corners, so it shrinks coefficients smoothly toward zero without reaching it.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">Q6</span><span>Which GATE vector tool has no counterpart in \(\mathbb{R}^{768}\), and why?</span></summary>
+      <div class="ans"><p>The cross product. It exists only in 3-D. The general operation is the wedge product, returning a bivector with \(n(n-1)/2\) components; in 3-D that equals 3, so a bivector can masquerade as a vector via the right-hand rule. In 4-D it is 6, and the disguise fails. A moment vector is really an oriented plane of rotation.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">Q7</span><span>In what sense was Mohr's circle an eigenvalue problem?</span></summary>
+      <div class="ans"><p>Rotating the stress element until the shear terms vanish is choosing the basis in which the (symmetric) stress matrix is diagonal; the diagonal entries are the principal stresses &mdash; its eigenvalues &mdash; and the new axes are its eigenvectors. PCA performs the identical act on a covariance matrix, producing axes of independent variation.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">Q8</span><span>For the basis \(\mathbf{b}_1=(1,1),\mathbf{b}_2=(-1,1)\), why is \(\mathbf{b}_1\cdot(3,2)=5\) not the first coordinate?</span></summary>
+      <div class="ans"><p>Because the basis is not orthonormal. The correct ruler is the first row of \(P^{-1}\), namely \((0.5,0.5)\), giving \(2.5\). Dotting with a basis vector returns its own coordinate only for orthonormal bases &mdash; which is why the shortcut always worked in the principal-axis frames of mechanics.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">Q9</span><span>Two random unit vectors in \(\mathbb{R}^{500}\): what angle do you expect, and what does that break?</span></summary>
+      <div class="ans"><p>Close to 90&deg;. \(\cos\theta\) has mean \(0\) and standard deviation \(1/\sqrt{d}\approx 0.045\), so almost all pairs are nearly orthogonal. It breaks the informativeness of "nearest": distances concentrate as \(d\) grows, the nearest and farthest neighbours converge, and naive Euclidean kNN degrades. The algebra is unaffected &mdash; only the 3-D mental picture is.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">Q10</span><span>In virtual work \(\delta W=\mathbf{F}\cdot\delta\mathbf{r}\), which object is the vector and which is the ruler?</span></summary>
+      <div class="ans"><p>The virtual displacement \(\delta\mathbf{r}\) is the vector; the force is the linear functional (covector) measuring it and returning a number. Forces genuinely live in the dual space of displacements &mdash; made explicit in Lagrangian mechanics by generalised coordinates \(q_i\) and generalised forces \(Q_i\).</p></div>
+    </details>
+  </div>
+</section>
+
+<section id="next">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">12</span>
+      <h2>What this chapter feeds</h2>
+    </div>
+    <hr class="rule-h">
+    <p>
+      Chapter 01 is load-bearing. Each of its four operations reappears later as the engine of
+      something that looks much more complicated, so it is worth knowing in advance which
+      later idea you are actually building.
+    </p>
+  </div>
+
+  <figure>
+    <div class="paper">
+      <svg viewBox="0 0 780 430" role="img" style="max-width:100%;height:auto"
+           aria-label="Vectors in R n branch into four operations - norm, dot product, basis and dual space - each feeding a named technique in a later chapter"
+           fill="none" stroke="#1b1b1b" font-family="Archivo Narrow, Arial Narrow, sans-serif">
+        <defs>
+          <marker id="cmArr" markerWidth="9" markerHeight="7" refX="8.5" refY="3.5" orient="auto">
+            <polygon points="0,0 9,3.5 0,7" fill="#1b1b1b" stroke="none"/>
+          </marker>
+        </defs>
+
+        <rect x="18" y="170" width="132" height="76" rx="3" fill="#ffffff" stroke="#1b1b1b" stroke-width="2"/>
+        <text x="84" y="200" text-anchor="middle" font-size="14" font-weight="700" fill="#1b1b1b" stroke="none">Vector in</text>
+        <text x="84" y="220" text-anchor="middle" font-size="14" font-weight="700" fill="#1b1b1b" stroke="none">n dimensions</text>
+        <text x="84" y="238" text-anchor="middle" font-size="10" fill="#666" stroke="none">CHAPTER 01</text>
+
+        <line x1="150" y1="208" x2="190" y2="208" stroke="#1b1b1b" stroke-width="1.5"/>
+        <line x1="190" y1="53" x2="190" y2="341" stroke="#1b1b1b" stroke-width="1.5"/>
+
+        <line x1="190" y1="53"  x2="226" y2="53"  stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cmArr)"/>
+        <line x1="190" y1="149" x2="226" y2="149" stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cmArr)"/>
+        <line x1="190" y1="245" x2="226" y2="245" stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cmArr)"/>
+        <line x1="190" y1="341" x2="226" y2="341" stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cmArr)"/>
+
+        <rect x="238" y="22" width="170" height="62" rx="3" fill="#ffffff" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="323" y="47" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">Norm</text>
+        <text x="323" y="67" text-anchor="middle" font-size="11" fill="#555" stroke="none">L1 diamond / L2 circle</text>
+
+        <rect x="238" y="118" width="170" height="62" rx="3" fill="#ffffff" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="323" y="143" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">Dot product</text>
+        <text x="323" y="163" text-anchor="middle" font-size="11" fill="#555" stroke="none">alignment, projection</text>
+
+        <rect x="238" y="214" width="170" height="62" rx="3" fill="#ffffff" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="323" y="239" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">Basis</text>
+        <text x="323" y="259" text-anchor="middle" font-size="11" fill="#555" stroke="none">change of description</text>
+
+        <rect x="238" y="310" width="170" height="62" rx="3" fill="#ffffff" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="323" y="335" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">Dual space</text>
+        <text x="323" y="355" text-anchor="middle" font-size="11" fill="#555" stroke="none">vectors as rulers</text>
+
+        <line x1="408" y1="53"  x2="514" y2="53"  stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cmArr)"/>
+        <line x1="408" y1="149" x2="514" y2="149" stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cmArr)"/>
+        <line x1="408" y1="245" x2="514" y2="245" stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cmArr)"/>
+        <line x1="408" y1="341" x2="514" y2="341" stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cmArr)"/>
+
+        <text x="461" y="45"  text-anchor="middle" font-size="10.5" fill="#666" stroke="none">corner &#8658; zero</text>
+        <text x="461" y="141" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">drop magnitude</text>
+        <text x="461" y="237" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">diagonalise</text>
+        <text x="461" y="333" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">rows of P inverse</text>
+
+        <rect x="526" y="22" width="236" height="62" rx="3" fill="#f2f2f0" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="644" y="47" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">Lasso / Ridge regularisation</text>
+        <text x="644" y="67" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">CHAPTER 06 &#183; MACHINE LEARNING</text>
+
+        <rect x="526" y="118" width="236" height="62" rx="3" fill="#f2f2f0" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="644" y="143" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">Attention, retrieval, embeddings</text>
+        <text x="644" y="163" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">CHAPTER 07 &#183; TRANSFORMERS</text>
+
+        <rect x="526" y="214" width="236" height="62" rx="3" fill="#f2f2f0" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="644" y="239" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">PCA, SVD, decompositions</text>
+        <text x="644" y="259" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">CHAPTER 02 &#183; MATRICES</text>
+
+        <rect x="526" y="310" width="236" height="62" rx="3" fill="#f2f2f0" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="644" y="335" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">Query &#183; Key pairing</text>
+        <text x="644" y="355" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">CHAPTER 07 &#183; ATTENTION</text>
+
+        <text x="84" y="290" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">four operations,</text>
+        <text x="84" y="306" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">four destinations</text>
+      </svg>
+    </div>
+    <figcaption><b>Fig. 1.7</b> &mdash; Each Chapter 01 operation is the engine of one named technique later in the compendium. The arrow labels name the specific property that carries across.</figcaption>
+  </figure>
+
+  <div class="col">
+    <p>
+      Chapter 02 is the natural next step: a matrix is what you get when you stop asking how one
+      vector behaves and start asking how a whole <em>transformation</em> behaves. You have the
+      anchor for it already &mdash; the stress tensor, the inertia tensor, and the global
+      stiffness matrix are all linear maps, and the decompositions in Chapter 02 are the
+      machinery behind the principal-axis calculation you already trust.
+    </p>
+
+    <div class="note">
+      <div class="note-h"><span class="ic">i</span>Before you move on</div>
+      <p style="margin-bottom:0">
+        Do the compendium's coding tasks for Chapter 01 &mdash; they are short, and typing them
+        is the difference between recognising and knowing. The repository ships an in-browser
+        Python runner, so a notebook is optional. If you want one habit from this page to
+        stick, make it this: whenever you meet a new ML operation, ask what it would mean if
+        the vectors were forces. When the question has a good answer, you have a free
+        intuition. When it does not, you have found a place worth slowing down.
+      </p>
+    </div>
+  </div>
+
+  <div class="col endnote">
+    <p>
+      Companion to <b>Chapter 01 &mdash; Vectors</b> of the Maths, CS &amp; AI Compendium by
+      Henry Ndubuaku. Figures marked <i>from the compendium</i> are reproduced from the
+      repository. Content here follows the source chapter's sequence; &sect;09 is added
+      material, marked as such.
+    </p>
+    <p style="margin-bottom:0">Built for a mechanical engineer with GATE-level mathematics and no prior CS.</p>
+  </div>
+</section>
+
+</main>
+</div>
+
+<style>
+/* SVG colours set via CSS so they follow the theme tokens reliably
+   (CSS rules beat presentation attributes, and var() in attributes is unreliable) */
+#hA polygon, #hC1 polygon{fill:var(--s2)}
+#hB polygon, #hC2 polygon, #hD1 polygon{fill:var(--s1)}
+#hR polygon{fill:var(--s3)}
+#gridA line, #gridC line, #gridB line, #gridD1 line, #gridE line{stroke:var(--rule)}
+#gridD2 line{stroke:var(--s1)}
+#axAx, #axAy, #axCx, #axCy, #axDx, #axDy{stroke:var(--rule-strong)}
+#vA, #vC1{stroke:var(--s2)} #vB, #vC2{stroke:var(--s1)} #vR{stroke:var(--s3)}
+#lA, #lC1{fill:var(--s2)} #lB, #lC2{fill:var(--s1)} #lR{fill:var(--s3)}
+#lb1, #lb2{fill:var(--s1)} #b1D, #b2D{stroke:var(--s1)}
+#hdA, #hdC1, #hdD{fill:var(--s2)} #hdB, #hdC2{fill:var(--s1)}
+#hdA, #hdB, #hdC1, #hdC2, #hdD{stroke:var(--sheet)}
+#pgram{fill:var(--s3); stroke:var(--rule-strong)}
+#arcC, #dropC{stroke:var(--ink-3)} #angC{fill:var(--ink-2)}
+#projC{stroke:var(--s3)} #ptline{stroke:var(--s2)}
+#ball1{stroke:var(--s1)} #ball2{stroke:var(--s2)} #ballInf{stroke:var(--s3)}
+#ballP{fill:var(--accent); stroke:var(--accent)}
+.axtick{fill:var(--ink-3); font-family:'IBM Plex Mono',monospace; font-size:10px}
+.axname{fill:var(--ink-2); font-family:'Archivo Narrow',sans-serif; font-size:11px; letter-spacing:.08em}
+.hbar{fill:var(--s2)}
+</style>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- theme ---------- */
+  var root = document.documentElement;
+  function currentDark() {
+    var t = root.getAttribute('data-theme');
+    if (t) return t === 'dark';
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  }
+  try {
+    var saved = localStorage.getItem('ch01-theme');
+    if (saved === 'dark' || saved === 'light') root.setAttribute('data-theme', saved);
+  } catch (e) {}
+  var tb = document.getElementById('themebtn');
+  if (tb) tb.addEventListener('click', function () {
+    var next = currentDark() ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('ch01-theme', next); } catch (e) {}
+    drawE();
+  });
+
+  /* ---------- helpers ---------- */
+  function $(id) { return document.getElementById(id); }
+  function set(el, a) { for (var k in a) el.setAttribute(k, a[k]); }
+  function fmt(n, d) { return (Math.abs(n) < 5e-4 ? 0 : n).toFixed(d === undefined ? 2 : d); }
+  function pair(x, y, d) { return '(' + fmt(x, d) + ', ' + fmt(y, d) + ')'; }
+  function svgPt(svg, ev) {
+    var r = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal;
+    return { x: (ev.clientX - r.left) / r.width * vb.width,
+             y: (ev.clientY - r.top) / r.height * vb.height };
+  }
+  function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+  function gridLines(g, w, h, step) {
+    var s = '';
+    for (var x = 0; x <= w; x += step) s += '<line x1="' + x + '" y1="0" x2="' + x + '" y2="' + h + '"/>';
+    for (var y = 0; y <= h; y += step) s += '<line x1="0" y1="' + y + '" x2="' + w + '" y2="' + y + '"/>';
+    g.innerHTML = s;
+  }
+  function draggable(svg, handles, onMove) {
+    var active = null;
+    function down(h) {
+      return function (ev) {
+        ev.preventDefault();
+        active = h;
+        svg.classList.add('drag');
+        svg.setPointerCapture(ev.pointerId);
+      };
+    }
+    handles.forEach(function (h) { h.el.addEventListener('pointerdown', down(h)); });
+    svg.addEventListener('pointermove', function (ev) {
+      if (!active) return;
+      ev.preventDefault();
+      onMove(active, svgPt(svg, ev));
+    });
+    function up(ev) {
+      if (!active) return;
+      active = null;
+      svg.classList.remove('drag');
+      try { svg.releasePointerCapture(ev.pointerId); } catch (e) {}
+    }
+    svg.addEventListener('pointerup', up);
+    svg.addEventListener('pointercancel', up);
+  }
+
+  /* ================= DEMO A - parallelogram of forces ================= */
+  var A = { ox: 70, oy: 250, s: 1.5, w: 480, h: 310 };
+  var aF1 = { x: 80, y: 70 }, aF2 = { x: 120, y: 20 };
+  function aToPx(v) { return { x: A.ox + v.x * A.s, y: A.oy - v.y * A.s }; }
+  function aToVal(p) { return { x: (p.x - A.ox) / A.s, y: (A.oy - p.y) / A.s }; }
+  function drawA() {
+    var p1 = aToPx(aF1), p2 = aToPx(aF2);
+    var R = { x: aF1.x + aF2.x, y: aF1.y + aF2.y }, pR = aToPx(R);
+    set($('vA'), { x1: A.ox, y1: A.oy, x2: p1.x, y2: p1.y });
+    set($('vB'), { x1: A.ox, y1: A.oy, x2: p2.x, y2: p2.y });
+    set($('vR'), { x1: A.ox, y1: A.oy, x2: pR.x, y2: pR.y });
+    set($('pgram'), { points: A.ox + ',' + A.oy + ' ' + p1.x + ',' + p1.y + ' ' + pR.x + ',' + pR.y + ' ' + p2.x + ',' + p2.y });
+    set($('lA'), { x: p1.x + 11, y: p1.y - 6 });
+    set($('lB'), { x: p2.x + 11, y: p2.y + 14 });
+    set($('lR'), { x: pR.x + 11, y: pR.y - 8 });
+    set($('hdA'), { cx: p1.x, cy: p1.y });
+    set($('hdB'), { cx: p2.x, cy: p2.y });
+    $('oA').textContent = pair(aF1.x, aF1.y, 1);
+    $('oB').textContent = pair(aF2.x, aF2.y, 1);
+    $('oR').textContent = pair(R.x, R.y, 1);
+    $('oRm').textContent = fmt(Math.hypot(R.x, R.y), 1);
+    $('oRa').textContent = fmt(Math.atan2(R.y, R.x) * 180 / Math.PI, 1) + '°';
+  }
+  (function initA() {
+    var svg = $('sA');
+    gridLines($('gridA'), A.w, A.h, 30);
+    set($('axAx'), { x1: 8, y1: A.oy, x2: 472, y2: A.oy });
+    set($('axAy'), { x1: A.ox, y1: 302, x2: A.ox, y2: 12 });
+    draggable(svg, [{ el: $('hdA'), t: 1 }, { el: $('hdB'), t: 2 }], function (h, p) {
+      var v = aToVal({ x: clamp(p.x, 14, 466), y: clamp(p.y, 14, 296) });
+      if (h.t === 1) aF1 = v; else aF2 = v;
+      drawA();
+    });
+    drawA();
+  })();
+
+  /* ================= DEMO B - Lp unit ball ================= */
+  var B = { cx: 240, cy: 152, r: 104 };
+  var bInf = false, bP = 2;
+  var bVec = [3, -4, 1];
+  function ballPath(p, isInf) {
+    var d = '', N = 400;
+    for (var i = 0; i <= N; i++) {
+      var t = i / N * 2 * Math.PI, c = Math.cos(t), s = Math.sin(t), rr;
+      if (isInf) rr = 1 / Math.max(Math.abs(c), Math.abs(s));
+      else rr = 1 / Math.pow(Math.pow(Math.abs(c), p) + Math.pow(Math.abs(s), p), 1 / p);
+      d += (i ? 'L' : 'M') + (B.cx + rr * c * B.r).toFixed(2) + ' ' + (B.cy - rr * s * B.r).toFixed(2);
+    }
+    return d + 'Z';
+  }
+  function lpNorm(v, p, isInf) {
+    if (isInf) return Math.max.apply(null, v.map(Math.abs));
+    var s = 0;
+    for (var i = 0; i < v.length; i++) s += Math.pow(Math.abs(v[i]), p);
+    return Math.pow(s, 1 / p);
+  }
+  function drawB() {
+    $('ballP').setAttribute('d', ballPath(bP, bInf));
+    $('pVal').textContent = bInf ? 'p = ∞' : 'p = ' + bP.toFixed(2);
+    $('oLp').textContent = lpNorm(bVec, bP, bInf).toFixed(3);
+    $('pInf').classList.toggle('on', bInf);
+  }
+  (function initB() {
+    var g = $('gridB'), s = '';
+    for (var i = -2; i <= 2; i++) {
+      var x = B.cx + i * B.r / 2, y = B.cy + i * B.r / 2;
+      s += '<line x1="' + x + '" y1="' + (B.cy - 130) + '" x2="' + x + '" y2="' + (B.cy + 130) + '"/>';
+      s += '<line x1="' + (B.cx - 130) + '" y1="' + y + '" x2="' + (B.cx + 130) + '" y2="' + y + '"/>';
+    }
+    g.innerHTML = s;
+    g.insertAdjacentHTML('afterend',
+      '<line x1="' + (B.cx - 136) + '" y1="' + B.cy + '" x2="' + (B.cx + 136) + '" y2="' + B.cy + '" stroke="currentColor" stroke-width="1.25" opacity=".45"/>' +
+      '<line x1="' + B.cx + '" y1="' + (B.cy - 136) + '" x2="' + B.cx + '" y2="' + (B.cy + 136) + '" stroke="currentColor" stroke-width="1.25" opacity=".45"/>' +
+      '<text class="axtick" x="' + (B.cx + B.r) + '" y="' + (B.cy + 16) + '" text-anchor="middle">1</text>' +
+      '<text class="axtick" x="' + (B.cx - B.r) + '" y="' + (B.cy + 16) + '" text-anchor="middle">-1</text>' +
+      '<text class="axtick" x="' + (B.cx + 8) + '" y="' + (B.cy - B.r + 4) + '">1</text>' +
+      '<text class="axtick" x="' + (B.cx + 8) + '" y="' + (B.cy + B.r + 4) + '">-1</text>' +
+      '<text class="axname" x="' + B.cx + '" y="308" text-anchor="middle">the set of vectors whose norm equals 1</text>');
+    $('ball1').setAttribute('d', ballPath(1, false));
+    $('ball2').setAttribute('d', ballPath(2, false));
+    $('ballInf').setAttribute('d', ballPath(0, true));
+    $('pSlider').addEventListener('input', function () {
+      bInf = false; bP = parseInt(this.value, 10) / 100; drawB();
+    });
+    $('pInf').addEventListener('click', function () { bInf = !bInf; drawB(); });
+    drawB();
+  })();
+
+  /* ================= DEMO C - dot product, projection ================= */
+  var C = { ox: 70, oy: 250, s: 25, w: 480, h: 310 };
+  var cF = { x: 5, y: 6 }, cD = { x: 8, y: 2 };
+  function cToPx(v) { return { x: C.ox + v.x * C.s, y: C.oy - v.y * C.s }; }
+  function cToVal(p) { return { x: (p.x - C.ox) / C.s, y: (C.oy - p.y) / C.s }; }
+  function drawC() {
+    var pF = cToPx(cF), pD = cToPx(cD);
+    var dot = cF.x * cD.x + cF.y * cD.y;
+    var nF = Math.hypot(cF.x, cF.y), nD = Math.hypot(cD.x, cD.y);
+    var cos = (nF * nD) ? dot / (nF * nD) : 0;
+    var ang = Math.acos(clamp(cos, -1, 1));
+    var k = (nD * nD) ? dot / (nD * nD) : 0;
+    var proj = { x: k * cD.x, y: k * cD.y }, pP = cToPx(proj);
+
+    set($('vC1'), { x1: C.ox, y1: C.oy, x2: pF.x, y2: pF.y });
+    set($('vC2'), { x1: C.ox, y1: C.oy, x2: pD.x, y2: pD.y });
+    set($('projC'), { x1: C.ox, y1: C.oy, x2: pP.x, y2: pP.y });
+    set($('dropC'), { x1: pF.x, y1: pF.y, x2: pP.x, y2: pP.y });
+    set($('lC1'), { x: pF.x + 11, y: pF.y - 5 });
+    set($('lC2'), { x: pD.x + 11, y: pD.y + 14 });
+    set($('hdC1'), { cx: pF.x, cy: pF.y });
+    set($('hdC2'), { cx: pD.x, cy: pD.y });
+
+    var t1 = Math.atan2(cF.y, cF.x), t2 = Math.atan2(cD.y, cD.x);
+    var lo = Math.min(t1, t2), hi = Math.max(t1, t2), R = 46;
+    var large = (hi - lo) > Math.PI ? 1 : 0;
+    set($('arcC'), { d: 'M' + (C.ox + R * Math.cos(lo)) + ' ' + (C.oy - R * Math.sin(lo)) +
+      'A' + R + ' ' + R + ' 0 ' + large + ' 0 ' + (C.ox + R * Math.cos(hi)) + ' ' + (C.oy - R * Math.sin(hi)) });
+    var mid = (lo + hi) / 2;
+    set($('angC'), { x: C.ox + 64 * Math.cos(mid) - 12, y: C.oy - 64 * Math.sin(mid) + 4 });
+    $('angC').textContent = fmt(ang * 180 / Math.PI, 1) + '°';
+
+    $('oC1').textContent = pair(cF.x, cF.y);
+    $('oC2').textContent = pair(cD.x, cD.y);
+    $('oCdot').textContent = fmt(dot, 3);
+    $('oCgeo').textContent = fmt(nF * nD * cos, 3);
+    $('oCang').textContent = fmt(ang * 180 / Math.PI, 1) + '°';
+    $('oCcos').textContent = fmt(cos, 3);
+  }
+  (function initC() {
+    var svg = $('sC');
+    gridLines($('gridC'), C.w, C.h, 25);
+    set($('axCx'), { x1: 8, y1: C.oy, x2: 472, y2: C.oy });
+    set($('axCy'), { x1: C.ox, y1: 302, x2: C.ox, y2: 12 });
+    draggable(svg, [{ el: $('hdC1'), t: 1 }, { el: $('hdC2'), t: 2 }], function (h, p) {
+      var v = cToVal({ x: clamp(p.x, 14, 466), y: clamp(p.y, 14, 296) });
+      if (h.t === 1) cF = v; else cD = v;
+      drawC();
+    });
+    drawC();
+  })();
+
+  /* ================= DEMO D - change of basis ================= */
+  var D = { cx: 240, cy: 165, s: 42 };
+  var b1 = { x: 1, y: 1 }, b2 = { x: -1, y: 1 };
+  var dPt = { x: 3, y: 2 };
+  function dToPx(v) { return { x: D.cx + v.x * D.s, y: D.cy - v.y * D.s }; }
+  function dToVal(p) { return { x: (p.x - D.cx) / D.s, y: (D.cy - p.y) / D.s }; }
+  function drawD() {
+    var p = dToPx(dPt);
+    set($('hdD'), { cx: p.x, cy: p.y });
+    set($('ptline'), { x1: D.cx, y1: D.cy, x2: p.x, y2: p.y });
+    var c1 = 0.5 * (dPt.x + dPt.y), c2 = 0.5 * (-dPt.x + dPt.y);
+    $('oD1').textContent = pair(dPt.x, dPt.y);
+    $('oD2').textContent = pair(c1, c2);
+    $('oD3').textContent = pair(c1 * b1.x + c2 * b2.x, c1 * b1.y + c2 * b2.y);
+  }
+  (function initD() {
+    var svg = $('sD');
+    svg.insertAdjacentHTML('afterbegin',
+      '<clipPath id="clipD"><rect x="8" y="8" width="464" height="304"/></clipPath>');
+    var g1 = $('gridD1'), s1 = '';
+    for (var i = -5; i <= 5; i++) {
+      s1 += '<line x1="' + (D.cx + i * D.s) + '" y1="8" x2="' + (D.cx + i * D.s) + '" y2="312"/>';
+      s1 += '<line x1="8" y1="' + (D.cy + i * D.s) + '" x2="472" y2="' + (D.cy + i * D.s) + '"/>';
+    }
+    g1.innerHTML = s1;
+    g1.setAttribute('clip-path', 'url(#clipD)');
+    var g2 = $('gridD2'), s2 = '', T = 4;
+    for (var k = -4; k <= 4; k++) {
+      var aS = dToPx({ x: k * b2.x - T * b1.x, y: k * b2.y - T * b1.y });
+      var aE = dToPx({ x: k * b2.x + T * b1.x, y: k * b2.y + T * b1.y });
+      s2 += '<line x1="' + aS.x + '" y1="' + aS.y + '" x2="' + aE.x + '" y2="' + aE.y + '"/>';
+      var bS = dToPx({ x: k * b1.x - T * b2.x, y: k * b1.y - T * b2.y });
+      var bE = dToPx({ x: k * b1.x + T * b2.x, y: k * b1.y + T * b2.y });
+      s2 += '<line x1="' + bS.x + '" y1="' + bS.y + '" x2="' + bE.x + '" y2="' + bE.y + '"/>';
+    }
+    g2.innerHTML = s2;
+    g2.setAttribute('clip-path', 'url(#clipD)');
+    set($('axDx'), { x1: 8, y1: D.cy, x2: 472, y2: D.cy });
+    set($('axDy'), { x1: D.cx, y1: 8, x2: D.cx, y2: 312 });
+    var e1 = dToPx(b1), e2 = dToPx(b2);
+    set($('b1D'), { x1: D.cx, y1: D.cy, x2: e1.x, y2: e1.y });
+    set($('b2D'), { x1: D.cx, y1: D.cy, x2: e2.x, y2: e2.y });
+    set($('lb1'), { x: e1.x + 8, y: e1.y + 4 });
+    set($('lb2'), { x: e2.x - 26, y: e2.y + 2 });
+    draggable(svg, [{ el: $('hdD'), t: 1 }], function (h, p) {
+      dPt = dToVal({ x: clamp(p.x, 14, 466), y: clamp(p.y, 14, 306) });
+      drawD();
+    });
+    drawD();
+  })();
+
+  /* ================= DEMO E - high-dimensional angles ================= */
+  var DIMS = [2, 3, 5, 10, 20, 50, 100, 200, 500, 1000];
+  var NSAMP = 2000, NBIN = 41;
+  var E = { x0: 58, x1: 456, y0: 32, y1: 238 };
+  var eData = null, eD = 2;
+
+  function gauss() {
+    var u = 0, v = 0;
+    while (u === 0) u = Math.random();
+    while (v === 0) v = Math.random();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
+  function sampleE(d) {
+    /* By rotational invariance the angle between two random directions has the
+       same law as the angle between a fixed axis and one random direction. */
+    var bins = new Array(NBIN).fill(0), sum = 0, sumSq = 0, near = 0;
+    for (var i = 0; i < NSAMP; i++) {
+      var first = 0, ss = 0;
+      for (var j = 0; j < d; j++) { var g = gauss(); if (j === 0) first = g; ss += g * g; }
+      var c = first / Math.sqrt(ss);
+      sum += Math.abs(c); sumSq += c * c;
+      if (Math.abs(c) <= 0.1) near++;
+      var b = Math.floor((c + 1) / 2 * NBIN);
+      bins[clamp(b, 0, NBIN - 1)]++;
+    }
+    return { bins: bins, meanAbs: sum / NSAMP, sd: Math.sqrt(sumSq / NSAMP),
+             near: near / NSAMP * 100 };
+  }
+  function drawE() {
+    if (!eData) return;
+    var bins = eData.bins, max = Math.max.apply(null, bins) / NSAMP;
+    var bw = (E.x1 - E.x0) / NBIN, s = '';
+    for (var i = 0; i < NBIN; i++) {
+      var f = bins[i] / NSAMP, h = max ? f / max * (E.y1 - E.y0) : 0;
+      if (h < 0.4) continue;
+      s += '<rect class="hbar" x="' + (E.x0 + i * bw + 1).toFixed(1) + '" y="' + (E.y1 - h).toFixed(1) +
+           '" width="' + (bw - 2).toFixed(1) + '" height="' + h.toFixed(1) + '" rx="1.5"/>';
+    }
+    $('barsE').innerHTML = s;
+
+    var gs = '';
+    for (var k = 0; k <= 4; k++) {
+      var y = E.y1 - k / 4 * (E.y1 - E.y0);
+      gs += '<line x1="' + E.x0 + '" y1="' + y + '" x2="' + E.x1 + '" y2="' + y + '"/>';
+    }
+    $('gridE').innerHTML = gs;
+
+    var ax = '<line x1="' + E.x0 + '" y1="' + E.y1 + '" x2="' + E.x1 + '" y2="' + E.y1 +
+             '" stroke="currentColor" stroke-width="1.25" opacity=".5"/>';
+    [-1, -0.5, 0, 0.5, 1].forEach(function (t) {
+      var x = E.x0 + (t + 1) / 2 * (E.x1 - E.x0);
+      ax += '<line x1="' + x + '" y1="' + E.y1 + '" x2="' + x + '" y2="' + (E.y1 + 5) +
+            '" stroke="currentColor" stroke-width="1.25" opacity=".5"/>' +
+            '<text class="axtick" x="' + x + '" y="' + (E.y1 + 19) + '" text-anchor="middle">' + t + '</text>';
+    });
+    ax += '<text class="axtick" x="' + (E.x0 - 8) + '" y="' + (E.y0 + 4) + '" text-anchor="end">' +
+          (max * 100).toFixed(1) + '%</text>';
+    ax += '<text class="axtick" x="' + (E.x0 - 8) + '" y="' + (E.y1 + 4) + '" text-anchor="end">0</text>';
+    ax += '<text class="axname" x="' + ((E.x0 + E.x1) / 2) + '" y="' + (E.y1 + 42) +
+          '" text-anchor="middle">cosine of the angle between two random directions</text>';
+    ax += '<text class="axname" x="' + E.x0 + '" y="' + (E.y0 - 12) + '">share of pairs</text>';
+    $('axE').innerHTML = ax;
+  }
+  function refreshE() {
+    eData = sampleE(eD);
+    $('oEm').textContent = eData.meanAbs.toFixed(3);
+    $('oEs').textContent = eData.sd.toFixed(3);
+    $('oEt').textContent = (1 / Math.sqrt(eD)).toFixed(3);
+    $('oEp').textContent = eData.near.toFixed(1) + '%';
+    $('dVal').textContent = 'd = ' + eD;
+    drawE();
+  }
+  (function initE() {
+    $('dSlider').addEventListener('input', function () {
+      eD = DIMS[parseInt(this.value, 10) - 1];
+      refreshE();
+    });
+    $('dRoll').addEventListener('click', refreshE);
+    refreshE();
+  })();
+
+  /* ================= rail scroll-spy ================= */
+  (function initRail() {
+    var links = Array.prototype.slice.call(document.querySelectorAll('.rail a'));
+    if (!links.length || !window.IntersectionObserver) return;
+    var map = {};
+    links.forEach(function (a) { map[a.getAttribute('href').slice(1)] = a; });
+    var seen = {};
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) { seen[en.target.id] = en.isIntersecting; });
+      var ids = Object.keys(map), activeId = null;
+      for (var i = 0; i < ids.length; i++) if (seen[ids[i]]) { activeId = ids[i]; break; }
+      if (!activeId) return;
+      links.forEach(function (a) { a.classList.toggle('on', a === map[activeId]); });
+    }, { rootMargin: '-70px 0px -65% 0px', threshold: 0 });
+    Object.keys(map).forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) io.observe(el);
+    });
+  })();
+})();
+</script>
+
+<script>
+/* Safety net: if the MathJax bundle cannot be reached, degrade the TeX to
+   readable Unicode instead of leaving raw backslash markup on the page. */
+(function () {
+  'use strict';
+  var GREEK = { theta:'θ', sigma:'σ', delta:'δ', mu:'μ', pi:'π',
+                infty:'∞', alpha:'α', beta:'β', lambda:'λ' };
+  var SUB = { '1':'₁','2':'₂','3':'₃','i':'ᵢ','j':'ⱼ','n':'ₙ','p':'ₚ','x':'ₓ','y':'ᵧ' };
+  var SUP = { '2':'²','3':'³','n':'ⁿ','p':'ᵖ','*':'*' };
+
+  function degrade(t) {
+    t = t.replace(/\$\$/g, '').replace(/\\[()[\]]/g, '');
+    t = t.replace(/\\(?:left|right|textstyle|displaystyle|!|,|;|:)/g, '');
+    t = t.replace(/\\q?quad/g, ' ');
+    t = t.replace(/\\mathbb\{R\}/g, 'ℝ').replace(/\\mathbb\{Z\}/g, 'ℤ')
+         .replace(/\\mathbb\{N\}/g, 'ℕ').replace(/\\mathbb\{Q\}/g, 'ℚ');
+    t = t.replace(/\\(?:mathbf|mathrm|text|textbf|operatorname)\{([^{}]*)\}/g, '$1');
+    t = t.replace(/\\hat\{([^{}]*)\}/g, '$1̂').replace(/\\bar\{([^{}]*)\}/g, '$1̄');
+    t = t.replace(/\\sqrt\{([^{}]*)\}/g, '√($1)');
+    t = t.replace(/\\t?frac\{([^{}]*)\}\{([^{}]*)\}/g, '($1)/($2)');
+    t = t.replace(/\\binom\{([^{}]*)\}\{([^{}]*)\}/g, 'C($1,$2)');
+    t = t.replace(/\\([a-zA-Z]+)/g, function (m, w) {
+      if (GREEK[w]) return GREEK[w];
+      switch (w) {
+        case 'cdot': return '·';
+        case 'times': return '×';
+        case 'le': case 'leq': return '≤';
+        case 'ge': case 'geq': return '≥';
+        case 'neq': return '≠';
+        case 'approx': return '≈';
+        case 'in': return '∈';
+        case 'pm': return '±';
+        case 'to': case 'rightarrow': return '→';
+        case 'Rightarrow': return '⇒';
+        case 'iff': return '⇔';
+        case 'parallel': return '∥';
+        case 'perp': return '⊥';
+        case 'sum': return 'Σ';
+        case 'langle': return '⟨';
+        case 'rangle': return '⟩';
+        case 'wedge': return '∧';
+        case 'ast': return '*';
+        case 'cdots': case 'ldots': case 'dots': return '…';
+        case 'max': case 'min': case 'cos': case 'sin': case 'log': case 'exp': return w;
+        default: return w;
+      }
+    });
+    t = t.replace(/\\\|/g, '‖').replace(/\|\|/g, '‖');
+    t = t.replace(/_\{?([0-9ijnpxy])\}?/g, function (m, c) { return SUB[c] || ('_' + c); });
+    t = t.replace(/\^\{?([23np*])\}?/g, function (m, c) { return SUP[c] || ('^' + c); });
+    t = t.replace(/[{}]/g, '');
+    return t.replace(/[ \t]{2,}/g, ' ');
+  }
+
+  function run() {
+    if (window.MathJax && window.MathJax.startup && window.MathJax.startup.document) return;
+    var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+      acceptNode: function (n) {
+        if (!n.nodeValue || n.nodeValue.indexOf('\\') < 0 && n.nodeValue.indexOf('$$') < 0)
+          return NodeFilter.FILTER_REJECT;
+        var p = n.parentNode;
+        while (p && p !== document.body) {
+          var tag = p.nodeName;
+          if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'CODE' || tag === 'PRE')
+            return NodeFilter.FILTER_REJECT;
+          p = p.parentNode;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    var hits = [], n;
+    while ((n = walker.nextNode())) hits.push(n);
+    hits.forEach(function (node) { node.nodeValue = degrade(node.nodeValue); });
+    document.querySelectorAll('.mathbox').forEach(function (el) {
+      el.style.fontFamily = "'IBM Plex Mono', monospace";
+      el.style.fontSize = '15px';
+      el.style.textAlign = 'center';
+      el.style.padding = '10px 0';
+    });
+  }
+  setTimeout(run, 6000);
+})();
+</script>
