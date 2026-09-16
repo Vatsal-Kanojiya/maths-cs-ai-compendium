@@ -1,0 +1,2065 @@
+<title>Matrices as Machines</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(', '\\)']], displayMath: [['$$', '$$']], processEscapes: true },
+  svg: { fontCache: 'global', scale: 1.0 },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-svg.js" id="MathJax-script" async></script>
+
+<style>
+/* ============ TOKENS: light is complete and authoritative ============ */
+:root{
+  --ground:#F0F2F1;
+  --sheet:#FBFCFB;
+  --sheet-2:#F4F6F5;
+  --ink:#14181A;
+  --ink-2:#4E575B;
+  --ink-3:#77838A;
+  --rule:#D3DAD7;
+  --rule-strong:#A8B4B0;
+  --accent:#12507E;
+  --accent-ink:#0E4267;
+  --accent-soft:#E4EEF6;
+  --bridge:#1F8A4C;
+  --bridge-soft:#E4F2EA;
+  --brk:#A8500F;
+  --brk-soft:#FAEBDF;
+  --s1:#BF5B00;
+  --s2:#0F74C7;
+  --s3:#1F8A4C;
+  --paper:#FFFFFF;            /* pasted-drawing ground, both themes */
+  --paper-ink:#1b1b1b;
+  --shadow:0 1px 2px rgba(20,24,26,.06), 0 6px 18px rgba(20,24,26,.05);
+  --f-disp:'Archivo Narrow', 'Arial Narrow', Helvetica, sans-serif;
+  --f-body:'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --f-mono:'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+    --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+    --rule:#293134; --rule-strong:#3F494C;
+    --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+    --bridge:#35AC63; --bridge-soft:#11281B;
+    --brk:#E0913F; --brk-soft:#2E2012;
+    --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+  --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+  --rule:#293134; --rule-strong:#3F494C;
+  --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+  --bridge:#35AC63; --bridge-soft:#11281B;
+  --brk:#E0913F; --brk-soft:#2E2012;
+  --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:var(--f-body); font-size:17px; line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ============ TITLE BLOCK (engineering drawing header) ============ */
+.titleblock{
+  position:sticky; top:env(safe-area-inset-top,0px); z-index:40;
+  background:var(--sheet); border-bottom:1px solid var(--rule-strong);
+}
+.tb-in{
+  max-width:1240px; margin:0 auto; padding:0 16px;
+  display:flex; align-items:stretch; gap:0; min-height:46px;
+}
+.tb-cell{
+  display:flex; flex-direction:column; justify-content:center;
+  padding:5px 14px; border-right:1px solid var(--rule);
+  font-family:var(--f-disp);
+}
+.tb-cell:first-child{padding-left:0}
+.tb-cell:last-child{border-right:0; margin-left:auto; padding-right:0}
+.tb-k{
+  font-size:8.5px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); line-height:1.4;
+}
+.tb-v{font-size:13px; font-weight:700; letter-spacing:.02em; color:var(--ink); line-height:1.3}
+.tb-v.accent{color:var(--accent)}
+.tb-hide{display:none}
+@media (min-width:680px){ .tb-hide{display:flex} }
+
+.themebtn{
+  appearance:none; background:transparent; border:1px solid var(--rule-strong);
+  color:var(--ink-2); font-family:var(--f-disp); font-size:10px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:6px 10px; border-radius:2px;
+  cursor:pointer; align-self:center; white-space:nowrap;
+}
+.themebtn:hover{border-color:var(--accent); color:var(--accent)}
+.themebtn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+/* ============ SHELL ============ */
+.shell{max-width:1240px; margin:0 auto; padding:0 16px; padding-block:0 64px}
+@media (min-width:1080px){
+  .shell{display:grid; grid-template-columns:212px minmax(0,1fr); gap:44px; align-items:start}
+}
+.rail{display:none}
+@media (min-width:1080px){
+  .rail{
+    display:block; position:sticky; top:calc(env(safe-area-inset-top,0px) + 70px);
+    padding-block:28px; font-family:var(--f-disp); font-size:12.5px;
+  }
+}
+.rail-h{
+  font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-3);
+  padding-bottom:8px; border-bottom:1px solid var(--rule); margin-bottom:10px;
+}
+.rail a{
+  display:flex; gap:9px; padding:4px 0; color:var(--ink-2); text-decoration:none;
+  border-left:2px solid transparent; padding-left:9px; margin-left:-11px; line-height:1.35;
+}
+.rail a:hover{color:var(--accent)}
+.rail a.on{color:var(--accent); border-left-color:var(--accent); font-weight:700}
+.rail a .n{font-family:var(--f-mono); font-size:10.5px; color:var(--ink-3); flex:none; padding-top:1px}
+.rail a.on .n{color:var(--accent)}
+
+main{min-width:0; padding-block:0 0}
+.col{max-width:70ch}
+
+/* ============ TYPE ============ */
+h1,h2,h3,h4{font-family:var(--f-disp); text-wrap:balance; margin:0; line-height:1.14}
+h1{font-size:clamp(34px,7vw,58px); font-weight:700; letter-spacing:-.015em}
+h2{font-size:clamp(25px,4.2vw,34px); font-weight:700; letter-spacing:-.01em}
+h3{font-size:19px; font-weight:700; letter-spacing:.005em; margin-top:2px}
+h4{font-size:14px; font-weight:700; letter-spacing:.06em; text-transform:uppercase}
+p{margin:0 0 1.05em}
+a{color:var(--accent-ink)}
+strong{font-weight:600}
+em{font-style:italic}
+code{font-family:var(--f-mono); font-size:.87em; background:var(--sheet-2); padding:1px 5px; border-radius:2px; border:1px solid var(--rule)}
+.lead{font-size:19.5px; line-height:1.56; color:var(--ink-2)}
+.eyebrow{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--ink-3); margin:0 0 10px;
+}
+.srcref{
+  font-family:var(--f-mono); font-size:11px; color:var(--ink-3);
+  border:1px solid var(--rule); border-radius:2px; padding:2px 7px; display:inline-block;
+  background:var(--sheet-2); white-space:nowrap;
+}
+
+/* ============ SECTION ============ */
+section{padding-block:38px 0; scroll-margin-top:calc(env(safe-area-inset-top,0px) + 62px)}
+.sechead{display:flex; align-items:baseline; gap:13px; margin-bottom:6px; flex-wrap:wrap}
+.secnum{
+  font-family:var(--f-mono); font-size:12px; font-weight:600; color:var(--accent);
+  border:1px solid var(--accent); border-radius:2px; padding:2px 7px; flex:none;
+  background:var(--accent-soft);
+}
+.rule-h{border:0; border-top:1px solid var(--rule); margin:0 0 22px}
+.rule-d{border:0; border-top:1px dashed var(--rule-strong); margin:34px 0}
+
+/* ============ CALLOUTS ============ */
+.note{
+  border:1px solid var(--rule); border-left:3px solid var(--accent);
+  background:var(--sheet); border-radius:2px; padding:16px 18px; margin:22px 0;
+}
+.note.bridge{border-left-color:var(--bridge); background:var(--bridge-soft)}
+.note.brk{border-left-color:var(--brk); background:var(--brk-soft)}
+.note-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; margin-bottom:7px; display:flex; align-items:center; gap:8px;
+}
+.note.bridge .note-h{color:var(--bridge)}
+.note.brk .note-h{color:var(--brk)}
+.note .note-h{color:var(--accent)}
+.note p:last-child, .note ul:last-child{margin-bottom:0}
+.note-h .ic{
+  width:15px; height:15px; border-radius:50%; border:1.5px solid currentColor; flex:none;
+  display:grid; place-items:center; font-size:9.5px; font-weight:700; font-family:var(--f-mono);
+}
+ul,ol{margin:0 0 1.05em; padding-left:1.25em}
+li{margin-bottom:.4em}
+li::marker{color:var(--ink-3)}
+
+/* ============ DEFINITION BLOCK ============ */
+.defn{
+  background:var(--sheet); border:1px solid var(--rule); border-radius:3px;
+  padding:18px 20px; margin:22px 0; box-shadow:var(--shadow);
+}
+.defn-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:10px;
+  padding-bottom:8px; border-bottom:1px solid var(--rule);
+}
+.defn p:last-child{margin-bottom:0}
+
+/* ============ TABLES ============ */
+.tw{overflow-x:auto; margin:22px 0; border:1px solid var(--rule); border-radius:3px; background:var(--sheet)}
+table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:480px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule); vertical-align:top}
+thead th{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); background:var(--sheet-2); font-weight:700; white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:0}
+td.mono,th.mono{font-family:var(--f-mono); font-size:13px; font-variant-numeric:tabular-nums}
+.tw caption{
+  caption-side:bottom; text-align:left; padding:9px 14px; font-size:12.5px;
+  color:var(--ink-3); border-top:1px solid var(--rule); font-family:var(--f-disp);
+}
+
+/* ============ FIGURES ============ */
+figure{margin:24px 0}
+.paper{
+  background:var(--paper); border:1px solid var(--rule-strong); border-radius:3px;
+  padding:16px; display:flex; justify-content:center; box-shadow:var(--shadow);
+}
+.paper img{max-width:100%; height:auto; display:block}
+figcaption{
+  font-family:var(--f-disp); font-size:12.5px; color:var(--ink-3); margin-top:9px;
+  line-height:1.45; padding-left:2px;
+}
+figcaption b{color:var(--ink-2); font-weight:700; letter-spacing:.04em}
+
+/* ============ INTERACTIVE PANELS ============ */
+.lab{
+  background:var(--sheet); border:1px solid var(--rule-strong); border-radius:3px;
+  margin:26px 0; overflow:hidden; box-shadow:var(--shadow);
+}
+.lab-h{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:11px 16px; border-bottom:1px solid var(--rule); background:var(--sheet-2);
+}
+.lab-t{font-family:var(--f-disp); font-size:13px; font-weight:700; letter-spacing:.05em; text-transform:uppercase}
+.lab-tag{
+  font-family:var(--f-mono); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--accent); border:1px solid var(--accent); border-radius:2px; padding:2px 6px;
+  margin-left:auto; white-space:nowrap;
+}
+.lab-body{padding:16px}
+.lab-foot{
+  padding:11px 16px; border-top:1px solid var(--rule); background:var(--sheet-2);
+  font-size:13.5px; color:var(--ink-2); line-height:1.5;
+}
+.lab-foot b{color:var(--ink)}
+.stage{width:100%; max-width:560px; height:auto; display:block; margin-inline:auto; touch-action:none; cursor:grab}
+.stage.drag{cursor:grabbing}
+
+.readout{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr)); gap:1px;
+  background:var(--rule); border:1px solid var(--rule); border-radius:2px; margin-top:14px;
+}
+.ro{background:var(--sheet); padding:8px 11px}
+.ro-k{
+  font-family:var(--f-disp); font-size:9px; letter-spacing:.13em; text-transform:uppercase;
+  color:var(--ink-3); margin-bottom:2px; white-space:nowrap;
+}
+.ro-v{
+  font-family:var(--f-mono); font-size:15px; font-weight:500; font-variant-numeric:tabular-nums;
+  color:var(--ink); line-height:1.25;
+}
+.ro-v.a{color:var(--s2)} .ro-v.b{color:var(--s1)} .ro-v.c{color:var(--s3)}
+
+.ctl{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:14px}
+.ctl label{
+  font-family:var(--f-disp); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-2); white-space:nowrap;
+}
+input[type=range]{
+  -webkit-appearance:none; appearance:none; height:22px; background:transparent;
+  flex:1 1 160px; min-width:130px; cursor:pointer;
+}
+input[type=range]:focus-visible{outline:2px solid var(--accent); outline-offset:3px}
+input[type=range]::-webkit-slider-runnable-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-moz-range-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:16px; height:16px; border-radius:50%;
+  background:var(--accent); border:2px solid var(--sheet); margin-top:-6.5px;
+}
+input[type=range]::-moz-range-thumb{
+  width:16px; height:16px; border-radius:50%; background:var(--accent);
+  border:2px solid var(--sheet);
+}
+.btn{
+  appearance:none; font-family:var(--f-disp); font-size:11px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:7px 13px; border-radius:2px;
+  border:1px solid var(--rule-strong); background:var(--sheet); color:var(--ink-2); cursor:pointer;
+}
+.btn:hover{border-color:var(--accent); color:var(--accent)}
+.btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.btn.on{background:var(--accent); border-color:var(--accent); color:var(--sheet)}
+
+.legend{display:flex; gap:16px; flex-wrap:wrap; margin-top:12px}
+.lg{display:flex; align-items:center; gap:7px; font-family:var(--f-disp); font-size:12px; color:var(--ink-2)}
+.lg i{width:15px; height:3px; border-radius:2px; flex:none; display:block}
+
+/* ============ MISC ============ */
+.mathbox{overflow-x:auto; overflow-y:hidden; margin:18px 0}
+mjx-container[display="true"]{margin:0 !important}
+.kv{display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:15px; margin:16px 0}
+.kv dt{font-family:var(--f-mono); font-size:13px; color:var(--accent); white-space:nowrap}
+.kv dd{margin:0; color:var(--ink-2)}
+
+details.q{
+  border:1px solid var(--rule); border-radius:3px; background:var(--sheet);
+  margin-bottom:9px; overflow:hidden;
+}
+details.q summary{
+  cursor:pointer; padding:12px 15px; font-weight:600; list-style:none;
+  display:flex; gap:11px; align-items:flex-start; font-size:15.5px;
+}
+details.q summary::-webkit-details-marker{display:none}
+details.q summary::after{
+  content:'+'; margin-left:auto; font-family:var(--f-mono); color:var(--accent);
+  font-size:17px; line-height:1; flex:none; padding-top:2px;
+}
+details.q[open] summary::after{content:'\2212'}
+details.q summary:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
+details.q summary .qn{
+  font-family:var(--f-mono); font-size:12px; color:var(--ink-3); flex:none; padding-top:3px;
+}
+details.q .ans{padding:0 15px 14px 41px; font-size:15.5px; color:var(--ink-2); border-top:1px solid var(--rule); padding-top:13px}
+details.q .ans p:last-child{margin-bottom:0}
+
+.endnote{
+  margin-top:44px; padding-top:20px; border-top:1px solid var(--rule-strong);
+  font-size:13.5px; color:var(--ink-3); font-family:var(--f-disp); line-height:1.55;
+}
+.endnote a{color:var(--accent)}
+
+@media (prefers-reduced-motion:reduce){*{animation:none !important; transition:none !important}}
+</style>
+
+<style>
+/* chapter 02 additions */
+.split{display:grid; grid-template-columns:1fr; gap:14px}
+@media (min-width:620px){ .split{grid-template-columns:1fr 1fr} }
+.split figure{margin:0}
+.canvwrap{
+  background:var(--paper); border:1px solid var(--rule-strong); border-radius:3px;
+  padding:10px; display:flex; flex-direction:column; align-items:center; gap:8px;
+}
+.canvwrap canvas{
+  width:100%; max-width:230px; height:auto; image-rendering:pixelated;
+  border:1px solid var(--rule); display:block;
+}
+.canvlabel{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.13em; text-transform:uppercase;
+  color:#555;
+}
+.mx{
+  font-family:var(--f-mono); font-size:13px; font-variant-numeric:tabular-nums;
+  display:inline-grid; gap:2px 12px; padding:6px 12px; border-left:2px solid var(--ink-3);
+  border-right:2px solid var(--ink-3); border-radius:2px; text-align:right;
+}
+.mx.c2{grid-template-columns:repeat(2,minmax(46px,auto))}
+.zoo td:first-child{font-weight:600; white-space:nowrap}
+</style>
+
+<header class="titleblock">
+  <div class="tb-in">
+    <div class="tb-cell">
+      <span class="tb-k">Chapter</span>
+      <span class="tb-v accent">02 &middot; Matrices</span>
+    </div>
+    <div class="tb-cell tb-hide">
+      <span class="tb-k">Sheet</span>
+      <span class="tb-v">2 of 20</span>
+    </div>
+    <div class="tb-cell tb-hide">
+      <span class="tb-k">Reader</span>
+      <span class="tb-v">B.E. Mechanical</span>
+    </div>
+    <div class="tb-cell tb-hide">
+      <span class="tb-k">Prerequisite</span>
+      <span class="tb-v">Sheet 1</span>
+    </div>
+    <div class="tb-cell">
+      <button class="themebtn" id="themebtn" type="button" aria-label="Switch colour theme">Theme</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+
+<nav class="rail" aria-label="Chapter contents">
+  <div class="rail-h">Contents</div>
+  <a href="#bridge" class="on"><span class="n">00</span><span>The bridge</span></a>
+  <a href="#machine"><span class="n">01</span><span>A matrix is a machine</span></a>
+  <a href="#twokinds"><span class="n">02</span><span>Two kinds of matrix</span></a>
+  <a href="#props"><span class="n">03</span><span>Properties</span></a>
+  <a href="#zoo"><span class="n">04</span><span>The matrix zoo</span></a>
+  <a href="#ops"><span class="n">05</span><span>Operations &amp; cost</span></a>
+  <a href="#transforms"><span class="n">06</span><span>Transformations</span></a>
+  <a href="#eigen"><span class="n">07</span><span>Eigenvectors</span></a>
+  <a href="#decomp"><span class="n">08</span><span>Decompositions</span></a>
+  <a href="#nonlinear"><span class="n">09</span><span>Why depth needs a kink</span></a>
+  <a href="#worked"><span class="n">10</span><span>Worked example</span></a>
+  <a href="#recall"><span class="n">11</span><span>Shadow reading</span></a>
+  <a href="#next"><span class="n">12</span><span>What this feeds</span></a>
+</nav>
+
+<main>
+
+<section id="top" style="padding-top:44px">
+  <div class="col">
+    <p class="eyebrow">Maths, CS &amp; AI Compendium &middot; Chapter 02</p>
+    <h1>Matrices as Machines</h1>
+    <p class="lead" style="margin-top:18px">
+      Chapter 01 asked what a vector is. This one asks what happens when something
+      <em>acts</em> on it. You have been feeding vectors into matrices since second year:
+      hand a stress tensor a plane and it returns a traction, hand an inertia tensor a spin
+      and it returns angular momentum, hand a stiffness matrix a displacement and it returns
+      a force.
+    </p>
+    <p>
+      That is the whole idea. A matrix is a machine with a vector-shaped input slot and a
+      vector-shaped output chute. Everything in this chapter &mdash; rank, determinant,
+      eigenvectors, SVD &mdash; is a question about what a particular machine does to the
+      things you put in it. And you have physical names for nearly all of the answers already:
+      a singular matrix is a mechanism, an eigenvector is a principal axis, a null space is a
+      set of rigid-body modes.
+    </p>
+    <p>
+      One warning up front. This chapter is where the mechanical picture is most seductive and
+      most dangerous, because ML uses the word "matrix" for two genuinely different things.
+      &sect;02 separates them before the confusion can set in.
+    </p>
+  </div>
+</section>
+
+<section id="bridge">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">00</span>
+      <h2>The bridge</h2>
+    </div>
+    <hr class="rule-h">
+    <p>
+      Chapter 01's table had one row that did not survive the crossing. This chapter's table
+      has almost none &mdash; matrices carry over far better than vectors did, because the
+      matrices of mechanics and the matrices of ML are doing the same structural job. The
+      danger here is not that the analogy fails; it is that it works so well you stop checking.
+    </p>
+  </div>
+
+  <div class="tw">
+    <table>
+      <thead>
+        <tr><th>What you already use</th><th>What ML calls it</th><th>How good is the match?</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Traction on a plane, \(\mathbf{t}=\boldsymbol{\sigma}\hat{\mathbf{n}}\)</td>
+          <td>Matrix&ndash;vector product \(A\mathbf{x}\)</td>
+          <td><b style="color:var(--bridge)">Identical.</b> The canonical "matrix eats a vector".</td>
+        </tr>
+        <tr>
+          <td>Principal stress planes (no shear)</td>
+          <td>Eigenvectors</td>
+          <td><b style="color:var(--bridge)">Exact.</b> "No shear" <em>is</em> \(\boldsymbol{\sigma}\hat{\mathbf{n}}=\lambda\hat{\mathbf{n}}\).</td>
+        </tr>
+        <tr>
+          <td>Principal axes of inertia, rotor balancing</td>
+          <td>Eigenvectors of a symmetric matrix</td>
+          <td><b style="color:var(--bridge)">Exact.</b> Imbalance <em>is</em> \(\mathbf{H}\nparallel\boldsymbol{\omega}\).</td>
+        </tr>
+        <tr>
+          <td>Mode shapes &amp; natural frequencies</td>
+          <td>Eigendecomposition</td>
+          <td><b style="color:var(--bridge)">Exact,</b> in generalised form \(K\boldsymbol{\phi}=\omega^2M\boldsymbol{\phi}\).</td>
+        </tr>
+        <tr>
+          <td>Rigid-body modes of an unconstrained FEM mesh</td>
+          <td>Null space, rank&ndash;nullity</td>
+          <td><b style="color:var(--bridge)">Exact.</b> Best physical picture of nullity there is.</td>
+        </tr>
+        <tr>
+          <td>Strain energy \(U=\tfrac12\mathbf{u}^TK\mathbf{u}>0\)</td>
+          <td>Positive definiteness</td>
+          <td><b style="color:var(--bridge)">Exact.</b> Stability <em>is</em> the quadratic form.</td>
+        </tr>
+        <tr>
+          <td>Polar decomposition \(F=RU\) of the deformation gradient</td>
+          <td>SVD</td>
+          <td><b style="color:var(--bridge)">Exact.</b> The strain ellipse is the SVD picture.</td>
+        </tr>
+        <tr>
+          <td>Cholesky solve of \(K\mathbf{u}=\mathbf{F}\) in FEM</td>
+          <td>Cholesky decomposition</td>
+          <td><b style="color:var(--bridge)">The same algorithm,</b> same reason.</td>
+        </tr>
+        <tr>
+          <td>Robot arm at a singular configuration</td>
+          <td>Singular matrix, \(\det=0\)</td>
+          <td><b style="color:var(--bridge)">Exact.</b> Lost degree of freedom <em>is</em> rank loss.</td>
+        </tr>
+        <tr>
+          <td>Stress tensor rotating as \(\boldsymbol{\sigma}'=R\boldsymbol{\sigma}R^T\)</td>
+          <td>A data matrix \(X\)</td>
+          <td><b style="color:var(--brk)">Not the same kind of object.</b> See &sect;02.</td>
+        </tr>
+      </tbody>
+      <caption>Nine exact correspondences and one trap. The trap is the important row.</caption>
+    </table>
+  </div>
+</section>
+
+<section id="machine">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">01</span>
+      <h2>A matrix is a machine</h2>
+      <span class="srcref">src 01 + 03</span>
+    </div>
+    <hr class="rule-h">
+    <p>
+      The single most useful way to read \(A\mathbf{x}\) is as a <strong>weighted sum of the
+      columns of \(A\)</strong>, with the entries of \(\mathbf{x}\) supplying the weights:
+    </p>
+    <div class="mathbox">
+      $$\begin{bmatrix}1&2\\3&4\end{bmatrix}\begin{bmatrix}5\\6\end{bmatrix}
+        =5\begin{bmatrix}1\\3\end{bmatrix}+6\begin{bmatrix}2\\4\end{bmatrix}
+        =\begin{bmatrix}17\\39\end{bmatrix}$$
+    </div>
+    <p>
+      Read it that way and two facts become obvious rather than memorised. The set of all
+      reachable outputs is whatever the columns can build between them &mdash; the
+      <strong>column space</strong>. And if the columns are not independent, some inputs get
+      mapped to the same output, information is lost, and the machine cannot be run backwards.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; you own three of these machines already</div>
+      <p>
+        <b>Cauchy stress.</b> Hand the stress tensor a unit normal and it returns the traction
+        vector acting on that plane: \(\mathbf{t}=\boldsymbol{\sigma}\hat{\mathbf{n}}\). Nine
+        numbers encode the force state on <em>every</em> plane through the point. That is a
+        matrix as a machine, exactly.
+      </p>
+      <p>
+        <b>Rotational inertia.</b> Hand the inertia tensor an angular velocity and it returns
+        angular momentum: \(\mathbf{H}=I\boldsymbol{\omega}\). Note what this says &mdash;
+        \(\mathbf{H}\) need not point along \(\boldsymbol{\omega}\). &sect;07 shows that the
+        directions where it does are the eigenvectors, and that this is the entire theory of
+        rotor balancing.
+      </p>
+      <p style="margin-bottom:0">
+        <b>Stiffness.</b> Hand the stiffness matrix a displacement vector and it returns the
+        nodal force vector: \(\mathbf{F}=K\mathbf{u}\). A neural network layer computes
+        \(W\mathbf{x}+\mathbf{b}\). Structurally, that is a stiffness relation with a preload.
+      </p>
+    </div>
+
+    <p>
+      So when the compendium says every neural network layer computes \(A\mathbf{x}+\mathbf{b}\),
+      you can picture it concretely: a very large, rectangular, non-symmetric stiffness matrix
+      whose entries were not derived from geometry and material properties but <em>fitted from
+      data</em>. That last difference is real, and &sect;02 is about it.
+    </p>
+  </div>
+
+  <figure class="col">
+    <div class="paper">
+      <img src="img/column_space.svg" alt="Independent columns spanning a plane, versus dependent columns spanning only a line" width="420">
+    </div>
+    <figcaption><b>Fig. 2.1</b> &mdash; The column space is the set of reachable outputs. Dependent columns collapse it to a line: the machine can no longer produce most of the space. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="twokinds">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">02</span>
+      <h2>Two different things called "matrix"</h2>
+      <span class="srcref">src 01. properties</span>
+    </div>
+    <hr class="rule-h">
+    <p>
+      The source chapter opens with a matrix of three people &mdash; each row a person, each
+      column a feature &mdash; and later uses matrices as transformations. Both are standard.
+      But they are not the same kind of object, and conflating them is the most common
+      conceptual error a newcomer makes.
+    </p>
+  </div>
+
+  <div class="tw col">
+    <table>
+      <thead>
+        <tr><th></th><th>Operator matrix</th><th>Data matrix</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><b>Example</b></td><td>\(\boldsymbol{\sigma}\), \(I\), \(K\), \(R\), a layer's \(W\)</td><td>\(X\): 3 people &times; 3 features</td></tr>
+        <tr><td><b>What a row means</b></td><td>One output coordinate</td><td>One sample</td></tr>
+        <tr><td><b>What a column means</b></td><td>Where one input basis vector lands</td><td>One feature</td></tr>
+        <tr><td><b>Reorder the rows?</b></td><td>Changes the transformation</td><td>Harmless &mdash; sample order carries no meaning</td></tr>
+        <tr><td><b>Does \(A^2\) mean anything?</b></td><td>Yes &mdash; apply it twice</td><td>No. Usually not even conformable</td></tr>
+        <tr><td><b>Under a rotation \(R\)</b></td><td>Tensor: \(\boldsymbol{\sigma}'=R\boldsymbol{\sigma}R^T\)</td><td>Nothing. There is no rotation to apply</td></tr>
+      </tbody>
+      <caption>Same notation, same arithmetic, different semantics. Ask which one you are holding before you interpret any result.</caption>
+    </table>
+  </div>
+
+  <div class="col">
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>Where the analogy breaks &mdash; a tensor is more than a matrix</div>
+      <p>
+        Every stress tensor is a matrix, but not every matrix is a tensor. What makes
+        \(\boldsymbol{\sigma}\) a tensor is not its shape &mdash; it is that its components
+        obey a transformation law when you change frame:
+      </p>
+      <div class="mathbox">
+        $$\boldsymbol{\sigma}' = R\,\boldsymbol{\sigma}\,R^T$$
+      </div>
+      <p>
+        This law is what guarantees the physics is frame-independent: two engineers using
+        differently-oriented axes compute the same principal stresses and the same factor of
+        safety. It is also what Mohr's circle is a graphical solution of.
+      </p>
+      <p style="margin-bottom:0">
+        A data matrix obeys no such law. Its rows are people and its columns are
+        height and mass; there is no rotation to apply and no invariant to preserve. This is
+        Chapter 01's units warning, escalated: in mechanics your matrices carried physical
+        structure that constrained what operations were meaningful. In ML that structure is
+        usually absent, so the arithmetic will happily compute things that mean nothing. The
+        mathematics will not stop you. You have to.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="props">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">03</span>
+      <h2>Properties, and what each one tells you</h2>
+      <span class="srcref">src 01. properties</span>
+    </div>
+    <hr class="rule-h">
+    <p>
+      Each property below answers a specific question about the machine. Learn the question,
+      not the formula.
+    </p>
+
+    <h3>Rank &mdash; how much of the input survives</h3>
+    <p>
+      The <strong>rank</strong> is the number of linearly independent rows, which always equals
+      the number of linearly independent columns. It is the dimension of the column space: how
+      many genuinely distinct directions the machine can still produce on the way out.
+    </p>
+    <p>
+      The <strong>null space</strong> is everything sent to zero, and the two are tied together
+      by the <strong>rank&ndash;nullity theorem</strong>:
+    </p>
+    <div class="mathbox">
+      $$\operatorname{rank}(A)+\operatorname{nullity}(A)=\text{number of columns of } A$$
+    </div>
+    <p>What the machine keeps, plus what it destroys, equals what you gave it.</p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; rigid-body modes are a null space</div>
+      <p>
+        Assemble a finite element mesh and, before you apply any boundary conditions, the global
+        stiffness matrix \(K\) is <em>singular</em>. Every FEM course mentions this; few explain
+        it. The reason is that an unsupported structure can translate and rotate freely, and
+        those motions produce no strain, hence no force:
+      </p>
+      <div class="mathbox">
+        $$K\mathbf{u}_{\text{rigid}}=\mathbf{0}$$
+      </div>
+      <p style="margin-bottom:0">
+        The rigid-body modes <em>are</em> the null space of \(K\) &mdash; three of them in 2-D
+        (two translations, one rotation), six in 3-D. So
+        \(\operatorname{rank}(K)=n-3\) or \(n-6\), and the nullity is a number you can count off
+        the physics before ever running the solver. Applying enough constraints removes the null
+        space, and \(K\) becomes invertible and positive definite. If your solver reports a
+        singular stiffness matrix, it is telling you the structure is a mechanism.
+      </p>
+    </div>
+  </div>
+
+  <figure class="col">
+    <div class="paper">
+      <img src="img/matrix_rank.svg" alt="Independent rows spanning the full space against dependent rows spanning only a subspace" width="420">
+    </div>
+    <figcaption><b>Fig. 2.2</b> &mdash; Full rank against rank deficiency. The deficient matrix has thrown a dimension away, permanently. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+
+  <div class="col">
+    <h3>Determinant &mdash; the volume scale factor</h3>
+    <p>
+      For a \(2\times2\) matrix, \(\det\begin{bmatrix}a&b\\c&d\end{bmatrix}=ad-bc\) is the area
+      of the parallelogram the unit square becomes. Positive preserves orientation, negative
+      flips it, and zero means space has been flattened into a lower dimension.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; two determinants you already trust</div>
+      <p>
+        <b>The isoparametric Jacobian.</b> In FEM you map a parent element to a distorted real
+        element, and the integration carries a factor \(\det J\). Every textbook warns that
+        \(\det J\) must stay positive throughout the element; if it goes to zero or negative,
+        the element has folded and the results are garbage. That warning is exactly "a zero
+        determinant means the map collapsed and cannot be inverted".
+      </p>
+      <p style="margin-bottom:0">
+        <b>Robot singularities.</b> For a manipulator, \(\mathbf{v}=J\dot{\mathbf{q}}\). At a
+        configuration where \(\det J=0\) &mdash; an arm stretched straight, say &mdash; the
+        machine loses a degree of freedom: there is a direction the end effector simply cannot
+        move in, no matter what the joints do. That lost direction is the collapsed dimension
+        of the column space.
+      </p>
+    </div>
+  </div>
+
+  <figure class="col">
+    <div class="paper">
+      <img src="img/determinant.svg" alt="The determinant shown as the area scaling factor of a linear transformation" width="400">
+    </div>
+    <figcaption><b>Fig. 2.3</b> &mdash; The determinant as area scaling. You will see this live in the panel in &sect;06. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+
+  <div class="col">
+    <h3>Trace, norms, conditioning</h3>
+    <p>
+      The <strong>trace</strong> is the sum of the diagonal, and it equals the sum of the
+      eigenvalues. Crucially it is <em>basis-independent</em>: two matrices representing the
+      same transformation in different bases have the same trace. In mechanics you have used
+      this without naming it &mdash; the first stress invariant \(I_1=\sigma_x+\sigma_y+\sigma_z\)
+      is the trace of the stress tensor, and it is invariant precisely because trace is.
+      Hydrostatic pressure is \(-I_1/3\).
+    </p>
+    <p>
+      The <strong>Frobenius norm</strong> treats the matrix as one long vector,
+      \(\|A\|_F=\sqrt{\sum_{ij}A_{ij}^2}\); the <strong>spectral norm</strong> \(\|A\|_2\) is the
+      largest singular value, the most the machine can stretch any unit input. The
+      <strong>condition number</strong> combines them:
+    </p>
+    <div class="mathbox">
+      $$\kappa(A)=\|A\|\cdot\|A^{-1}\|=\frac{\sigma_{\max}}{\sigma_{\min}}$$
+    </div>
+    <p>
+      A well-conditioned matrix has \(\kappa\) near 1; an ill-conditioned one amplifies tiny
+      input errors enormously. You have met this as element distortion: a long sliver-shaped
+      element drives \(\kappa(K)\) up and the solution becomes round-off noise. The same number
+      appears in robotics as a dexterity measure, and in ML as a diagnosis of why training is
+      unstable.
+    </p>
+
+    <h3>Positive definiteness &mdash; stability</h3>
+    <p>
+      A symmetric \(A\) is <strong>positive definite</strong> when
+      \(\mathbf{x}^TA\mathbf{x}>0\) for every non-zero \(\mathbf{x}\), and
+      <strong>positive semi-definite</strong> when \(\ge 0\) is allowed.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; the quadratic form is strain energy</div>
+      <p style="margin-bottom:0">
+        The strain energy stored by a displacement \(\mathbf{u}\) is
+        \(U=\tfrac12\mathbf{u}^TK\mathbf{u}\). Requiring \(U>0\) for every non-zero
+        displacement &mdash; you cannot deform a stable structure and get energy out &mdash; is
+        <em>literally</em> the definition of positive definiteness. A positive definite \(K\)
+        means a stable equilibrium with a unique minimum-energy configuration; a semi-definite
+        one means some direction costs no energy, which is a rigid-body mode or a buckling
+        mode at its critical load. When ML says a positive definite Hessian guarantees a unique
+        minimum, it is making the same statement about the same kind of object.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="zoo">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">04</span>
+      <h2>The matrix zoo</h2>
+      <span class="srcref">src 02. matrix types</span>
+    </div>
+    <hr class="rule-h">
+    <p>
+      Special structure buys speed, guarantees, or both. The source chapter lists the types;
+      the column that matters for you is the third one, because in almost every case you have
+      already met the animal in the wild.
+    </p>
+  </div>
+
+  <div class="tw zoo">
+    <table>
+      <thead>
+        <tr><th>Type</th><th>Defining property</th><th>Where you have already met it</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Identity</td><td>\(AI=IA=A\)</td><td>The "do nothing" transform; the target of \(Q^TQ\)</td></tr>
+        <tr><td>Diagonal</td><td>Off-diagonal all zero</td><td>Inertia tensor written in principal axes &mdash; no products of inertia</td></tr>
+        <tr><td>Symmetric</td><td>\(A=A^T\)</td><td>Stress, strain, inertia, stiffness. \(K\) is symmetric by Maxwell&ndash;Betti reciprocity</td></tr>
+        <tr><td>Triangular</td><td>Zeros one side of the diagonal</td><td>What Gaussian elimination leaves you; solved by back substitution</td></tr>
+        <tr><td>Orthogonal</td><td>\(Q^TQ=I\), so \(Q^{-1}=Q^T\)</td><td>The direction cosine matrix of a rotated frame. Rigid, length-preserving</td></tr>
+        <tr><td>Positive definite</td><td>\(\mathbf{x}^TA\mathbf{x}>0\)</td><td>A properly constrained stiffness matrix. Strain energy is positive</td></tr>
+        <tr><td>Sparse</td><td>Mostly zeros</td><td>Global FEM stiffness &mdash; each node couples only to its neighbours</td></tr>
+        <tr><td>Permutation</td><td>A shuffled identity</td><td>Row swaps during pivoting; node renumbering to reduce bandwidth</td></tr>
+        <tr><td>Toeplitz</td><td>Constant along each diagonal</td><td>Sliding a fixed filter along a signal &mdash; i.e. convolution</td></tr>
+        <tr><td>Circulant</td><td>Each row a cyclic shift of the one above</td><td>Cyclically symmetric structures &mdash; a bladed turbine disk, solved by DFT</td></tr>
+        <tr><td>Idempotent</td><td>\(A^2=A\)</td><td>A projection. Projecting twice changes nothing</td></tr>
+        <tr><td>Vandermonde</td><td>Consecutive powers of a value set</td><td>Polynomial interpolation &mdash; deriving element shape functions</td></tr>
+        <tr><td>Boolean / adjacency</td><td>Only 0s and 1s</td><td>The element&ndash;node connectivity table of a mesh; a graph's edges</td></tr>
+        <tr><td>Hessenberg</td><td>Almost triangular</td><td>A staging post inside eigenvalue algorithms</td></tr>
+      </tbody>
+      <caption>Structure is not decoration. Each row above is a computational shortcut somebody exploits.</caption>
+    </table>
+  </div>
+
+  <figure class="col">
+    <div class="paper">
+      <img src="img/sparse_dense.svg" alt="A sparse matrix with few marked entries beside a dense one with most entries marked" width="400">
+    </div>
+    <figcaption><b>Fig. 2.4</b> &mdash; Sparse against dense. A million-node mesh has a million-square stiffness matrix with perhaps thirty nonzeros per row; no solver ever stores the rest. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="ops">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">05</span>
+      <h2>Operations, and what they cost</h2>
+      <span class="srcref">src 03. operations</span>
+    </div>
+    <hr class="rule-h">
+    <p>
+      Matrix multiplication \(C=AB\) puts a dot product in every cell:
+      \(C_{ij}=\sum_k A_{ik}B_{kj}\). Inner dimensions must match; the result takes the outer
+      ones. It is associative and distributive, but <strong>not commutative</strong> &mdash;
+      which you already accept, because rotating a part and then translating it is not the same
+      as translating then rotating.
+    </p>
+
+    <h3>The outer product, and why it is the whole of SVD</h3>
+    <p>
+      An <strong>outer product</strong> \(\mathbf{u}\mathbf{v}^T\) turns two vectors into a
+      matrix, and the result always has <strong>rank 1</strong> &mdash; every row is a scaled
+      copy of \(\mathbf{v}^T\).
+    </p>
+    <div class="mathbox">
+      $$\begin{bmatrix}1\\2\\3\end{bmatrix}\begin{bmatrix}4&5\end{bmatrix}
+        =\begin{bmatrix}4&5\\8&10\\12&15\end{bmatrix}$$
+    </div>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; you have assembled rank-1 matrices by hand</div>
+      <p>
+        Take a plane truss bar with direction cosines \((c,s)\), area \(A\), length \(L\). Its
+        element stiffness matrix in global coordinates is
+      </p>
+      <div class="mathbox">
+        $$k_e=\frac{EA}{L}\,\mathbf{b}\mathbf{b}^T,\qquad \mathbf{b}=(c,\;s,\;-c,\;-s)^T$$
+      </div>
+      <p style="margin-bottom:0">
+        That is an outer product, so \(k_e\) has rank 1 &mdash; a single bar resists motion along
+        exactly one direction and is blind to everything else. Assembling the global stiffness
+        matrix is summing one rank-1 contribution per bar. <strong>SVD runs this construction
+        backwards:</strong> hand it any matrix and it returns the best rank-1 pieces to build it
+        from, in order of importance. You already know the forward direction.
+      </p>
+    </div>
+
+    <h3>Cost</h3>
+    <p>
+      Multiplying two \(n\times n\) matrices naively takes \(O(n^3)\) operations. For the
+      \(4096\times4096\) matrices inside a large language model that is roughly
+      \(1.4\times10^{11}\) floating-point operations for a single layer's single multiply. This
+      is the entire reason GPUs exist in machine learning: the operation is enormous, perfectly
+      regular, and embarrassingly parallel.
+    </p>
+    <p>
+      When a matrix is sparse, naive multiplication wastes nearly all its effort on zeros.
+      <strong>Compressed Sparse Row</strong> stores only the nonzeros with their positions
+      &mdash; values, column indices, and row offsets. A banded FEM solver is the same idea,
+      arrived at independently by structural engineers decades earlier.
+    </p>
+    <p>
+      For solving \(A\mathbf{x}=\mathbf{b}\), note what the source chapter says and take it
+      seriously: <em>do not compute the inverse</em>. Forming \(A^{-1}\) is expensive and
+      numerically poor. Factor instead, which is &sect;08.
+    </p>
+  </div>
+</section>
+
+<section id="transforms">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">06</span>
+      <h2>Every matrix is a transformation</h2>
+      <span class="srcref">src 04. transformations</span>
+    </div>
+    <hr class="rule-h">
+    <p>
+      The key to reading any matrix by eye: <strong>its columns tell you where the basis
+      vectors land.</strong> For \(A=\begin{bmatrix}2&1\\1&2\end{bmatrix}\),
+      \(\hat{\mathbf{i}}\) goes to \((2,1)\) and \(\hat{\mathbf{j}}\) goes to \((1,2)\).
+      Linearity fixes everything else.
+    </p>
+    <p>
+      Drag those two landing points below and watch the machine change character. Everything in
+      &sect;03 is displayed live, including the eigenvectors from &sect;07.
+    </p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-h">
+      <span class="lab-t">Transformation playground</span>
+      <span class="lab-tag">Drag the column tips</span>
+    </div>
+    <div class="lab-body">
+      <svg class="stage" id="sT" viewBox="0 0 480 320" role="img"
+           aria-label="A unit square deformed into a parallelogram by a two by two matrix, with eigenvector directions marked">
+        <defs>
+          <marker id="tc1" markerWidth="9" markerHeight="7" refX="8.5" refY="3.5" orient="auto">
+            <polygon points="0,0 9,3.5 0,7" fill="var(--s2)"/>
+          </marker>
+          <marker id="tc2" markerWidth="9" markerHeight="7" refX="8.5" refY="3.5" orient="auto">
+            <polygon points="0,0 9,3.5 0,7" fill="var(--s1)"/>
+          </marker>
+        </defs>
+        <g id="gridT"></g>
+        <line id="axTx"/><line id="axTy"/>
+        <polygon id="unitSq" fill="none" stroke-width="1.5" stroke-dasharray="4 3"/>
+        <polygon id="imgSq" stroke-width="2"/>
+        <line id="ev1" stroke-width="1.75" stroke-dasharray="7 4"/>
+        <line id="ev2" stroke-width="1.75" stroke-dasharray="7 4"/>
+        <line id="colA" stroke-width="2.5" marker-end="url(#tc1)"/>
+        <line id="colB" stroke-width="2.5" marker-end="url(#tc2)"/>
+        <circle id="hdT1" r="8" stroke-width="2" style="cursor:grab"/>
+        <circle id="hdT2" r="8" stroke-width="2" style="cursor:grab"/>
+        <text id="lblT1" font-size="12" font-weight="700" font-family="IBM Plex Mono, monospace">col 1</text>
+        <text id="lblT2" font-size="12" font-weight="700" font-family="IBM Plex Mono, monospace">col 2</text>
+      </svg>
+      <div class="ctl">
+        <button class="btn" data-preset="rot" type="button">Rotation</button>
+        <button class="btn" data-preset="scale" type="button">Scaling</button>
+        <button class="btn" data-preset="shear" type="button">Shear</button>
+        <button class="btn" data-preset="reflect" type="button">Reflection</button>
+        <button class="btn" data-preset="sing" type="button">Singular</button>
+      </div>
+      <div class="readout">
+        <div class="ro"><div class="ro-k">Matrix A</div><div class="ro-v" id="oMat" style="font-size:12px">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">det A &nbsp;(area &times;)</div><div class="ro-v c" id="oDet">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">trace A</div><div class="ro-v" id="oTr">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">rank</div><div class="ro-v" id="oRank">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Eigenvalues</div><div class="ro-v a" id="oEig" style="font-size:12px">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Condition &kappa;</div><div class="ro-v" id="oCond">&mdash;</div></div>
+      </div>
+      <div class="legend">
+        <span class="lg"><i style="background:var(--s2)"></i>column 1 &middot; where <b>i</b> lands</span>
+        <span class="lg"><i style="background:var(--s1)"></i>column 2 &middot; where <b>j</b> lands</span>
+        <span class="lg"><i style="background:var(--s3)"></i>eigenvector directions</span>
+      </div>
+    </div>
+    <div class="lab-foot">
+      The green dashed rays are the <b>eigenvector directions</b> &mdash; the lines the machine
+      only stretches, never turns. Pick <b>Rotation</b> and they vanish: a rotation turns every
+      direction, so it has no real eigenvectors at all. Pick <b>Singular</b> and watch the
+      parallelogram flatten to a line, the determinant hit zero and the rank drop to 1. That
+      flattened state is a mechanism.
+    </div>
+  </div>
+
+  <div class="col">
+    <p>
+      Four named transformations account for most of what you will see. Note their determinants,
+      which tell you what each does to volume and orientation:
+    </p>
+  </div>
+
+  <div class="tw col">
+    <table>
+      <thead><tr><th>Transformation</th><th class="mono">Matrix</th><th class="mono">det</th><th>Effect</th></tr></thead>
+      <tbody>
+        <tr><td>Rotation by \(\theta\)</td><td class="mono">[[cos&theta;, &minus;sin&theta;], [sin&theta;, cos&theta;]]</td><td class="mono">+1</td><td>Rigid. Lengths and angles preserved</td></tr>
+        <tr><td>Scaling</td><td class="mono">[[s&#8339;, 0], [0, s&#7527;]]</td><td class="mono">s&#8339;s&#7527;</td><td>Stretch per axis. Diagonal is always scaling</td></tr>
+        <tr><td>Reflection</td><td class="mono">[[1, 0], [0, &minus;1]]</td><td class="mono">&minus;1</td><td>Rigid but orientation-flipping</td></tr>
+        <tr><td>Shear by \(k\)</td><td class="mono">[[1, k], [0, 1]]</td><td class="mono">+1</td><td>Slides layers. Area unchanged</td></tr>
+      </tbody>
+      <caption>Rotation and reflection are the orthogonal matrices: rigid transformations, determinant &plusmn;1.</caption>
+    </table>
+  </div>
+
+  <figure class="col">
+    <div class="paper">
+      <img src="img/shearing.svg" alt="A shape sheared so the top slides sideways while the base stays fixed" width="380">
+    </div>
+    <figcaption><b>Fig. 2.5</b> &mdash; Shear. This is not merely <i>like</i> shear strain, it is the same picture: \(k\) is the engineering shear strain \(\gamma\), and the area-preserving property is why pure shear causes no volume change. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+
+  <div class="col">
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>Where the analogy breaks &mdash; translation is not linear</div>
+      <p>
+        Rotation, scaling, reflection and shear all hold the origin fixed. Translation does not,
+        so it is <em>not</em> a linear transformation &mdash; shift everything right by 3 and the
+        zero vector moves to \((3,0)\), which no matrix can do. The fix is
+        <strong>homogeneous coordinates</strong>: append a 1 to every vector and work with an
+        \((n{+}1)\times(n{+}1)\) matrix,
+      </p>
+      <div class="mathbox">
+        $$\begin{bmatrix}A&\mathbf{t}\\ \mathbf{0}^T&1\end{bmatrix}
+          \begin{bmatrix}\mathbf{x}\\1\end{bmatrix}
+          =\begin{bmatrix}A\mathbf{x}+\mathbf{t}\\1\end{bmatrix}$$
+      </div>
+      <p style="margin-bottom:0">
+        If you have seen Denavit&ndash;Hartenberg matrices in kinematics, you have used this
+        exact trick: the \(4\times4\) transform that carries one joint frame to the next is a
+        rotation block plus a translation column plus a bottom row of \((0,0,0,1)\). It is also
+        why a neural network layer is written \(W\mathbf{x}+\mathbf{b}\) &mdash; the bias
+        \(\mathbf{b}\) is a translation, and the layer is affine rather than linear.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="eigen">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">07</span>
+      <h2>Eigenvectors: the directions a machine respects</h2>
+      <span class="srcref">src 05. decompositions</span>
+    </div>
+    <hr class="rule-h">
+    <p>
+      Most vectors come out of a matrix pointing somewhere new. <strong>Eigenvectors</strong>
+      are the exceptions &mdash; the directions the machine only stretches:
+    </p>
+    <div class="mathbox">
+      $$A\mathbf{x}=\lambda\mathbf{x}$$
+    </div>
+    <p>
+      The scalar \(\lambda\) is the <strong>eigenvalue</strong>, the stretch factor. Find them by
+      solving the characteristic equation \(\det(A-\lambda I)=0\), then substitute each root back
+      to get its eigenvector. Two facts worth holding: the trace equals the sum of the
+      eigenvalues, and the determinant equals their product.
+    </p>
+    <p>
+      For <strong>symmetric</strong> matrices &mdash; which is nearly everything in mechanics
+      &mdash; the <strong>spectral theorem</strong> guarantees that the eigenvalues are real and
+      the eigenvectors are mutually perpendicular. That guarantee is why principal axes are
+      always at right angles, a fact you have used for years without being shown why it must
+      hold.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; three eigenproblems you have already solved</div>
+      <p>
+        <b>Principal stresses.</b> A principal plane is one carrying no shear &mdash; the
+        traction is purely normal. Written out, "traction parallel to the normal" is
+        \(\boldsymbol{\sigma}\hat{\mathbf{n}}=\lambda\hat{\mathbf{n}}\). The principal stresses
+        are eigenvalues and the principal directions are eigenvectors, exactly. Mohr's circle is
+        a nomogram for the \(2\times2\) case.
+      </p>
+      <p>
+        <b>Rotor balancing.</b> Angular momentum is \(\mathbf{H}=I\boldsymbol{\omega}\). Spin a
+        rotor about an arbitrary axis and \(\mathbf{H}\) is not parallel to
+        \(\boldsymbol{\omega}\), so \(\mathbf{H}\) sweeps round as the rotor turns, and
+        \(\mathrm{d}\mathbf{H}/\mathrm{d}t\) shows up as a rotating reaction in the bearings.
+        That is dynamic imbalance. It vanishes precisely when \(\boldsymbol{\omega}\) lies along
+        an eigenvector of \(I\) &mdash; a principal axis, where the products of inertia are
+        zero. <em>Balancing a rotor is making its spin axis an eigenvector.</em>
+      </p>
+      <p style="margin-bottom:0">
+        <b>Mode shapes.</b> Free vibration of a multi-degree-of-freedom system gives
+        \((K-\omega^2M)\boldsymbol{\phi}=\mathbf{0}\), a generalised eigenvalue problem
+        \(K\boldsymbol{\phi}=\omega^2M\boldsymbol{\phi}\). Natural frequencies come from the
+        eigenvalues, mode shapes are the eigenvectors, and the modes are orthogonal with
+        respect to \(M\) &mdash; which is exactly what lets you decouple the equations of motion
+        and solve each mode independently.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab">
+    <div class="lab-h">
+      <span class="lab-t">Hunting the principal axis</span>
+      <span class="lab-tag">Sweep the input direction</span>
+    </div>
+    <div class="lab-body">
+      <svg class="stage" id="sE" viewBox="0 0 480 320" role="img"
+           aria-label="An input direction swept around a circle beside the output it produces, which aligns with the input only along the principal axes">
+        <defs>
+          <marker id="ev-in" markerWidth="9" markerHeight="7" refX="8.5" refY="3.5" orient="auto">
+            <polygon points="0,0 9,3.5 0,7" fill="var(--s2)"/>
+          </marker>
+          <marker id="ev-out" markerWidth="9" markerHeight="7" refX="8.5" refY="3.5" orient="auto">
+            <polygon points="0,0 9,3.5 0,7" fill="var(--s1)"/>
+          </marker>
+        </defs>
+        <g id="gridEv"></g>
+        <line id="axEvx"/><line id="axEvy"/>
+        <ellipse id="ellEv" fill="none" stroke-width="1.5" stroke-dasharray="4 4"/>
+        <line id="pax1" stroke-width="1.75" stroke-dasharray="7 4"/>
+        <line id="pax2" stroke-width="1.75" stroke-dasharray="7 4"/>
+        <line id="vIn" stroke-width="2.5" marker-end="url(#ev-in)"/>
+        <line id="vOut" stroke-width="2.5" marker-end="url(#ev-out)"/>
+        <text id="evMsg" font-size="13" font-weight="700" font-family="Archivo Narrow, sans-serif" text-anchor="middle"></text>
+      </svg>
+      <div class="ctl">
+        <label for="angSlider">Input angle</label>
+        <input type="range" id="angSlider" min="0" max="360" value="20" step="0.5">
+        <span class="ro-v" id="angVal" style="min-width:62px">20&deg;</span>
+        <button class="btn" id="snapAx" type="button">Snap to principal axis</button>
+      </div>
+      <div class="readout">
+        <div class="ro"><div class="ro-k">Input &omega;</div><div class="ro-v a" id="oIn">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Output I&omega;</div><div class="ro-v b" id="oOut">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Misalignment</div><div class="ro-v" id="oMis">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Stretch |I&omega;|/|&omega;|</div><div class="ro-v c" id="oStr">&mdash;</div></div>
+      </div>
+      <div class="legend">
+        <span class="lg"><i style="background:var(--s2)"></i>input &omega;</span>
+        <span class="lg"><i style="background:var(--s1)"></i>output I&omega;</span>
+        <span class="lg"><i style="background:var(--s3)"></i>principal axes</span>
+      </div>
+    </div>
+    <div class="lab-foot">
+      Read the blue arrow as an angular velocity and the orange as the resulting angular
+      momentum, with \(I=\begin{bmatrix}4&1.2\\1.2&2\end{bmatrix}\). Almost everywhere they
+      disagree, and that misalignment is what the bearings feel once per revolution. At exactly
+      two angles the misalignment drops to zero: the <b>principal axes</b>, the eigenvectors.
+      The dashed ellipse traces every possible output.
+    </div>
+  </div>
+
+  <figure class="col">
+    <div class="paper">
+      <img src="img/eigenvector.svg" alt="An eigenvector staying on its own line while an ordinary vector is rotated by the transformation" width="400">
+    </div>
+    <figcaption><b>Fig. 2.6</b> &mdash; An eigenvector keeps its line; an ordinary vector is turned off it. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+
+  <div class="col">
+    <h3>Diagonalisation &mdash; why anyone bothers</h3>
+    <p>
+      If \(A\) has a full set of independent eigenvectors it can be written \(A=PDP^{-1}\), with
+      \(D\) diagonal and the columns of \(P\) the eigenvectors. In that basis the machine is
+      just independent scaling along each eigen-direction &mdash; the coupling is gone.
+    </p>
+    <p>
+      That is the same move as writing the inertia tensor in principal axes so the products of
+      inertia vanish, and the same move as modal decomposition in vibration, where coupled
+      equations of motion become one independent oscillator per mode. It also makes powers
+      trivial: \(A^{100}=PD^{100}P^{-1}\), and raising a diagonal matrix to a power just raises
+      each entry.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>Where the analogy breaks &mdash; ML matrices are rarely symmetric or square</div>
+      <p>
+        Nearly every matrix in your training was square and symmetric, so you may have absorbed
+        the spectral theorem's guarantees as if they were universal. They are not. A neural
+        network weight matrix might be \(4096\times11008\) &mdash; not square, so it has no
+        eigenvalues at all. Even square ML matrices are usually non-symmetric, and then
+        eigenvalues can be complex and eigenvectors need not be orthogonal.
+      </p>
+      <p style="margin-bottom:0">
+        This is exactly why <strong>SVD</strong>, not eigendecomposition, is the workhorse in
+        machine learning: every matrix of every shape has one.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="decomp">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">08</span>
+      <h2>Decompositions</h2>
+      <span class="srcref">src 05. decompositions</span>
+    </div>
+    <hr class="rule-h">
+    <p>
+      Factoring a matrix is like factoring a number: \(12=3\times4\) is easier to reason about
+      than 12. The goal is almost always to reach triangular factors, because triangular systems
+      solve instantly by substitution.
+    </p>
+
+    <h3>LU and Cholesky &mdash; the FEM solver you have already run</h3>
+    <p>
+      <strong>LU</strong> formalises Gaussian elimination as \(A=LU\). To solve
+      \(A\mathbf{x}=\mathbf{b}\), first solve \(L\mathbf{y}=\mathbf{b}\) downward by forward
+      substitution, then \(U\mathbf{x}=\mathbf{y}\) upward by back substitution. Two easy solves
+      instead of one hard one.
+    </p>
+    <p>
+      When the matrix is symmetric and positive definite &mdash; a constrained stiffness matrix,
+      a covariance matrix &mdash; <strong>Cholesky</strong> does better: \(A=LL^T\), about twice
+      as fast and unconditionally stable. If it fails partway, with a negative number under a
+      square root, the matrix was not positive definite, so Cholesky doubles as a stability test.
+    </p>
+  </div>
+
+  <figure>
+    <div class="paper">
+      <svg viewBox="0 0 760 250" role="img" style="max-width:100%;height:auto"
+           aria-label="A stiffness matrix factorised once, then reused for many load cases, each costing only two substitutions"
+           fill="none" stroke="#1b1b1b" font-family="Archivo Narrow, Arial Narrow, sans-serif">
+        <defs>
+          <marker id="dcArr" markerWidth="9" markerHeight="7" refX="8.5" refY="3.5" orient="auto">
+            <polygon points="0,0 9,3.5 0,7" fill="#1b1b1b" stroke="none"/>
+          </marker>
+        </defs>
+        <rect x="16" y="90" width="150" height="66" rx="3" fill="#ffffff" stroke="#1b1b1b" stroke-width="2"/>
+        <text x="91" y="116" text-anchor="middle" font-size="14" font-weight="700" fill="#1b1b1b" stroke="none">Stiffness K</text>
+        <text x="91" y="136" text-anchor="middle" font-size="11" fill="#555" stroke="none">symmetric, positive definite</text>
+
+        <line x1="166" y1="123" x2="230" y2="123" stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#dcArr)"/>
+        <text x="198" y="114" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">factor</text>
+        <text x="198" y="140" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">ONCE</text>
+
+        <rect x="242" y="90" width="150" height="66" rx="3" fill="#f2f2f0" stroke="#1b1b1b" stroke-width="2"/>
+        <text x="317" y="116" text-anchor="middle" font-size="14" font-weight="700" fill="#1b1b1b" stroke="none">K = L L&#7488;</text>
+        <text x="317" y="136" text-anchor="middle" font-size="11" fill="#555" stroke="none">cost ~ n&#179;/3</text>
+
+        <line x1="392" y1="123" x2="430" y2="123" stroke="#1b1b1b" stroke-width="1.5"/>
+        <line x1="430" y1="40" x2="430" y2="206" stroke="#1b1b1b" stroke-width="1.5"/>
+        <line x1="430" y1="40"  x2="486" y2="40"  stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#dcArr)"/>
+        <line x1="430" y1="123" x2="486" y2="123" stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#dcArr)"/>
+        <line x1="430" y1="206" x2="486" y2="206" stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#dcArr)"/>
+
+        <rect x="498" y="14" width="246" height="52" rx="3" fill="#ffffff" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="621" y="35" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1b1b1b" stroke="none">Load case 1 &#8594; u&#8321;</text>
+        <text x="621" y="53" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">two substitutions, cost ~ n&#178;</text>
+
+        <rect x="498" y="97" width="246" height="52" rx="3" fill="#ffffff" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="621" y="118" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1b1b1b" stroke="none">Load case 2 &#8594; u&#8322;</text>
+        <text x="621" y="136" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">two substitutions, cost ~ n&#178;</text>
+
+        <rect x="498" y="180" width="246" height="52" rx="3" fill="#ffffff" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="621" y="201" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1b1b1b" stroke="none">Load case 1000 &#8594; u&#8321;&#8320;&#8320;&#8320;</text>
+        <text x="621" y="219" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">two substitutions, cost ~ n&#178;</text>
+      </svg>
+    </div>
+    <figcaption><b>Fig. 2.7</b> &mdash; Why factorisation beats inversion. The expensive step runs once; each additional load case then costs \(O(n^2)\) rather than \(O(n^3)\). This is why a structural solver can sweep a thousand load combinations in the time one full solve would take, and why ML libraries factor rather than invert.</figcaption>
+  </figure>
+
+  <div class="col">
+    <h3>QR</h3>
+    <p>
+      \(A=QR\) splits any matrix into an orthogonal \(Q\) &mdash; pure direction information,
+      rigid, cheap to invert by transposing &mdash; and an upper triangular \(R\) carrying the
+      scaling and mixing. Gram&ndash;Schmidt builds \(Q\) one column at a time: take a column,
+      subtract its projection onto everything already accepted, normalise what is left. QR drives
+      the standard eigenvalue algorithm and solves least-squares problems, which is how you fit a
+      line through more data points than unknowns.
+    </p>
+
+    <h3>SVD &mdash; and the polar decomposition you already know</h3>
+    <p>
+      Every matrix, any shape, any rank, factors as \(A=U\Sigma V^T\): an input rotation, a
+      stretch along orthogonal axes, an output rotation. Geometrically, every linear
+      transformation maps a circle to an ellipse. The singular values
+      \(\sigma_1\ge\sigma_2\ge\cdots\) are the semi-axes, and the number of nonzero ones is the
+      rank.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; the strain ellipse is the SVD picture</div>
+      <p>
+        Continuum mechanics decomposes the deformation gradient into
+        \(F=RU\): a rotation \(R\) and a symmetric positive definite right stretch tensor \(U\).
+        This <strong>polar decomposition</strong> separates "how much the material turned" from
+        "how much it actually stretched", which is what lets you define strain that ignores rigid
+        rotation.
+      </p>
+      <p>
+        SVD <em>is</em> that decomposition. Write \(F=W\Sigma Z^T\); then
+      </p>
+      <div class="mathbox">
+        $$R=WZ^T,\qquad U=Z\Sigma Z^T,\qquad RU=WZ^TZ\Sigma Z^T=W\Sigma Z^T=F$$
+      </div>
+      <p style="margin-bottom:0">
+        The singular values are the <strong>principal stretches</strong> \(\lambda_1,\lambda_2\),
+        and the circle-to-ellipse drawing in every SVD tutorial is the strain ellipse from your
+        continuum mechanics notes. Same theorem, two vocabularies.
+      </p>
+    </div>
+  </div>
+
+  <figure class="col">
+    <div class="paper">
+      <img src="img/svd.svg" alt="A transformation broken into a rotation, a scaling along axes, and a second rotation" width="430">
+    </div>
+    <figcaption><b>Fig. 2.8</b> &mdash; \(A=U\Sigma V^T\): rotate, stretch, rotate. Read \(\Sigma\) as the principal stretches. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+
+  <div class="col">
+    <h3>Low-rank approximation</h3>
+    <p>
+      Keep only the \(k\) largest singular values and you get the <em>best possible</em> rank-\(k\)
+      approximation of \(A\) &mdash; best in the least-squares sense, guaranteed by the
+      Eckart&ndash;Young theorem. That single fact underlies image compression, recommender
+      systems, noise reduction and the LoRA fine-tuning method used on large language models.
+    </p>
+    <p>
+      Rather than take that on trust, compress something. The panel below runs a real SVD in your
+      browser on a 64&times;64 drawing of a flange, and rebuilds it from the top \(k\) rank-1
+      outer products &mdash; the same outer products you assemble stiffness matrices from in
+      &sect;05.
+    </p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-h">
+      <span class="lab-t">Rank-k compression, computed live</span>
+      <span class="lab-tag">Drag k</span>
+    </div>
+    <div class="lab-body">
+      <div class="split">
+        <div class="canvwrap">
+          <canvas id="cvOrig" width="64" height="64"></canvas>
+          <span class="canvlabel">Original &middot; rank 64</span>
+        </div>
+        <div class="canvwrap">
+          <canvas id="cvApprox" width="64" height="64"></canvas>
+          <span class="canvlabel" id="apxLabel">Rebuilt &middot; rank 6</span>
+        </div>
+      </div>
+      <div class="ctl">
+        <label for="kSlider">Components k</label>
+        <input type="range" id="kSlider" min="1" max="40" value="6" step="1">
+        <span class="ro-v" id="kVal" style="min-width:56px">k = 6</span>
+      </div>
+      <div class="readout">
+        <div class="ro"><div class="ro-k">Numbers stored</div><div class="ro-v" id="oStore">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">vs. 4096 original</div><div class="ro-v c" id="oRatio">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Relative error</div><div class="ro-v a" id="oErr">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">&sigma;&#8342; / &sigma;&#8321;</div><div class="ro-v" id="oSig">&mdash;</div></div>
+      </div>
+    </div>
+    <div class="lab-foot">
+      Storing a rank-\(k\) version costs \(k(64+64+1)=129k\) numbers against the original 4096, so
+      the saving disappears near \(k=32\) &mdash; push the slider up and watch the ratio fall
+      through 1&times;. Notice also <b>what</b> returns first: the hub and the straight keyway
+      appear at low \(k\), while the round bolt holes need far more. Axis-aligned structure is
+      cheap in this basis; rotational symmetry is expensive. Compression is never free, and never
+      neutral about what it preserves.
+    </div>
+  </div>
+
+  <figure class="col">
+    <div class="paper">
+      <img src="img/pca.svg" alt="A cloud of data points with the directions of greatest variance drawn through it" width="400">
+    </div>
+    <figcaption><b>Fig. 2.9</b> &mdash; PCA: standardise, form the covariance matrix, take its eigenvectors, keep the largest. The first component is the direction of greatest variance &mdash; the same calculation as finding a principal axis of inertia, run on data instead of mass. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="nonlinear">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">09</span>
+      <h2>Why depth needs a kink</h2>
+      <span class="srcref">src 04 &middot; corrected</span>
+    </div>
+    <hr class="rule-h">
+    <p>
+      The source chapter closes by saying that today's leading models "almost exclusively pass
+      the data through a bunch of linear transformations, we call these Transformers." The
+      spirit is right &mdash; matrix multiplication really is where the arithmetic goes &mdash;
+      but taken literally the claim cannot be true, and seeing why is worth more than the claim.
+    </p>
+    <p>
+      Stack two linear layers. The first sends \(\mathbf{x}\mapsto W_1\mathbf{x}\), the second
+      \(\mathbf{y}\mapsto W_2\mathbf{y}\). Composing them:
+    </p>
+    <div class="mathbox">
+      $$W_2(W_1\mathbf{x})=(W_2W_1)\mathbf{x}=W\mathbf{x}$$
+    </div>
+    <p>
+      Matrix multiplication is associative, so the pair collapses into a <em>single</em> matrix
+      \(W=W_2W_1\). Stack a hundred layers and they collapse to one. A purely linear deep
+      network has exactly the expressive power of a one-layer linear network, no matter how deep
+      or wide &mdash; all those parameters buy nothing.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; springs in series are still a spring</div>
+      <p>
+        You already believe this result. Put two linear springs in series and the combination is
+        a linear spring, \(1/k_{\text{eq}}=1/k_1+1/k_2\). Add a thousand more and it is still
+        just a linear spring with some other stiffness. Linear elements compose to a linear
+        element; you never get qualitatively new behaviour by stacking them.
+      </p>
+      <p style="margin-bottom:0">
+        Everything genuinely interesting in structural mechanics &mdash; plasticity, contact,
+        buckling, large deflection &mdash; requires a <em>nonlinearity</em> somewhere: a
+        material law that bends, or a geometry that changes as it loads.
+      </p>
+    </div>
+
+    <p>
+      Neural networks solve it the same way, by inserting an element-wise nonlinear function
+      between the matrix multiplications:
+    </p>
+    <div class="mathbox">
+      $$\mathbf{h}=\phi(W_1\mathbf{x}+\mathbf{b}_1),\qquad
+        \mathbf{y}=W_2\mathbf{h}+\mathbf{b}_2$$
+    </div>
+    <p>
+      With \(\phi\) present, \(W_2\phi(W_1\mathbf{x})\) cannot be rewritten as a single matrix,
+      and depth starts buying real expressive power. The most common choice is
+      <strong>ReLU</strong>:
+    </p>
+    <div class="mathbox">
+      $$\phi(z)=\max(0,z)$$
+    </div>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; ReLU is a tension-only member</div>
+      <p style="margin-bottom:0">
+        Look at that formula again: pass positive values through, return zero for negative ones.
+        That is exactly the constitutive law of a <strong>cable that can pull but not push</strong>,
+        or of a <strong>gap element</strong> in contact analysis &mdash; carries load one way,
+        goes slack the other. If you have ever run a nonlinear FEM model with tension-only
+        bracing, you have solved a system full of ReLUs. It is the same kink, introduced for the
+        same reason: a piecewise-linear element is the cheapest way to buy genuine nonlinearity.
+      </p>
+    </div>
+
+    <p>
+      So what is actually inside a transformer? Matrix multiplications carrying nearly all the
+      arithmetic, yes &mdash; but also a <strong>softmax</strong> inside every attention block, a
+      <strong>GELU</strong> or similar in every feed-forward block, and <strong>layer
+      normalisation</strong> throughout. Attention is nonlinear in a second way too: in
+      \(\operatorname{softmax}\!\left(QK^T/\sqrt{d_k}\right)V\) the input appears both in the
+      weights and in the values being weighted, so the block is not even linear before the
+      softmax is applied.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>Keep both halves of this</div>
+      <p style="margin-bottom:0">
+        Do not over-correct. The engineering claim behind the source chapter's sentence is
+        accurate and important: well over 90% of the floating-point work in a transformer is
+        matrix multiplication, which is why this chapter matters and why GPUs are built the way
+        they are. The nonlinearities are computationally trivial and functionally essential.
+        Cheap to run, impossible to remove.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="worked">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">10</span>
+      <h2>One matrix, two readings</h2>
+    </div>
+    <hr class="rule-h">
+    <p>
+      Take the matrix from the eigenvector panel and work it completely.
+    </p>
+    <div class="mathbox">
+      $$A=\begin{bmatrix}4&1.2\\1.2&2\end{bmatrix}$$
+    </div>
+
+    <h3>The arithmetic</h3>
+    <p>
+      Trace \(=4+2=6\); determinant \(=4(2)-1.2^2=8-1.44=6.56\). The characteristic equation is
+      \(\lambda^2-6\lambda+6.56=0\), so
+    </p>
+    <div class="mathbox">
+      $$\lambda=\frac{6\pm\sqrt{36-26.24}}{2}=\frac{6\pm 3.1241}{2}
+        \;\Rightarrow\; \lambda_1=4.5620,\quad \lambda_2=1.4380$$
+    </div>
+    <p>
+      Check both invariants: \(\lambda_1+\lambda_2=6.000\) matches the trace, and
+      \(\lambda_1\lambda_2=6.560\) matches the determinant. Eigenvectors follow from
+      \((A-\lambda I)\mathbf{v}=\mathbf{0}\):
+    </p>
+    <div class="mathbox">
+      $$\hat{\mathbf{v}}_1=(0.9056,\;0.4241)\ \text{at } 25.10^\circ,\qquad
+        \hat{\mathbf{v}}_2=(0.4241,\;-0.9056)\ \text{at } -64.90^\circ$$
+    </div>
+    <p>
+      They are exactly \(90^\circ\) apart and \(\hat{\mathbf{v}}_1\cdot\hat{\mathbf{v}}_2=0\),
+      as the spectral theorem promises for a symmetric matrix. Both eigenvalues are positive, so
+      \(A\) is positive definite &mdash; confirmed independently by Sylvester's criterion, since
+      the leading minors \(4\) and \(6.56\) are both positive. The condition number is
+      \(\kappa=\lambda_1/\lambda_2=3.17\): well conditioned.
+    </p>
+  </div>
+
+  <div class="tw col">
+    <table>
+      <thead>
+        <tr><th>Quantity</th><th>Read as an inertia tensor</th><th>Read as a covariance matrix</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="mono">\(\lambda_1=4.562\)</td><td>Larger principal moment of inertia, kg&middot;m&sup2;</td><td>Variance along the first principal component</td></tr>
+        <tr><td class="mono">\(\hat{\mathbf{v}}_1\) at 25.1&deg;</td><td>A principal axis &mdash; spin here and the bearings stay quiet</td><td>PC1 &mdash; the direction the data actually varies along</td></tr>
+        <tr><td class="mono">\(\lambda_2=1.438\)</td><td>Smaller principal moment</td><td>Variance along PC2</td></tr>
+        <tr><td class="mono">off-diagonal 1.2</td><td>Product of inertia &mdash; the source of imbalance</td><td>Covariance &mdash; the two features are correlated</td></tr>
+        <tr><td class="mono">\(\lambda_1/(\lambda_1{+}\lambda_2)\)</td><td>Share of inertia on the major axis: 76.0%</td><td>Variance explained by PC1: <b>76.0%</b></td></tr>
+        <tr><td class="mono">Diagonalising</td><td>Choosing principal axes: products of inertia vanish</td><td>Running PCA: features become uncorrelated</td></tr>
+      </tbody>
+      <caption>
+        Identical arithmetic, start to finish. Balancing a rotor and running PCA are the same
+        computation; only the units on the answer differ.
+      </caption>
+    </table>
+  </div>
+
+  <div class="col">
+    <p>
+      If you keep only PC1 you have compressed two features into one and retained 76% of the
+      variance &mdash; which is the rank-1 approximation from &sect;08, arrived at from the other
+      direction. And discarding PC2 is the same act as ignoring the minor principal moment:
+      defensible when it is small, destructive when it is not.
+    </p>
+  </div>
+</section>
+
+<section id="recall">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">11</span>
+      <h2>Shadow reading</h2>
+    </div>
+    <hr class="rule-h">
+    <p>Prompt, close the page, write the full answer, then check. Writing is the part that works.</p>
+  </div>
+
+  <div class="col">
+    <details class="q"><summary><span class="qn">Q1</span><span>Why is an unconstrained FEM stiffness matrix singular, and what is its nullity?</span></summary>
+      <div class="ans"><p>Rigid-body motions produce no strain and therefore no force, so \(K\mathbf{u}_{\text{rigid}}=\mathbf{0}\) — those motions are the null space. The nullity is 3 in 2-D (two translations, one rotation) and 6 in 3-D, so \(\operatorname{rank}(K)=n-3\) or \(n-6\). Applying enough boundary conditions removes the null space and makes \(K\) positive definite.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">Q2</span><span>Give two matrices with the same entries whose semantics are completely different.</span></summary>
+      <div class="ans"><p>An operator matrix (stress tensor, stiffness, a layer's \(W\)) versus a data matrix (rows = samples, columns = features). For the operator, reordering rows changes the transformation and \(A^2\) is meaningful; for the data matrix, sample order carries no meaning and \(X^2\) is usually not even conformable. Only the operator obeys a tensor transformation law under a change of frame.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">Q3</span><span>What makes a stress tensor more than "a 3×3 matrix"?</span></summary>
+      <div class="ans"><p>Its components obey \(\boldsymbol{\sigma}'=R\boldsymbol{\sigma}R^T\) under a change of frame. That law is what makes the physics frame-independent — two engineers with different axes get the same principal stresses. A data matrix obeys no such law, so operations that are meaningful on a tensor may be meaningless on it.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">Q4</span><span>State rotor balancing as an eigenvalue statement.</span></summary>
+      <div class="ans"><p>\(\mathbf{H}=I\boldsymbol{\omega}\). Dynamic imbalance is \(\mathbf{H}\) not being parallel to \(\boldsymbol{\omega}\), so \(\mathbf{H}\) sweeps round and the bearings see a rotating reaction. It vanishes exactly when \(I\boldsymbol{\omega}=\lambda\boldsymbol{\omega}\) — when the spin axis is an eigenvector of the inertia tensor, i.e. a principal axis with zero products of inertia.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">Q5</span><span>Why is a truss element's stiffness matrix rank 1, and what does SVD do with that idea?</span></summary>
+      <div class="ans"><p>\(k_e=\frac{EA}{L}\mathbf{b}\mathbf{b}^T\) is an outer product, and every outer product has rank 1 — one bar resists motion along one direction only. Assembling \(K\) sums one rank-1 piece per bar. SVD inverts the process: given any matrix, it returns the best rank-1 outer products to rebuild it from, ordered by importance.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">Q6</span><span>Why is SVD, not eigendecomposition, the workhorse of ML?</span></summary>
+      <div class="ans"><p>Eigendecomposition needs a square matrix, and its clean guarantees (real eigenvalues, orthogonal eigenvectors) need symmetry. ML matrices are typically rectangular — a weight matrix might be \(4096\times11008\) — and rarely symmetric when square. Every matrix of every shape has an SVD, so it always applies.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">Q7</span><span>Connect polar decomposition to SVD.</span></summary>
+      <div class="ans"><p>Polar decomposition splits the deformation gradient as \(F=RU\): rotation times right stretch tensor. Writing \(F=W\Sigma Z^T\) gives \(R=WZ^T\) and \(U=Z\Sigma Z^T\), and \(RU=F\). The singular values are the principal stretches, and the SVD circle-to-ellipse drawing is the strain ellipse.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">Q8</span><span>Why does a hundred-layer purely linear network have the power of one layer?</span></summary>
+      <div class="ans"><p>Matrix multiplication is associative, so \(W_{100}\cdots W_1\mathbf{x}=(W_{100}\cdots W_1)\mathbf{x}=W\mathbf{x}\) — a single matrix. Same reason linear springs in series are still a linear spring. Depth only buys expressive power once a nonlinearity sits between the layers.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">Q9</span><span>What structural element has the same constitutive law as ReLU?</span></summary>
+      <div class="ans"><p>A tension-only member (a cable, slack in compression) or a gap/contact element. \(\phi(z)=\max(0,z)\) passes load one way and returns zero the other — the identical piecewise-linear kink, introduced for the identical reason.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">Q10</span><span>Rank-\(k\) approximation of a \(64\times64\) image: at what \(k\) does compression stop saving anything, and why?</span></summary>
+      <div class="ans"><p>Storing \(k\) triplets costs \(k(64+64+1)=129k\) numbers against 4096, so the saving vanishes near \(k=32\). Beyond that you store more than the original. There is also a qualitative cost: low-rank bases favour axis-aligned structure, so straight features return at low \(k\) while curved, rotationally symmetric ones need many more.</p></div>
+    </details>
+  </div>
+</section>
+
+<section id="next">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">12</span>
+      <h2>What this chapter feeds</h2>
+    </div>
+    <hr class="rule-h">
+  </div>
+
+  <figure>
+    <div class="paper">
+      <svg viewBox="0 0 780 430" role="img" style="max-width:100%;height:auto"
+           aria-label="A matrix branches into four capabilities, each feeding a named technique in a later chapter"
+           fill="none" stroke="#1b1b1b" font-family="Archivo Narrow, Arial Narrow, sans-serif">
+        <defs>
+          <marker id="cm2" markerWidth="9" markerHeight="7" refX="8.5" refY="3.5" orient="auto">
+            <polygon points="0,0 9,3.5 0,7" fill="#1b1b1b" stroke="none"/>
+          </marker>
+        </defs>
+
+        <rect x="18" y="170" width="132" height="76" rx="3" fill="#ffffff" stroke="#1b1b1b" stroke-width="2"/>
+        <text x="84" y="200" text-anchor="middle" font-size="14" font-weight="700" fill="#1b1b1b" stroke="none">Matrix as</text>
+        <text x="84" y="220" text-anchor="middle" font-size="14" font-weight="700" fill="#1b1b1b" stroke="none">a machine</text>
+        <text x="84" y="238" text-anchor="middle" font-size="10" fill="#666" stroke="none">CHAPTER 02</text>
+
+        <line x1="150" y1="208" x2="190" y2="208" stroke="#1b1b1b" stroke-width="1.5"/>
+        <line x1="190" y1="53" x2="190" y2="341" stroke="#1b1b1b" stroke-width="1.5"/>
+        <line x1="190" y1="53"  x2="226" y2="53"  stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cm2)"/>
+        <line x1="190" y1="149" x2="226" y2="149" stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cm2)"/>
+        <line x1="190" y1="245" x2="226" y2="245" stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cm2)"/>
+        <line x1="190" y1="341" x2="226" y2="341" stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cm2)"/>
+
+        <rect x="238" y="22" width="170" height="62" rx="3" fill="#ffffff" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="323" y="47" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">Matrix multiply</text>
+        <text x="323" y="67" text-anchor="middle" font-size="11" fill="#555" stroke="none">O(n&#179;), perfectly parallel</text>
+
+        <rect x="238" y="118" width="170" height="62" rx="3" fill="#ffffff" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="323" y="143" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">Eigendecomposition</text>
+        <text x="323" y="163" text-anchor="middle" font-size="11" fill="#555" stroke="none">principal directions</text>
+
+        <rect x="238" y="214" width="170" height="62" rx="3" fill="#ffffff" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="323" y="239" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">SVD</text>
+        <text x="323" y="259" text-anchor="middle" font-size="11" fill="#555" stroke="none">best rank-k pieces</text>
+
+        <rect x="238" y="310" width="170" height="62" rx="3" fill="#ffffff" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="323" y="335" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">Conditioning</text>
+        <text x="323" y="355" text-anchor="middle" font-size="11" fill="#555" stroke="none">&#954; = &#963;max / &#963;min</text>
+
+        <line x1="408" y1="53"  x2="514" y2="53"  stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cm2)"/>
+        <line x1="408" y1="149" x2="514" y2="149" stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cm2)"/>
+        <line x1="408" y1="245" x2="514" y2="245" stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cm2)"/>
+        <line x1="408" y1="341" x2="514" y2="341" stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cm2)"/>
+
+        <text x="461" y="45"  text-anchor="middle" font-size="10.5" fill="#666" stroke="none">every layer</text>
+        <text x="461" y="141" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">of covariance</text>
+        <text x="461" y="237" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">of weights</text>
+        <text x="461" y="333" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">of gradients</text>
+
+        <rect x="526" y="22" width="236" height="62" rx="3" fill="#f2f2f0" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="644" y="47" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">GPU kernels, tensor cores</text>
+        <text x="644" y="67" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">CHAPTER 16 &#183; SIMD &amp; GPU</text>
+
+        <rect x="526" y="118" width="236" height="62" rx="3" fill="#f2f2f0" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="644" y="143" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">PCA, spectral graph methods</text>
+        <text x="644" y="163" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">CHAPTER 06 &amp; 12</text>
+
+        <rect x="526" y="214" width="236" height="62" rx="3" fill="#f2f2f0" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="644" y="239" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">LoRA, model compression</text>
+        <text x="644" y="259" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">CHAPTER 17 &#183; AI INFERENCE</text>
+
+        <rect x="526" y="310" width="236" height="62" rx="3" fill="#f2f2f0" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="644" y="335" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">Why training goes unstable</text>
+        <text x="644" y="355" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">CHAPTER 03 &amp; 06</text>
+      </svg>
+    </div>
+    <figcaption><b>Fig. 2.10</b> &mdash; The four capabilities this chapter grants, and where each is spent. The arrow labels name what the operation is applied <i>to</i> downstream.</figcaption>
+  </figure>
+
+  <div class="col">
+    <p>
+      Chapter 03 is calculus, and the bridge is already visible from here. Optimisation means
+      walking downhill on a surface; the local curvature of that surface is a matrix &mdash; the
+      Hessian &mdash; and everything you now know about eigenvalues, conditioning and positive
+      definiteness becomes a statement about whether gradient descent converges quickly, slowly,
+      or not at all. An ill-conditioned Hessian is a long narrow valley, and it is the same
+      \(\kappa\) that ruined your sliver-shaped elements.
+    </p>
+
+    <div class="note">
+      <div class="note-h"><span class="ic">i</span>Before you move on</div>
+      <p style="margin-bottom:0">
+        Run the source chapter's coding tasks &mdash; particularly the power-iteration one,
+        which finds the dominant eigenvector in about six lines and shows you that the
+        "impossible" eigenvalue problem is, computationally, just repeated multiplication. Then
+        try this: take the inertia tensor of any part you have modelled, feed it to
+        <code>eigh</code>, and check the principal axes against your CAD package's mass
+        properties output. They will match, and something will click.
+      </p>
+    </div>
+  </div>
+
+  <div class="col endnote">
+    <p>
+      Companion to <b>Chapter 02 &mdash; Matrices</b> of the Maths, CS &amp; AI Compendium by
+      Henry Ndubuaku. Figures marked <i>from the compendium</i> are reproduced from the
+      repository. &sect;09 corrects and extends a claim in the source chapter and is marked as
+      such.
+    </p>
+    <p style="margin-bottom:0">Sheet 2 of 20. Built for a mechanical engineer with GATE-level mathematics and no prior CS.</p>
+  </div>
+</section>
+
+</main>
+</div>
+
+<style>
+#gridT line, #gridEv line{stroke:var(--rule)}
+#axTx, #axTy, #axEvx, #axEvy{stroke:var(--rule-strong)}
+#unitSq{stroke:var(--ink-3)}
+#imgSq{stroke:var(--accent); fill:var(--accent); fill-opacity:.12}
+#ev1, #ev2, #pax1, #pax2{stroke:var(--s3)}
+#colA, #vIn{stroke:var(--s2)} #colB, #vOut{stroke:var(--s1)}
+#hdT1{fill:var(--s2)} #hdT2{fill:var(--s1)}
+#hdT1, #hdT2{stroke:var(--sheet)}
+#lblT1{fill:var(--s2)} #lblT2{fill:var(--s1)}
+#ellEv{stroke:var(--ink-3)}
+#evMsg{fill:var(--s3)}
+</style>
+
+<script>
+(function () {
+  'use strict';
+
+  var root = document.documentElement;
+  function currentDark() {
+    var t = root.getAttribute('data-theme');
+    if (t) return t === 'dark';
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  }
+  try {
+    var saved = localStorage.getItem('ch02-theme');
+    if (saved === 'dark' || saved === 'light') root.setAttribute('data-theme', saved);
+  } catch (e) {}
+  var tb = document.getElementById('themebtn');
+  if (tb) tb.addEventListener('click', function () {
+    var next = currentDark() ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('ch02-theme', next); } catch (e) {}
+  });
+
+  function $(id) { return document.getElementById(id); }
+  function set(el, a) { for (var k in a) el.setAttribute(k, a[k]); }
+  function fmt(n, d) { d = d === undefined ? 2 : d; return (Math.abs(n) < 5e-4 ? 0 : n).toFixed(d); }
+  function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+  function svgPt(svg, ev) {
+    var r = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal;
+    return { x: (ev.clientX - r.left) / r.width * vb.width,
+             y: (ev.clientY - r.top) / r.height * vb.height };
+  }
+  function gridLines(g, w, h, step) {
+    var s = '';
+    for (var x = 0; x <= w; x += step) s += '<line x1="' + x + '" y1="0" x2="' + x + '" y2="' + h + '"/>';
+    for (var y = 0; y <= h; y += step) s += '<line x1="0" y1="' + y + '" x2="' + w + '" y2="' + y + '"/>';
+    g.innerHTML = s;
+  }
+  function draggable(svg, handles, onMove) {
+    var active = null;
+    handles.forEach(function (h) {
+      h.el.addEventListener('pointerdown', function (ev) {
+        ev.preventDefault(); active = h; svg.classList.add('drag');
+        svg.setPointerCapture(ev.pointerId);
+      });
+    });
+    svg.addEventListener('pointermove', function (ev) {
+      if (!active) return; ev.preventDefault(); onMove(active, svgPt(svg, ev));
+    });
+    function up(ev) {
+      if (!active) return; active = null; svg.classList.remove('drag');
+      try { svg.releasePointerCapture(ev.pointerId); } catch (e) {}
+    }
+    svg.addEventListener('pointerup', up);
+    svg.addEventListener('pointercancel', up);
+  }
+
+  /* ============ DEMO T : transformation playground ============ */
+  var T = { cx: 240, cy: 165, s: 58 };
+  var c1 = { x: 1.4, y: 0.4 }, c2 = { x: 0.3, y: 1.25 };
+  function tPx(x, y) { return { x: T.cx + x * T.s, y: T.cy - y * T.s }; }
+  function tVal(p) { return { x: (p.x - T.cx) / T.s, y: (T.cy - p.y) / T.s }; }
+  function poly(pts) { return pts.map(function (p) { var q = tPx(p[0], p[1]); return q.x.toFixed(1) + ',' + q.y.toFixed(1); }).join(' '); }
+
+  function eigen2(a, b, c, d) {
+    var tr = a + d, det = a * d - b * c, disc = tr * tr - 4 * det;
+    if (disc < -1e-12) return { real: false, tr: tr, det: det };
+    var s = Math.sqrt(Math.max(disc, 0));
+    var l1 = (tr + s) / 2, l2 = (tr - s) / 2;
+    function vecFor(l) {
+      if (Math.abs(b) > 1e-9) return { x: b, y: l - a };
+      if (Math.abs(c) > 1e-9) return { x: l - d, y: c };
+      return Math.abs(l - a) < 1e-9 ? { x: 1, y: 0 } : { x: 0, y: 1 };
+    }
+    return { real: true, l1: l1, l2: l2, v1: vecFor(l1), v2: vecFor(l2), tr: tr, det: det };
+  }
+  function singVals(a, b, c, d) {
+    var p = a * a + c * c, q = b * b + d * d, r = a * b + c * d;
+    var m = (p + q) / 2, k = Math.sqrt(Math.max(((p - q) / 2) * ((p - q) / 2) + r * r, 0));
+    return [Math.sqrt(Math.max(m + k, 0)), Math.sqrt(Math.max(m - k, 0))];
+  }
+  function drawT() {
+    var a = c1.x, c = c1.y, b = c2.x, d = c2.y;
+    set($('unitSq'), { points: poly([[0, 0], [1, 0], [1, 1], [0, 1]]) });
+    set($('imgSq'), { points: poly([[0, 0], [a, c], [a + b, c + d], [b, d]]) });
+    var p1 = tPx(a, c), p2 = tPx(b, d);
+    set($('colA'), { x1: T.cx, y1: T.cy, x2: p1.x, y2: p1.y });
+    set($('colB'), { x1: T.cx, y1: T.cy, x2: p2.x, y2: p2.y });
+    set($('hdT1'), { cx: p1.x, cy: p1.y });
+    set($('hdT2'), { cx: p2.x, cy: p2.y });
+    set($('lblT1'), { x: p1.x + 10, y: p1.y - 6 });
+    set($('lblT2'), { x: p2.x + 10, y: p2.y + 14 });
+
+    var E = eigen2(a, b, c, d);
+    [['ev1', E.real ? E.v1 : null], ['ev2', E.real ? E.v2 : null]].forEach(function (pair) {
+      var el = $(pair[0]), v = pair[1];
+      if (!v) { el.setAttribute('x1', 0); el.setAttribute('y1', 0); el.setAttribute('x2', 0); el.setAttribute('y2', 0); return; }
+      var n = Math.hypot(v.x, v.y) || 1, ux = v.x / n, uy = v.y / n, L = 3.1;
+      var A0 = tPx(-ux * L, -uy * L), B0 = tPx(ux * L, uy * L);
+      set(el, { x1: A0.x, y1: A0.y, x2: B0.x, y2: B0.y });
+    });
+
+    var det = a * d - b * c, sv = singVals(a, b, c, d);
+    var kappa = sv[1] > 1e-9 ? sv[0] / sv[1] : Infinity;
+    var rank = sv[0] < 1e-7 ? 0 : (sv[1] / sv[0] < 1e-6 ? 1 : 2);
+    $('oMat').textContent = '[' + fmt(a) + ' ' + fmt(b) + '; ' + fmt(c) + ' ' + fmt(d) + ']';
+    $('oDet').textContent = fmt(det, 3);
+    $('oTr').textContent = fmt(a + d, 3);
+    $('oRank').textContent = String(rank);
+    $('oEig').textContent = E.real ? fmt(E.l1, 2) + ', ' + fmt(E.l2, 2) : 'complex pair';
+    $('oCond').textContent = isFinite(kappa) ? (kappa > 9999 ? '>10000' : fmt(kappa, 2)) : '∞';
+  }
+  (function initT() {
+    var svg = $('sT');
+    gridLines($('gridT'), 480, 320, 29);
+    set($('axTx'), { x1: 8, y1: T.cy, x2: 472, y2: T.cy });
+    set($('axTy'), { x1: T.cx, y1: 8, x2: T.cx, y2: 312 });
+    draggable(svg, [{ el: $('hdT1'), t: 1 }, { el: $('hdT2'), t: 2 }], function (h, p) {
+      var v = tVal({ x: clamp(p.x, 12, 468), y: clamp(p.y, 12, 308) });
+      if (h.t === 1) c1 = v; else c2 = v;
+      drawT();
+    });
+    var P = {
+      rot: [{ x: 0.766, y: 0.643 }, { x: -0.643, y: 0.766 }],
+      scale: [{ x: 1.6, y: 0 }, { x: 0, y: 0.6 }],
+      shear: [{ x: 1, y: 0 }, { x: 0.8, y: 1 }],
+      reflect: [{ x: 1, y: 0 }, { x: 0, y: -1 }],
+      sing: [{ x: 1.2, y: 0.6 }, { x: 0.6, y: 0.3 }]
+    };
+    document.querySelectorAll('[data-preset]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var p = P[btn.getAttribute('data-preset')];
+        c1 = { x: p[0].x, y: p[0].y }; c2 = { x: p[1].x, y: p[1].y };
+        document.querySelectorAll('[data-preset]').forEach(function (o) { o.classList.remove('on'); });
+        btn.classList.add('on');
+        drawT();
+      });
+    });
+    drawT();
+  })();
+
+  /* ============ DEMO Ev : principal axis hunt ============ */
+  var Im = [[4, 1.2], [1.2, 2]];
+  var Ev = { cx: 240, cy: 162, inLen: 92, outS: 27 };
+  var evAng = 20;
+  var Eig = eigen2(Im[0][0], Im[0][1], Im[1][0], Im[1][1]);
+  var paxDeg = Math.atan2(Eig.v1.y, Eig.v1.x) * 180 / Math.PI;
+
+  function drawEv() {
+    var t = evAng * Math.PI / 180, ux = Math.cos(t), uy = Math.sin(t);
+    var ox = Im[0][0] * ux + Im[0][1] * uy, oy = Im[1][0] * ux + Im[1][1] * uy;
+    var inP = { x: Ev.cx + ux * Ev.inLen, y: Ev.cy - uy * Ev.inLen };
+    var outP = { x: Ev.cx + ox * Ev.outS, y: Ev.cy - oy * Ev.outS };
+    set($('vIn'), { x1: Ev.cx, y1: Ev.cy, x2: inP.x, y2: inP.y });
+    set($('vOut'), { x1: Ev.cx, y1: Ev.cy, x2: outP.x, y2: outP.y });
+
+    var mag = Math.hypot(ox, oy);
+    var cosA = clamp((ux * ox + uy * oy) / (mag || 1), -1, 1);
+    var mis = Math.acos(cosA) * 180 / Math.PI;
+    $('angVal').textContent = fmt(evAng, 1) + '°';
+    $('oIn').textContent = '(' + fmt(ux) + ', ' + fmt(uy) + ')';
+    $('oOut').textContent = '(' + fmt(ox) + ', ' + fmt(oy) + ')';
+    $('oMis').textContent = fmt(mis, 2) + '°';
+    $('oStr').textContent = fmt(mag, 3);
+    var aligned = mis < 0.6;
+    $('evMsg').textContent = aligned ? 'PRINCIPAL AXIS — output parallel to input, λ = ' + fmt(mag, 3) : '';
+    set($('evMsg'), { x: 240, y: 306 });
+  }
+  (function initEv() {
+    gridLines($('gridEv'), 480, 320, 29);
+    set($('axEvx'), { x1: 8, y1: Ev.cy, x2: 472, y2: Ev.cy });
+    set($('axEvy'), { x1: Ev.cx, y1: 8, x2: Ev.cx, y2: 312 });
+    set($('ellEv'), { cx: Ev.cx, cy: Ev.cy, rx: Eig.l1 * Ev.outS, ry: Eig.l2 * Ev.outS,
+      transform: 'rotate(' + (-paxDeg) + ' ' + Ev.cx + ' ' + Ev.cy + ')' });
+    [[$('pax1'), paxDeg], [$('pax2'), paxDeg + 90]].forEach(function (pr) {
+      var r = pr[1] * Math.PI / 180, L = 140;
+      set(pr[0], { x1: Ev.cx - Math.cos(r) * L, y1: Ev.cy + Math.sin(r) * L,
+                   x2: Ev.cx + Math.cos(r) * L, y2: Ev.cy - Math.sin(r) * L });
+    });
+    $('angSlider').addEventListener('input', function () { evAng = parseFloat(this.value); drawEv(); });
+    $('snapAx').addEventListener('click', function () {
+      evAng = (paxDeg + 360) % 360;
+      $('angSlider').value = evAng;
+      drawEv();
+    });
+    drawEv();
+  })();
+
+  /* ============ DEMO SVD : rank-k image compression ============ */
+  var N = 64, KMAX = 40, triplets = null, srcMat = null, srcNorm = 1;
+
+  function drawFlange(ctx) {
+    ctx.fillStyle = '#141414'; ctx.fillRect(0, 0, N, N);
+    ctx.fillStyle = '#e6e6e6';
+    ctx.beginPath(); ctx.arc(32, 32, 28, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = '#2a2a2a';
+    for (var i = 0; i < 6; i++) {
+      var th = i * Math.PI / 3 + 0.26;
+      ctx.beginPath(); ctx.arc(32 + 20 * Math.cos(th), 32 + 20 * Math.sin(th), 3.6, 0, 6.2832); ctx.fill();
+    }
+    ctx.beginPath(); ctx.arc(32, 32, 8.5, 0, 6.2832); ctx.fill();
+    ctx.fillRect(29, 17, 6, 12);            /* keyway - axis aligned, low rank */
+    ctx.fillStyle = '#9a9a9a';
+    ctx.fillRect(3, 30, 58, 4);             /* straight rib - very low rank */
+  }
+  function toMatrix(ctx) {
+    var d = ctx.getImageData(0, 0, N, N).data, M = new Float64Array(N * N);
+    for (var i = 0; i < N * N; i++) M[i] = 0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2];
+    return M;
+  }
+  function topSVD(M, K) {
+    var A = Float64Array.from(M), out = [];
+    var u = new Float64Array(N), v = new Float64Array(N), t = new Float64Array(N);
+    function mv(src, dst) {
+      for (var i = 0; i < N; i++) { var s = 0; for (var j = 0; j < N; j++) s += A[i * N + j] * src[j]; dst[i] = s; }
+    }
+    function mtv(src, dst) {
+      for (var j = 0; j < N; j++) { var s = 0; for (var i = 0; i < N; i++) s += A[i * N + j] * src[i]; dst[j] = s; }
+    }
+    function nrm(x) { var s = 0; for (var i = 0; i < N; i++) s += x[i] * x[i]; return Math.sqrt(s); }
+    var seed = 12345;
+    function rnd() { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff - 0.5; }
+    for (var k = 0; k < K; k++) {
+      for (var i = 0; i < N; i++) v[i] = rnd();
+      var n0 = nrm(v); for (i = 0; i < N; i++) v[i] /= n0;
+      for (var it = 0; it < 70; it++) {
+        mv(v, u); var nu = nrm(u); if (nu < 1e-13) break;
+        for (i = 0; i < N; i++) u[i] /= nu;
+        mtv(u, t); var nv = nrm(t); if (nv < 1e-13) break;
+        for (i = 0; i < N; i++) v[i] = t[i] / nv;
+      }
+      mv(v, u); var sig = nrm(u);
+      if (sig < 1e-10) break;
+      for (i = 0; i < N; i++) u[i] /= sig;
+      out.push({ s: sig, u: Float64Array.from(u), v: Float64Array.from(v) });
+      for (i = 0; i < N; i++) for (var j = 0; j < N; j++) A[i * N + j] -= sig * u[i] * v[j];
+    }
+    return out;
+  }
+  function renderK(k) {
+    var ctx = $('cvApprox').getContext('2d');
+    var img = ctx.createImageData(N, N), err = 0;
+    for (var i = 0; i < N; i++) {
+      for (var j = 0; j < N; j++) {
+        var acc = 0;
+        for (var t = 0; t < k && t < triplets.length; t++) acc += triplets[t].s * triplets[t].u[i] * triplets[t].v[j];
+        var diff = srcMat[i * N + j] - acc; err += diff * diff;
+        var g = clamp(Math.round(acc), 0, 255), o = (i * N + j) * 4;
+        img.data[o] = img.data[o + 1] = img.data[o + 2] = g; img.data[o + 3] = 255;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    var stored = k * (2 * N + 1), ratio = (N * N) / stored;
+    $('kVal').textContent = 'k = ' + k;
+    $('apxLabel').textContent = 'Rebuilt · rank ' + k;
+    $('oStore').textContent = String(stored);
+    $('oRatio').textContent = ratio >= 1 ? fmt(ratio, 2) + '× smaller' : fmt(1 / ratio, 2) + '× BIGGER';
+    $('oErr').textContent = fmt(Math.sqrt(err) / srcNorm * 100, 1) + '%';
+    $('oSig').textContent = triplets[k - 1] ? fmt(triplets[k - 1].s / triplets[0].s, 4) : '—';
+  }
+  (function initSVD() {
+    var oc = $('cvOrig'), ctx = oc.getContext('2d', { willReadFrequently: true });
+    drawFlange(ctx);
+    srcMat = toMatrix(ctx);
+    var ss = 0; for (var i = 0; i < N * N; i++) ss += srcMat[i] * srcMat[i];
+    srcNorm = Math.sqrt(ss);
+    triplets = topSVD(srcMat, KMAX);
+    $('kSlider').addEventListener('input', function () { renderK(parseInt(this.value, 10)); });
+    renderK(6);
+  })();
+
+  /* ============ rail scroll-spy ============ */
+  (function initRail() {
+    var links = Array.prototype.slice.call(document.querySelectorAll('.rail a'));
+    if (!links.length || !window.IntersectionObserver) return;
+    var map = {};
+    links.forEach(function (a) { map[a.getAttribute('href').slice(1)] = a; });
+    var seen = {};
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) { seen[en.target.id] = en.isIntersecting; });
+      var ids = Object.keys(map), activeId = null;
+      for (var i = 0; i < ids.length; i++) if (seen[ids[i]]) { activeId = ids[i]; break; }
+      if (!activeId) return;
+      links.forEach(function (a) { a.classList.toggle('on', a === map[activeId]); });
+    }, { rootMargin: '-70px 0px -65% 0px', threshold: 0 });
+    Object.keys(map).forEach(function (id) {
+      var el = document.getElementById(id); if (el) io.observe(el);
+    });
+  })();
+})();
+</script>
+<script>
+/* Safety net: if the MathJax bundle cannot be reached, degrade the TeX to
+   readable Unicode instead of leaving raw backslash markup on the page. */
+(function () {
+  'use strict';
+  var GREEK = { theta:'θ', sigma:'σ', delta:'δ', mu:'μ', pi:'π',
+                infty:'∞', alpha:'α', beta:'β', lambda:'λ' };
+  var SUB = { '1':'₁','2':'₂','3':'₃','i':'ᵢ','j':'ⱼ','n':'ₙ','p':'ₚ','x':'ₓ','y':'ᵧ' };
+  var SUP = { '2':'²','3':'³','n':'ⁿ','p':'ᵖ','*':'*' };
+
+  function degrade(t) {
+    t = t.replace(/\$\$/g, '').replace(/\\[()[\]]/g, '');
+    t = t.replace(/\\(?:left|right|textstyle|displaystyle|!|,|;|:)/g, '');
+    t = t.replace(/\\q?quad/g, ' ');
+    t = t.replace(/\\mathbb\{R\}/g, 'ℝ').replace(/\\mathbb\{Z\}/g, 'ℤ')
+         .replace(/\\mathbb\{N\}/g, 'ℕ').replace(/\\mathbb\{Q\}/g, 'ℚ');
+    t = t.replace(/\\(?:mathbf|mathrm|text|textbf|operatorname)\{([^{}]*)\}/g, '$1');
+    t = t.replace(/\\hat\{([^{}]*)\}/g, '$1̂').replace(/\\bar\{([^{}]*)\}/g, '$1̄');
+    t = t.replace(/\\sqrt\{([^{}]*)\}/g, '√($1)');
+    t = t.replace(/\\t?frac\{([^{}]*)\}\{([^{}]*)\}/g, '($1)/($2)');
+    t = t.replace(/\\binom\{([^{}]*)\}\{([^{}]*)\}/g, 'C($1,$2)');
+    t = t.replace(/\\([a-zA-Z]+)/g, function (m, w) {
+      if (GREEK[w]) return GREEK[w];
+      switch (w) {
+        case 'cdot': return '·';
+        case 'times': return '×';
+        case 'le': case 'leq': return '≤';
+        case 'ge': case 'geq': return '≥';
+        case 'neq': return '≠';
+        case 'approx': return '≈';
+        case 'in': return '∈';
+        case 'pm': return '±';
+        case 'to': case 'rightarrow': return '→';
+        case 'Rightarrow': return '⇒';
+        case 'iff': return '⇔';
+        case 'parallel': return '∥';
+        case 'perp': return '⊥';
+        case 'sum': return 'Σ';
+        case 'langle': return '⟨';
+        case 'rangle': return '⟩';
+        case 'wedge': return '∧';
+        case 'ast': return '*';
+        case 'cdots': case 'ldots': case 'dots': return '…';
+        case 'max': case 'min': case 'cos': case 'sin': case 'log': case 'exp': return w;
+        default: return w;
+      }
+    });
+    t = t.replace(/\\\|/g, '‖').replace(/\|\|/g, '‖');
+    t = t.replace(/_\{?([0-9ijnpxy])\}?/g, function (m, c) { return SUB[c] || ('_' + c); });
+    t = t.replace(/\^\{?([23np*])\}?/g, function (m, c) { return SUP[c] || ('^' + c); });
+    t = t.replace(/[{}]/g, '');
+    return t.replace(/[ \t]{2,}/g, ' ');
+  }
+
+  function run() {
+    if (window.MathJax && window.MathJax.startup && window.MathJax.startup.document) return;
+    var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+      acceptNode: function (n) {
+        if (!n.nodeValue || n.nodeValue.indexOf('\\') < 0 && n.nodeValue.indexOf('$$') < 0)
+          return NodeFilter.FILTER_REJECT;
+        var p = n.parentNode;
+        while (p && p !== document.body) {
+          var tag = p.nodeName;
+          if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'CODE' || tag === 'PRE')
+            return NodeFilter.FILTER_REJECT;
+          p = p.parentNode;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    var hits = [], n;
+    while ((n = walker.nextNode())) hits.push(n);
+    hits.forEach(function (node) { node.nodeValue = degrade(node.nodeValue); });
+    document.querySelectorAll('.mathbox').forEach(function (el) {
+      el.style.fontFamily = "'IBM Plex Mono', monospace";
+      el.style.fontSize = '15px';
+      el.style.textAlign = 'center';
+      el.style.padding = '10px 0';
+    });
+  }
+  setTimeout(run, 6000);
+})();
+</script>
