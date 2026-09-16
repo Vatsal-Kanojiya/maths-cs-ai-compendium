@@ -34,6 +34,7 @@ merely structural, that is said plainly.
 |---|---------|------|-----------|
 | 01 | Vectors | [`ch01-vectors/`](ch01-vectors/index.html) | [Read online](https://claude.ai/artifact/98j4cnE4QvTKi1znhH6vh9) |
 | 02 | Matrices | [`ch02-matrices/`](ch02-matrices/index.html) | [Read online](https://claude.ai/artifact/SaJmwkXPKYmaJ6Eet8uBKd) |
+| 03 | Calculus | [`ch03-calculus/`](ch03-calculus/index.html) | [Read online](https://claude.ai/artifact/DhK5wG1RE9YMnRxSHizngC) |
 
 ## What's in a chapter page
 

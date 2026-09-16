@@ -1,0 +1,1835 @@
+<title>Slope, Area, Descent</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(', '\\)']], displayMath: [['$$', '$$']], processEscapes: true },
+  svg: { fontCache: 'global', scale: 1.0 },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-svg.js" id="MathJax-script" async></script>
+
+<style>
+/* ============ TOKENS: light is complete and authoritative ============ */
+:root{
+  --ground:#F0F2F1;
+  --sheet:#FBFCFB;
+  --sheet-2:#F4F6F5;
+  --ink:#14181A;
+  --ink-2:#4E575B;
+  --ink-3:#77838A;
+  --rule:#D3DAD7;
+  --rule-strong:#A8B4B0;
+  --accent:#12507E;
+  --accent-ink:#0E4267;
+  --accent-soft:#E4EEF6;
+  --bridge:#1F8A4C;
+  --bridge-soft:#E4F2EA;
+  --brk:#A8500F;
+  --brk-soft:#FAEBDF;
+  --s1:#BF5B00;
+  --s2:#0F74C7;
+  --s3:#1F8A4C;
+  --paper:#FFFFFF;            /* pasted-drawing ground, both themes */
+  --paper-ink:#1b1b1b;
+  --shadow:0 1px 2px rgba(20,24,26,.06), 0 6px 18px rgba(20,24,26,.05);
+  --f-disp:'Archivo Narrow', 'Arial Narrow', Helvetica, sans-serif;
+  --f-body:'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --f-mono:'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+    --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+    --rule:#293134; --rule-strong:#3F494C;
+    --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+    --bridge:#35AC63; --bridge-soft:#11281B;
+    --brk:#E0913F; --brk-soft:#2E2012;
+    --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+  --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+  --rule:#293134; --rule-strong:#3F494C;
+  --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+  --bridge:#35AC63; --bridge-soft:#11281B;
+  --brk:#E0913F; --brk-soft:#2E2012;
+  --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:var(--f-body); font-size:17px; line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ============ TITLE BLOCK (engineering drawing header) ============ */
+.titleblock{
+  position:sticky; top:env(safe-area-inset-top,0px); z-index:40;
+  background:var(--sheet); border-bottom:1px solid var(--rule-strong);
+}
+.tb-in{
+  max-width:1240px; margin:0 auto; padding:0 16px;
+  display:flex; align-items:stretch; gap:0; min-height:46px;
+}
+.tb-cell{
+  display:flex; flex-direction:column; justify-content:center;
+  padding:5px 14px; border-right:1px solid var(--rule);
+  font-family:var(--f-disp);
+}
+.tb-cell:first-child{padding-left:0}
+.tb-cell:last-child{border-right:0; margin-left:auto; padding-right:0}
+.tb-k{
+  font-size:8.5px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); line-height:1.4;
+}
+.tb-v{font-size:13px; font-weight:700; letter-spacing:.02em; color:var(--ink); line-height:1.3}
+.tb-v.accent{color:var(--accent)}
+.tb-hide{display:none}
+@media (min-width:680px){ .tb-hide{display:flex} }
+
+.themebtn{
+  appearance:none; background:transparent; border:1px solid var(--rule-strong);
+  color:var(--ink-2); font-family:var(--f-disp); font-size:10px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:6px 10px; border-radius:2px;
+  cursor:pointer; align-self:center; white-space:nowrap;
+}
+.themebtn:hover{border-color:var(--accent); color:var(--accent)}
+.themebtn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+/* ============ SHELL ============ */
+.shell{max-width:1240px; margin:0 auto; padding:0 16px; padding-block:0 64px}
+@media (min-width:1080px){
+  .shell{display:grid; grid-template-columns:212px minmax(0,1fr); gap:44px; align-items:start}
+}
+.rail{display:none}
+@media (min-width:1080px){
+  .rail{
+    display:block; position:sticky; top:calc(env(safe-area-inset-top,0px) + 70px);
+    padding-block:28px; font-family:var(--f-disp); font-size:12.5px;
+  }
+}
+.rail-h{
+  font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-3);
+  padding-bottom:8px; border-bottom:1px solid var(--rule); margin-bottom:10px;
+}
+.rail a{
+  display:flex; gap:9px; padding:4px 0; color:var(--ink-2); text-decoration:none;
+  border-left:2px solid transparent; padding-left:9px; margin-left:-11px; line-height:1.35;
+}
+.rail a:hover{color:var(--accent)}
+.rail a.on{color:var(--accent); border-left-color:var(--accent); font-weight:700}
+.rail a .n{font-family:var(--f-mono); font-size:10.5px; color:var(--ink-3); flex:none; padding-top:1px}
+.rail a.on .n{color:var(--accent)}
+
+main{min-width:0; padding-block:0 0}
+.col{max-width:70ch}
+
+/* ============ TYPE ============ */
+h1,h2,h3,h4{font-family:var(--f-disp); text-wrap:balance; margin:0; line-height:1.14}
+h1{font-size:clamp(34px,7vw,58px); font-weight:700; letter-spacing:-.015em}
+h2{font-size:clamp(25px,4.2vw,34px); font-weight:700; letter-spacing:-.01em}
+h3{font-size:19px; font-weight:700; letter-spacing:.005em; margin-top:2px}
+h4{font-size:14px; font-weight:700; letter-spacing:.06em; text-transform:uppercase}
+p{margin:0 0 1.05em}
+a{color:var(--accent-ink)}
+strong{font-weight:600}
+em{font-style:italic}
+code{font-family:var(--f-mono); font-size:.87em; background:var(--sheet-2); padding:1px 5px; border-radius:2px; border:1px solid var(--rule)}
+.lead{font-size:19.5px; line-height:1.56; color:var(--ink-2)}
+.eyebrow{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--ink-3); margin:0 0 10px;
+}
+.srcref{
+  font-family:var(--f-mono); font-size:11px; color:var(--ink-3);
+  border:1px solid var(--rule); border-radius:2px; padding:2px 7px; display:inline-block;
+  background:var(--sheet-2); white-space:nowrap;
+}
+
+/* ============ SECTION ============ */
+section{padding-block:38px 0; scroll-margin-top:calc(env(safe-area-inset-top,0px) + 62px)}
+.sechead{display:flex; align-items:baseline; gap:13px; margin-bottom:6px; flex-wrap:wrap}
+.secnum{
+  font-family:var(--f-mono); font-size:12px; font-weight:600; color:var(--accent);
+  border:1px solid var(--accent); border-radius:2px; padding:2px 7px; flex:none;
+  background:var(--accent-soft);
+}
+.rule-h{border:0; border-top:1px solid var(--rule); margin:0 0 22px}
+.rule-d{border:0; border-top:1px dashed var(--rule-strong); margin:34px 0}
+
+/* ============ CALLOUTS ============ */
+.note{
+  border:1px solid var(--rule); border-left:3px solid var(--accent);
+  background:var(--sheet); border-radius:2px; padding:16px 18px; margin:22px 0;
+}
+.note.bridge{border-left-color:var(--bridge); background:var(--bridge-soft)}
+.note.brk{border-left-color:var(--brk); background:var(--brk-soft)}
+.note-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; margin-bottom:7px; display:flex; align-items:center; gap:8px;
+}
+.note.bridge .note-h{color:var(--bridge)}
+.note.brk .note-h{color:var(--brk)}
+.note .note-h{color:var(--accent)}
+.note p:last-child, .note ul:last-child{margin-bottom:0}
+.note-h .ic{
+  width:15px; height:15px; border-radius:50%; border:1.5px solid currentColor; flex:none;
+  display:grid; place-items:center; font-size:9.5px; font-weight:700; font-family:var(--f-mono);
+}
+ul,ol{margin:0 0 1.05em; padding-left:1.25em}
+li{margin-bottom:.4em}
+li::marker{color:var(--ink-3)}
+
+/* ============ DEFINITION BLOCK ============ */
+.defn{
+  background:var(--sheet); border:1px solid var(--rule); border-radius:3px;
+  padding:18px 20px; margin:22px 0; box-shadow:var(--shadow);
+}
+.defn-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:10px;
+  padding-bottom:8px; border-bottom:1px solid var(--rule);
+}
+.defn p:last-child{margin-bottom:0}
+
+/* ============ TABLES ============ */
+.tw{overflow-x:auto; margin:22px 0; border:1px solid var(--rule); border-radius:3px; background:var(--sheet)}
+table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:480px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule); vertical-align:top}
+thead th{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); background:var(--sheet-2); font-weight:700; white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:0}
+td.mono,th.mono{font-family:var(--f-mono); font-size:13px; font-variant-numeric:tabular-nums}
+.tw caption{
+  caption-side:bottom; text-align:left; padding:9px 14px; font-size:12.5px;
+  color:var(--ink-3); border-top:1px solid var(--rule); font-family:var(--f-disp);
+}
+
+/* ============ FIGURES ============ */
+figure{margin:24px 0}
+.paper{
+  background:var(--paper); border:1px solid var(--rule-strong); border-radius:3px;
+  padding:16px; display:flex; justify-content:center; box-shadow:var(--shadow);
+}
+.paper img{max-width:100%; height:auto; display:block}
+figcaption{
+  font-family:var(--f-disp); font-size:12.5px; color:var(--ink-3); margin-top:9px;
+  line-height:1.45; padding-left:2px;
+}
+figcaption b{color:var(--ink-2); font-weight:700; letter-spacing:.04em}
+
+/* ============ INTERACTIVE PANELS ============ */
+.lab{
+  background:var(--sheet); border:1px solid var(--rule-strong); border-radius:3px;
+  margin:26px 0; overflow:hidden; box-shadow:var(--shadow);
+}
+.lab-h{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:11px 16px; border-bottom:1px solid var(--rule); background:var(--sheet-2);
+}
+.lab-t{font-family:var(--f-disp); font-size:13px; font-weight:700; letter-spacing:.05em; text-transform:uppercase}
+.lab-tag{
+  font-family:var(--f-mono); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--accent); border:1px solid var(--accent); border-radius:2px; padding:2px 6px;
+  margin-left:auto; white-space:nowrap;
+}
+.lab-body{padding:16px}
+.lab-foot{
+  padding:11px 16px; border-top:1px solid var(--rule); background:var(--sheet-2);
+  font-size:13.5px; color:var(--ink-2); line-height:1.5;
+}
+.lab-foot b{color:var(--ink)}
+.stage{width:100%; max-width:560px; height:auto; display:block; margin-inline:auto; touch-action:none; cursor:grab}
+.stage.drag{cursor:grabbing}
+
+.readout{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr)); gap:1px;
+  background:var(--rule); border:1px solid var(--rule); border-radius:2px; margin-top:14px;
+}
+.ro{background:var(--sheet); padding:8px 11px}
+.ro-k{
+  font-family:var(--f-disp); font-size:9px; letter-spacing:.13em; text-transform:uppercase;
+  color:var(--ink-3); margin-bottom:2px; white-space:nowrap;
+}
+.ro-v{
+  font-family:var(--f-mono); font-size:15px; font-weight:500; font-variant-numeric:tabular-nums;
+  color:var(--ink); line-height:1.25;
+}
+.ro-v.a{color:var(--s2)} .ro-v.b{color:var(--s1)} .ro-v.c{color:var(--s3)}
+
+.ctl{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:14px}
+.ctl label{
+  font-family:var(--f-disp); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-2); white-space:nowrap;
+}
+input[type=range]{
+  -webkit-appearance:none; appearance:none; height:22px; background:transparent;
+  flex:1 1 160px; min-width:130px; cursor:pointer;
+}
+input[type=range]:focus-visible{outline:2px solid var(--accent); outline-offset:3px}
+input[type=range]::-webkit-slider-runnable-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-moz-range-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:16px; height:16px; border-radius:50%;
+  background:var(--accent); border:2px solid var(--sheet); margin-top:-6.5px;
+}
+input[type=range]::-moz-range-thumb{
+  width:16px; height:16px; border-radius:50%; background:var(--accent);
+  border:2px solid var(--sheet);
+}
+.btn{
+  appearance:none; font-family:var(--f-disp); font-size:11px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:7px 13px; border-radius:2px;
+  border:1px solid var(--rule-strong); background:var(--sheet); color:var(--ink-2); cursor:pointer;
+}
+.btn:hover{border-color:var(--accent); color:var(--accent)}
+.btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.btn.on{background:var(--accent); border-color:var(--accent); color:var(--sheet)}
+
+.legend{display:flex; gap:16px; flex-wrap:wrap; margin-top:12px}
+.lg{display:flex; align-items:center; gap:7px; font-family:var(--f-disp); font-size:12px; color:var(--ink-2)}
+.lg i{width:15px; height:3px; border-radius:2px; flex:none; display:block}
+
+/* ============ MISC ============ */
+.mathbox{overflow-x:auto; overflow-y:hidden; margin:18px 0}
+mjx-container[display="true"]{margin:0 !important}
+.kv{display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:15px; margin:16px 0}
+.kv dt{font-family:var(--f-mono); font-size:13px; color:var(--accent); white-space:nowrap}
+.kv dd{margin:0; color:var(--ink-2)}
+
+details.q{
+  border:1px solid var(--rule); border-radius:3px; background:var(--sheet);
+  margin-bottom:9px; overflow:hidden;
+}
+details.q summary{
+  cursor:pointer; padding:12px 15px; font-weight:600; list-style:none;
+  display:flex; gap:11px; align-items:flex-start; font-size:15.5px;
+}
+details.q summary::-webkit-details-marker{display:none}
+details.q summary::after{
+  content:'+'; margin-left:auto; font-family:var(--f-mono); color:var(--accent);
+  font-size:17px; line-height:1; flex:none; padding-top:2px;
+}
+details.q[open] summary::after{content:'\2212'}
+details.q summary:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
+details.q summary .qn{
+  font-family:var(--f-mono); font-size:12px; color:var(--ink-3); flex:none; padding-top:3px;
+}
+details.q .ans{padding:0 15px 14px 41px; font-size:15.5px; color:var(--ink-2); border-top:1px solid var(--rule); padding-top:13px}
+details.q .ans p:last-child{margin-bottom:0}
+
+.endnote{
+  margin-top:44px; padding-top:20px; border-top:1px solid var(--rule-strong);
+  font-size:13.5px; color:var(--ink-3); font-family:var(--f-disp); line-height:1.55;
+}
+.endnote a{color:var(--accent)}
+
+@media (prefers-reduced-motion:reduce){*{animation:none !important; transition:none !important}}
+</style>
+
+<style>
+/* chapter 03 additions */
+.beamgrid{display:grid; gap:0}
+.stage.tall{max-width:560px}
+.statline{
+  display:flex; gap:18px; flex-wrap:wrap; padding:9px 12px; margin-top:12px;
+  border:1px solid var(--rule); border-radius:2px; background:var(--sheet-2);
+  font-family:var(--f-mono); font-size:12.5px; color:var(--ink-2);
+}
+.statline b{color:var(--ink); font-weight:600}
+.flag{
+  display:inline-block; padding:1px 7px; border-radius:2px; font-family:var(--f-disp);
+  font-size:10px; letter-spacing:.1em; text-transform:uppercase; font-weight:700;
+}
+.flag.ok{background:var(--bridge-soft); color:var(--bridge)}
+.flag.bad{background:var(--brk-soft); color:var(--brk)}
+</style>
+
+<header class="titleblock">
+  <div class="tb-in">
+    <div class="tb-cell">
+      <span class="tb-k">Chapter</span>
+      <span class="tb-v accent">03 &middot; Calculus</span>
+    </div>
+    <div class="tb-cell tb-hide">
+      <span class="tb-k">Sheet</span>
+      <span class="tb-v">3 of 20</span>
+    </div>
+    <div class="tb-cell tb-hide">
+      <span class="tb-k">Reader</span>
+      <span class="tb-v">B.E. Mechanical</span>
+    </div>
+    <div class="tb-cell tb-hide">
+      <span class="tb-k">Prerequisite</span>
+      <span class="tb-v">Sheets 1&ndash;2</span>
+    </div>
+    <div class="tb-cell">
+      <button class="themebtn" id="themebtn" type="button" aria-label="Switch colour theme">Theme</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+
+<nav class="rail" aria-label="Chapter contents">
+  <div class="rail-h">Contents</div>
+  <a href="#bridge" class="on"><span class="n">00</span><span>The bridge</span></a>
+  <a href="#beam"><span class="n">01</span><span>Slope and area</span></a>
+  <a href="#chain"><span class="n">02</span><span>Chain rule &amp; backprop</span></a>
+  <a href="#grad"><span class="n">03</span><span>The gradient</span></a>
+  <a href="#hess"><span class="n">04</span><span>The Hessian</span></a>
+  <a href="#taylor"><span class="n">05</span><span>Taylor &amp; small angles</span></a>
+  <a href="#opt"><span class="n">06</span><span>Descent</span></a>
+  <a href="#constr"><span class="n">07</span><span>Constraints</span></a>
+  <a href="#breaks"><span class="n">08</span><span>Where it stops being physics</span></a>
+  <a href="#worked"><span class="n">09</span><span>Worked example</span></a>
+  <a href="#recall"><span class="n">10</span><span>Shadow reading</span></a>
+  <a href="#next"><span class="n">11</span><span>What this feeds</span></a>
+</nav>
+
+<main>
+
+<section id="top" style="padding-top:44px">
+  <div class="col">
+    <p class="eyebrow">Maths, CS &amp; AI Compendium &middot; Chapter 03</p>
+    <h1>Slope, Area, Descent</h1>
+    <p class="lead" style="margin-top:18px">
+      Training a model means walking downhill on a surface you cannot see, in a space with a
+      million directions. That sounds exotic. It is not. You have done the two-dimensional
+      version by hand, on paper, under exam conditions, every time you drew a bending moment
+      diagram and marked the maximum where the shear crossed zero.
+    </p>
+    <p>
+      This chapter is calculus, and it splits into three moves. <strong>Slope</strong>: how fast
+      is this changing right now. <strong>Area</strong>: how much has accumulated. And
+      <strong>descent</strong>: given the slope, which way is downhill, and how far dare I step.
+      You have strong physical instincts for the first two. The third is where machine learning
+      lives, and where &mdash; honestly &mdash; your instincts start to mislead you, because the
+      landscape ML walks on is not a physical one.
+    </p>
+  </div>
+</section>
+
+<section id="bridge">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">00</span>
+      <h2>The bridge</h2>
+    </div>
+    <hr class="rule-h">
+  </div>
+
+  <div class="tw">
+    <table>
+      <thead>
+        <tr><th>What you already use</th><th>What ML calls it</th><th>How good is the match?</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>\(V=\mathrm{d}M/\mathrm{d}x\), \(w=-\mathrm{d}V/\mathrm{d}x\)</td>
+          <td>Derivative</td>
+          <td><b style="color:var(--bridge)">Identical.</b> Your SFD/BMD rules <em>are</em> calculus.</td>
+        </tr>
+        <tr>
+          <td>"Max BM where SF crosses zero"</td>
+          <td>Critical point, \(f'(x)=0\)</td>
+          <td><b style="color:var(--bridge)">Identical.</b> Same theorem, exam-ready phrasing.</td>
+        </tr>
+        <tr>
+          <td>Area under the shear diagram</td>
+          <td>Definite integral</td>
+          <td><b style="color:var(--bridge)">Identical.</b> The Fundamental Theorem, applied.</td>
+        </tr>
+        <tr>
+          <td>Gear train ratio = product of stage ratios</td>
+          <td>Chain rule</td>
+          <td><b style="color:var(--bridge)">Identical.</b> Multiply local rates along the chain.</td>
+        </tr>
+        <tr>
+          <td>Fourier's law \(\mathbf{q}=-k\nabla T\)</td>
+          <td>Gradient descent</td>
+          <td><b style="color:var(--bridge)">Same minus sign, same reason.</b> See &sect;03.</td>
+        </tr>
+        <tr>
+          <td>Isotherms perpendicular to heat flux</td>
+          <td>Contours perpendicular to gradient</td>
+          <td><b style="color:var(--bridge)">Identical.</b> Same diagram, relabelled.</td>
+        </tr>
+        <tr>
+          <td>Stiffness matrix \(K\)</td>
+          <td>Hessian of the objective</td>
+          <td><b style="color:var(--bridge)">Exact:</b> \(K=\partial^2U/\partial\mathbf{u}^2\).</td>
+        </tr>
+        <tr>
+          <td>Small-angle \(\sin\theta\approx\theta\)</td>
+          <td>First-order Taylor</td>
+          <td><b style="color:var(--bridge)">Identical &mdash; and quantifiably wrong.</b> See &sect;05.</td>
+        </tr>
+        <tr>
+          <td>Newton&ndash;Raphson, tangent stiffness</td>
+          <td>Newton's method</td>
+          <td><b style="color:var(--bridge)">The same algorithm,</b> unusable at ML scale.</td>
+        </tr>
+        <tr>
+          <td>Constraint force in a pendulum rod</td>
+          <td>Lagrange multiplier \(\lambda\)</td>
+          <td><b style="color:var(--bridge)">Exact.</b> \(\lambda\) <em>is</em> the rod tension.</td>
+        </tr>
+        <tr>
+          <td>A design objective with one clear optimum</td>
+          <td>A deep learning loss surface</td>
+          <td><b style="color:var(--brk)">Nothing like it.</b> See &sect;08.</td>
+        </tr>
+      </tbody>
+      <caption>Ten exact correspondences and one that fails badly. The last row is most of what makes training hard.</caption>
+    </table>
+  </div>
+</section>
+
+<section id="beam">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">01</span>
+      <h2>Slope and area are the same fact</h2>
+      <span class="srcref">src 01 + 02</span>
+    </div>
+    <hr class="rule-h">
+    <p>
+      The <strong>derivative</strong> is the slope of the tangent, defined as the limit of a
+      secant slope as the two points merge:
+    </p>
+    <div class="mathbox">
+      $$f'(a)=\lim_{h\to 0}\frac{f(a+h)-f(a)}{h}$$
+    </div>
+    <p>
+      The <strong>definite integral</strong> is the signed area under a curve, defined as the
+      limit of a sum of thin rectangles. The <strong>Fundamental Theorem of Calculus</strong>
+      says these two operations undo each other:
+    </p>
+    <div class="mathbox">
+      $$\int_a^b f(x)\,\mathrm{d}x=F(b)-F(a),\qquad \frac{\mathrm{d}}{\mathrm{d}x}\int_a^x f(t)\,\mathrm{d}t=f(x)$$
+    </div>
+    <p>
+      Presented cold, that theorem is a pair of formulas to memorise. You, however, have used
+      it hundreds of times under a different name.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; the beam diagram <em>is</em> the Fundamental Theorem</div>
+      <p>
+        For a beam carrying distributed load \(w(x)\), shear \(V(x)\) and bending moment
+        \(M(x)\), the relations you drilled are:
+      </p>
+      <div class="mathbox">
+        $$\frac{\mathrm{d}V}{\mathrm{d}x}=-w(x),\qquad \frac{\mathrm{d}M}{\mathrm{d}x}=V(x)$$
+      </div>
+      <p>
+        and, read the other way round, \(\Delta V=-\int w\,\mathrm{d}x\) and
+        \(\Delta M=\int V\,\mathrm{d}x\). Every rule you were taught for sketching these
+        diagrams is a calculus theorem in disguise:
+      </p>
+      <ul>
+        <li>"The slope of the moment diagram is the shear" &mdash; that is differentiation.</li>
+        <li>"The change in moment is the area under the shear diagram" &mdash; that is the Fundamental Theorem.</li>
+        <li>"Under a UDL the shear is linear and the moment is parabolic" &mdash; integrating a constant gives a ramp; integrating a ramp gives a parabola.</li>
+        <li>"Maximum bending moment occurs where the shear crosses zero" &mdash; that is the critical point condition \(\mathrm{d}M/\mathrm{d}x=0\).</li>
+      </ul>
+      <p style="margin-bottom:0">
+        You did not learn a set of drawing tricks. You learned calculus, indexed by a beam.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab">
+    <div class="lab-h">
+      <span class="lab-t">Load, shear, moment</span>
+      <span class="lab-tag">Move the load</span>
+    </div>
+    <div class="lab-body">
+      <svg class="stage tall" id="sB" viewBox="0 0 480 400" role="img"
+           aria-label="A simply supported beam with its shear force and bending moment diagrams, showing the maximum moment where shear crosses zero">
+        <g id="beamG"></g>
+      </svg>
+      <div class="ctl">
+        <label for="wSl">UDL w</label>
+        <input type="range" id="wSl" min="0" max="12" value="4" step="0.5">
+        <span class="ro-v" id="wVal" style="min-width:74px">4.0 kN/m</span>
+      </div>
+      <div class="ctl">
+        <label for="pSl">Point load P</label>
+        <input type="range" id="pSl" min="0" max="40" value="20" step="1">
+        <span class="ro-v" id="pVal" style="min-width:66px">20 kN</span>
+      </div>
+      <div class="ctl">
+        <label for="aSl">at position a</label>
+        <input type="range" id="aSl" min="0.2" max="5.8" value="2.2" step="0.1">
+        <span class="ro-v" id="aVal" style="min-width:60px">2.2 m</span>
+      </div>
+      <div class="readout">
+        <div class="ro"><div class="ro-k">Reaction R&#7472;</div><div class="ro-v a" id="oRA">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Reaction R&#7480;</div><div class="ro-v a" id="oRB">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Shear zero at x*</div><div class="ro-v c" id="oX0">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">M at x*</div><div class="ro-v c" id="oMmax">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Area under V, 0&#8594;x*</div><div class="ro-v" id="oArea">&mdash;</div></div>
+      </div>
+    </div>
+    <div class="lab-foot">
+      Span 6 m, simply supported. The green marker tracks where \(V\) crosses zero, and the
+      moment diagram peaks at exactly that station &mdash; because \(\mathrm{d}M/\mathrm{d}x=V\),
+      so \(M\) is stationary precisely where \(V=0\). The last readout integrates the shear
+      diagram numerically from the left support to \(x^*\); compare it with the moment. They
+      agree to the displayed precision, which is the Fundamental Theorem being checked in front
+      of you.
+    </div>
+  </div>
+
+  <figure class="col">
+    <div class="paper">
+      <img src="img/area_under_curve.svg" alt="The area under a curve approximated by summing thin rectangles" width="400">
+    </div>
+    <figcaption><b>Fig. 3.1</b> &mdash; The integral as a limit of rectangle sums. When you computed the area of a triangular shear block to get a moment, you evaluated one of these in closed form. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+
+  <div class="col">
+    <p>
+      The differentiation rules follow the same pattern you already use: power rule
+      \(\frac{\mathrm{d}}{\mathrm{d}x}x^n=nx^{n-1}\), product rule \((fg)'=f'g+fg'\), quotient
+      rule, and the chain rule which gets its own section next. Integration reverses them:
+      u-substitution reverses the chain rule, and integration by parts reverses the product rule.
+    </p>
+    <p>
+      Two more integrals you have already computed without calling them that: the second moment
+      of area \(I=\int y^2\,\mathrm{d}A\), and the work done by a varying force
+      \(W=\int F\,\mathrm{d}x\) &mdash; the area under the force&ndash;displacement curve, which
+      for a spring gives the familiar \(\tfrac12kx^2\).
+    </p>
+  </div>
+</section>
+
+<section id="chain">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">02</span>
+      <h2>The chain rule, and what backpropagation adds to it</h2>
+      <span class="srcref">src 01 + 03</span>
+    </div>
+    <hr class="rule-h">
+    <p>
+      When functions are nested, their derivatives multiply along the chain:
+    </p>
+    <div class="mathbox">
+      $$\frac{\mathrm{d}}{\mathrm{d}x}f\big(g(x)\big)=f'\big(g(x)\big)\cdot g'(x)$$
+    </div>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; a gear train is a chain rule</div>
+      <p>
+        A three-stage reduction with ratios \(r_1,r_2,r_3\) has overall ratio \(r_1r_2r_3\).
+        Written as rates,
+      </p>
+      <div class="mathbox">
+        $$\frac{\mathrm{d}\omega_{\text{out}}}{\mathrm{d}\omega_{\text{in}}}
+          =\frac{\mathrm{d}\omega_{\text{out}}}{\mathrm{d}\omega_2}
+           \frac{\mathrm{d}\omega_2}{\mathrm{d}\omega_1}
+           \frac{\mathrm{d}\omega_1}{\mathrm{d}\omega_{\text{in}}}$$
+      </div>
+      <p style="margin-bottom:0">
+        which is the chain rule exactly. And it carries a warning you already understand: if one
+        stage has a ratio of \(1/50\), the whole train barely turns, no matter what the other
+        stages do. A long product of small local derivatives collapses toward zero. In deep
+        networks that is called the <strong>vanishing gradient problem</strong>, and it is the
+        same arithmetic &mdash; early layers receive almost no signal because it was
+        multiplied down through every stage above them. The mirror failure, one stage with a
+        large ratio blowing the product up, is the <strong>exploding gradient</strong>.
+      </p>
+    </div>
+  </div>
+
+  <figure class="col">
+    <div class="paper">
+      <img src="img/chain_rule.svg" alt="The chain rule shown as differentiating an outer function then multiplying by the derivative of the inner one" width="400">
+    </div>
+    <figcaption><b>Fig. 3.2</b> &mdash; Differentiate the outer, multiply by the derivative of the inner. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+
+  <div class="col">
+    <h3>What backpropagation actually contributes</h3>
+    <p>
+      The source chapter says backpropagation is the chain rule applied repeatedly. True, but
+      it undersells the idea, and the missing half is the reason training a billion-parameter
+      model is possible at all. The chain rule tells you <em>what</em> to multiply. It does not
+      tell you in <em>what order</em>, and the order is everything.
+    </p>
+    <p>
+      A loss function maps \(n\) parameters to one number, \(L:\mathbb{R}^n\to\mathbb{R}\), with
+      \(n\) in the billions. There are two ways to evaluate the chain of derivatives:
+    </p>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Mode</th><th>Sweeps the chain</th><th>Gets you</th><th>Cost for \(n\) parameters</th></tr></thead>
+        <tbody>
+          <tr><td><b>Forward</b></td><td>Inputs &rarr; output</td><td>Sensitivity of <em>all</em> outputs to <em>one</em> input</td><td class="mono">n passes</td></tr>
+          <tr><td><b>Reverse</b></td><td>Output &rarr; inputs</td><td>Sensitivity of <em>one</em> output to <em>all</em> inputs</td><td class="mono">1 pass</td></tr>
+        </tbody>
+        <caption>Both compute exactly the same derivatives. Only the sweep direction differs, and with one output and a billion inputs that difference is a factor of a billion.</caption>
+      </table>
+    </div>
+    <p>
+      Backpropagation is reverse mode. One forward pass to compute the loss, one backward pass
+      to get every partial derivative, at roughly two to three times the cost of the forward
+      pass alone &mdash; regardless of how many parameters there are. Forward mode would need one
+      pass per parameter. That asymmetry, not the chain rule, is the engineering insight.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>If you have met the adjoint method</div>
+      <p style="margin-bottom:0">
+        In structural and shape optimisation there are two ways to get sensitivities of a
+        response to many design variables: the <em>direct differentiation</em> method, costing
+        one solve per design variable, and the <em>adjoint</em> method, costing one extra solve
+        total regardless of how many variables there are. Anyone who has run topology
+        optimisation has relied on the adjoint. Backpropagation is that same trick, and reverse-
+        mode automatic differentiation is its general form.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="grad">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">03</span>
+      <h2>The gradient</h2>
+      <span class="srcref">src 03. multivariate</span>
+    </div>
+    <hr class="rule-h">
+    <p>
+      A <strong>partial derivative</strong> nudges one variable and holds the rest fixed. The
+      <strong>gradient</strong> collects them into a vector:
+    </p>
+    <div class="mathbox">
+      $$\nabla f=\left(\frac{\partial f}{\partial x_1},\ \frac{\partial f}{\partial x_2},\ \ldots,\ \frac{\partial f}{\partial x_n}\right)$$
+    </div>
+    <p>
+      It has two properties worth stating carefully. It points in the direction of
+      <strong>steepest increase</strong>, and its magnitude \(\|\nabla f\|\) is the rate of
+      increase in that direction. The <strong>directional derivative</strong> along any unit
+      vector \(\mathbf{u}\) is a dot product &mdash; Chapter 01 paying off:
+    </p>
+    <div class="mathbox">
+      $$D_{\mathbf{u}}f=\nabla f\cdot\mathbf{u}=\|\nabla f\|\cos\theta$$
+    </div>
+    <p>
+      Read that geometrically and the whole of gradient descent falls out of it. The dot product
+      is most negative when \(\cos\theta=-1\), that is when \(\mathbf{u}\) points exactly
+      opposite the gradient. So <strong>steepest descent is \(-\nabla f\)</strong> &mdash; not a
+      definition, a consequence of the cosine.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; gradient descent is Fourier's law</div>
+      <p>
+        Heat conduction obeys \(\mathbf{q}=-k\nabla T\). Heat flows <em>down</em> the temperature
+        gradient, at a rate proportional to its steepness. The minus sign is the entire content
+        of the law. Now compare the update rule that trains every neural network on earth:
+      </p>
+      <div class="mathbox">
+        $$\boldsymbol{\theta}\leftarrow\boldsymbol{\theta}-\alpha\nabla L$$
+      </div>
+      <p style="margin-bottom:0">
+        Same minus sign, same reason. Fick's law for diffusion and Darcy's law for seepage have
+        the identical shape. And the picture is the one from your heat transfer notes: isotherms
+        are contour lines, heat flux lines cross them at right angles, and tightly packed
+        isotherms mean steep gradients and fast flow. Every statement in the source chapter about
+        contours and gradients is a statement you have already drawn.
+      </p>
+    </div>
+  </div>
+
+  <figure class="col">
+    <div class="paper">
+      <img src="img/gradient_contour.svg" alt="Gradient arrows pointing uphill, perpendicular to the contour lines" width="400">
+    </div>
+    <figcaption><b>Fig. 3.3</b> &mdash; Gradients perpendicular to contours. Relabel the contours as isotherms and the arrows as heat flux, reversed, and it is a conduction diagram. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+
+  <div class="col">
+    <p>
+      For vector-valued functions, the <strong>Jacobian</strong> stacks one gradient per output
+      row. You have used one: a manipulator's \(\mathbf{v}=J\dot{\mathbf{q}}\) is the Jacobian of
+      the forward kinematics map, and Chapter 02's singular configurations were exactly the
+      points where \(\det J=0\).
+    </p>
+  </div>
+</section>
+
+<section id="hess">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">04</span>
+      <h2>The Hessian is a stiffness matrix</h2>
+      <span class="srcref">src 03. multivariate</span>
+    </div>
+    <hr class="rule-h">
+    <p>
+      The gradient is first-order information: which way is downhill. The <strong>Hessian</strong>
+      is second-order: how the surface curves.
+    </p>
+    <div class="mathbox">
+      $$H_{ij}=\frac{\partial^2 f}{\partial x_i\,\partial x_j}$$
+    </div>
+    <p>
+      By <strong>Clairaut's theorem</strong>, mixed partials commute for functions with
+      continuous second derivatives, so \(H\) is symmetric &mdash; which by Chapter 02's spectral
+      theorem gives it real eigenvalues and orthogonal eigenvectors. That chain of consequences
+      is worth tracing, because it is what makes the second derivative test work at all.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; \(K\) is literally a Hessian</div>
+      <p>
+        Strain energy for a linear structure is \(U(\mathbf{u})=\tfrac12\mathbf{u}^TK\mathbf{u}\).
+        Differentiate twice:
+      </p>
+      <div class="mathbox">
+        $$\nabla U=K\mathbf{u}=\mathbf{F},\qquad \frac{\partial^2 U}{\partial\mathbf{u}^2}=K$$
+      </div>
+      <p style="margin-bottom:0">
+        The gradient of strain energy is the force vector, and the Hessian of strain energy
+        <em>is</em> the stiffness matrix. So every fact from Chapter 02 transfers directly:
+        \(K\) positive definite means a stable equilibrium at a strict energy minimum; a zero
+        eigenvalue means a direction that costs no energy, which is a mechanism or a buckling
+        mode at its critical load. When an ML text says "a positive definite Hessian certifies a
+        local minimum", it is stating the stability criterion you already apply to structures.
+      </p>
+    </div>
+
+    <p>
+      The <strong>second derivative test</strong> then reads exactly as you would expect:
+    </p>
+    <div class="kv">
+      <dt>H positive definite</dt><dd>All eigenvalues \(>0\). Bowl. Local <b>minimum</b>.</dd>
+      <dt>H negative definite</dt><dd>All eigenvalues \(<0\). Dome. Local <b>maximum</b>.</dd>
+      <dt>Mixed signs</dt><dd><b>Saddle point</b> &mdash; up in some directions, down in others. A mountain pass.</dd>
+      <dt>Any zero eigenvalue</dt><dd>Inconclusive at second order. A flat direction.</dd>
+    </div>
+    <p>
+      One more consequence, and it is the one that matters most in practice. The
+      <strong>condition number</strong> \(\kappa=\lambda_{\max}/\lambda_{\min}\) of the Hessian
+      measures how elongated the bowl is. A \(\kappa\) near 1 is a round bowl and gradient
+      descent runs straight to the bottom. A large \(\kappa\) is a long narrow valley, and
+      descent zigzags across it, making painful progress along its floor. &sect;06 shows this
+      happening. It is the same \(\kappa\) that ruins a sliver-shaped finite element.
+    </p>
+  </div>
+
+  <figure class="col">
+    <div class="paper">
+      <img src="img/critical_points.svg" alt="Points where the derivative is zero, marking a peak, a valley and a saddle" width="400">
+    </div>
+    <figcaption><b>Fig. 3.4</b> &mdash; Critical points. The gradient vanishes at all three; only the Hessian distinguishes them. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="taylor">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">05</span>
+      <h2>Taylor series, and the price of the small-angle assumption</h2>
+      <span class="srcref">src 04. approximation</span>
+    </div>
+    <hr class="rule-h">
+    <p>
+      A <strong>Taylor series</strong> rebuilds a function near a point out of its derivatives
+      there &mdash; value, then slope, then curvature, then finer and finer detail:
+    </p>
+    <div class="mathbox">
+      $$f(x)=f(a)+f'(a)(x-a)+\frac{f''(a)}{2!}(x-a)^2+\frac{f'''(a)}{3!}(x-a)^3+\cdots$$
+    </div>
+    <p>
+      Truncate after the linear term and you have <strong>linearisation</strong>: replace the
+      curve by its tangent. You have done this constantly &mdash; linearising a system about an
+      operating point in control theory, assuming small strains, using
+      \((1+x)^n\approx 1+nx\) in an error estimate.
+    </p>
+    <p>
+      And once, very early, you did it to a pendulum.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; \(\sin\theta\approx\theta\) is a truncated Taylor series</div>
+      <p style="margin-bottom:0">
+        The pendulum equation is \(\ddot{\theta}+\frac{g}{L}\sin\theta=0\), which has no
+        elementary solution. Every textbook then says "for small angles,
+        \(\sin\theta\approx\theta\)", giving \(\ddot{\theta}+\frac{g}{L}\theta=0\) &mdash; simple
+        harmonic motion, with \(T_0=2\pi\sqrt{L/g}\). That substitution is the first term of
+        \(\sin\theta=\theta-\theta^3/3!+\theta^5/5!-\cdots\), and the famous result that the
+        period is independent of amplitude is <em>an artefact of the truncation</em>, not a
+        property of pendulums.
+      </p>
+    </div>
+
+    <p>
+      That is not a criticism &mdash; it is the honest accounting that makes the approximation
+      usable. The error is quantifiable. Carrying the expansion further gives the true period as
+    </p>
+    <div class="mathbox">
+      $$T=T_0\left(1+\frac{1}{16}\theta_0^2+\frac{11}{3072}\theta_0^4+\cdots\right)$$
+    </div>
+    <p>and so the small-angle assumption costs you:</p>
+  </div>
+
+  <div class="tw col">
+    <table>
+      <thead><tr><th class="mono">Amplitude &theta;&#8320;</th><th class="mono">True period / T&#8320;</th><th>Error in the SHM answer</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">5&deg;</td><td class="mono">1.0005</td><td>0.05% &mdash; unmeasurable</td></tr>
+        <tr><td class="mono">30&deg;</td><td class="mono">1.0174</td><td>1.7% &mdash; visible on a stopwatch</td></tr>
+        <tr><td class="mono">60&deg;</td><td class="mono">1.0728</td><td>7.3% &mdash; the model is misleading</td></tr>
+        <tr><td class="mono">90&deg;</td><td class="mono">1.1760</td><td>17.6% &mdash; the model is wrong</td></tr>
+      </tbody>
+      <caption>The cost of keeping one Taylor term. Know the number, and the approximation is a tool; ignore it, and it is a trap.</caption>
+    </table>
+  </div>
+
+  <div class="lab">
+    <div class="lab-h">
+      <span class="lab-t">Adding Taylor terms</span>
+      <span class="lab-tag">Drag the term count</span>
+    </div>
+    <div class="lab-body">
+      <svg class="stage" id="sTay" viewBox="0 0 480 300" role="img"
+           aria-label="The sine function with its Taylor polynomial approximations of increasing order">
+        <g id="gridTay"></g>
+        <g id="axTay"></g>
+        <path id="curveSin" fill="none" stroke-width="2.5"/>
+        <path id="curveTay" fill="none" stroke-width="2.5"/>
+        <line id="markSm"/>
+      </svg>
+      <div class="ctl">
+        <label for="nSl">Terms kept</label>
+        <input type="range" id="nSl" min="1" max="8" value="1" step="1">
+        <span class="ro-v" id="nVal" style="min-width:56px">1</span>
+      </div>
+      <div class="readout">
+        <div class="ro"><div class="ro-k">Highest power</div><div class="ro-v" id="oPow">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">|error| at 30&deg;</div><div class="ro-v c" id="oE30">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">|error| at 90&deg;</div><div class="ro-v a" id="oE90">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">|error| at 180&deg;</div><div class="ro-v b" id="oE180">&mdash;</div></div>
+      </div>
+      <div class="legend">
+        <span class="lg"><i style="background:var(--s2)"></i>sin x &middot; exact</span>
+        <span class="lg"><i style="background:var(--s1)"></i>Taylor polynomial</span>
+      </div>
+    </div>
+    <div class="lab-foot">
+      One term is the straight line \(y=x\) &mdash; the small-angle assumption, drawn. It hugs
+      the curve near the origin and diverges badly further out, which is exactly the table above
+      in picture form. Notice how each new term extends the region of good agreement outward
+      rather than improving it uniformly: a Taylor series is a <b>local</b> statement about
+      behaviour near one point.
+    </div>
+  </div>
+
+  <figure class="col">
+    <div class="paper">
+      <img src="img/taylor_approximation.svg" alt="Successive Taylor polynomials tracking a curve more closely as terms are added" width="400">
+    </div>
+    <figcaption><b>Fig. 3.5</b> &mdash; More terms, wider agreement. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+
+  <div class="col">
+    <p>
+      In several variables the second-order Taylor expansion is the one that matters, because it
+      is the quadratic model every serious optimiser is built on:
+    </p>
+    <div class="mathbox">
+      $$f(\mathbf{x})\approx f(\mathbf{a})+\nabla f(\mathbf{a})^T(\mathbf{x}-\mathbf{a})
+        +\tfrac12(\mathbf{x}-\mathbf{a})^TH(\mathbf{a})(\mathbf{x}-\mathbf{a})$$
+    </div>
+    <p>
+      Value, gradient, Hessian. Compare it with \(U=\tfrac12\mathbf{u}^TK\mathbf{u}\) and the
+      structure is identical: near any minimum, every smooth function looks like a linear elastic
+      structure, with the Hessian playing the stiffness matrix. That is why elastic intuition
+      transfers so well to optimisation, and it is also the approximation Newton's method jumps
+      to the bottom of.
+    </p>
+  </div>
+</section>
+
+<section id="opt">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">06</span>
+      <h2>Descent</h2>
+      <span class="srcref">src 05. optimisation</span>
+    </div>
+    <hr class="rule-h">
+    <p>
+      <strong>Critical points</strong> are where \(f'(x)=0\), and the second derivative test
+      sorts them into minima, maxima and inflections. A function is <strong>convex</strong> when
+      it curves upward everywhere, and convexity buys you an enormous guarantee: every local
+      minimum is the global minimum. Roll a ball into a convex bowl and it finds the bottom.
+    </p>
+    <p>
+      <strong>Gradient descent</strong> takes repeated steps downhill:
+    </p>
+    <div class="mathbox">
+      $$\boldsymbol{\theta}_{k+1}=\boldsymbol{\theta}_k-\alpha\nabla f(\boldsymbol{\theta}_k)$$
+    </div>
+    <p>
+      Everything hinges on \(\alpha\), the <strong>learning rate</strong>. Too small and you
+      crawl; too large and you overshoot and diverge. That trade-off is not a quirk of machine
+      learning &mdash; it is a stability condition you have already met.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; the learning rate is a timestep</div>
+      <p>
+        Consider the continuous version, \(\dot{\boldsymbol\theta}=-\nabla f\). This is gradient
+        <em>flow</em>, and it is a diffusion equation &mdash; the system relaxing toward
+        equilibrium exactly as a temperature field relaxes. Gradient descent is that ODE
+        integrated with the simplest explicit scheme, forward Euler, and \(\alpha\) is the
+        timestep.
+      </p>
+      <p>
+        Explicit time integration is only conditionally stable. On a quadratic with Hessian
+        eigenvalues \(\lambda_i\), gradient descent converges if and only if
+      </p>
+      <div class="mathbox">
+        $$0<\alpha<\frac{2}{\lambda_{\max}}$$
+      </div>
+      <p style="margin-bottom:0">
+        Compare the critical timestep for explicit central-difference dynamics,
+        \(\Delta t_{\text{crit}}=2/\omega_{\max}\). The operators differ &mdash; first-order
+        relaxation here, second-order dynamics there &mdash; but the mechanism is the same one:
+        an explicit scheme stays stable only while the step is small enough for the
+        <em>fastest</em> mode in the system, and both limits take the form 2 over that mode's
+        characteristic rate. A loss that
+        explodes to <code>NaN</code> because the learning rate was too high is the same failure as
+        an explicit FEM run going unstable because one tiny stiff element pushed
+        \(\omega_{\max}\) up. You have debugged this before.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab">
+    <div class="lab-h">
+      <span class="lab-t">Descent in a valley</span>
+      <span class="lab-tag">Tune rate and conditioning</span>
+    </div>
+    <div class="lab-body">
+      <svg class="stage" id="sGD" viewBox="0 0 480 320" role="img"
+           aria-label="Gradient descent iterates plotted on elliptical contours, zigzagging when the problem is ill conditioned">
+        <g id="gridGD"></g>
+        <g id="contGD"></g>
+        <line id="axGDx"/><line id="axGDy"/>
+        <path id="pathGD" fill="none" stroke-width="2"/>
+        <g id="ptsGD"></g>
+        <circle id="minGD" r="5"/>
+      </svg>
+      <div class="ctl">
+        <label for="lrSl">Learning rate &alpha;</label>
+        <input type="range" id="lrSl" min="1" max="130" value="30" step="1">
+        <span class="ro-v" id="lrVal" style="min-width:74px">0.30</span>
+      </div>
+      <div class="ctl">
+        <label for="kSl">Condition &kappa;</label>
+        <input type="range" id="kSl" min="1" max="40" value="8" step="1">
+        <span class="ro-v" id="kVal" style="min-width:56px">8</span>
+      </div>
+      <div class="readout">
+        <div class="ro"><div class="ro-k">Stability limit 2/&lambda;max</div><div class="ro-v c" id="oLim">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Status</div><div class="ro-v" id="oStat">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Steps to 1% of start</div><div class="ro-v a" id="oSteps">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Best-case rate (&kappa;&minus;1)/(&kappa;+1)</div><div class="ro-v" id="oRate">&mdash;</div></div>
+      </div>
+    </div>
+    <div class="lab-foot">
+      The objective is \(f=\tfrac12(\kappa x^2+y^2)\), whose contours are ellipses with aspect
+      ratio \(\kappa\) &mdash; the Hessian's condition number made visible. Raise \(\kappa\) and
+      watch descent stop heading for the minimum and start bouncing across the valley instead.
+      Raise \(\alpha\) past the stability limit and the path spirals outward: that is the
+      <code>NaN</code>. The cruel part is that raising \(\kappa\) <em>lowers</em> the limit, so
+      the harder the problem, the smaller the step you are allowed.
+    </div>
+  </div>
+
+  <div class="col">
+    <h3>Newton's method, and why ML cannot use it</h3>
+    <p>
+      <strong>Newton's method</strong> for a root is \(x_{n+1}=x_n-f(x_n)/f'(x_n)\); applied to
+      \(f'=0\) for optimisation it becomes, in several variables,
+    </p>
+    <div class="mathbox">
+      $$\mathbf{x}_{n+1}=\mathbf{x}_n-H^{-1}\nabla f(\mathbf{x}_n)$$
+    </div>
+    <p>
+      Fit the local quadratic from &sect;05, jump to its minimum, repeat. Convergence is
+      quadratic &mdash; correct digits roughly double each step &mdash; and it is
+      <em>scale-free</em>: because \(H^{-1}\) undoes the conditioning, the zigzag in the panel
+      above disappears entirely. You have run this as <strong>Newton&ndash;Raphson</strong> in
+      numerical methods, and nonlinear FEM runs it with the tangent stiffness matrix as \(H\).
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>Where the analogy breaks &mdash; the Hessian does not fit in the universe</div>
+      <p style="margin-bottom:0">
+        For a model with \(n=10^9\) parameters the Hessian has \(10^{18}\) entries. At 4 bytes
+        each that is four billion gigabytes, and inverting it costs \(O(n^3)=10^{27}\)
+        operations. It is not slow, it is impossible &mdash; by a margin of many orders of
+        magnitude. So deep learning abandons the better algorithm and uses first-order methods
+        that only ever touch \(\nabla f\), patching the conditioning problem with momentum and
+        per-parameter step sizes instead. <strong>Adam</strong>, the default optimiser, is
+        essentially gradient descent with a running estimate of each parameter's own scale. To a
+        numerical analyst it looks crude. At \(10^9\) parameters it is what fits.
+      </p>
+    </div>
+  </div>
+
+  <figure class="col">
+    <div class="paper">
+      <img src="img/newtons_method.svg" alt="Newton's method following a tangent line to a better estimate of a root" width="380">
+    </div>
+    <figcaption><b>Fig. 3.6</b> &mdash; Newton's method: follow the tangent to the axis, repeat. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="constr">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">07</span>
+      <h2>Optimising under constraint</h2>
+      <span class="srcref">src 05. optimisation</span>
+    </div>
+    <hr class="rule-h">
+    <p>
+      Real problems come with restrictions: minimise mass <em>subject to</em> a stress limit,
+      maximise stiffness <em>subject to</em> a volume budget. <strong>Lagrange multipliers</strong>
+      handle equality constraints. To optimise \(f\) subject to \(g=c\), form
+    </p>
+    <div class="mathbox">
+      $$\mathcal{L}(\mathbf{x},\lambda)=f(\mathbf{x})-\lambda\big(g(\mathbf{x})-c\big)$$
+    </div>
+    <p>
+      and set every partial derivative to zero. The geometric content is worth more than the
+      recipe: at a constrained optimum the two gradients must be <strong>parallel</strong>,
+      \(\nabla f=\lambda\nabla g\). If they were not, some direction along the constraint surface
+      would still improve \(f\), so you would not be at the optimum.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; \(\lambda\) is a constraint force</div>
+      <p style="margin-bottom:0">
+        In analytical mechanics, a constrained system is handled the same way, and the
+        multipliers are not bookkeeping &mdash; they are the <strong>constraint forces</strong>.
+        For a pendulum, the constraint is that the bob stays at fixed radius, and the multiplier
+        enforcing it <em>is</em> the tension in the rod. This generalises: \(\lambda\) is always
+        the sensitivity of the optimum to relaxing the constraint by one unit. In a
+        minimum-mass design under a stress limit, \(\lambda\) tells you how much mass you would
+        save per unit of extra allowable stress &mdash; which economists call a shadow price and
+        engineers call a trade-off study.
+      </p>
+    </div>
+    <p>
+      For inequality constraints, the <strong>KKT conditions</strong> generalise this: each
+      constraint is either <em>active</em> and behaves like an equality, or <em>inactive</em> and
+      can be ignored because the optimum sits in the interior. That is the same case split you
+      make when checking whether a design is limited by strength or by deflection.
+    </p>
+  </div>
+
+  <figure class="col">
+    <div class="paper">
+      <img src="img/lagrange_multiplier.svg" alt="At a constrained optimum the gradients of the objective and the constraint are parallel" width="400">
+    </div>
+    <figcaption><b>Fig. 3.7</b> &mdash; Tangency. The optimum sits where a contour of \(f\) just touches the constraint curve, so their gradients align. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="breaks">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">08</span>
+      <h2>Where optimisation stops being physics</h2>
+      <span class="srcref">beyond the chapter</span>
+    </div>
+    <hr class="rule-h">
+    <p>
+      Everything so far transferred cleanly. This section is the bill. Four things about machine
+      learning optimisation have no counterpart in the design problems you have solved, and each
+      one breaks an instinct that has served you well until now.
+    </p>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>1 &mdash; The obstacle is saddles, not local minima</div>
+      <p>
+        Everyone's mental picture of non-convex optimisation is a 2-D curve with several
+        valleys, where the danger is getting stuck in the wrong one. In high dimensions that
+        picture is wrong.
+      </p>
+      <p style="margin-bottom:0">
+        A critical point is a minimum only if <em>every one</em> of the Hessian's \(n\)
+        eigenvalues is positive. With \(n\) in the millions, that is an extraordinarily strong
+        demand, and for a randomly-structured surface the overwhelming majority of critical
+        points have at least one negative eigenvalue &mdash; they are <strong>saddle
+        points</strong>. Worse, they come surrounded by plateaus where the gradient is tiny and
+        progress nearly stops, which <em>feels</em> exactly like being stuck in a minimum while
+        being nothing of the sort. Your 2-D intuition diagnoses the wrong disease. This is
+        Chapter 01's high-dimensional warning again, wearing different clothes.
+      </p>
+    </div>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>2 &mdash; You do not want the minimum</div>
+      <p>
+        This is the one that will feel genuinely wrong. When you solve \(K\mathbf{u}=\mathbf{F}\)
+        you want the exact answer, and a smaller residual is strictly better. In machine learning
+        it is not.
+      </p>
+      <p>
+        The quantity being minimised is the error on the <em>training</em> data. The quantity
+        anyone cares about is the error on data the model has never seen. Drive the first to zero
+        and you will typically have fitted the noise in your sample &mdash; the model memorises
+        the measurement error and performs worse on anything new. This is
+        <strong>overfitting</strong>, and it means the objective function is a <em>proxy</em>
+        for the real goal, not the goal.
+      </p>
+      <p style="margin-bottom:0">
+        So practitioners deliberately handicap the optimiser: stop early, add penalty terms, inject
+        noise. Imagine deliberately under-converging a finite element solve because the fully
+        converged answer would be less trustworthy. That is the situation, and there is no
+        mechanical analogue for it. The closest honest parallel is fitting a curve through
+        scattered experimental points: a high-order polynomial through every point has zero
+        residual and no predictive value.
+      </p>
+    </div>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>3 &mdash; The functions are not differentiable, and nobody minds</div>
+      <p style="margin-bottom:0">
+        &sect;01 said differentiability requires no sharp corners. ReLU, \(\max(0,z)\), has a
+        corner at exactly zero &mdash; and it is the most widely used activation function in the
+        field. Frameworks simply declare a value at the kink (usually 0) and carry on. The
+        justification is real but technical: the non-differentiable points form a set of measure
+        zero, and the correct object is a <em>subgradient</em> rather than a gradient. The
+        practical position is that the theory was extended to cover what was already working. Do
+        not let the rigour of &sect;01 make you think ML obeys it.
+      </p>
+    </div>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>4 &mdash; The noise is a feature</div>
+      <p style="margin-bottom:0">
+        <strong>Stochastic</strong> gradient descent computes the gradient on a small random
+        batch of data rather than all of it, so every step is a noisy estimate of the true
+        descent direction. The obvious reading is that this is a compromise for speed. It is
+        also, apparently, good for the result: the noise helps escape the saddle plateaus of
+        point 1 and tends to find minima that generalise better. An engineer's instinct is that
+        a noisier measurement gives a worse answer. Here a noisier gradient often gives a better
+        model, for reasons that remain an active research question rather than a settled theory.
+      </p>
+    </div>
+
+    <p>
+      None of this invalidates &sect;&sect;01&ndash;07. The calculus is exactly as stated; the
+      chain rule, the gradient, the Hessian and the stability limit all hold without
+      qualification. What changes is the <em>context</em> the calculus is applied in, and the
+      context is stranger than any structure you have analysed.
+    </p>
+  </div>
+
+  <figure class="col">
+    <div class="paper">
+      <img src="img/convex_nonconvex.svg" alt="A convex bowl with one minimum beside a non-convex landscape with several" width="400">
+    </div>
+    <figcaption><b>Fig. 3.8</b> &mdash; Convex against non-convex. Useful as far as it goes &mdash; but in a million dimensions the real hazard is not the extra valleys, it is the saddles between them. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="worked">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">09</span>
+      <h2>Worked example: choosing a step size</h2>
+    </div>
+    <hr class="rule-h">
+    <p>
+      Minimise \(f(x,y)=\tfrac12(10x^2+y^2)\) starting from \((1,1)\). This is the quadratic
+      model of &sect;05 with
+      \(H=\begin{bmatrix}10&0\\0&1\end{bmatrix}\), so \(\lambda_{\max}=10\),
+      \(\lambda_{\min}=1\), and \(\kappa=10\).
+    </p>
+    <p>
+      The gradient is \(\nabla f=(10x,\,y)\), so a descent step multiplies each coordinate by a
+      fixed factor:
+    </p>
+    <div class="mathbox">
+      $$x_{k+1}=(1-10\alpha)\,x_k,\qquad y_{k+1}=(1-\alpha)\,y_k$$
+    </div>
+    <p>
+      Convergence needs both factors below 1 in absolute value, so
+      \(|1-10\alpha|<1\), giving the stability limit \(\alpha<2/\lambda_{\max}=0.2\). Test it on
+      both sides.
+    </p>
+  </div>
+
+  <div class="tw col">
+    <table>
+      <thead>
+        <tr><th class="mono">k</th><th class="mono">&alpha; = 0.18 &nbsp;(x, y)</th><th class="mono">&alpha; = 0.21 &nbsp;(x, y)</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="mono">0</td><td class="mono">(1.000, 1.000)</td><td class="mono">(1.000, 1.000)</td></tr>
+        <tr><td class="mono">1</td><td class="mono">(&minus;0.800, 0.820)</td><td class="mono">(&minus;1.100, 0.790)</td></tr>
+        <tr><td class="mono">2</td><td class="mono">(0.640, 0.672)</td><td class="mono">(1.210, 0.624)</td></tr>
+        <tr><td class="mono">3</td><td class="mono">(&minus;0.512, 0.551)</td><td class="mono">(&minus;1.331, 0.493)</td></tr>
+        <tr><td class="mono">4</td><td class="mono">(0.410, 0.452)</td><td class="mono">(1.464, 0.390)</td></tr>
+        <tr><td class="mono">&hellip;</td><td class="mono"><span class="flag ok">converges</span> |x| = 0.8&#7503;</td><td class="mono"><span class="flag bad">diverges</span> |x| = 1.1&#7503;</td></tr>
+      </tbody>
+      <caption>
+        Three hundredths of a unit in &alpha; separates a working optimiser from one that
+        overflows to NaN. Both columns run the identical algorithm on the identical function.
+      </caption>
+    </table>
+  </div>
+
+  <div class="col">
+    <p>
+      Note what the converging column is doing: \(x\) flips sign every step while shrinking by
+      \(0.8\), which is the zigzag across the valley floor drawn in the &sect;06 panel. But
+      \(y\) shrinks by only \(0.82\) per step, and it is the <em>slower</em> coordinate that
+      decides when you are done: reaching 1% of the starting value takes
+      \(\ln(0.01)/\ln(0.82)\approx 24\) steps &mdash; for a two-variable quadratic with no
+      noise. The stiff direction sets the largest step you may take; the soft direction sets how
+      long you must keep taking it.
+    </p>
+    <p>
+      The best possible constant step is \(\alpha^\ast=2/(\lambda_{\max}+\lambda_{\min})=2/11\approx0.1818\),
+      which makes both factors equal to \((\kappa-1)/(\kappa+1)=9/11\approx0.818\). That ratio is
+      the fundamental speed limit of gradient descent on this problem: no constant step size does
+      better. At \(\kappa=100\) it becomes \(0.980\) per step, meaning roughly 230 steps for the
+      same 1% progress. <strong>Conditioning, not the algorithm, is what makes optimisation
+      slow</strong> &mdash; and it is the same \(\kappa\) you avoided in your meshes.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>The mechanical reading</div>
+      <p style="margin-bottom:0">
+        Read \(H\) as a stiffness matrix and this is a two-degree-of-freedom system with
+        stiffnesses 10 and 1, relaxing to equilibrium under an explicit integration scheme. The
+        stiff mode sets the largest stable timestep; the soft mode sets how long you must wait.
+        One stiff element forcing a tiny timestep on the whole model, while a soft mode takes
+        forever to settle, is a situation you have already met.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="recall">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">10</span>
+      <h2>Shadow reading</h2>
+    </div>
+    <hr class="rule-h">
+  </div>
+
+  <div class="col">
+    <details class="q"><summary><span class="qn">Q1</span><span>State the Fundamental Theorem of Calculus in the language of beam diagrams.</span></summary>
+      <div class="ans"><p>\(\mathrm{d}M/\mathrm{d}x=V\) and \(\Delta M=\int V\,\mathrm{d}x\): the slope of the moment diagram is the shear, and the change in moment is the area under the shear diagram. Differentiation and integration undo each other, which is why you can build either diagram from the other.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">Q2</span><span>Why does maximum bending moment occur where shear crosses zero?</span></summary>
+      <div class="ans"><p>Because \(\mathrm{d}M/\mathrm{d}x=V\), so \(M\) is stationary exactly where \(V=0\). It is the critical point condition \(f'(x)=0\) with the symbols renamed. Whether that stationary point is a maximum depends on the sign change of \(V\), which is the second derivative test.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">Q3</span><span>What does a gear train tell you about vanishing gradients?</span></summary>
+      <div class="ans"><p>The overall ratio is the product of the stage ratios, exactly as the chain rule multiplies local derivatives along a chain. One stage with a ratio of \(1/50\) makes the whole train barely turn, regardless of the others. In a deep network, small local derivatives multiply down through the layers so early layers receive almost no gradient signal.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">Q4</span><span>Backpropagation is "the chain rule". What does that description leave out?</span></summary>
+      <div class="ans"><p>The evaluation order. The chain rule says what to multiply, not in which direction to sweep. A loss is \(\mathbb{R}^n\to\mathbb{R}\), so reverse mode gets all \(n\) partials in one backward pass, while forward mode would need \(n\) passes. With \(n\sim10^9\) that ordering choice is the whole ballgame. It is the same economy as the adjoint method in structural optimisation.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">Q5</span><span>Relate the learning rate to a quantity you already tune.</span></summary>
+      <div class="ans"><p>It is a timestep. Gradient descent is forward-Euler integration of the gradient flow \(\dot{\boldsymbol\theta}=-\nabla f\), and explicit schemes are only conditionally stable: \(\alpha<2/\lambda_{\max}\). A loss exploding to NaN is the same instability as an explicit dynamics run violating its critical timestep.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">Q6</span><span>Why is the Hessian of strain energy the stiffness matrix?</span></summary>
+      <div class="ans"><p>\(U=\tfrac12\mathbf{u}^TK\mathbf{u}\), so \(\nabla U=K\mathbf{u}=\mathbf{F}\) and \(\partial^2U/\partial\mathbf{u}^2=K\). Hence positive definite \(K\) means a strict energy minimum, i.e. a stable equilibrium, and a zero eigenvalue is a mechanism or a buckling mode — the second derivative test and the stability criterion are the same statement.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">Q7</span><span>What does the small-angle assumption actually cost at 60°?</span></summary>
+      <div class="ans"><p>About 7.3% in the pendulum period. \(\sin\theta\approx\theta\) is the first Taylor term, and the true period is \(T=T_0(1+\theta_0^2/16+11\theta_0^4/3072+\cdots)\). The amplitude-independence of SHM is an artefact of the truncation, not a property of pendulums. At 5° the error is 0.05%; at 90° it is 17.6%.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">Q8</span><span>Newton's method converges quadratically and is scale-free. Why does deep learning not use it?</span></summary>
+      <div class="ans"><p>Memory and time. With \(n=10^9\) parameters the Hessian has \(10^{18}\) entries and inverting it is \(O(n^3)\). It is impossible by many orders of magnitude, so the field uses first-order methods and patches conditioning with momentum and per-parameter step sizes — which is essentially what Adam does.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">Q9</span><span>In high dimensions, what is the real obstacle to optimisation?</span></summary>
+      <div class="ans"><p>Saddle points, not local minima. A critical point is a minimum only if all \(n\) Hessian eigenvalues are positive, which is a very strong condition when \(n\) is large; most critical points therefore have a negative direction. They sit in plateaus with tiny gradients that feel like being stuck without being minima at all.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">Q10</span><span>Why would anyone deliberately stop an optimiser before it converges?</span></summary>
+      <div class="ans"><p>Because the training loss is a proxy for generalisation error, not the goal itself. Driving it to zero usually means fitting the noise in the sample — overfitting — and the model then performs worse on unseen data. So practitioners stop early, add penalties, and inject noise. It is the difference between a high-order polynomial through every scattered data point and a straight line that predicts.</p></div>
+    </details>
+    <details class="q"><summary><span class="qn">Q11</span><span>What is the Lagrange multiplier, physically?</span></summary>
+      <div class="ans"><p>A constraint force. For a pendulum it is the tension in the rod enforcing fixed radius. More generally \(\lambda\) is the sensitivity of the optimum to relaxing the constraint by one unit — the mass saved per unit of extra allowable stress, say. At the optimum \(\nabla f=\lambda\nabla g\): the gradients are parallel, or you could still improve along the constraint.</p></div>
+    </details>
+  </div>
+</section>
+
+<section id="next">
+  <div class="col">
+    <div class="sechead">
+      <span class="secnum">11</span>
+      <h2>What this chapter feeds</h2>
+    </div>
+    <hr class="rule-h">
+  </div>
+
+  <figure>
+    <div class="paper">
+      <svg viewBox="0 0 780 430" role="img" style="max-width:100%;height:auto"
+           aria-label="Calculus branches into four tools, each feeding a named technique in a later chapter"
+           fill="none" stroke="#1b1b1b" font-family="Archivo Narrow, Arial Narrow, sans-serif">
+        <defs>
+          <marker id="cm3" markerWidth="9" markerHeight="7" refX="8.5" refY="3.5" orient="auto">
+            <polygon points="0,0 9,3.5 0,7" fill="#1b1b1b" stroke="none"/>
+          </marker>
+        </defs>
+        <rect x="18" y="170" width="132" height="76" rx="3" fill="#ffffff" stroke="#1b1b1b" stroke-width="2"/>
+        <text x="84" y="200" text-anchor="middle" font-size="14" font-weight="700" fill="#1b1b1b" stroke="none">Rates and</text>
+        <text x="84" y="220" text-anchor="middle" font-size="14" font-weight="700" fill="#1b1b1b" stroke="none">accumulation</text>
+        <text x="84" y="238" text-anchor="middle" font-size="10" fill="#666" stroke="none">CHAPTER 03</text>
+
+        <line x1="150" y1="208" x2="190" y2="208" stroke="#1b1b1b" stroke-width="1.5"/>
+        <line x1="190" y1="53" x2="190" y2="341" stroke="#1b1b1b" stroke-width="1.5"/>
+        <line x1="190" y1="53"  x2="226" y2="53"  stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cm3)"/>
+        <line x1="190" y1="149" x2="226" y2="149" stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cm3)"/>
+        <line x1="190" y1="245" x2="226" y2="245" stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cm3)"/>
+        <line x1="190" y1="341" x2="226" y2="341" stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cm3)"/>
+
+        <rect x="238" y="22" width="170" height="62" rx="3" fill="#ffffff" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="323" y="47" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">Chain rule, reversed</text>
+        <text x="323" y="67" text-anchor="middle" font-size="11" fill="#555" stroke="none">one sweep, all partials</text>
+
+        <rect x="238" y="118" width="170" height="62" rx="3" fill="#ffffff" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="323" y="143" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">Gradient</text>
+        <text x="323" y="163" text-anchor="middle" font-size="11" fill="#555" stroke="none">steepest descent</text>
+
+        <rect x="238" y="214" width="170" height="62" rx="3" fill="#ffffff" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="323" y="239" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">Hessian</text>
+        <text x="323" y="259" text-anchor="middle" font-size="11" fill="#555" stroke="none">curvature, conditioning</text>
+
+        <rect x="238" y="310" width="170" height="62" rx="3" fill="#ffffff" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="323" y="335" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">Integral</text>
+        <text x="323" y="355" text-anchor="middle" font-size="11" fill="#555" stroke="none">area, accumulation</text>
+
+        <line x1="408" y1="53"  x2="514" y2="53"  stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cm3)"/>
+        <line x1="408" y1="149" x2="514" y2="149" stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cm3)"/>
+        <line x1="408" y1="245" x2="514" y2="245" stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cm3)"/>
+        <line x1="408" y1="341" x2="514" y2="341" stroke="#1b1b1b" stroke-width="1.5" marker-end="url(#cm3)"/>
+
+        <text x="461" y="45"  text-anchor="middle" font-size="10.5" fill="#666" stroke="none">through layers</text>
+        <text x="461" y="141" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">plus a timestep</text>
+        <text x="461" y="237" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">too big to build</text>
+        <text x="461" y="333" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">of a density</text>
+
+        <rect x="526" y="22" width="236" height="62" rx="3" fill="#f2f2f0" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="644" y="47" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">Backpropagation</text>
+        <text x="644" y="67" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">CHAPTER 06 &#183; MACHINE LEARNING</text>
+
+        <rect x="526" y="118" width="236" height="62" rx="3" fill="#f2f2f0" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="644" y="143" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">SGD, Adam, schedules</text>
+        <text x="644" y="163" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">CHAPTER 06 &#183; TRAINING</text>
+
+        <rect x="526" y="214" width="236" height="62" rx="3" fill="#f2f2f0" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="644" y="239" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">Why first-order methods win</text>
+        <text x="644" y="259" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">CHAPTER 06 &amp; 18</text>
+
+        <rect x="526" y="310" width="236" height="62" rx="3" fill="#f2f2f0" stroke="#1b1b1b" stroke-width="1.5"/>
+        <text x="644" y="335" text-anchor="middle" font-size="13" font-weight="700" fill="#1b1b1b" stroke="none">Densities, expectation</text>
+        <text x="644" y="355" text-anchor="middle" font-size="10.5" fill="#666" stroke="none">CHAPTER 04 &amp; 05 &#183; PROBABILITY</text>
+      </svg>
+    </div>
+    <figcaption><b>Fig. 3.9</b> &mdash; Where each tool is spent. The arrow labels name what changes when the tool meets machine-learning scale.</figcaption>
+  </figure>
+
+  <div class="col">
+    <p>
+      Chapters 04 and 05 are statistics and probability, and the integral is the handover: a
+      probability density is a curve whose <em>area</em> is a probability, and an expected value
+      is an integral weighted by that density. If you have computed a centroid as
+      \(\bar{x}=\int x\,\mathrm{d}A/\int \mathrm{d}A\), you have already computed an expected
+      value &mdash; the mean of a distribution is the centroid of its density, and the variance
+      is its second moment of area. That correspondence is exact, and it is the spine of the
+      next two chapters.
+    </p>
+
+    <div class="note">
+      <div class="note-h"><span class="ic">i</span>Before you move on</div>
+      <p style="margin-bottom:0">
+        Do the source chapter's fourth coding task &mdash; the forty-line autodiff engine. It is
+        the single most clarifying exercise in the chapter: you will see that the machinery
+        behind PyTorch is a graph of operations, each storing how to pass a derivative backwards,
+        and nothing more mysterious than that. Then go back to the &sect;06 panel, set
+        \(\kappa=40\), and find the largest learning rate that still converges. The number you
+        land on is \(2/\lambda_{\max}\), and feeling it will stick better than reading it.
+      </p>
+    </div>
+  </div>
+
+  <div class="col endnote">
+    <p>
+      Companion to <b>Chapter 03 &mdash; Calculus</b> of the Maths, CS &amp; AI Compendium by
+      Henry Ndubuaku. Figures marked <i>from the compendium</i> are reproduced from the
+      repository. &sect;08 is added material and is marked as such.
+    </p>
+    <p style="margin-bottom:0">Sheet 3 of 20. Built for a mechanical engineer with GATE-level mathematics and no prior CS.</p>
+  </div>
+</section>
+
+</main>
+</div>
+
+<style>
+#gridTay line, #gridGD line{stroke:var(--rule)}
+#axGDx, #axGDy{stroke:var(--rule-strong)}
+#curveSin{stroke:var(--s2)} #curveTay{stroke:var(--s1)}
+#markSm{stroke:var(--ink-3)}
+#pathGD{stroke:var(--s1)}
+#minGD{fill:var(--s3)}
+.bmLine{stroke:var(--ink-2)}
+.bmFillV{fill:var(--s2); fill-opacity:.22; stroke:var(--s2); stroke-width:2}
+.bmFillM{fill:var(--s1); fill-opacity:.22; stroke:var(--s1); stroke-width:2}
+.bmBase{stroke:var(--rule-strong); stroke-width:1.25}
+.bmLoad{stroke:var(--s3); stroke-width:1.5}
+.bmPt{stroke:var(--brk); stroke-width:2.5}
+.bmMark{stroke:var(--s3); stroke-width:1.5; stroke-dasharray:5 4}
+.bmTxt{fill:var(--ink-2); font-family:'Archivo Narrow',sans-serif; font-size:11px; letter-spacing:.06em}
+.bmNum{fill:var(--ink-3); font-family:'IBM Plex Mono',monospace; font-size:10px}
+.gdDot{fill:var(--s1); stroke:var(--sheet); stroke-width:1}
+.contour{fill:none; stroke:var(--rule-strong); stroke-width:1}
+</style>
+
+<script>
+(function () {
+  'use strict';
+  var root = document.documentElement;
+  function currentDark() {
+    var t = root.getAttribute('data-theme');
+    if (t) return t === 'dark';
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  }
+  try {
+    var sv = localStorage.getItem('ch03-theme');
+    if (sv === 'dark' || sv === 'light') root.setAttribute('data-theme', sv);
+  } catch (e) {}
+  var tb = document.getElementById('themebtn');
+  if (tb) tb.addEventListener('click', function () {
+    var n = currentDark() ? 'light' : 'dark';
+    root.setAttribute('data-theme', n);
+    try { localStorage.setItem('ch03-theme', n); } catch (e) {}
+  });
+
+  function $(id) { return document.getElementById(id); }
+  function fmt(n, d) { d = d === undefined ? 2 : d; return (Math.abs(n) < 5e-4 ? 0 : n).toFixed(d); }
+  function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+  function gridLines(g, w, h, step) {
+    var s = '';
+    for (var x = 0; x <= w; x += step) s += '<line x1="' + x + '" y1="0" x2="' + x + '" y2="' + h + '"/>';
+    for (var y = 0; y <= h; y += step) s += '<line x1="0" y1="' + y + '" x2="' + w + '" y2="' + y + '"/>';
+    g.innerHTML = s;
+  }
+
+  /* ================= BEAM : load, shear, moment ================= */
+  var L = 6, BX0 = 52, BX1 = 442, SPX = (BX1 - BX0) / L;
+  var YB = 74, YS = 178, YM = 330, HS = 54, HM = 62;
+  function bx(x) { return BX0 + x * SPX; }
+
+  function beamState() {
+    var w = parseFloat($('wSl').value), P = parseFloat($('pSl').value), a = parseFloat($('aSl').value);
+    var RA = w * L / 2 + P * (L - a) / L, RB = w * L / 2 + P * a / L;
+    function V(x) { return RA - w * x - (x > a ? P : 0); }
+    function M(x) { return RA * x - w * x * x / 2 - (x > a ? P * (x - a) : 0); }
+    return { w: w, P: P, a: a, RA: RA, RB: RB, V: V, M: M };
+  }
+  function drawBeam() {
+    var st = beamState(), NS = 601, s = '';
+    var xs = [], vs = [], ms = [], i, x;
+    for (i = 0; i < NS; i++) {
+      x = i / (NS - 1) * L; xs.push(x);
+      vs.push(st.V(i === 0 ? 1e-9 : (x >= L ? L - 1e-9 : x)));
+      ms.push(st.M(x));
+    }
+    var vmax = Math.max(1e-6, Math.max.apply(null, vs.map(Math.abs)));
+    var mmax = Math.max(1e-6, Math.max.apply(null, ms.map(Math.abs)));
+
+    /* --- beam + supports + loading --- */
+    s += '<line class="bmLine" x1="' + BX0 + '" y1="' + YB + '" x2="' + BX1 + '" y2="' + YB + '" stroke-width="3"/>';
+    [BX0, BX1].forEach(function (px) {
+      s += '<polygon points="' + px + ',' + (YB + 2) + ' ' + (px - 9) + ',' + (YB + 17) + ' ' + (px + 9) + ',' + (YB + 17) + '" fill="none" class="bmLine" stroke-width="1.5"/>';
+    });
+    if (st.w > 0) {
+      for (i = 0; i <= 12; i++) {
+        var px = BX0 + i * (BX1 - BX0) / 12;
+        s += '<line class="bmLoad" x1="' + px + '" y1="' + (YB - 26) + '" x2="' + px + '" y2="' + (YB - 5) + '"/>';
+      }
+      s += '<line class="bmLoad" x1="' + BX0 + '" y1="' + (YB - 26) + '" x2="' + BX1 + '" y2="' + (YB - 26) + '"/>';
+      s += '<text class="bmTxt" x="' + (BX1 + 4) + '" y="' + (YB - 22) + '">w</text>';
+    }
+    if (st.P > 0) {
+      var pxa = bx(st.a);
+      s += '<line class="bmPt" x1="' + pxa + '" y1="' + (YB - 48) + '" x2="' + pxa + '" y2="' + (YB - 6) + '"/>';
+      s += '<polygon points="' + pxa + ',' + (YB - 3) + ' ' + (pxa - 5) + ',' + (YB - 14) + ' ' + (pxa + 5) + ',' + (YB - 14) + '" fill="var(--brk)"/>';
+      s += '<text class="bmTxt" x="' + (pxa + 8) + '" y="' + (YB - 40) + '">P</text>';
+    }
+
+    /* --- find the sign change in V --- */
+    var xstar = null;
+    for (i = 1; i < NS; i++) {
+      if (vs[i - 1] === 0) { xstar = xs[i - 1]; break; }
+      if (vs[i - 1] > 0 !== vs[i] > 0) {
+        if (Math.abs(st.a - xs[i]) < 2 * L / NS) xstar = st.a;
+        else xstar = xs[i - 1] + (xs[i] - xs[i - 1]) * Math.abs(vs[i - 1]) / (Math.abs(vs[i - 1]) + Math.abs(vs[i]));
+        break;
+      }
+    }
+
+    /* --- shear & moment diagrams --- */
+    function diag(vals, base, half, scale, cls) {
+      var p = 'M' + BX0 + ' ' + base;
+      for (var k = 0; k < NS; k++) p += 'L' + bx(xs[k]).toFixed(1) + ' ' + (base - vals[k] / scale * half).toFixed(1);
+      p += 'L' + BX1 + ' ' + base + 'Z';
+      return '<path class="' + cls + '" d="' + p + '"/>';
+    }
+    s += '<line class="bmBase" x1="' + BX0 + '" y1="' + YS + '" x2="' + BX1 + '" y2="' + YS + '"/>';
+    s += diag(vs, YS, HS, vmax, 'bmFillV');
+    s += '<text class="bmTxt" x="' + BX0 + '" y="' + (YS - HS - 10) + '">SHEAR FORCE V(x)</text>';
+    s += '<text class="bmNum" x="' + (BX0 - 6) + '" y="' + (YS - HS) + '" text-anchor="end">' + fmt(vmax, 1) + '</text>';
+    s += '<text class="bmNum" x="' + (BX0 - 6) + '" y="' + (YS + 4) + '" text-anchor="end">0</text>';
+
+    s += '<line class="bmBase" x1="' + BX0 + '" y1="' + YM + '" x2="' + BX1 + '" y2="' + YM + '"/>';
+    s += diag(ms, YM, HM, mmax, 'bmFillM');
+    s += '<text class="bmTxt" x="' + BX0 + '" y="' + (YM - HM - 10) + '">BENDING MOMENT M(x)</text>';
+    s += '<text class="bmNum" x="' + (BX0 - 6) + '" y="' + (YM - HM) + '" text-anchor="end">' + fmt(mmax, 1) + '</text>';
+    s += '<text class="bmNum" x="' + (BX0 - 6) + '" y="' + (YM + 4) + '" text-anchor="end">0</text>';
+
+    var Mst = 0, area = 0;
+    if (xstar !== null) {
+      var pxs = bx(xstar);
+      s += '<line class="bmMark" x1="' + pxs + '" y1="' + (YS - HS - 6) + '" x2="' + pxs + '" y2="' + (YM + 10) + '"/>';
+      s += '<text class="bmTxt" x="' + (pxs + 6) + '" y="' + (YM + 24) + '" fill="var(--s3)">x* = ' + fmt(xstar, 2) + ' m</text>';
+      Mst = st.M(xstar);
+      var NI = 4000, h = xstar / NI;
+      for (i = 0; i < NI; i++) {
+        var xa = i * h, xb2 = (i + 1) * h;
+        area += 0.5 * (st.V(xa === 0 ? 1e-9 : xa) + st.V(xb2)) * h;
+      }
+    }
+    $('beamG').innerHTML = s;
+    $('wVal').textContent = fmt(st.w, 1) + ' kN/m';
+    $('pVal').textContent = fmt(st.P, 0) + ' kN';
+    $('aVal').textContent = fmt(st.a, 1) + ' m';
+    $('oRA').textContent = fmt(st.RA, 2) + ' kN';
+    $('oRB').textContent = fmt(st.RB, 2) + ' kN';
+    $('oX0').textContent = xstar === null ? 'no crossing' : fmt(xstar, 2) + ' m';
+    $('oMmax').textContent = xstar === null ? '—' : fmt(Mst, 2) + ' kN·m';
+    $('oArea').textContent = xstar === null ? '—' : fmt(area, 2) + ' kN·m';
+  }
+  ['wSl', 'pSl', 'aSl'].forEach(function (id) { $(id).addEventListener('input', drawBeam); });
+  drawBeam();
+
+  /* ================= TAYLOR ================= */
+  var TX0 = 40, TX1 = 460, TY0 = 32, TY1 = 268, XR = 2 * Math.PI, YR = 2.3;
+  function tx(x) { return TX0 + (x + XR) / (2 * XR) * (TX1 - TX0); }
+  function ty(y) { return (TY0 + TY1) / 2 - y / YR * ((TY1 - TY0) / 2); }
+  function taylorSin(x, n) {
+    var s = 0, term = x, k;
+    for (k = 0; k < n; k++) {
+      s += term;
+      term = -term * x * x / ((2 * k + 2) * (2 * k + 3));
+    }
+    return s;
+  }
+  function drawTay() {
+    var n = parseInt($('nSl').value, 10), d1 = '', d2 = '', i, x, y;
+    for (i = 0; i <= 480; i++) {
+      x = -XR + i / 480 * 2 * XR;
+      d1 += (i ? 'L' : 'M') + tx(x).toFixed(1) + ' ' + ty(Math.sin(x)).toFixed(1);
+      y = clamp(taylorSin(x, n), -YR, YR);
+      d2 += (i ? 'L' : 'M') + tx(x).toFixed(1) + ' ' + ty(y).toFixed(1);
+    }
+    $('curveSin').setAttribute('d', d1);
+    $('curveTay').setAttribute('d', d2);
+    var ax = '<line x1="' + TX0 + '" y1="' + ty(0) + '" x2="' + TX1 + '" y2="' + ty(0) + '" stroke="currentColor" stroke-width="1.25" opacity=".45"/>';
+    [[-Math.PI, '-π'], [0, '0'], [Math.PI, 'π'], [2 * Math.PI, '2π']].forEach(function (t) {
+      ax += '<text class="axtick" x="' + tx(t[0]) + '" y="' + (ty(0) + 16) + '" text-anchor="middle" fill="var(--ink-3)" font-family="IBM Plex Mono,monospace" font-size="10">' + t[1] + '</text>';
+    });
+    ax += '<text class="axtick" x="' + (TX0 - 6) + '" y="' + (ty(1) + 4) + '" text-anchor="end" fill="var(--ink-3)" font-family="IBM Plex Mono,monospace" font-size="10">1</text>';
+    ax += '<text class="axtick" x="' + (TX0 - 6) + '" y="' + (ty(-1) + 4) + '" text-anchor="end" fill="var(--ink-3)" font-family="IBM Plex Mono,monospace" font-size="10">-1</text>';
+    $('axTay').innerHTML = ax;
+    $('markSm').setAttribute('x1', tx(0)); $('markSm').setAttribute('y1', TY0);
+    $('markSm').setAttribute('x2', tx(0)); $('markSm').setAttribute('y2', TY1);
+    $('markSm').setAttribute('stroke-dasharray', '3 4');
+    $('nVal').textContent = String(n);
+    $('oPow').textContent = 'x^' + (2 * n - 1);
+    [[30, 'oE30'], [90, 'oE90'], [180, 'oE180']].forEach(function (p) {
+      var r = p[0] * Math.PI / 180;
+      var e = Math.abs(taylorSin(r, n) - Math.sin(r));
+      $(p[1]).textContent = e < 1e-5 ? '< 0.00001' : fmt(e, e > 0.01 ? 4 : 6);
+    });
+  }
+  gridLines($('gridTay'), 480, 300, 30);
+  $('nSl').addEventListener('input', drawTay);
+  drawTay();
+
+  /* ================= GRADIENT DESCENT ================= */
+  var GX = 240, GY = 160, GS = 108;
+  function gx(x) { return GX + x * GS; }
+  function gy(y) { return GY - y * GS; }
+  function drawGD() {
+    var alpha = parseInt($('lrSl').value, 10) / 100;
+    var kap = parseInt($('kSl').value, 10);
+    $('lrVal').textContent = fmt(alpha, 2);
+    $('kVal').textContent = String(kap);
+
+    var cs = '';
+    [0.08, 0.25, 0.5, 0.85, 1.3].forEach(function (c) {
+      var rx = Math.sqrt(2 * c / kap) * GS, ry = Math.sqrt(2 * c) * GS;
+      cs += '<ellipse class="contour" cx="' + GX + '" cy="' + GY + '" rx="' + rx.toFixed(1) + '" ry="' + ry.toFixed(1) + '"/>';
+    });
+    $('contGD').innerHTML = cs;
+
+    var x = 1, y = 1, d = 'M' + gx(x) + ' ' + gy(y), pts = '', diverged = false;
+    for (var k = 0; k < 60; k++) {
+      x = (1 - alpha * kap) * x; y = (1 - alpha) * y;
+      if (!isFinite(x) || !isFinite(y) || Math.abs(x) > 2.6 || Math.abs(y) > 2.6) { diverged = true; break; }
+      d += 'L' + gx(x).toFixed(1) + ' ' + gy(y).toFixed(1);
+      if (k < 26) pts += '<circle class="gdDot" cx="' + gx(x).toFixed(1) + '" cy="' + gy(y).toFixed(1) + '" r="2.6"/>';
+    }
+    $('pathGD').setAttribute('d', d);
+    $('ptsGD').innerHTML = pts;
+    $('minGD').setAttribute('cx', GX); $('minGD').setAttribute('cy', GY);
+
+    var f = Math.max(Math.abs(1 - alpha * kap), Math.abs(1 - alpha));
+    var stable = f < 1;
+    $('oLim').textContent = fmt(2 / kap, 3);
+    $('oStat').innerHTML = stable
+      ? '<span class="flag ok">converging</span>'
+      : '<span class="flag bad">diverging</span>';
+    $('oSteps').textContent = stable ? String(Math.ceil(Math.log(0.01) / Math.log(f))) : '∞';
+    $('oRate').textContent = fmt((kap - 1) / (kap + 1), 3);
+  }
+  gridLines($('gridGD'), 480, 320, 30);
+  $('axGDx').setAttribute('x1', 8); $('axGDx').setAttribute('y1', GY);
+  $('axGDx').setAttribute('x2', 472); $('axGDx').setAttribute('y2', GY);
+  $('axGDy').setAttribute('x1', GX); $('axGDy').setAttribute('y1', 8);
+  $('axGDy').setAttribute('x2', GX); $('axGDy').setAttribute('y2', 312);
+  $('lrSl').addEventListener('input', drawGD);
+  $('kSl').addEventListener('input', drawGD);
+  drawGD();
+
+  /* ================= rail ================= */
+  (function initRail() {
+    var links = Array.prototype.slice.call(document.querySelectorAll('.rail a'));
+    if (!links.length || !window.IntersectionObserver) return;
+    var map = {};
+    links.forEach(function (a) { map[a.getAttribute('href').slice(1)] = a; });
+    var seen = {};
+    var io = new IntersectionObserver(function (es) {
+      es.forEach(function (e) { seen[e.target.id] = e.isIntersecting; });
+      var ids = Object.keys(map), act = null;
+      for (var i = 0; i < ids.length; i++) if (seen[ids[i]]) { act = ids[i]; break; }
+      if (!act) return;
+      links.forEach(function (a) { a.classList.toggle('on', a === map[act]); });
+    }, { rootMargin: '-70px 0px -65% 0px', threshold: 0 });
+    Object.keys(map).forEach(function (id) { var el = document.getElementById(id); if (el) io.observe(el); });
+  })();
+})();
+</script>
+<script>
+/* Safety net: if the MathJax bundle cannot be reached, degrade the TeX to
+   readable Unicode instead of leaving raw backslash markup on the page. */
+(function () {
+  'use strict';
+  var GREEK = { theta:'θ', sigma:'σ', delta:'δ', mu:'μ', pi:'π',
+                infty:'∞', alpha:'α', beta:'β', lambda:'λ' };
+  var SUB = { '1':'₁','2':'₂','3':'₃','i':'ᵢ','j':'ⱼ','n':'ₙ','p':'ₚ','x':'ₓ','y':'ᵧ' };
+  var SUP = { '2':'²','3':'³','n':'ⁿ','p':'ᵖ','*':'*' };
+
+  function degrade(t) {
+    t = t.replace(/\$\$/g, '').replace(/\\[()[\]]/g, '');
+    t = t.replace(/\\(?:left|right|textstyle|displaystyle|!|,|;|:)/g, '');
+    t = t.replace(/\\q?quad/g, ' ');
+    t = t.replace(/\\mathbb\{R\}/g, 'ℝ').replace(/\\mathbb\{Z\}/g, 'ℤ')
+         .replace(/\\mathbb\{N\}/g, 'ℕ').replace(/\\mathbb\{Q\}/g, 'ℚ');
+    t = t.replace(/\\(?:mathbf|mathrm|text|textbf|operatorname)\{([^{}]*)\}/g, '$1');
+    t = t.replace(/\\hat\{([^{}]*)\}/g, '$1̂').replace(/\\bar\{([^{}]*)\}/g, '$1̄');
+    t = t.replace(/\\sqrt\{([^{}]*)\}/g, '√($1)');
+    t = t.replace(/\\t?frac\{([^{}]*)\}\{([^{}]*)\}/g, '($1)/($2)');
+    t = t.replace(/\\binom\{([^{}]*)\}\{([^{}]*)\}/g, 'C($1,$2)');
+    t = t.replace(/\\([a-zA-Z]+)/g, function (m, w) {
+      if (GREEK[w]) return GREEK[w];
+      switch (w) {
+        case 'cdot': return '·';
+        case 'times': return '×';
+        case 'le': case 'leq': return '≤';
+        case 'ge': case 'geq': return '≥';
+        case 'neq': return '≠';
+        case 'approx': return '≈';
+        case 'in': return '∈';
+        case 'pm': return '±';
+        case 'to': case 'rightarrow': return '→';
+        case 'Rightarrow': return '⇒';
+        case 'iff': return '⇔';
+        case 'parallel': return '∥';
+        case 'perp': return '⊥';
+        case 'sum': return 'Σ';
+        case 'langle': return '⟨';
+        case 'rangle': return '⟩';
+        case 'wedge': return '∧';
+        case 'ast': return '*';
+        case 'cdots': case 'ldots': case 'dots': return '…';
+        case 'max': case 'min': case 'cos': case 'sin': case 'log': case 'exp': return w;
+        default: return w;
+      }
+    });
+    t = t.replace(/\\\|/g, '‖').replace(/\|\|/g, '‖');
+    t = t.replace(/_\{?([0-9ijnpxy])\}?/g, function (m, c) { return SUB[c] || ('_' + c); });
+    t = t.replace(/\^\{?([23np*])\}?/g, function (m, c) { return SUP[c] || ('^' + c); });
+    t = t.replace(/[{}]/g, '');
+    return t.replace(/[ \t]{2,}/g, ' ');
+  }
+
+  function run() {
+    if (window.MathJax && window.MathJax.startup && window.MathJax.startup.document) return;
+    var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+      acceptNode: function (n) {
+        if (!n.nodeValue || n.nodeValue.indexOf('\\') < 0 && n.nodeValue.indexOf('$$') < 0)
+          return NodeFilter.FILTER_REJECT;
+        var p = n.parentNode;
+        while (p && p !== document.body) {
+          var tag = p.nodeName;
+          if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'CODE' || tag === 'PRE')
+            return NodeFilter.FILTER_REJECT;
+          p = p.parentNode;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    var hits = [], n;
+    while ((n = walker.nextNode())) hits.push(n);
+    hits.forEach(function (node) { node.nodeValue = degrade(node.nodeValue); });
+    document.querySelectorAll('.mathbox').forEach(function (el) {
+      el.style.fontFamily = "'IBM Plex Mono', monospace";
+      el.style.fontSize = '15px';
+      el.style.textAlign = 'center';
+      el.style.padding = '10px 0';
+    });
+  }
+  setTimeout(run, 6000);
+})();
+</script>
