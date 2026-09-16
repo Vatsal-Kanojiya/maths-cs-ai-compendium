@@ -335,6 +335,16 @@ details.q .ans p:last-child{margin-bottom:0}
 }
 .endnote a{color:var(--accent)}
 
+.srcref{text-decoration:none}
+a.srcref{color:var(--ink-2); transition:none}
+a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(--accent-soft)}
+a.srcref:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.srcref.nolink{opacity:.75; font-style:italic}
+.pv{font-family:var(--f-disp); font-size:9.5px; font-weight:700; letter-spacing:.1em;
+    text-transform:uppercase; padding:2px 7px; border-radius:2px; white-space:nowrap}
+.pv.ok{background:var(--bridge-soft); color:var(--bridge)}
+.pv.add{background:var(--accent-soft); color:var(--accent)}
+.pv.corr{background:var(--brk-soft); color:var(--brk)}
 @media (prefers-reduced-motion:reduce){*{animation:none !important; transition:none !important}}
 </style>
 
@@ -396,6 +406,7 @@ details.q .ans p:last-child{margin-bottom:0}
   <a href="#worked"><span class="n">09</span><span>Worked example</span></a>
   <a href="#recall"><span class="n">10</span><span>Shadow reading</span></a>
   <a href="#next"><span class="n">11</span><span>What this feeds</span></a>
+  <a href="#provenance"><span class="n">A</span><span>Provenance</span></a>
 </nav>
 
 <main>
@@ -502,7 +513,7 @@ details.q .ans p:last-child{margin-bottom:0}
     <div class="sechead">
       <span class="secnum">01</span>
       <h2>Slope and area are the same fact</h2>
-      <span class="srcref">src 01 + 02</span>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/tree/9850ee5/chapter%2003%20-%20calculus" target="_blank" rel="noopener" title="Open the original source on GitHub, pinned to commit 9850ee5">src 01 + 02 &#8599;</a>
     </div>
     <hr class="rule-h">
     <p>
@@ -622,7 +633,7 @@ details.q .ans p:last-child{margin-bottom:0}
     <div class="sechead">
       <span class="secnum">02</span>
       <h2>The chain rule, and what backpropagation adds to it</h2>
-      <span class="srcref">src 01 + 03</span>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/tree/9850ee5/chapter%2003%20-%20calculus" target="_blank" rel="noopener" title="Open the original source on GitHub, pinned to commit 9850ee5">src 01 + 03 &#8599;</a>
     </div>
     <hr class="rule-h">
     <p>
@@ -710,7 +721,7 @@ details.q .ans p:last-child{margin-bottom:0}
     <div class="sechead">
       <span class="secnum">03</span>
       <h2>The gradient</h2>
-      <span class="srcref">src 03. multivariate</span>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2003%20-%20calculus/03.%20multivariate%20calculus.md" target="_blank" rel="noopener" title="Open the original source on GitHub, pinned to commit 9850ee5">src 03. multivariate &#8599;</a>
     </div>
     <hr class="rule-h">
     <p>
@@ -778,7 +789,7 @@ details.q .ans p:last-child{margin-bottom:0}
     <div class="sechead">
       <span class="secnum">04</span>
       <h2>The Hessian is a stiffness matrix</h2>
-      <span class="srcref">src 03. multivariate</span>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2003%20-%20calculus/03.%20multivariate%20calculus.md" target="_blank" rel="noopener" title="Open the original source on GitHub, pinned to commit 9850ee5">src 03. multivariate &#8599;</a>
     </div>
     <hr class="rule-h">
     <p>
@@ -846,7 +857,7 @@ details.q .ans p:last-child{margin-bottom:0}
     <div class="sechead">
       <span class="secnum">05</span>
       <h2>Taylor series, and the price of the small-angle assumption</h2>
-      <span class="srcref">src 04. approximation</span>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2003%20-%20calculus/04.%20function%20approximation.md" target="_blank" rel="noopener" title="Open the original source on GitHub, pinned to commit 9850ee5">src 04. approximation &#8599;</a>
     </div>
     <hr class="rule-h">
     <p>
@@ -978,7 +989,7 @@ details.q .ans p:last-child{margin-bottom:0}
     <div class="sechead">
       <span class="secnum">06</span>
       <h2>Descent</h2>
-      <span class="srcref">src 05. optimisation</span>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2003%20-%20calculus/05.%20optimisation.md" target="_blank" rel="noopener" title="Open the original source on GitHub, pinned to commit 9850ee5">src 05. optimisation &#8599;</a>
     </div>
     <hr class="rule-h">
     <p>
@@ -1115,7 +1126,7 @@ details.q .ans p:last-child{margin-bottom:0}
     <div class="sechead">
       <span class="secnum">07</span>
       <h2>Optimising under constraint</h2>
-      <span class="srcref">src 05. optimisation</span>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2003%20-%20calculus/05.%20optimisation.md" target="_blank" rel="noopener" title="Open the original source on GitHub, pinned to commit 9850ee5">src 05. optimisation &#8599;</a>
     </div>
     <hr class="rule-h">
     <p>
@@ -1167,7 +1178,7 @@ details.q .ans p:last-child{margin-bottom:0}
     <div class="sechead">
       <span class="secnum">08</span>
       <h2>Where optimisation stops being physics</h2>
-      <span class="srcref">beyond the chapter</span>
+      <span class="srcref nolink" title="Added material, not in the source chapter">beyond the chapter</span>
     </div>
     <hr class="rule-h">
     <p>
@@ -1485,6 +1496,44 @@ details.q .ans p:last-child{margin-bottom:0}
         land on is \(2/\lambda_{\max}\), and feeling it will stick better than reading it.
       </p>
     </div>
+  </div>
+
+
+  <div class="col" id="provenance" style="scroll-margin-top:calc(env(safe-area-inset-top,0px) + 62px)">
+    <div class="sechead" style="margin-top:40px">
+      <span class="secnum">A</span>
+      <h2>Provenance and changes</h2>
+    </div>
+    <hr class="rule-h">
+    <p>
+      This page is a derivative work. The compendium is Apache-2.0 licensed, which requires a
+      statement of what was changed &mdash; and independently of the licence, you should be able
+      to see where I followed the source and where I departed from it. Every source reference on
+      this page is also a link to the original file, pinned to commit
+      <code>9850ee5</code> so it cannot drift.
+    </p>
+  </div>
+  <div class="tw">
+    <table>
+      <thead><tr><th>Section</th><th>Title</th><th>Source</th><th>Verdict</th><th>What changed</th></tr></thead>
+      <tbody>
+<tr><td class="mono">&sect;00</td><td>The bridge</td><td class="mono">&mdash;</td><td><span class="pv add">added</span></td><td>Mapping table is mine.</td></tr>
+<tr><td class="mono">&sect;01</td><td>Slope and area</td><td class="mono"><a href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2003%20-%20calculus" target="_blank" rel="noopener">01, 02</a></td><td><span class="pv ok">faithful</span></td><td>Derivative, integral and the Fundamental Theorem as in source. The beam-diagram reading is <b>added</b>.</td></tr>
+<tr><td class="mono">&sect;02</td><td>Chain rule &amp; backprop</td><td class="mono"><a href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2003%20-%20calculus" target="_blank" rel="noopener">01, 03</a></td><td><span class="pv ok">expanded</span></td><td>Source says backpropagation is the chain rule applied repeatedly. True but incomplete: the forward versus reverse mode distinction, which is what makes it tractable, is <b>added</b>.</td></tr>
+<tr><td class="mono">&sect;03</td><td>The gradient</td><td class="mono"><a href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2003%20-%20calculus" target="_blank" rel="noopener">03</a></td><td><span class="pv ok">faithful</span></td><td>Partials, gradient, directional derivative, Jacobian as in source. Fourier's law parallel is <b>added</b>.</td></tr>
+<tr><td class="mono">&sect;04</td><td>The Hessian</td><td class="mono"><a href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2003%20-%20calculus" target="_blank" rel="noopener">03</a></td><td><span class="pv ok">faithful</span></td><td>Clairaut, the second derivative test and conditioning follow the source. K as the Hessian of strain energy is <b>added</b>.</td></tr>
+<tr><td class="mono">&sect;05</td><td>Taylor &amp; small angles</td><td class="mono"><a href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2003%20-%20calculus" target="_blank" rel="noopener">04</a></td><td><span class="pv ok">expanded</span></td><td>Taylor and Maclaurin series as in source. The pendulum error table is <b>added</b> &mdash; and was itself <b>wrong on first publication</b>, printing the two-term series as though it were the exact period. Corrected to elliptic-integral values; see <code>verify_claims.py</code>.</td></tr>
+<tr><td class="mono">&sect;06</td><td>Descent</td><td class="mono"><a href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2003%20-%20calculus" target="_blank" rel="noopener">05</a></td><td><span class="pv ok">faithful</span></td><td>Critical points, convexity, gradient descent, Newton, optimiser families as in source. The learning-rate-as-timestep reading and the stability limit are <b>added</b>.</td></tr>
+<tr><td class="mono">&sect;07</td><td>Constraints</td><td class="mono"><a href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2003%20-%20calculus" target="_blank" rel="noopener">05</a></td><td><span class="pv ok">faithful</span></td><td>Lagrange multipliers and KKT as in source. The constraint-force interpretation is <b>added</b>.</td></tr>
+<tr><td class="mono">&sect;08</td><td>Where it stops being physics</td><td class="mono">&mdash;</td><td><span class="pv add">added</span></td><td>Entirely mine, and flagged on the page.</td></tr>
+<tr><td class="mono">&sect;09</td><td>Worked example</td><td class="mono">&mdash;</td><td><span class="pv add">added</span></td><td>Mine.</td></tr>
+      </tbody>
+      <caption>
+        <b>faithful</b> follows the source closely &middot; <b>expanded</b> keeps the source and
+        adds to it &middot; <b>added</b> has no source counterpart &middot; <b>corrected</b>
+        departs from the source on a point of fact, with the reason given on the page.
+      </caption>
+    </table>
   </div>
 
   <div class="col endnote">
@@ -1837,5 +1886,60 @@ details.q .ans p:last-child{margin-bottom:0}
     });
   }
   setTimeout(run, 6000);
+})();
+</script>
+
+<script>
+/* Long display equations can be wider than their container - especially inside a
+   callout box, which is narrower than the main column. After the typesetter
+   finishes, measure each one and shrink it just enough to fit. Only ever shrinks,
+   never grows, and never below a readable floor - so the worst case is the
+   scrollbar we already had. */
+(function () {
+  'use strict';
+  var MIN_SCALE = 0.70;   /* below this, scrolling beats illegible text */
+
+  function fitOne(box) {
+    try {
+      var c = box.querySelector('mjx-container[display="true"]');
+      if (!c) return;
+      var svg = c.querySelector('svg');
+      if (!svg) return;
+      c.style.fontSize = '';
+      var avail = box.clientWidth;
+      if (!avail) return;
+      var w = svg.getBoundingClientRect().width;
+      if (!w || w <= avail) return;
+      var k = Math.max(MIN_SCALE, (avail / w) * 0.98);
+      c.style.fontSize = (k * 100).toFixed(1) + '%';
+      var w2 = svg.getBoundingClientRect().width;      /* one refinement pass */
+      if (w2 > avail) {
+        k = Math.max(MIN_SCALE, k * (avail / w2) * 0.98);
+        c.style.fontSize = (k * 100).toFixed(1) + '%';
+      }
+    } catch (e) { /* leave the equation exactly as it was */ }
+  }
+
+  function fitAll() {
+    try { document.querySelectorAll('.mathbox').forEach(fitOne); } catch (e) {}
+  }
+
+  function start() {
+    fitAll();
+    var t;
+    window.addEventListener('resize', function () {
+      clearTimeout(t); t = setTimeout(fitAll, 160);
+    });
+  }
+
+  function waitForTypesetter(n) {
+    if (window.MathJax && window.MathJax.startup && window.MathJax.startup.promise) {
+      window.MathJax.startup.promise.then(start, start);
+      return;
+    }
+    if (n > 60) return;            /* typesetter never arrived - nothing to fit */
+    setTimeout(function () { waitForTypesetter(n + 1); }, 200);
+  }
+  waitForTypesetter(0);
 })();
 </script>

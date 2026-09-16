@@ -335,6 +335,31 @@ details.q .ans p:last-child{margin-bottom:0}
 }
 .endnote a{color:var(--accent)}
 
+.srcref{text-decoration:none}
+a.srcref{color:var(--ink-2); transition:none}
+a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(--accent-soft)}
+a.srcref:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.srcref.nolink{opacity:.75; font-style:italic}
+.pv{font-family:var(--f-disp); font-size:9.5px; font-weight:700; letter-spacing:.1em;
+    text-transform:uppercase; padding:2px 7px; border-radius:2px; white-space:nowrap}
+.pv.ok{background:var(--bridge-soft); color:var(--bridge)}
+.pv.add{background:var(--accent-soft); color:var(--accent)}
+.pv.corr{background:var(--brk-soft); color:var(--brk)}
+details.srcbox{border:1px solid var(--rule); border-left:3px solid var(--ink-3);
+  border-radius:2px; background:var(--sheet-2); margin:26px 0 4px}
+details.srcbox summary{cursor:pointer; list-style:none; padding:10px 14px;
+  display:flex; gap:10px; align-items:baseline; flex-wrap:wrap}
+details.srcbox summary::-webkit-details-marker{display:none}
+details.srcbox summary::after{content:'+'; margin-left:auto; font-family:var(--f-mono);
+  color:var(--ink-3); font-size:16px; line-height:1}
+details.srcbox[open] summary::after{content:'\2212'}
+details.srcbox summary:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
+.srcbox-k{font-family:var(--f-disp); font-size:10px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-3); font-weight:700}
+.srcbox-f{font-family:var(--f-mono); font-size:11.5px; color:var(--ink-2)}
+.srcbox-body{border-top:1px solid var(--rule); max-height:420px; overflow:auto; background:var(--sheet)}
+.srcbox-body pre{margin:0; padding:14px 16px; font-family:var(--f-mono); font-size:12px;
+  line-height:1.65; color:var(--ink-2); white-space:pre-wrap; word-break:break-word}
 @media (prefers-reduced-motion:reduce){*{animation:none !important; transition:none !important}}
 </style>
 
@@ -379,6 +404,7 @@ details.q .ans p:last-child{margin-bottom:0}
   <a href="#worked"><span class="n">10</span><span>Worked example</span></a>
   <a href="#recall"><span class="n">11</span><span>Shadow reading</span></a>
   <a href="#next"><span class="n">12</span><span>What this feeds</span></a>
+  <a href="#provenance"><span class="n">A</span><span>Provenance</span></a>
 </nav>
 
 <main>
@@ -484,6 +510,12 @@ details.q .ans p:last-child{margin-bottom:0}
         the number before you drag, then drag and check. &sect;11 is a set of prompts to
         shadow-read against.
       </p>
+      <p style="margin-bottom:0; margin-top:.9em">
+        Every section here also ends with a <b>Compare with the source</b> panel holding the
+        original compendium text, verbatim and unedited, for the passage that section was built
+        from. Open it whenever you want to check what Henry actually wrote against what I have
+        made of it. Appendix&nbsp;A lists every place the two differ.
+      </p>
     </div>
   </div>
 </section>
@@ -493,7 +525,7 @@ details.q .ans p:last-child{margin-bottom:0}
     <div class="sechead">
       <span class="secnum">01</span>
       <h2>Vector spaces</h2>
-      <span class="srcref">01. vector spaces.md</span>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2001%20-%20vectors/01.%20vector%20spaces.md" target="_blank" rel="noopener" title="Open the original source on GitHub, pinned to commit 9850ee5">01. vector spaces.md &#8599;</a>
     </div>
     <hr class="rule-h">
     <p>
@@ -631,6 +663,131 @@ details.q .ans p:last-child{margin-bottom:0}
     </div>
     <figcaption><b>Fig. 1.2</b> &mdash; Scalar multiplication: \(2\mathbf{v}\) stretches, \(-\mathbf{v}\) reverses. Direction is preserved up to sign; only magnitude changes. <i>Figure from the compendium.</i></figcaption>
   </figure>
+  <div class="col">
+    <details class="srcbox">
+      <summary><span class="srcbox-k">Compare with the source</span><span class="srcbox-f">01. vector spaces.md</span></summary>
+      <div class="srcbox-body"><pre># Vector Spaces
+
+*Vector spaces form the mathematical playground where ML lives. This file covers vector addition, scalar multiplication, closure axioms, subspaces, and why nearly everything in AI is represented as vectors.*
+
+- Think of a Vector Space as a specific kind of playground where mathematical objects live, and each object is called a **vector**. 
+
+- Vector space is formally defined as an collection of vectors that can be added and scaled together without leaving the space. 
+
+- A useful non-example: the integers $\mathbb{Z}$ are **not** a vector space over the real numbers, since scaling $3$ by $0.5$ gives $1.5$, which falls outside the set. The &quot;without leaving the space&quot; part of the definition is doing real work.
+
+- For geometric intuition in machine learning (ML), we will always think of vectors as a point in Euclidean space, represented by it&#x27;s coordinates. 
+
+- The vector $\mathbf{a}$ (denoted mathematically as lowercase letters in bold) has $n$ coordinates, each representing a position along an axis.
+
+$$\mathbf{a} = [a_1, a_2, a_3]$$
+
+![A vector a = (3, 2, 4) plotted in 3D space with x, y, z axes](../images/vector_3d.svg)
+
+- The vectors in the vector space live under a very specific, unbreakable set of rules:
+
+    - **Vector Addition (Combining)**:
+    You can take any two vectors and combine them to create a new one.
+    Think of vectors as instructions for movement.
+    If vector A means &quot;walk 3 steps forward&quot; and vector B means &quot;walk 2 steps right,&quot;
+    adding them (A + B) creates a new, single instruction: &quot;walk 3 steps forward and 2 steps right.&quot;
+
+    - **Scalar Multiplication (Scaling)**:
+    You can take any vector and scale it using a regular number (a &quot;scalar&quot;).
+    You can stretch it, shrink it, or reverse it.
+    If vector A is &quot;walk 3 steps forward,&quot; scaling it by 2 makes it &quot;walk 6 steps forward.&quot;
+    Scaling it by -1 flips it entirely to &quot;walk 3 steps backward.&quot;
+
+- The **dimension** of a vector space is the number of independent directions it contains. $\mathbb{R}^2$ is 2-dimensional (needs 2 coordinates), while $\mathbf{a}$ above lives in $\mathbb{R}^3$.
+
+- We can for instance represent any object, say, a human, as a vector, where $h_1$ = height in cm, $h_2$ = weight in kg, $h_3$ = age.
+
+$$\mathbf{h} = [185, 75, 30]$$
+
+- We have now created a vector space with a vector representing a human.
+
+- We can represent multiple humans, and see how close or apart they are!
+
+![Three humans as vectors: Alice and Carol are close, Alice and Bob are far apart](../images/human_vectors.svg)
+
+- We can add more features, creating a rich representation of a human, often called feature vectors in ML.
+
+- The more unique and meaningful features you have, the more descriptive the feature vector is, an important factor to remember. 
+
+- Beyond 3 dimensions, vectors become very difficult to visually inspect, inspiring a field of mathematics called **Linear Algebra**.
+
+- Now, **Linear algebra** is the study of vectors, vector spaces and mappings between vectors.
+
+- We represent almost every thing in AI/ML as vectors, making linear algebra the bedrock of the field.
+
+- Vector addition can be performed by placing one vector on the tail of the other visually, and drawing from the origin to the endpoint.
+
+![Vector addition: a (red) plus b (blue) gives resultant a + b (green dashed)](../images/vector_addition.svg)
+
+- For two vectors $\mathbf{a} = (a_1, a_2)$ and $\mathbf{b} = (b_1, b_2)$: $\mathbf{a} + \mathbf{b} = (a_1 + b_1, a_2 + b_2)$
+
+- Vectors can also be subtracted, with all addition rules applying too.
+
+- Multiplying a vector by a scalar scales the vector by that factor in the same direction.
+
+![Scalar multiplication: v (red), 2v (blue, doubled), -v (purple, reversed)](../images/scalar_multiplication.svg)
+
+- For a scalar $c$ and vector $\mathbf{v} = (v_1, v_2)$: $c\mathbf{v} = (cv_1, cv_2)$
+
+- **Closure under Addition**: If you add any two vectors from the vector space, the result is also a vector within the same space: If $\mathbf{u} \in V$ and $\mathbf{v} \in V$, then $\mathbf{u} + \mathbf{v} \in V$
+
+- **Closure under Scalar Multiplication**: If you multiply any vector from the vector space by a scalar, the result is a vector within the same space: If $\mathbf{v} \in V$ and $c \in F$, then $c\mathbf{v} \in V$
+
+- **Commutativity of Addition**: For any two vectors $\mathbf{u}$ and $\mathbf{v}$: $\mathbf{u} + \mathbf{v} = \mathbf{v} + \mathbf{u}$
+
+![Parallelogram rule: both paths (u then v, or v then u) reach the same point](../images/commutativity.svg)
+
+- Both paths through the parallelogram arrive at the same point.
+
+- **(Zero Vector)**: There exists a vector $\mathbf{0}$ such that for any vector $\mathbf{v}$: $\mathbf{v} + \mathbf{0} = \mathbf{v}$
+
+![Zero vector: v + 0 = v](../images/zero_vector.svg)
+
+- **Additive Inverse**: For every vector $\mathbf{v}$, there exists a vector $-\mathbf{v}$ such that: $\mathbf{v} + (-\mathbf{v}) = \mathbf{0}$
+
+![Additive inverse: v (red) and -v (blue) cancel to zero](../images/additive_inverse.svg)
+
+- **Distributivity 1**: For any scalar $c$ and vectors $\mathbf{u}$, $\mathbf{v}$: $c(\mathbf{u} + \mathbf{v}) = c\mathbf{u} + c\mathbf{v}$
+
+![Distributivity: scaling the sum (gold) equals summing the scaled vectors](../images/distributivity.svg)
+
+- Scaling the sum (gold) gives the same result as summing the scaled vectors.
+
+- **Distributivity 2**: For any scalars $c$, $d$ and vector $\mathbf{v}$: $(c + d)\mathbf{v} = c\mathbf{v} + d\mathbf{v}$
+
+- **Associativity**: For any scalars $c$, $d$ and vector $\mathbf{v}$: $(cd)\mathbf{v} = c(d\mathbf{v})$
+
+- **Identity Element**: For any vector $\mathbf{v}$: $1\mathbf{v} = \mathbf{v}$, where $1$ is the multiplicative identity in the field of scalars.
+
+- Some examples of vector spaces:
+
+    - **$\mathbb{R}^n$ (n-dimensional space)**: all real numbers in an n-dimensional space, example vector [1,4,3000...nth item], add two points or scale one, and you still land somewhere on the plane.
+
+    - **Grayscale images**: a $28 \times 28$ image is just 784 pixel intensities, i.e. a vector in $\mathbb{R}^{784}$. Adding two images (blending) or scaling one (brightening) gives another image of the same size.
+
+    - **Audio signals**: a 1-second clip sampled at 44.1kHz is a vector with 44,100 entries. Mixing two clips together is just vector addition.
+
+    - **Polynomials**: adding two polynomials or scaling one by a number gives another polynomial, so they form a vector space too. Vectors don&#x27;t have to look like arrows!
+
+- A **subspace** is just a smaller playground inside the bigger one. Imagine 3D space as a room. A flat sheet of paper passing through the centre of the room is a subspace, and so is a single straight wire through the centre.
+
+- The key requirement is that the subspace must pass through the origin. If you shift that sheet of paper off-centre, it stops being a subspace because the zero vector is no longer on it.
+
+![Subspaces: a line and a plane through the origin inside 3D space](../images/subspaces.svg)
+
+- All the same rules from the vector space (addition, scaling, closure) still work inside a subspace. You can add or scale vectors within it and never &quot;fall off&quot; into the larger space.
+
+- A line through the origin is a 1-dimensional subspace, a plane through the origin is a 2-dimensional subspace, and the full space is a subspace of itself.
+
+- In ML, subspaces appear naturally. High-dimensional data often has structure that lives on a lower-dimensional subspace. Techniques like PCA find that subspace so we can work with the data more efficiently.</pre></div>
+    </details>
+  </div>
+
 </section>
 
 <section id="leap">
@@ -638,7 +795,7 @@ details.q .ans p:last-child{margin-bottom:0}
     <div class="sechead">
       <span class="secnum">02</span>
       <h2>The dimensional leap</h2>
-      <span class="srcref">01. vector spaces.md</span>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2001%20-%20vectors/01.%20vector%20spaces.md" target="_blank" rel="noopener" title="Open the original source on GitHub, pinned to commit 9850ee5">01. vector spaces.md &#8599;</a>
     </div>
     <hr class="rule-h">
     <p>
@@ -677,7 +834,10 @@ details.q .ans p:last-child{margin-bottom:0}
         Now look at the compendium's own example, \(\mathbf{h} = [185\,\text{cm},\ 75\,\text{kg},\ 30\,\text{yr}]\), and its magnitude:
       </p>
       <div class="mathbox">
-        $$\|\mathbf{h}\|_2=\sqrt{185^2+75^2+30^2}=\sqrt{34225+5625+900}\approx 201.9\ \ (\textbf{units: none})$$
+        $$\begin{aligned}
+        \|\mathbf{h}\|_2&=\sqrt{185^2+75^2+30^2}=\sqrt{34225+5625+900}\\[2pt]
+        &\approx 201.9 \qquad (\textbf{units: none})
+        \end{aligned}$$
       </div>
       <p>
         That number is dimensionally meaningless. It is a sum of squared centimetres, squared
@@ -744,6 +904,31 @@ details.q .ans p:last-child{margin-bottom:0}
       </p>
     </div>
   </div>
+  <div class="col">
+    <details class="srcbox">
+      <summary><span class="srcbox-k">Compare with the source</span><span class="srcbox-f">01. vector spaces.md (feature-vector passage)</span></summary>
+      <div class="srcbox-body"><pre>- We can for instance represent any object, say, a human, as a vector, where $h_1$ = height in cm, $h_2$ = weight in kg, $h_3$ = age.
+
+$$\mathbf{h} = [185, 75, 30]$$
+
+- We have now created a vector space with a vector representing a human.
+
+- We can represent multiple humans, and see how close or apart they are!
+
+![Three humans as vectors: Alice and Carol are close, Alice and Bob are far apart](../images/human_vectors.svg)
+
+- We can add more features, creating a rich representation of a human, often called feature vectors in ML.
+
+- The more unique and meaningful features you have, the more descriptive the feature vector is, an important factor to remember. 
+
+- Beyond 3 dimensions, vectors become very difficult to visually inspect, inspiring a field of mathematics called **Linear Algebra**.
+
+- Now, **Linear algebra** is the study of vectors, vector spaces and mappings between vectors.
+
+- We represent almost every thing in AI/ML as vectors, making linear algebra the bedrock of the field.</pre></div>
+    </details>
+  </div>
+
 </section>
 
 <section id="magnitude">
@@ -751,7 +936,7 @@ details.q .ans p:last-child{margin-bottom:0}
     <div class="sechead">
       <span class="secnum">03</span>
       <h2>Magnitude, direction, independence</h2>
-      <span class="srcref">02. vector properties.md</span>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2001%20-%20vectors/02.%20vector%20properties.md" target="_blank" rel="noopener" title="Open the original source on GitHub, pinned to commit 9850ee5">02. vector properties.md &#8599;</a>
     </div>
     <hr class="rule-h">
     <p>
@@ -837,6 +1022,87 @@ details.q .ans p:last-child{margin-bottom:0}
       </p>
     </div>
   </div>
+  <div class="col">
+    <details class="srcbox">
+      <summary><span class="srcbox-k">Compare with the source</span><span class="srcbox-f">02. vector properties.md</span></summary>
+      <div class="srcbox-body"><pre># Vector Properties
+
+*Vector properties describe the geometric and algebraic characteristics that define how vectors behave. This file covers magnitude, direction, unit vectors, equality, parallelism, orthogonality, and linear independence, the building blocks of every ML feature space.*
+
+- The **magnitude** (or length) of a vector tells you *how far* it reaches. Think of it as the length of the arrow. For a vector $\mathbf{a} = (a_1, a_2, a_3)$, its magnitude is:
+
+$$\|\mathbf{a}\| = \sqrt{a_1^2 + a_2^2 + a_3^2}$$
+
+- This is just the Pythagorean theorem extended to higher dimensions and measuring the straight-line distance from the origin to the point.
+
+- The **direction** of a vector tells you *where* it points; simply visualise a straight line from the origin to the coordinate&#x27;s point. 
+
+- When origin is not explicitly specifies, we often imply (0,0,...0), the centerpoint, at least for visualisation purposes. 
+
+- Position doesn&#x27;t matter, its always about displacement: a vector $(3, 2)$ drawn from the origin and the same $(3, 2)$ drawn from another point are still equal.
+
+![Vector equality: same (3,2) vector drawn from two different starting points](../images/vector_equality.svg)
+
+- Two vectors can have the same length but point in completely different directions, or point the same way but differ in length.
+
+![Same direction, different magnitudes (v and 2v) vs same magnitude, different directions](../images/magnitude_direction.svg)
+
+- Two vectors are **equal** if and only if all their corresponding components match; same length, same direction, the exact same arrow.
+
+$$\mathbf{a} = \mathbf{b} \iff a_i = b_i \text{ for all } i$$
+
+- Two vectors are **parallel** if one is a scalar multiple of the other. They point along the same line, either in the same direction or exactly opposite.
+
+$$\mathbf{a} \parallel \mathbf{b} \iff \mathbf{a} = k\mathbf{b} \text{ for some scalar } k \neq 0$$
+
+![Parallel vectors: a and b point the same way, a and -b point opposite](../images/parallel_vectors.svg)
+
+- If $k &gt; 0$, they point the same way. If $k &lt; 0$, they point in opposite directions. Either way, they lie on the same line through the origin.
+
+- Intuitively, parallel vectors carry no &quot;new&quot; directional information. One is just a stretched or flipped version of the other.
+
+- Two vectors are **orthogonal** (perpendicular) if they point in completely independent directions. Moving along one gives you zero progress along the other.
+
+![Orthogonal vectors: u and v meet at a right angle](../images/orthogonal_vectors.svg)
+
+- Think of walking north and then walking east, these are orthogonal directions, no amount of walking north will ever move you east. We will encounter orthogonality very often.
+
+- Orthogonality is central to ML: features that are orthogonal carry completely independent information, which is ideal for representation.
+
+- More generally, any two vectors have an **angle** $\theta$ between them, ranging from $0°$ to $180°$.
+
+- This angle captures the entire relationship between two directions: $0°$ means parallel (same direction), $180°$ means parallel (opposite direction), and $90°$ means orthogonal. Everything in between is a blend.
+
+- Most vector relationships in ML live somewhere in this spectrum. Later, we will see exact tools (dot product, cosine similarity) to compute this angle.
+
+- A set of vectors is **linearly dependent** if at least one of them can be built from the others by scaling and adding. It brings no new information to the set.
+
+- For example, if $\mathbf{c} = 2\mathbf{a} + 3\mathbf{b}$, then $\mathbf{c}$ is redundant, you already have everything $\mathbf{c}$ offers through $\mathbf{a}$ and $\mathbf{b}$.
+
+- Parallel vectors are always linearly dependent, since one is just a scaled copy of the other. Any set containing the zero vector is also linearly dependent.
+
+- Vectors are **linearly independent** if none of them can be built from the others. Each one contributes a genuinely new direction. Orthogonal vectors are always linearly independent.
+
+- Some intuition: if you want to study different humans and represent them as a vector, linearly dependent vectors (humans) will skew the observation in favour of the oversampled data point, an important factor in designing dataset for training AI. 
+
+- In 2D, two linearly independent vectors can reach any point in the plane. In 3D, you need three. This idea of &quot;how many independent vectors you need&quot; connects directly to dimension.
+
+- A vector is **sparse** when most of its components are zero. The opposite, most components being nonzero, is called **dense**.
+
+$$\mathbf{s} = [0, 0, 3, 0, 0, 0, 1, 0, 0, 0]$$
+
+- Sparsity matters because it affects both storage and computation. Sparse vectors can be stored and processed much more efficiently by only tracking the nonzero entries.
+
+- A **unit vector** is a vector with magnitude exactly 1. It purely represents a direction with no length information. You can turn any vector into a unit vector by dividing by its magnitude:
+
+$$\hat{\mathbf{a}} = \frac{\mathbf{a}}{\|\mathbf{a}\|}$$
+
+- This process is called **normalisation**. It strips away &quot;how far&quot; and keeps only &quot;which way&quot;, this is an important factor in machine learning. 
+
+- The standard unit vectors point along each axis: $\hat{\mathbf{i}} = (1, 0, 0)$, $\hat{\mathbf{j}} = (0, 1, 0)$, $\hat{\mathbf{k}} = (0, 0, 1)$. Any vector can be written as a combination of these, e.g. $(3, 2, 4) = 3\hat{\mathbf{i}} + 2\hat{\mathbf{j}} + 4\hat{\mathbf{k}}$.</pre></div>
+    </details>
+  </div>
+
 </section>
 
 <section id="norms">
@@ -844,7 +1110,7 @@ details.q .ans p:last-child{margin-bottom:0}
     <div class="sechead">
       <span class="secnum">04</span>
       <h2>Norms and metrics</h2>
-      <span class="srcref">03. norms and metrics.md</span>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2001%20-%20vectors/03.%20norms%20and%20metrics.md" target="_blank" rel="noopener" title="Open the original source on GitHub, pinned to commit 9850ee5">03. norms and metrics.md &#8599;</a>
     </div>
     <hr class="rule-h">
     <p>
@@ -974,6 +1240,75 @@ details.q .ans p:last-child{margin-bottom:0}
       data has outliers, that choice is a modelling decision, not a formatting detail.
     </p>
   </div>
+  <div class="col">
+    <details class="srcbox">
+      <summary><span class="srcbox-k">Compare with the source</span><span class="srcbox-f">03. norms and metrics.md</span></summary>
+      <div class="srcbox-body"><pre># Metrics and Norms
+
+*Norms measure the size of a vector; metrics measure the distance between two vectors. This file covers L1, L2, and L-infinity norms, Euclidean and cosine distance, and why choosing the right distance function is critical for kNN, clustering, and retrieval in ML.*
+
+- We know vectors have magnitude and direction. But how do we actually measure &quot;how big&quot; a single vector is, or &quot;how far apart&quot; two vectors are? This is where **norms** and **metrics** come in.
+
+- In scalars, we know that 10 &gt; 5, because their values quantify them, but how can we quantify a vector? It&#x27;s **norm**, it measures the size of a single vector. 
+
+- The most familiar norm is the **Euclidean norm** (L2), which is just the magnitude formula we already know:
+
+$$\|\mathbf{v}\|_2 = \sqrt{v_1^2 + v_2^2 + \cdots + v_n^2}$$
+
+- But there are other ways to measure size. Imagine you are in a city with a grid of streets. You cannot walk diagonally through buildings, so the &quot;length&quot; of your journey is the total blocks walked along each street. This is the **Manhattan norm** (L1):
+
+$$\|\mathbf{v}\|_1 = |v_1| + |v_2| + \cdots + |v_n|$$
+
+- Or you might only care about the single largest component, ignoring the rest. This is the **Max norm** (L-infinity):
+
+$$\|\mathbf{v}\|_\infty = \max(|v_1|, |v_2|, \ldots, |v_n|)$$
+
+- All three are special cases of the **general Lp norm**:
+
+$$\|\mathbf{v}\|_p = (|v_1|^p + |v_2|^p + \cdots + |v_n|^p)^{1/p}$$
+
+- Setting $p = 2$ gives Euclidean, $p = 1$ gives Manhattan, and as $p \to \infty$ you get the Max norm. As $p$ grows, the largest component contributes more and more, until eventually only it matters.
+
+- Every norm must obey three rules:
+
+    - **Non-negativity**: $\|\mathbf{v}\| \geq 0$, and $\|\mathbf{v}\| = 0$ only if $\mathbf{v} = \mathbf{0}$. Size is never negative, and only the zero vector has zero size.
+
+    - **Scaling**: $\|c\mathbf{v}\| = |c| \cdot \|\mathbf{v}\|$. Doubling a vector doubles its size.
+
+    - **Triangle inequality**: $\|\mathbf{u} + \mathbf{v}\| \leq \|\mathbf{u}\| + \|\mathbf{v}\|$. The shortcut is never longer than going the long way round.
+
+- Now, a **metric** measures the distance *between* two vectors. Think of it as asking: &quot;how far apart are these two points?&quot;
+
+- The simplest way to get a metric is to use a norm on the difference: $d(\mathbf{u}, \mathbf{v}) = \|\mathbf{u} - \mathbf{v}\|$. Subtract the two vectors, then measure the size of what remains.
+
+- Using the Euclidean norm this gives us the familiar **Euclidean distance**:
+
+$$d(\mathbf{u}, \mathbf{v}) = \sqrt{(u_1 - v_1)^2 + (u_2 - v_2)^2 + \cdots + (u_n - v_n)^2}$$
+
+- Using the Manhattan norm gives **Manhattan distance**, the total difference along each axis, like counting city blocks between two locations.
+
+- Every metric must obey four rules:
+
+    - **Non-negativity**: $d(\mathbf{u}, \mathbf{v}) \geq 0$. Distance is never negative.
+
+    - **Identity**: $d(\mathbf{u}, \mathbf{v}) = 0$ if and only if $\mathbf{u} = \mathbf{v}$. Zero distance means the same point.
+
+    - **Symmetry**: $d(\mathbf{u}, \mathbf{v}) = d(\mathbf{v}, \mathbf{u})$. The distance from A to B is the same as from B to A.
+
+    - **Triangle inequality**: $d(\mathbf{u}, \mathbf{w}) \leq d(\mathbf{u}, \mathbf{v}) + d(\mathbf{v}, \mathbf{w})$. Going directly is never longer than taking a detour.
+
+- So what is the relationship between the two? A norm measures one vector, a metric measures the gap between two. Every norm naturally creates a metric (by measuring the difference), but not every metric comes from a norm.
+
+- For example, **Hamming distance** counts the number of positions where two vectors differ. It is a valid metric, but it does not come from any norm.
+
+- In ML, choosing the right norm or metric matters. 
+
+- L2 distance squares each difference before summing, so a single large difference dominates the result.
+
+- L1 distance sums the absolute differences, treating each one equally. A single large difference has less influence compared to L2.</pre></div>
+    </details>
+  </div>
+
 </section>
 
 <section id="dot">
@@ -981,7 +1316,7 @@ details.q .ans p:last-child{margin-bottom:0}
     <div class="sechead">
       <span class="secnum">05</span>
       <h2>The dot product</h2>
-      <span class="srcref">04. products.md</span>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2001%20-%20vectors/04.%20products.md" target="_blank" rel="noopener" title="Open the original source on GitHub, pinned to commit 9850ee5">04. products.md &#8599;</a>
     </div>
     <hr class="rule-h">
     <p>
@@ -1091,6 +1426,61 @@ details.q .ans p:last-child{margin-bottom:0}
       </p>
     </div>
   </div>
+  <div class="col">
+    <details class="srcbox">
+      <summary><span class="srcbox-k">Compare with the source</span><span class="srcbox-f">04. products.md (inner and dot products)</span></summary>
+      <div class="srcbox-body"><pre># Vector Products
+
+*Vector products are the fundamental operations for measuring similarity and computing projections. This file covers inner products, the dot product, cosine similarity, the cross product, and outer products, operations that power attention mechanisms, embeddings, and geometric reasoning in AI.*
+
+- We have seen how to add and scale vectors. But can we *multiply* two vectors together? It turns out there is more than one way to do it, and each answers a different question.
+
+- An **inner product** is the general idea: a function that takes two vectors and produces a single number (a scalar). It is the abstract blueprint for &quot;multiplying&quot; vectors.
+
+- Any inner product must satisfy three rules:
+
+    - **Positive definiteness**: $\langle \mathbf{v}, \mathbf{v} \rangle \geq 0$, and equals zero only for the zero vector. Multiplying a vector with itself always gives a non-negative result.
+
+    - **Symmetry**: $\langle \mathbf{u}, \mathbf{v} \rangle = \langle \mathbf{v}, \mathbf{u} \rangle$. The order does not matter.
+
+    - **Linearity**: $\langle a\mathbf{u} + b\mathbf{v}, \mathbf{w} \rangle = a\langle \mathbf{u}, \mathbf{w} \rangle + b\langle \mathbf{v}, \mathbf{w} \rangle$. It distributes over addition and scaling.
+
+- The **dot product** is the most common inner product. It is the concrete version you will use almost everywhere. For two vectors $\mathbf{a} = (a_1, a_2, \ldots, a_n)$ and $\mathbf{b} = (b_1, b_2, \ldots, b_n)$:
+
+$$\mathbf{a} \cdot \mathbf{b} = a_1 b_1 + a_2 b_2 + \cdots + a_n b_n$$
+
+- Multiply matching components, then add everything up. That is all it is.
+
+- But what does this number *mean*? The dot product has a beautiful geometric interpretation:
+
+$$\mathbf{a} \cdot \mathbf{b} = \|\mathbf{a}\| \, \|\mathbf{b}\| \cos(\theta)$$
+
+![Dot product: vector a projected onto b, with angle θ and projection shown](../images/dot_product.svg)
+
+- This connects the dot product directly to the angle $\theta$ between the two vectors. The result tells you how much the two vectors &quot;agree&quot; in direction.
+
+- If they point the same way ($\theta = 0°$), $\cos(\theta) = 1$ and the dot product is maximised.
+
+- If they are orthogonal ($\theta = 90°$), $\cos(\theta) = 0$ and the dot product is exactly zero. This gives us a precise test for orthogonality.
+
+- If they point in opposite directions ($\theta = 180°$), $\cos(\theta) = -1$ and the dot product is negative.
+
+- A vector dotted with itself gives its magnitude squared: $\mathbf{a} \cdot \mathbf{a} = \|\mathbf{a}\|^2$.
+
+- The dot product also gives us **projection**, the shadow one vector casts onto another. The projection of $\mathbf{a}$ onto $\mathbf{b}$ is:
+
+$$\text{proj}_{\mathbf{b}}(\mathbf{a}) = \frac{\mathbf{a} \cdot \mathbf{b}}{\|\mathbf{b}\|^2} \, \mathbf{b}$$
+
+- Think of shining a light straight down onto $\mathbf{b}$. The shadow of $\mathbf{a}$ on that line is the projection. It tells you how much of $\mathbf{a}$ lies in the direction of $\mathbf{b}$.
+
+- **Cosine similarity** normalises the dot product by dividing out both magnitudes:
+
+$$\cos(\theta) = \frac{\mathbf{a} \cdot \mathbf{b}}{\|\mathbf{a}\| \, \|\mathbf{b}\|}$$
+
+- This gives a value between $-1$ and $1$ that measures direction alignment, ignoring how long the vectors are. It is widely used in ML to compare things like documents, embeddings, and user preferences.</pre></div>
+    </details>
+  </div>
+
 </section>
 
 <section id="cross">
@@ -1098,7 +1488,7 @@ details.q .ans p:last-child{margin-bottom:0}
     <div class="sechead">
       <span class="secnum">06</span>
       <h2>The cross product</h2>
-      <span class="srcref">04. products.md</span>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2001%20-%20vectors/04.%20products.md" target="_blank" rel="noopener" title="Open the original source on GitHub, pinned to commit 9850ee5">04. products.md &#8599;</a>
     </div>
     <hr class="rule-h">
     <p>
@@ -1149,6 +1539,45 @@ details.q .ans p:last-child{margin-bottom:0}
       </p>
     </div>
   </div>
+  <div class="col">
+    <details class="srcbox">
+      <summary><span class="srcbox-k">Compare with the source</span><span class="srcbox-f">04. products.md (cross and triple products)</span></summary>
+      <div class="srcbox-body"><pre>- Now, the dot product takes two vectors and returns a scalar. The **cross product** does the opposite, it takes two vectors and returns a *new vector*.
+
+- The cross product $\mathbf{a} \times \mathbf{b}$ produces a vector that is perpendicular to both $\mathbf{a}$ and $\mathbf{b}$:
+
+$$\mathbf{a} \times \mathbf{b} = (a_2 b_3 - a_3 b_2, \; a_3 b_1 - a_1 b_3, \; a_1 b_2 - a_2 b_1)$$
+
+- The cross product only works in 3D. While the dot product works in any number of dimensions, the cross product is specific to three-dimensional space.
+
+- Its magnitude equals the area of the parallelogram formed by the two vectors:
+
+$$\|\mathbf{a} \times \mathbf{b}\| = \|\mathbf{a}\| \, \|\mathbf{b}\| \sin(\theta)$$
+
+- Notice the pattern: the dot product uses $\cos(\theta)$ and the cross product uses $\sin(\theta)$. The dot product measures how much two vectors align, the cross product measures how much they *differ* in direction.
+
+- The direction of the result follows the **right-hand rule**: curl the fingers of your right hand from $\mathbf{a}$ towards $\mathbf{b}$, and your thumb points in the direction of $\mathbf{a} \times \mathbf{b}$.
+
+- Unlike the dot product, the cross product is **not commutative**: $\mathbf{a} \times \mathbf{b} = -(\mathbf{b} \times \mathbf{a})$. Swapping the order flips the direction.
+
+- If two vectors are parallel, their cross product is the zero vector (since $\sin(0°) = 0$). No area, no perpendicular direction.
+
+- What happens when you combine three vectors using both products? This gives us **triple products**.
+
+- The **scalar triple product** $\mathbf{a} \cdot (\mathbf{b} \times \mathbf{c})$ first takes the cross product of two vectors, then dots the result with the third. The output is a single number that equals the volume of the parallelepiped (a slanted 3D box) formed by the three vectors.
+
+- If the scalar triple product is zero, the three vectors are **coplanar**, they all lie in the same flat plane and form no volume.
+
+- The order can be cycled without changing the result: $\mathbf{a} \cdot (\mathbf{b} \times \mathbf{c}) = \mathbf{b} \cdot (\mathbf{c} \times \mathbf{a}) = \mathbf{c} \cdot (\mathbf{a} \times \mathbf{b})$.
+
+- The **vector triple product** $\mathbf{a} \times (\mathbf{b} \times \mathbf{c})$ applies the cross product twice and returns a vector. It expands neatly using the identity:
+
+$$\mathbf{a} \times (\mathbf{b} \times \mathbf{c}) = (\mathbf{a} \cdot \mathbf{c})\mathbf{b} - (\mathbf{a} \cdot \mathbf{b})\mathbf{c}$$
+
+- The result always lies in the plane spanned by $\mathbf{b}$ and $\mathbf{c}$. Note that the cross product is **not associative**: $\mathbf{a} \times (\mathbf{b} \times \mathbf{c}) \neq (\mathbf{a} \times \mathbf{b}) \times \mathbf{c}$.</pre></div>
+    </details>
+  </div>
+
 </section>
 
 <section id="basis">
@@ -1156,7 +1585,7 @@ details.q .ans p:last-child{margin-bottom:0}
     <div class="sechead">
       <span class="secnum">07</span>
       <h2>Basis, and why Mohr's circle was PCA</h2>
-      <span class="srcref">05. basis and duality.md</span>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2001%20-%20vectors/05.%20basis%20and%20duality.md" target="_blank" rel="noopener" title="Open the original source on GitHub, pinned to commit 9850ee5">05. basis and duality.md &#8599;</a>
     </div>
     <hr class="rule-h">
     <p>
@@ -1239,6 +1668,60 @@ details.q .ans p:last-child{margin-bottom:0}
       </p>
     </div>
   </div>
+  <div class="col">
+    <details class="srcbox">
+      <summary><span class="srcbox-k">Compare with the source</span><span class="srcbox-f">05. basis and duality.md (basis and change of basis)</span></summary>
+      <div class="srcbox-body"><pre># Basis and Duality
+
+*Bases define the coordinate systems of vector spaces, and duality reveals how linear functions act on vectors. This file covers linear independence, spanning sets, change of basis, dual spaces, and covectors, concepts behind PCA, feature transforms, and attention queries in ML.*
+
+- We have seen that vectors live in spaces with a certain number of dimensions. But what defines those dimensions? This is where **basis vectors** come in.
+
+- A **basis** is a set of vectors that can build every other vector in the space through scaling and adding (linear combination), with no redundancy. They are the building blocks of the space.
+
+- A basis must satisfy two conditions:
+
+    - **Linearly independent**: No basis vector can be built from the others. Each one contributes a genuinely new direction.
+
+    - **Spanning**: Every vector in the space can be expressed as a combination of the basis vectors. Nothing is left out.
+
+- The number of vectors in a basis equals the **dimension** of the space. In $\mathbb{R}^2$ you need 2, in $\mathbb{R}^3$ you need 3, and so on.
+
+- The most natural basis is the **standard basis**, the unit vectors along each axis:
+
+    - In $\mathbb{R}^2$: $\hat{\mathbf{i}} = (1, 0)$ and $\hat{\mathbf{j}} = (0, 1)$
+    - In $\mathbb{R}^3$: $\hat{\mathbf{i}} = (1, 0, 0)$, $\hat{\mathbf{j}} = (0, 1, 0)$, $\hat{\mathbf{k}} = (0, 0, 1)$
+
+- Any vector is just a weighted sum of these basis vectors. The vector $(3, 2)$ is really $3\hat{\mathbf{i}} + 2\hat{\mathbf{j}}$. The weights (3 and 2) are the **coordinates** of the vector in that basis.
+
+- But the standard basis is not the only valid basis. In $\mathbb{R}^2$, the vectors $(1, 1)$ and $(-1, 1)$ also form a basis. They are linearly independent and can reach any point in the plane. The same vector will just have different coordinates in this new basis.
+
+- A **change of basis** re-expresses the same vector using different basis. The vector has not moved, we are just describing it from a different perspective.
+
+- This is done by multiplying by a **change of basis matrix** $P$, whose columns are the new basis vectors written in the old coordinates. To go back, multiply by $P^{-1}$.
+
+- Think of it as two friends giving directions to the same café. You navigate by streets: $(3, 2)$ means &quot;3 blocks east, 2 blocks north&quot;. Your friend navigates by diagonals: their directions are $\mathbf{b}_1 = (1, 1)$ (north-east) and $\mathbf{b}_2 = (-1, 1)$ (north-west), the new basis from earlier. Same café, two languages for describing how to get there.
+
+- Your friend says the café is at $(2.5, -0.5)$: &quot;walk 2.5 steps along my north-east diagonal, then half a step *backwards* along my north-west diagonal&quot;. To find out what that means in your street language, you simply follow their recipe:
+
+$$2.5 \begin{bmatrix} 1 \\ 1 \end{bmatrix} - 0.5 \begin{bmatrix} -1 \\ 1 \end{bmatrix} = \begin{bmatrix} 3 \\ 2 \end{bmatrix}$$
+
+- It is the same café you call $(3, 2)$!
+
+- That &quot;follow the recipe&quot; step is exactly what multiplying by $P$ does. Stack the friend&#x27;s basis vectors as columns, and multiplying by a vector of their coordinates takes 2.5 of the first column and -0.5 of the second, the recipe again, just written compactly:
+
+$$P = \begin{bmatrix} 1 &amp; -1 \\ 1 &amp; 1 \end{bmatrix}, \qquad P \begin{bmatrix} 2.5 \\ -0.5 \end{bmatrix} = \begin{bmatrix} 3 \\ 2 \end{bmatrix}$$
+
+- Translating the other way, from your $(3, 2)$ into the friend&#x27;s language, means *undoing* the recipe, and undoing $P$ is precisely what $P^{-1}$ does:
+
+$$P^{-1} \begin{bmatrix} 3 \\ 2 \end{bmatrix} = \begin{bmatrix} 2.5 \\ -0.5 \end{bmatrix}$$
+
+- Nothing moved. $(3, 2)$ and $(2.5, -0.5)$ are two descriptions of one point, and $P$ is the dictionary for translating between them.
+
+- In ML, change of basis appears frequently. PCA, for example, finds a new basis (the principal components) where the data is easier to understand, the axes align with the directions of greatest variation.</pre></div>
+    </details>
+  </div>
+
 </section>
 
 <section id="dual">
@@ -1246,7 +1729,7 @@ details.q .ans p:last-child{margin-bottom:0}
     <div class="sechead">
       <span class="secnum">08</span>
       <h2>Duality: forces were never vectors</h2>
-      <span class="srcref">05. basis and duality.md</span>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2001%20-%20vectors/05.%20basis%20and%20duality.md" target="_blank" rel="noopener" title="Open the original source on GitHub, pinned to commit 9850ee5">05. basis and duality.md &#8599;</a>
     </div>
     <hr class="rule-h">
     <p>
@@ -1320,6 +1803,51 @@ details.q .ans p:last-child{margin-bottom:0}
       Chapter 07 will build on exactly this.
     </p>
   </div>
+  <div class="col">
+    <details class="srcbox">
+      <summary><span class="srcbox-k">Compare with the source</span><span class="srcbox-f">05. basis and duality.md (duality)</span></summary>
+      <div class="srcbox-body"><pre>- The next set of concepts would be abstract and quite challenging to grasp for now, until when we apply the comepts in later chapters, so brace yourselff for impact, sorry. 
+
+- Now, there is a deeper idea hiding here. When we write $\mathbf{v} = (3, 2)$, the coordinates 3 and 2 are really the result of &quot;measuring&quot; $\mathbf{v}$ along each basis direction. The first coordinate asks &quot;how much of $\hat{\mathbf{i}}$ is in $\mathbf{v}$?&quot;, the second asks &quot;how much of $\hat{\mathbf{j}}$?&quot;
+
+- In the café story, these measurements were the friend&#x27;s questions: &quot;how far along my north-east diagonal did you walk?&quot; and &quot;how far along my north-west one?&quot;. Every basis comes with its own set of questions, one per direction.
+
+- Each question is a **linear functional**: a function that takes in a vector and returns a single number, the reading.
+
+- The word *linear* means the functional respects the two vector space operations. Measure a sum of vectors and you get the sum of the readings; double a vector and the reading doubles:
+
+$$f(\mathbf{u} + \mathbf{v}) = f(\mathbf{u}) + f(\mathbf{v}), \qquad f(c\mathbf{v}) = c\,f(\mathbf{v})$$
+
+- In other words, linear functionals are *honest rulers*. Vectors are the objects, linear functionals are the rulers that measure them, and the collection of all possible rulers forms the **dual space** $V^\ast$.
+
+- For every basis $\{\mathbf{e}_1, \mathbf{e}_2, \ldots, \mathbf{e}_n\}$ there is a matched set of rulers, the **dual basis** $\{\mathbf{e}_1^\ast, \mathbf{e}_2^\ast, \ldots, \mathbf{e}_n^\ast\}$, where $\mathbf{e}_i^\ast$ answers exactly one question: &quot;how many steps of $\mathbf{e}_i$?&quot;. A well-calibrated ruler reads 1 on its own basis vector and completely ignores all the others, which is written compactly using the **Kronecker delta** $\delta_{ij}$:
+
+```math
+\mathbf{e}_i^\ast(\mathbf{e}_j) = \delta_{ij} = \begin{cases} 1 &amp; \text{if } i = j \\ 0 &amp; \text{if } i \neq j \end{cases}
+```
+
+- That tiny calibration rule is all a ruler needs, because linearity does the rest. Watch $\mathbf{e}_1^\ast$ read the first coordinate of $\mathbf{v} = 3\mathbf{e}_1 + 2\mathbf{e}_2$:
+
+$$\mathbf{e}_1^\ast(3\mathbf{e}_1 + 2\mathbf{e}_2) = 3\,\mathbf{e}_1^\ast(\mathbf{e}_1) + 2\,\mathbf{e}_1^\ast(\mathbf{e}_2) = 3 \cdot 1 + 2 \cdot 0 = 3$$
+
+- The ruler ignores every direction except its own and reports the coordinate. Coordinates *are* dual basis readings.
+
+- So what does a ruler look like concretely? In $\mathbb{R}^n$, every linear functional is just a row of numbers applied with a dot product. And for the friend&#x27;s basis we have already built the rulers without noticing: translating $(3, 2)$ into the friend&#x27;s language meant multiplying by $P^{-1}$, and each row of $P^{-1}$ produced one coordinate. **The rows of $P^{-1}$ are the dual basis**:
+
+$$P^{-1} = \frac{1}{2}\begin{bmatrix} 1 &amp; 1 \\ -1 &amp; 1 \end{bmatrix} \quad\Rightarrow\quad \mathbf{b}_1^\ast = (0.5,\ 0.5), \qquad \mathbf{b}_2^\ast = (-0.5,\ 0.5)$$
+
+- Check it against the café trip: $\mathbf{b}_1^\ast \cdot (3, 2) = 0.5 \cdot 3 + 0.5 \cdot 2 = 2.5$, exactly the friend&#x27;s first coordinate. The two halves of this file are one idea: a change of basis swaps the building blocks, and the dual basis is the matched set of rulers that reads off the new coordinates.
+
+- The calibration rule was hiding in plain sight too: $P^{-1}P = I$ says precisely that ruler $i$ reads 1 on basis vector $i$ and 0 on the others. The identity matrix is the Kronecker delta written out as a table.
+
+- One warning. It is tempting to guess that the ruler for $\mathbf{b}_1$ is $\mathbf{b}_1$ itself, i.e. just dot with $(1, 1)$. But $(1, 1) \cdot (3, 2) = 5$, double the true coordinate of 2.5. Dotting with a basis vector reads off its own coordinate only when the basis is **orthonormal** (mutually perpendicular, each of length 1), like the standard basis. That is the only reason $\mathbf{e}_1^\ast$ happens to look identical to $\mathbf{e}_1$. For every other basis, the rulers live in the rows of $P^{-1}$.
+
+- This also explains the dot product&#x27;s double life. Every vector $\mathbf{u}$ secretly defines a ruler (measure $\mathbf{v}$ by computing $\mathbf{u} \cdot \mathbf{v}$), and every ruler is a dot product with some vector. In finite dimensions, the dual space is essentially a mirror image of the original space.
+
+- Duality may seem abstract now, but it underlies many practical ideas: coordinates are dual basis evaluations, the dot product is a duality pairing, and transformations like attention in neural networks operate by having one set of vectors &quot;query&quot; another, which is duality in action.</pre></div>
+    </details>
+  </div>
+
 </section>
 
 <section id="highdim">
@@ -1327,7 +1855,7 @@ details.q .ans p:last-child{margin-bottom:0}
     <div class="sechead">
       <span class="secnum">09</span>
       <h2>High-dimensional reality check</h2>
-      <span class="srcref">beyond the chapter</span>
+      <span class="srcref nolink" title="Added material, not in the source chapter">beyond the chapter</span>
     </div>
     <hr class="rule-h">
     <p>
@@ -1638,6 +2166,46 @@ details.q .ans p:last-child{margin-bottom:0}
         intuition. When it does not, you have found a place worth slowing down.
       </p>
     </div>
+  </div>
+
+
+  <div class="col" id="provenance" style="scroll-margin-top:calc(env(safe-area-inset-top,0px) + 62px)">
+    <div class="sechead" style="margin-top:40px">
+      <span class="secnum">A</span>
+      <h2>Provenance and changes</h2>
+    </div>
+    <hr class="rule-h">
+    <p>
+      This page is a derivative work. The compendium is Apache-2.0 licensed, which requires a
+      statement of what was changed &mdash; and independently of the licence, you should be able
+      to see where I followed the source and where I departed from it. Every source reference on
+      this page is also a link to the original file, pinned to commit
+      <code>9850ee5</code> so it cannot drift.
+    </p>
+  </div>
+  <div class="tw">
+    <table>
+      <thead><tr><th>Section</th><th>Title</th><th>Source</th><th>Verdict</th><th>What changed</th></tr></thead>
+      <tbody>
+<tr><td class="mono">&sect;00</td><td>The bridge</td><td class="mono">&mdash;</td><td><span class="pv add">added</span></td><td>The GATE-to-ML mapping table is mine; no equivalent in the source.</td></tr>
+<tr><td class="mono">&sect;01</td><td>Vector spaces</td><td class="mono"><a href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2001%20-%20vectors" target="_blank" rel="noopener">01</a></td><td><span class="pv ok">faithful</span></td><td>Axioms collected into one block for reference. The bound / sliding / free vector distinction is <b>added</b>.</td></tr>
+<tr><td class="mono">&sect;02</td><td>The dimensional leap</td><td class="mono"><a href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2001%20-%20vectors" target="_blank" rel="noopener">01</a></td><td><span class="pv ok">expanded</span></td><td>Source supplies the [185, 75, 30] example. The unit-change nearest-neighbour flip and the standardisation argument are <b>added</b>.</td></tr>
+<tr><td class="mono">&sect;03</td><td>Magnitude &amp; direction</td><td class="mono"><a href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2001%20-%20vectors" target="_blank" rel="noopener">02</a></td><td><span class="pv ok">faithful</span></td><td>Direction-cosine identity and the FEM sparsity parallel are <b>added</b>.</td></tr>
+<tr><td class="mono">&sect;04</td><td>Norms &amp; metrics</td><td class="mono"><a href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2001%20-%20vectors" target="_blank" rel="noopener">03</a></td><td><span class="pv ok">expanded</span></td><td>Norm and metric axioms follow the source. The von Mises / Tresca norm identity and the L1-corner explanation of sparsity are <b>added</b>.</td></tr>
+<tr><td class="mono">&sect;05</td><td>Dot product</td><td class="mono"><a href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2001%20-%20vectors" target="_blank" rel="noopener">04</a></td><td><span class="pv ok">faithful</span></td><td>Both formulas and projection as in source. Live verification that they agree is <b>added</b>.</td></tr>
+<tr><td class="mono">&sect;06</td><td>Cross product</td><td class="mono"><a href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2001%20-%20vectors" target="_blank" rel="noopener">04</a></td><td><span class="pv ok">expanded</span></td><td>Source notes it is 3-D only. The wedge-product reason <em>why</em> is <b>added</b>.</td></tr>
+<tr><td class="mono">&sect;07</td><td>Basis</td><td class="mono"><a href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2001%20-%20vectors" target="_blank" rel="noopener">05</a></td><td><span class="pv ok">faithful</span></td><td>The caf&eacute; and P-matrix worked example is the source's. Mohr's circle to PCA link is <b>added</b>.</td></tr>
+<tr><td class="mono">&sect;08</td><td>Duality</td><td class="mono"><a href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2001%20-%20vectors" target="_blank" rel="noopener">05</a></td><td><span class="pv ok">faithful</span></td><td>Including the orthonormality trap, which is the source's own warning. Virtual-work reading is <b>added</b>.</td></tr>
+<tr><td class="mono">&sect;09</td><td>High-dimensional reality</td><td class="mono">&mdash;</td><td><span class="pv add">added</span></td><td>Entirely mine, and flagged as such on the page itself.</td></tr>
+<tr><td class="mono">&sect;10</td><td>Worked example</td><td class="mono">&mdash;</td><td><span class="pv add">added</span></td><td>The bracket problem is mine.</td></tr>
+<tr><td class="mono">&sect;11</td><td>Shadow reading</td><td class="mono">README</td><td><span class="pv ok">faithful</span></td><td>Method taken from the compendium README's Phase 2. Questions are <b>added</b>.</td></tr>
+      </tbody>
+      <caption>
+        <b>faithful</b> follows the source closely &middot; <b>expanded</b> keeps the source and
+        adds to it &middot; <b>added</b> has no source counterpart &middot; <b>corrected</b>
+        departs from the source on a point of fact, with the reason given on the page.
+      </caption>
+    </table>
   </div>
 
   <div class="col endnote">
@@ -2119,5 +2687,60 @@ details.q .ans p:last-child{margin-bottom:0}
     });
   }
   setTimeout(run, 6000);
+})();
+</script>
+
+<script>
+/* Long display equations can be wider than their container - especially inside a
+   callout box, which is narrower than the main column. After the typesetter
+   finishes, measure each one and shrink it just enough to fit. Only ever shrinks,
+   never grows, and never below a readable floor - so the worst case is the
+   scrollbar we already had. */
+(function () {
+  'use strict';
+  var MIN_SCALE = 0.70;   /* below this, scrolling beats illegible text */
+
+  function fitOne(box) {
+    try {
+      var c = box.querySelector('mjx-container[display="true"]');
+      if (!c) return;
+      var svg = c.querySelector('svg');
+      if (!svg) return;
+      c.style.fontSize = '';
+      var avail = box.clientWidth;
+      if (!avail) return;
+      var w = svg.getBoundingClientRect().width;
+      if (!w || w <= avail) return;
+      var k = Math.max(MIN_SCALE, (avail / w) * 0.98);
+      c.style.fontSize = (k * 100).toFixed(1) + '%';
+      var w2 = svg.getBoundingClientRect().width;      /* one refinement pass */
+      if (w2 > avail) {
+        k = Math.max(MIN_SCALE, k * (avail / w2) * 0.98);
+        c.style.fontSize = (k * 100).toFixed(1) + '%';
+      }
+    } catch (e) { /* leave the equation exactly as it was */ }
+  }
+
+  function fitAll() {
+    try { document.querySelectorAll('.mathbox').forEach(fitOne); } catch (e) {}
+  }
+
+  function start() {
+    fitAll();
+    var t;
+    window.addEventListener('resize', function () {
+      clearTimeout(t); t = setTimeout(fitAll, 160);
+    });
+  }
+
+  function waitForTypesetter(n) {
+    if (window.MathJax && window.MathJax.startup && window.MathJax.startup.promise) {
+      window.MathJax.startup.promise.then(start, start);
+      return;
+    }
+    if (n > 60) return;            /* typesetter never arrived - nothing to fit */
+    setTimeout(function () { waitForTypesetter(n + 1); }, 200);
+  }
+  waitForTypesetter(0);
 })();
 </script>

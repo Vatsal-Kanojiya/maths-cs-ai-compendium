@@ -49,6 +49,48 @@ Figures marked *from the compendium* are reproduced from this repository's
 `images/` directory; each chapter folder carries its own copy so the page stays
 self-contained.
 
+## Provenance, and why you can check everything
+
+This is a derivative work built on someone else's writing, so three mechanisms exist to let
+you audit it rather than trust it.
+
+**Linked sources.** Every section header carries a chip naming the source file it was built
+from, and that chip is a link to the original on GitHub, pinned to commit `9850ee5` so it
+cannot drift as the upstream repository changes.
+
+**Appendix A — provenance and changes.** Each chapter ends with a table listing every
+section against its source and a verdict: *faithful*, *expanded*, *added*, or *corrected*.
+The `corrected` rows are the ones that matter — they are where this companion departs from
+the compendium on a point of fact, with the reason stated on the page. The Apache-2.0
+licence requires a statement of changes; this is it.
+
+**Inline source panels (Chapter 01).** Every section in Chapter 01 ends with a
+*Compare with the source* panel containing the original compendium text, verbatim and
+unedited, for the passage that section covers. This is a trial of the approach; the other
+chapters rely on the linked chips instead.
+
+## Verification
+
+`verify_claims.py` checks the load-bearing mathematical claims across all three chapters
+against independent computation rather than against anybody's memory — the von Mises and
+Tresca norm identities, the unit-change nearest-neighbour flip, the worked bracket example,
+the `1/sqrt(d)` concentration of cosine similarity, the inertia tensor eigenvalues, polar
+decomposition recovered from SVD, the rank of a truss element stiffness matrix, the pendulum
+series against the exact elliptic integral, the gradient descent stability threshold, and the
+beam's Fundamental Theorem check.
+
+```
+pip install numpy scipy
+python3 study-companion/verify_claims.py
+```
+
+It is not decoration. Running it is what caught a real error in the Chapter 03 pendulum
+table, which was printing a truncated series where it claimed to print exact values.
+
+Claims that *cannot* be settled this way — research results such as the prevalence of saddle
+points in high dimensions, or facts that go stale such as typical model sizes — are hedged in
+the text rather than asserted.
+
 ## Technical notes
 
 - Mathematics renders through MathJax (SVG output) loaded from CDN. If the CDN is
