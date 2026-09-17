@@ -743,3 +743,91 @@ print(f"[Ch08 s14] Shi-Tomasi min(l1,l2) = {np.linalg.eigvalsh(M).min():.0f} (cl
       f"{P(np.isclose(np.linalg.eigvalsh(M).min(), 36.0))}")
 
 print("\n" + "="*66)
+
+print("=" * 66)
+print("CHAPTER 09 - AUDIO AND SPEECH (part 1)")
+print("=" * 66)
+
+mel = lambda f: 2595*np.log10(1 + f/700)
+
+# --- The source says the mel scale explains equally-spaced octaves --------
+# It does not.  Octaves widen steadily in mel, because the scale is
+# deliberately near-LINEAR below ~700 Hz rather than logarithmic.
+oct_w = [mel(2*f) - mel(f) for f in (220, 440, 880, 1760)]
+print("\n[Ch09 s06] octave widths in mel: " + ", ".join(f"{w:.1f}" for w in oct_w))
+print(f"[Ch09 s06] page table says 241.6/367.8/499.0/608.2            "
+      f"{P(all(abs(a-b) < 0.1 for a, b in zip(oct_w, (241.6, 367.8, 499.0, 608.2))))}")
+print(f"[Ch09 s06] they are NOT equal -> source claim is wrong        {P(abs(oct_w[1]-oct_w[2]) > 100)}")
+print(f"[Ch09 s06] third octave / second = {oct_w[2]/oct_w[1]:.2f}x (page says 1.36) {P(abs(oct_w[2]/oct_w[1]-1.36) < 0.005)}")
+print(f"[Ch09 s06] scale calibrated so 1000 Hz -> {mel(1000):.1f} mel        {P(abs(mel(1000)-1000) < 0.5)}")
+d = [mel(f+100)-mel(f) for f in (100, 200, 300)]
+print(f"[Ch09 s06] low-end steps {d[0]:.1f}/{d[1]:.1f}/{d[2]:.1f} mel per 100 Hz -> near-linear, not log  {P(d[0]/d[2] < 1.3)}")
+
+# --- sampling, aliasing, and the lab's folding rule -----------------------
+def fold(f, fs):
+    r = f % fs
+    return fs - r if r > fs/2 else r
+cases = [(700,1000,300), (900,1000,100), (1000,1000,0), (1500,1000,500), (1900,2000,100), (15000,16000,1000)]
+bad = [c for c in cases if abs(fold(c[0], c[1]) - c[2]) > 1e-9]
+print(f"\n[Ch09 s02] fold(f,fs) matches the lab on {len(cases)-len(bad)}/{len(cases)} cases      {P(not bad)}")
+print(f"[Ch09 s02] 15 kHz at fs=16 kHz -> {fold(15000,16000):.0f} Hz (page 1 kHz)        {P(fold(15000,16000)==1000)}")
+# the alias really is indistinguishable: both tones agree at every sample instant
+fs_ = 1000.0; f_, fa_ = 700.0, fold(700, 1000)
+n = np.arange(400); t = n/fs_
+err = np.abs(np.sin(2*np.pi*f_*t) - (-np.sin(2*np.pi*fa_*t))).max()
+print(f"[Ch09 s02] the two tones agree at EVERY sample, max diff {err:.2e}  {P(err < 1e-9)}")
+print(f"[Ch09 s02] analyser 2.56x rule: 44100/(2*20000) = {44100/(2*20000):.3f}x guard    {P(44100/40000 > 1.0)}")
+
+# --- resolution: the only thing that sets it is capture length ------------
+print()
+for capms in (25, 100, 200):
+    T = capms/1000
+    print(f"[Ch09 s05] T={capms:3d} ms -> df = 1/T = {1/T:5.1f} Hz, N at 16 kHz = {round(16000*T):4d}   "
+          f"{P(abs(1/T - 1000/capms) < 1e-9)}")
+print(f"[Ch09 s05] bin spacing fs/N at 16 kHz, N=512 = {16000/512:.2f} Hz       {P(16000/512 == 31.25)}")
+print(f"[Ch09 s05] zero-pad 400->512 changes N but not T, so not resolution  {P(1/0.025 == 40)}")
+
+# --- the DFT is an orthogonal change of basis, and Parseval follows -------
+N9 = 64
+W9 = np.exp(-2j*np.pi*np.outer(np.arange(N9), np.arange(N9))/N9)
+orth = np.abs(W9 @ W9.conj().T / N9 - np.eye(N9)).max()
+print(f"\n[Ch09 s05] DFT matrix: W W^H / N == I, max err {orth:.2e}          {P(orth < 1e-12)}")
+rng9 = np.random.default_rng(3); x9 = rng9.normal(size=256); X9 = np.fft.fft(x9)
+print(f"[Ch09 s05] Parseval: sum|x|^2 == sum|X|^2/N, err {abs((x9**2).sum()-(np.abs(X9)**2).sum()/256):.2e}  "
+      f"{P(abs((x9**2).sum()-(np.abs(X9)**2).sum()/256) < 1e-9)}")
+print(f"[Ch09 s05] FFT saving at N=4096: N^2/(N logN) = {4096**2/(4096*np.log2(4096)):.0f}x (page 341) "
+      f"{P(abs(4096/np.log2(4096) - 341.3) < 0.5)}")
+
+# --- dB, quantisation, zero-crossings ------------------------------------
+print()
+print(f"[Ch09 s01] 6 dB doubles amplitude: 20log10(2) = {20*np.log10(2):.2f} dB    {P(abs(20*np.log10(2)-6.02) < 0.01)}")
+print(f"[Ch09 s03] 16-bit dynamic range ~ 6.02*16 = {6.02*16:.1f} dB (page ~96)  {P(abs(6.02*16-96) < 1.0)}")
+D9 = 1/2**8
+e9 = (rng9.uniform(-10, 10, 2_000_000) % D9) - D9/2
+print(f"[Ch09 s03] quantisation noise var {e9.var():.4e} vs D^2/12 {D9**2/12:.4e}  "
+      f"{P(abs(e9.var()/(D9**2/12) - 1) < 0.01)}")
+print(f"[Ch09 s03] 12-bit over +/-10 V -> step {20/4096*1000:.1f} mV (page 4.9)   {P(abs(20/4096*1000-4.88) < 0.01)}")
+fs9, ft9 = 100000, 50.0
+x_t = np.sin(2*np.pi*ft9*np.arange(0, 1, 1/fs9))
+zc = int(np.sum(np.diff(np.sign(x_t)) != 0))
+print(f"[Ch09 s04] {ft9:.0f} Hz tone crosses zero {zc} times in 1 s (2f = {2*ft9:.0f})  {P(abs(zc-2*ft9) <= 1)}")
+# Autocorrelation peaks at the period.  Two things the naive test gets wrong:
+# the segment must span many periods, and R[k] must be normalised by the number
+# of overlapping samples (N-k) -- otherwise the finite window tapers R[k] down
+# and the largest raw value sits at the smallest lag, not at the period.
+per = int(fs9/ft9)                       # 2000 samples at fs=100 kHz, f=50 Hz
+seg = x_t[:20*per]                       # 20 full periods
+R = np.correlate(seg, seg, 'full')[len(seg)-1:]
+R = R / (len(seg) - np.arange(len(R)))   # unbiased: divide by the overlap
+# Taking the GLOBAL max here returns lag 4003 -- two periods -- because a
+# periodic signal correlates with itself at every multiple of its period.  That
+# is the octave error the page describes in s04, reproduced exactly.  Pitch
+# detection takes the FIRST significant peak, not the largest one.
+dip = int(np.argmax(R < 0.3*R[0]))       # walk past the main lobe first
+pk = int(np.argmax(R[dip:2*per]) + dip)  # then the first peak after it
+naive = int(np.argmax(R[per//2:3*per]) + per//2)
+print(f"[Ch09 s04] naive global-max lag {naive} = {naive/per:.1f} periods -> the octave error   {P(naive > 1.5*per)}")
+# within 1%: the peak lands a few samples off from the finite-window taper
+print(f"[Ch09 s04] first peak at lag {pk} vs period {per}; f = fs/k = {fs9/pk:.2f} Hz (true {ft9:.0f})  {P(abs(fs9/pk - ft9) < 0.01*ft9)}")
+
+print("\n" + "="*66)

@@ -1,0 +1,1352 @@
+<title>Sampling, Spectra, Leakage</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(', '\\)']], displayMath: [['$$', '$$']], processEscapes: true },
+  svg: { fontCache: 'global', scale: 1.0 },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-svg.js" id="MathJax-script" async></script>
+
+<style>
+/* ============ TOKENS: light is complete and authoritative ============ */
+:root{
+  --ground:#F0F2F1;
+  --sheet:#FBFCFB;
+  --sheet-2:#F4F6F5;
+  --ink:#14181A;
+  --ink-2:#4E575B;
+  --ink-3:#77838A;
+  --rule:#D3DAD7;
+  --rule-strong:#A8B4B0;
+  --accent:#12507E;
+  --accent-ink:#0E4267;
+  --accent-soft:#E4EEF6;
+  --bridge:#1F8A4C;
+  --bridge-soft:#E4F2EA;
+  --brk:#A8500F;
+  --brk-soft:#FAEBDF;
+  --s1:#BF5B00;
+  --s2:#0F74C7;
+  --s3:#1F8A4C;
+  --paper:#FFFFFF;            /* pasted-drawing ground, both themes */
+  --paper-ink:#1b1b1b;
+  --shadow:0 1px 2px rgba(20,24,26,.06), 0 6px 18px rgba(20,24,26,.05);
+  --f-disp:'Archivo Narrow', 'Arial Narrow', Helvetica, sans-serif;
+  --f-body:'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --f-mono:'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+    --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+    --rule:#293134; --rule-strong:#3F494C;
+    --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+    --bridge:#35AC63; --bridge-soft:#11281B;
+    --brk:#E0913F; --brk-soft:#2E2012;
+    --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+  --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+  --rule:#293134; --rule-strong:#3F494C;
+  --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+  --bridge:#35AC63; --bridge-soft:#11281B;
+  --brk:#E0913F; --brk-soft:#2E2012;
+  --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:var(--f-body); font-size:17px; line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ============ TITLE BLOCK (engineering drawing header) ============ */
+.titleblock{
+  position:sticky; top:env(safe-area-inset-top,0px); z-index:40;
+  background:var(--sheet); border-bottom:1px solid var(--rule-strong);
+}
+.tb-in{
+  max-width:1240px; margin:0 auto; padding:0 16px;
+  display:flex; align-items:stretch; gap:0; min-height:46px;
+}
+.tb-cell{
+  display:flex; flex-direction:column; justify-content:center;
+  padding:5px 14px; border-right:1px solid var(--rule);
+  font-family:var(--f-disp);
+}
+.tb-cell:first-child{padding-left:0}
+.tb-cell:last-child{border-right:0; margin-left:auto; padding-right:0}
+.tb-k{
+  font-size:8.5px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); line-height:1.4;
+}
+.tb-v{font-size:13px; font-weight:700; letter-spacing:.02em; color:var(--ink); line-height:1.3}
+.tb-v.accent{color:var(--accent)}
+.tb-hide{display:none}
+@media (min-width:680px){ .tb-hide{display:flex} }
+
+.themebtn{
+  appearance:none; background:transparent; border:1px solid var(--rule-strong);
+  color:var(--ink-2); font-family:var(--f-disp); font-size:10px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:6px 10px; border-radius:2px;
+  cursor:pointer; align-self:center; white-space:nowrap;
+}
+.themebtn:hover{border-color:var(--accent); color:var(--accent)}
+.themebtn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+/* ============ SHELL ============ */
+.shell{max-width:1240px; margin:0 auto; padding:0 16px; padding-block:0 64px}
+@media (min-width:1080px){
+  .shell{display:grid; grid-template-columns:212px minmax(0,1fr); gap:44px; align-items:start}
+}
+.rail{display:none}
+@media (min-width:1080px){
+  .rail{
+    display:block; position:sticky; top:calc(env(safe-area-inset-top,0px) + 70px);
+    padding-block:28px; font-family:var(--f-disp); font-size:12.5px;
+  }
+}
+.rail-h{
+  font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-3);
+  padding-bottom:8px; border-bottom:1px solid var(--rule); margin-bottom:10px;
+}
+.rail a{
+  display:flex; gap:9px; padding:4px 0; color:var(--ink-2); text-decoration:none;
+  border-left:2px solid transparent; padding-left:9px; margin-left:-11px; line-height:1.35;
+}
+.rail a:hover{color:var(--accent)}
+.rail a.on{color:var(--accent); border-left-color:var(--accent); font-weight:700}
+.rail a .n{font-family:var(--f-mono); font-size:10.5px; color:var(--ink-3); flex:none; padding-top:1px}
+.rail a.on .n{color:var(--accent)}
+
+main{min-width:0; padding-block:0 0}
+.col{max-width:70ch}
+
+/* ============ TYPE ============ */
+h1,h2,h3,h4{font-family:var(--f-disp); text-wrap:balance; margin:0; line-height:1.14}
+h1{font-size:clamp(34px,7vw,58px); font-weight:700; letter-spacing:-.015em}
+h2{font-size:clamp(25px,4.2vw,34px); font-weight:700; letter-spacing:-.01em}
+h3{font-size:19px; font-weight:700; letter-spacing:.005em; margin-top:2px}
+h4{font-size:14px; font-weight:700; letter-spacing:.06em; text-transform:uppercase}
+p{margin:0 0 1.05em}
+a{color:var(--accent-ink)}
+strong{font-weight:600}
+em{font-style:italic}
+code{font-family:var(--f-mono); font-size:.87em; background:var(--sheet-2); padding:1px 5px; border-radius:2px; border:1px solid var(--rule)}
+.lead{font-size:19.5px; line-height:1.56; color:var(--ink-2)}
+.eyebrow{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--ink-3); margin:0 0 10px;
+}
+.srcref{
+  font-family:var(--f-mono); font-size:11px; color:var(--ink-3);
+  border:1px solid var(--rule); border-radius:2px; padding:2px 7px; display:inline-block;
+  background:var(--sheet-2); white-space:nowrap;
+}
+
+/* ============ SECTION ============ */
+section{padding-block:38px 0; scroll-margin-top:calc(env(safe-area-inset-top,0px) + 62px)}
+.sechead{display:flex; align-items:baseline; gap:13px; margin-bottom:6px; flex-wrap:wrap}
+.secnum{
+  font-family:var(--f-mono); font-size:12px; font-weight:600; color:var(--accent);
+  border:1px solid var(--accent); border-radius:2px; padding:2px 7px; flex:none;
+  background:var(--accent-soft);
+}
+.rule-h{border:0; border-top:1px solid var(--rule); margin:0 0 22px}
+.rule-d{border:0; border-top:1px dashed var(--rule-strong); margin:34px 0}
+
+/* ============ CALLOUTS ============ */
+.note{
+  border:1px solid var(--rule); border-left:3px solid var(--accent);
+  background:var(--sheet); border-radius:2px; padding:16px 18px; margin:22px 0;
+}
+/* Greek letters must never be uppercased: text-transform turns beta into
+   a capital Beta, which is the Latin letter B on screen -- likewise eta->H,
+   kappa->K, lambda->A-shape.  Any Greek inside an uppercased label wears .gk. */
+.gk{text-transform:none}
+.note.bridge{border-left-color:var(--bridge); background:var(--bridge-soft)}
+.note.brk{border-left-color:var(--brk); background:var(--brk-soft)}
+.note-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; margin-bottom:7px; display:flex; align-items:center; gap:8px;
+}
+.note.bridge .note-h{color:var(--bridge)}
+.note.brk .note-h{color:var(--brk)}
+.note .note-h{color:var(--accent)}
+.note p:last-child, .note ul:last-child{margin-bottom:0}
+.note-h .ic{
+  width:15px; height:15px; border-radius:50%; border:1.5px solid currentColor; flex:none;
+  display:grid; place-items:center; font-size:9.5px; font-weight:700; font-family:var(--f-mono);
+}
+ul,ol{margin:0 0 1.05em; padding-left:1.25em}
+li{margin-bottom:.4em}
+li::marker{color:var(--ink-3)}
+
+/* ============ DEFINITION BLOCK ============ */
+.defn{
+  background:var(--sheet); border:1px solid var(--rule); border-radius:3px;
+  padding:18px 20px; margin:22px 0; box-shadow:var(--shadow);
+}
+.defn-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:10px;
+  padding-bottom:8px; border-bottom:1px solid var(--rule);
+}
+.defn p:last-child{margin-bottom:0}
+
+/* ============ TABLES ============ */
+.tw{overflow-x:auto; margin:22px 0; border:1px solid var(--rule); border-radius:3px; background:var(--sheet)}
+table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:480px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule); vertical-align:top}
+thead th{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); background:var(--sheet-2); font-weight:700; white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:0}
+td.mono,th.mono{font-family:var(--f-mono); font-size:13px; font-variant-numeric:tabular-nums}
+.tw caption{
+  caption-side:bottom; text-align:left; padding:9px 14px; font-size:12.5px;
+  color:var(--ink-3); border-top:1px solid var(--rule); font-family:var(--f-disp);
+}
+
+/* ============ FIGURES ============ */
+figure{margin:24px 0}
+.paper{
+  background:var(--paper); border:1px solid var(--rule-strong); border-radius:3px;
+  padding:16px; display:flex; justify-content:center; box-shadow:var(--shadow);
+}
+.paper img{max-width:100%; height:auto; display:block}
+figcaption{
+  font-family:var(--f-disp); font-size:12.5px; color:var(--ink-3); margin-top:9px;
+  line-height:1.45; padding-left:2px;
+}
+figcaption b{color:var(--ink-2); font-weight:700; letter-spacing:.04em}
+
+/* ============ INTERACTIVE PANELS ============ */
+.lab{
+  background:var(--sheet); border:1px solid var(--rule-strong); border-radius:3px;
+  margin:26px 0; overflow:hidden; box-shadow:var(--shadow);
+}
+.lab-h{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:11px 16px; border-bottom:1px solid var(--rule); background:var(--sheet-2);
+}
+.lab-t{font-family:var(--f-disp); font-size:13px; font-weight:700; letter-spacing:.05em; text-transform:uppercase}
+.lab-tag{
+  font-family:var(--f-mono); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--accent); border:1px solid var(--accent); border-radius:2px; padding:2px 6px;
+  margin-left:auto; white-space:nowrap;
+}
+.lab-body{padding:16px}
+.lab-foot{
+  padding:11px 16px; border-top:1px solid var(--rule); background:var(--sheet-2);
+  font-size:13.5px; color:var(--ink-2); line-height:1.5;
+}
+.lab-foot b{color:var(--ink)}
+.stage{width:100%; max-width:560px; height:auto; display:block; margin-inline:auto; touch-action:none; cursor:grab}
+.stage.drag{cursor:grabbing}
+
+/* Dividers are drawn as cell borders rather than as 1px grid gaps over a grey
+   backdrop: when the item count does not fill the last row, a gap-based grid
+   leaves the backdrop showing as an empty grey block. */
+.readout{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr)); gap:0;
+  background:var(--sheet); border:1px solid var(--rule); border-radius:2px;
+  margin-top:14px; overflow:hidden;
+}
+.ro{background:var(--sheet); padding:8px 11px;
+  border-right:1px solid var(--rule); border-bottom:1px solid var(--rule)}
+.ro-k{
+  font-family:var(--f-disp); font-size:9px; letter-spacing:.13em; text-transform:uppercase;
+  color:var(--ink-3); margin-bottom:2px;
+  /* was white-space:nowrap, which clipped the longer keys instead of wrapping */
+  white-space:normal; overflow-wrap:break-word; line-height:1.3; min-height:2.6em;
+}
+.ro-v{
+  font-family:var(--f-mono); font-size:15px; font-weight:500; font-variant-numeric:tabular-nums;
+  color:var(--ink); line-height:1.25;
+}
+.ro-v.a{color:var(--s2)} .ro-v.b{color:var(--s1)} .ro-v.c{color:var(--s3)}
+
+.ctl{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:14px}
+.ctl label{
+  font-family:var(--f-disp); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-2); white-space:nowrap;
+}
+input[type=range]{
+  -webkit-appearance:none; appearance:none; height:22px; background:transparent;
+  flex:1 1 160px; min-width:130px; cursor:pointer;
+}
+input[type=range]:focus-visible{outline:2px solid var(--accent); outline-offset:3px}
+input[type=range]::-webkit-slider-runnable-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-moz-range-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:16px; height:16px; border-radius:50%;
+  background:var(--accent); border:2px solid var(--sheet); margin-top:-6.5px;
+}
+input[type=range]::-moz-range-thumb{
+  width:16px; height:16px; border-radius:50%; background:var(--accent);
+  border:2px solid var(--sheet);
+}
+.btn{
+  appearance:none; font-family:var(--f-disp); font-size:11px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:7px 13px; border-radius:2px;
+  border:1px solid var(--rule-strong); background:var(--sheet); color:var(--ink-2); cursor:pointer;
+}
+.btn:hover{border-color:var(--accent); color:var(--accent)}
+.btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.btn.on{background:var(--accent); border-color:var(--accent); color:var(--sheet)}
+
+.legend{display:flex; gap:16px; flex-wrap:wrap; margin-top:12px}
+.lg{display:flex; align-items:center; gap:7px; font-family:var(--f-disp); font-size:12px; color:var(--ink-2)}
+.lg i{width:15px; height:3px; border-radius:2px; flex:none; display:block}
+
+/* ============ MISC ============ */
+.mathbox{overflow-x:auto; overflow-y:hidden; margin:18px 0}
+mjx-container[display="true"]{margin:0 !important}
+.kv{display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:15px; margin:16px 0}
+.kv dt{font-family:var(--f-mono); font-size:13px; color:var(--accent); white-space:nowrap}
+.kv dd{margin:0; color:var(--ink-2)}
+
+details.q{
+  border:1px solid var(--rule); border-radius:3px; background:var(--sheet);
+  margin-bottom:9px; overflow:hidden;
+}
+details.q summary{
+  cursor:pointer; padding:12px 15px; font-weight:600; list-style:none;
+  display:flex; gap:11px; align-items:flex-start; font-size:15.5px;
+}
+details.q summary::-webkit-details-marker{display:none}
+details.q summary::after{
+  content:'+'; margin-left:auto; font-family:var(--f-mono); color:var(--accent);
+  font-size:17px; line-height:1; flex:none; padding-top:2px;
+}
+details.q[open] summary::after{content:'\2212'}
+details.q summary:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
+details.q summary .qn{
+  font-family:var(--f-mono); font-size:12px; color:var(--ink-3); flex:none; padding-top:3px;
+}
+details.q .ans{padding:0 15px 14px 41px; font-size:15.5px; color:var(--ink-2); border-top:1px solid var(--rule); padding-top:13px}
+details.q .ans p:last-child{margin-bottom:0}
+
+.endnote{
+  margin-top:44px; padding-top:20px; border-top:1px solid var(--rule-strong);
+  font-size:13.5px; color:var(--ink-3); font-family:var(--f-disp); line-height:1.55;
+}
+.endnote a{color:var(--accent)}
+
+.srcref{text-decoration:none}
+a.srcref{color:var(--ink-2); transition:none}
+
+</style>
+<style>
+.srcref{text-decoration:none}
+a.srcref{color:var(--ink-2)}
+a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(--accent-soft)}
+.srcref.nolink{opacity:.75; font-style:italic}
+.pv{font-family:var(--f-disp); font-size:9.5px; font-weight:700; letter-spacing:.1em;
+    text-transform:uppercase; padding:2px 7px; border-radius:2px; white-space:nowrap}
+.pv.ok{background:var(--bridge-soft); color:var(--bridge)}
+.pv.add{background:var(--accent-soft); color:var(--accent)}
+.pv.corr{background:var(--brk-soft); color:var(--brk)}
+.flag{display:inline-block; padding:1px 7px; border-radius:2px; font-family:var(--f-disp);
+      font-size:10px; letter-spacing:.1em; text-transform:uppercase; font-weight:700}
+.flag.ok{background:var(--bridge-soft); color:var(--bridge)}
+.flag.bad{background:var(--brk-soft); color:var(--brk)}
+.predict{border:1px solid var(--rule-strong); border-left:3px solid var(--brk);
+  background:var(--brk-soft); border-radius:2px; padding:13px 15px; margin:0 0 14px}
+.predict-h{font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--brk); margin-bottom:6px}
+.predict p{margin:0 0 10px; font-size:15px}
+.predict .opts{display:flex; gap:8px; flex-wrap:wrap}
+.pbtn{appearance:none; font-family:var(--f-disp); font-size:12px; font-weight:600;
+  padding:6px 12px; border-radius:2px; border:1px solid var(--rule-strong);
+  background:var(--sheet); color:var(--ink-2); cursor:pointer}
+.pbtn:hover{border-color:var(--brk); color:var(--brk)}
+.pbtn.picked{background:var(--brk); border-color:var(--brk); color:var(--sheet)}
+.pverdict{margin-top:10px; font-size:14.5px; color:var(--ink-2); display:none}
+.pverdict.show{display:block}
+.pverdict b{color:var(--ink)}
+.gap{border:1px solid var(--rule); border-left:3px solid var(--ink-3); background:var(--sheet-2);
+  border-radius:2px; padding:14px 16px; margin:18px 0}
+.gap-h{font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:7px}
+</style>
+
+<div class="sheet">
+
+<header class="titleblock">
+  <div class="tb-main">
+    <div class="tb-k">Sheet 09 of 20 &mdash; Audio and Speech, part 1</div>
+    <h1>Sampling, Spectra, Leakage</h1>
+    <p class="tb-sub">
+      The chapter where you already own the mathematics. Every core operation in audio
+      machine learning &mdash; sampling, the FFT, windowing, the spectrogram &mdash; is an
+      operation you performed on an accelerometer trace, under a different name and for a
+      different reason.
+    </p>
+  </div>
+  <div class="tb-meta">
+    <div class="tb-cell"><div class="tb-k">Reader</div><div class="tb-v">B.E. Mechanical</div></div>
+    <div class="tb-cell"><div class="tb-k">Prerequisite</div><div class="tb-v">Sheets 1&ndash;8</div></div>
+    <button class="btn" id="themebtn" type="button">Theme</button>
+  </div>
+</header>
+
+<nav class="toc">
+  <a href="#bridge"><span class="n">00</span><span>The bridge</span></a>
+  <a href="#sound"><span class="n">01</span><span>Sound as a signal</span></a>
+  <a href="#sampling"><span class="n">02</span><span>Sampling and Nyquist</span></a>
+  <a href="#quant"><span class="n">03</span><span>Quantisation</span></a>
+  <a href="#timedom"><span class="n">04</span><span>Time-domain features</span></a>
+  <a href="#dft"><span class="n">05</span><span>The DFT and the FFT</span></a>
+  <a href="#breaks"><span class="n">06</span><span>Where it breaks</span></a>
+  <a href="#next"><span class="n">07</span><span>What part 2 covers</span></a>
+</nav>
+
+<main>
+
+<section id="top" style="padding-top:44px">
+  <div class="col">
+    <p class="lede">
+      This is the closest the compendium comes to a chapter you have already studied.
+      A microphone is an accelerometer that happens to be pointed at air. The signal it
+      produces is sampled, windowed, transformed and plotted using operations you ran on
+      a bearing housing in a vibration lab. The vocabulary changes. The mathematics does not.
+    </p>
+    <p>
+      That makes this sheet unusual, and it changes what it should do. For eight chapters
+      the work has been building bridges from mechanics to a subject you had never seen. Here
+      the bridge is mostly already built, so the useful work is different: naming what is
+      genuinely identical, being precise about the handful of things that are not, and
+      pointing at the one idea in this chapter that has <em>no</em> mechanical counterpart
+      at all &mdash; the mel scale, which is a fact about your ear rather than about the signal.
+    </p>
+    <p>
+      Part 1 takes the signal as far as its spectrum: what sampling costs you, what the
+      FFT is, and what a frequency reading actually means. Part 2 picks up at windowing and
+      the spectrogram.
+    </p>
+  </div>
+</section>
+
+<section id="bridge">
+  <div class="col">
+    <div class="sechead"><span class="secnum">00</span><h2>The bridge</h2>
+      <a class="srcref" href="https://github.com/HenryNdubuaku/maths-cs-ai-compendium/blob/9850ee5/chapter%2009%20-%20audio%20and%20speech/01.%20digital%20signal%20processing.md" target="_blank" rel="noopener">source &sect;01</a>
+    </div>
+    <p>
+      The verdict column is the important one. Most rows in this table say
+      <b style="color:var(--bridge)">identical operation</b>, which has not happened before
+      in this series.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Vibration analysis and audio ML are the same toolkit. Rated honestly.</caption>
+      <thead><tr><th>You already do this</th><th>Audio ML calls it</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td>Accelerometer FFT of a machine</td><td>Magnitude spectrum of a frame</td><td><b style="color:var(--bridge)">Identical operation.</b> Same transform, same units problem, same interpretation.</td></tr>
+        <tr><td>Choosing DAQ sample rate above 2&times; the top frequency of interest</td><td>Nyquist criterion, \(f_s\ge 2f_{\max}\)</td><td><b style="color:var(--bridge)">Identical theorem.</b> You apply it when you set up a measurement.</td></tr>
+        <tr><td>Anti-aliasing filter on the signal conditioner</td><td>Anti-aliasing filter before the ADC</td><td><b style="color:var(--bridge)">The same hardware.</b></td></tr>
+        <tr><td>Hanning window on a vibration spectrum</td><td>Hann window before the FFT</td><td><b style="color:var(--bridge)">Identical.</b> Same function, same reason: leakage.</td></tr>
+        <tr><td>Resolution \(\Delta f = 1/T\) on a spectrum analyser</td><td>Frequency resolution of an STFT frame</td><td><b style="color:var(--bridge)">Identical.</b> Longer capture, finer lines &mdash; the rule you already use.</td></tr>
+        <tr><td>Waterfall plot, speed ramp-up</td><td>Spectrogram</td><td><b style="color:var(--bridge)">Identical object.</b> Time on one axis, frequency on the other, magnitude as colour.</td></tr>
+        <tr><td>Order tracking to find shaft speed</td><td>Autocorrelation pitch detection</td><td><b style="color:var(--bridge)">Same method.</b> Find the lag that repeats; invert it for the rate.</td></tr>
+        <tr><td>Overall vibration level (RMS)</td><td>Frame energy</td><td><b style="color:var(--bridge)">Identical.</b> Both are the \(\ell_2\) norm of Chapter 01.</td></tr>
+        <tr><td>Harmonics of running speed; sidebands</td><td>Fundamental and harmonics of a voiced sound</td><td><b style="color:var(--bridge)">Same structure.</b> A vowel is a machine with a 150 Hz shaft.</td></tr>
+        <tr><td>FIR/IIR filters, poles and zeros, unit circle</td><td>The same, unchanged</td><td><b style="color:var(--bridge)">Identical.</b> Straight out of a controls course.</td></tr>
+        <tr><td>Change of basis (Chapter 02)</td><td>The DFT matrix \(W\)</td><td><b style="color:var(--bridge)">Exact.</b> The DFT is an orthogonal basis change, nothing more.</td></tr>
+        <tr><td>Convolution (Chapter 06 &sect;09)</td><td>Filtering</td><td><b style="color:var(--bridge)">Identical.</b> And the convolution theorem makes it a multiply.</td></tr>
+        <tr><td>Uncertainty in measurement resolution</td><td>Gabor limit, \(\Delta t\,\Delta f\ge 1/4\pi\)</td><td><b style="color:var(--brk)">Related, stated precisely.</b> A real theorem, not a rule of thumb.</td></tr>
+        <tr><td>&mdash; nothing &mdash;</td><td>The mel scale</td><td><b style="color:var(--brk)">No mechanical analogue.</b> It describes your cochlea, not the signal. &sect;08 in part 2.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="sound">
+  <div class="col">
+    <div class="sechead"><span class="secnum">01</span><h2>Sound as a signal</h2>
+      <a class="srcref" href="https://github.com/HenryNdubuaku/maths-cs-ai-compendium/blob/9850ee5/chapter%2009%20-%20audio%20and%20speech/01.%20digital%20signal%20processing.md" target="_blank" rel="noopener">source &sect;01</a>
+    </div>
+    <p>
+      Sound is a pressure wave. A vibrating surface &mdash; a vocal fold, a speaker cone, a
+      gear tooth meshing &mdash; pushes and pulls on the air, and those pressure variations
+      travel at about 343 m/s until something transduces them. The source chapter offers a
+      stone-in-a-pond picture. You do not need it: this is a longitudinal wave in a
+      compressible medium, which you have already met in fluid mechanics, and a microphone
+      is a transducer with a frequency response and a calibration constant, exactly like the
+      accelerometer you have already bolted to a bearing housing.
+    </p>
+    <p>A pure tone is one sinusoid:</p>
+  </div>
+  <div class="mathbox col">
+    $$x(t) = A\sin(2\pi f t + \phi)$$
+  </div>
+  <div class="col">
+    <p>
+      Amplitude \(A\) sets loudness, frequency \(f\) sets pitch, phase \(\phi\) sets where in
+      the cycle it starts, and the period is \(T=1/f\). Nothing here is new. What is worth
+      pausing on is which of the three the field throws away, and why.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; timbre is a spectrum, and you have read one</div>
+      <p>
+        A piano and a violin playing concert A both have a fundamental at 440 Hz. They sound
+        different because the amplitudes of the <b>harmonics</b> &mdash; the integer multiples,
+        880, 1320, 1760 &mdash; differ. That set of relative amplitudes is called
+        <b>timbre</b>, and it is the same object as a machine&rsquo;s vibration signature:
+        1&times; running speed, 2&times;, 3&times;, with the pattern of relative heights telling
+        you what you are looking at. A misaligned coupling and a worn gear differ in their
+        harmonic pattern in exactly the sense that a violin and a piano do.
+      </p>
+      <p style="margin-bottom:0">
+        This is not an analogy. It is the same measurement, on the same kind of instrument,
+        read the same way.
+      </p>
+    </div>
+
+    <p>
+      <strong>Decibels.</strong> Human hearing spans an enormous amplitude range, so level is
+      quoted logarithmically:
+    </p>
+  </div>
+  <div class="mathbox col">
+    $$L = 20\log_{10}\!\left(\frac{A}{A_{\text{ref}}}\right)\ \text{dB}$$
+  </div>
+  <div class="col">
+    <p>
+      with \(A_{\text{ref}}=20\,\mu\text{Pa}\), the threshold of hearing. Whisper &asymp; 30 dB,
+      conversation &asymp; 60 dB, rock concert &asymp; 110 dB. Two numbers worth committing:
+      <b>6 dB doubles the amplitude</b> (because \(20\log_{10}2=6.02\)), and doubling the
+      amplitude <b>quadruples the power</b>, since power goes as amplitude squared. The
+      factor-of-20 rather than factor-of-10 in front of the logarithm is exactly the
+      amplitude-versus-power distinction you already handle when reading a vibration
+      severity chart.
+    </p>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>Where the accelerometer analogy needs care &mdash; phase</div>
+      <p>
+        In machinery diagnostics <b>phase is a primary measurement</b>. Phase between two
+        accelerometers is how you distinguish unbalance from misalignment; a phase reference
+        from a tachometer is what makes balancing possible at all. You would never discard it.
+      </p>
+      <p style="margin-bottom:0">
+        Speech pipelines routinely do discard it. The magnitude spectrogram keeps
+        \(|X[k]|\) and throws \(\angle X[k]\) away, because human pitch and timbre perception
+        is largely phase-insensitive. That is a statement about <em>perception</em>, not about
+        the signal &mdash; the information really is gone, and reconstructing audio from
+        magnitude alone is a hard research problem with its own literature. Phase still matters
+        here for anything spatial: stereo, beamforming, and source localisation, which are the
+        audio equivalents of your two-accelerometer measurement.
+      </p>
+    </div>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/audio_waveform.svg" alt="A sine wave annotated with amplitude, period, frequency and phase shift" width="420"></div>
+    <figcaption><b>Fig. 9.1</b> &mdash; The three parameters of a sinusoid. Read it as a single-frequency vibration trace, because that is what it is. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="sampling">
+  <div class="col">
+    <div class="sechead"><span class="secnum">02</span><h2>Sampling and Nyquist</h2>
+      <a class="srcref" href="https://github.com/HenryNdubuaku/maths-cs-ai-compendium/blob/9850ee5/chapter%2009%20-%20audio%20and%20speech/01.%20digital%20signal%20processing.md" target="_blank" rel="noopener">source &sect;01</a>
+    </div>
+    <p>
+      A computer cannot hold a continuous function, so the signal is measured at regular
+      intervals. The <b>sample rate</b> \(f_s\) is how many measurements per second: 8 kHz for
+      telephony, 16 kHz for most speech models, 44.1 kHz for CD audio. The
+      <b>Nyquist&ndash;Shannon theorem</b> says a signal can be perfectly reconstructed from
+      its samples if and only if
+    </p>
+  </div>
+  <div class="mathbox col">
+    $$f_s \ge 2 f_{\max}$$
+  </div>
+  <div class="col">
+    <p>
+      and \(f_s/2\) is called the <b>Nyquist frequency</b>. Above it, frequencies do not
+      disappear &mdash; they <b>fold back</b> and reappear as lower frequencies that were never
+      in the signal. A 15 kHz tone sampled at 16 kHz comes back as
+      \(|16-15|=1\) kHz: a completely different pitch, indistinguishable from a real 1 kHz tone.
+      Aliasing is <em>irreversible</em>. Once the samples are taken, no amount of processing
+      recovers what was lost.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; you have already obeyed this theorem</div>
+      <p>
+        When you set up a vibration measurement you pick a sample rate above twice your
+        highest frequency of interest, and you rely on the signal conditioner&rsquo;s
+        anti-aliasing filter to remove what is above it. Analyser vendors typically sample at
+        \(2.56\times\) the displayed span rather than exactly \(2\times\), because a real
+        low-pass filter has a finite roll-off and needs guard band &mdash; the extra 28% is the
+        filter&rsquo;s transition region. Audio hardware does the identical thing: 44.1 kHz for
+        a 20 kHz audio band is \(2.205\times\), not \(2\times\), for exactly this reason.
+      </p>
+      <p style="margin-bottom:0">
+        The wagon-wheel effect in films is the same phenomenon at 24 frames per second. A wheel
+        turning slightly faster than the frame rate appears to creep backwards, which is a
+        rotating machine aliasing under a strobe &mdash; something you may have seen directly
+        if you have ever used a stroboscope to freeze a shaft.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Folding a tone past Nyquist</div><div class="lab-tag">Predict, then sample</div></div>
+
+    <div class="predict">
+      <p style="margin-top:0">
+        A 700 Hz tone is sampled at 1000 Hz, so the Nyquist frequency is 500 Hz. What will the
+        samples look like?
+      </p>
+      <button class="pbtn" data-p1="a" type="button">A 700 Hz tone</button>
+      <button class="pbtn" data-p1="b" type="button">Nothing &mdash; it is filtered out</button>
+      <button class="pbtn" data-p1="c" type="button">A 300 Hz tone</button>
+      <button class="pbtn" data-p1="d" type="button">Noise</button>
+      <div class="pverdict" id="pv1"></div>
+    </div>
+
+    <svg class="stage" id="sA" viewBox="0 0 480 300" role="img"
+         aria-label="A continuous sine wave with sample points marked, and the lower-frequency tone those samples actually describe">
+      <g id="aGrid"></g>
+      <line id="aAx" x1="8" y1="150" x2="472" y2="150"/>
+      <path id="aTrue" fill="none" stroke-width="1.6" opacity="0.55"/>
+      <path id="aAlias" fill="none" stroke-width="2.4" stroke-dasharray="6 4"/>
+      <g id="aDots"></g>
+    </svg>
+
+    <div class="ctl">
+      <label for="fSl">Tone <span class="gk">&fnof;</span></label>
+      <input type="range" id="fSl" min="20" max="1900" value="300" step="10">
+      <span class="ro-v" id="fVal" style="min-width:74px">300 Hz</span>
+      <label for="fsSl" style="margin-left:6px">Sample rate <span class="gk">&fnof;</span><sub>s</sub></label>
+      <input type="range" id="fsSl" min="200" max="2000" value="1000" step="50">
+      <span class="ro-v" id="fsVal" style="min-width:74px">1000 Hz</span>
+    </div>
+
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Nyquist<br><span class="gk">&fnof;</span><sub>s</sub>/2</div><div class="ro-v" id="oNy">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Status</div><div class="ro-v" id="oSt">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">What you<br>actually record</div><div class="ro-v a" id="oAp">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Error</div><div class="ro-v c" id="oEr">&mdash;</div></div>
+    </div>
+
+    <div class="legend">
+      <span class="lg"><i style="background:var(--s2)"></i>the real tone</span>
+      <span class="lg"><i style="background:var(--s1)"></i>what the samples describe</span>
+    </div>
+  </div>
+
+  <div class="lab-foot col">
+    Drag the tone up through the Nyquist line and watch the dashed curve turn round and come
+    back down. Every sample dot lies on <em>both</em> curves &mdash; that is the whole point,
+    and it is why the loss is irreversible: the two signals are not merely similar at the
+    sample instants, they are <b>identical</b> there, so nothing in the recorded data
+    distinguishes them. Push past \(f_s\) and the alias folds again. At exactly \(f_s\) the
+    tone aliases to DC: every sample catches the wave at the same point in its cycle, which is
+    precisely a stroboscope freezing a shaft.
+  </div>
+
+  <div class="lab-foot col">
+    <b>One edge case the readout glosses over.</b> Set the tone to exactly the Nyquist
+    frequency and the panel reports &ldquo;safe&rdquo;. Strictly it is not. At exactly
+    \(f=f_s/2\) you get two samples per cycle, and whether you capture the peaks or the
+    zero-crossings depends entirely on phase &mdash; sample a sine at its zeros and you record
+    silence. This is why the theorem is usually stated for signals with <em>no energy at or
+    above</em> \(f_s/2\), and why real systems put the filter cutoff comfortably below the
+    Nyquist line rather than exactly on it. The same reason analysers sample at
+    \(2.56\times\) rather than \(2\times\).
+  </div>
+
+  <div class="col">
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>The one place this bites in practice</div>
+      <p style="margin-bottom:0">
+        Aliasing is a solved problem in hardware &mdash; the ADC filters before it samples.
+        Where it still catches people is <b>resampling in software</b>: converting 44.1 kHz
+        audio to 16 kHz for a speech model. If you simply take every 2.75th sample without
+        low-pass filtering first, everything between 8 kHz and 22 kHz folds down into your
+        speech band as noise that no later stage can remove. Every audio library&rsquo;s
+        <code>resample</code> does the filtering for you. Decimating by array slicing does not,
+        and it is a quiet, plausible-looking bug &mdash; the audio still sounds roughly right.
+      </p>
+    </div>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/sampling_aliasing.svg" alt="Proper sampling of a signal compared with aliased sampling where the rate is too low" width="420"></div>
+    <figcaption><b>Fig. 9.2</b> &mdash; Adequate sampling against undersampling. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="quant">
+  <div class="col">
+    <div class="sechead"><span class="secnum">03</span><h2>Quantisation</h2>
+      <a class="srcref" href="https://github.com/HenryNdubuaku/maths-cs-ai-compendium/blob/9850ee5/chapter%2009%20-%20audio%20and%20speech/01.%20digital%20signal%20processing.md" target="_blank" rel="noopener">source &sect;01</a>
+    </div>
+    <p>
+      Sampling discretises <em>time</em>. Quantisation discretises <em>amplitude</em>: each
+      measured value is rounded to the nearest of \(2^n\) levels. CD audio uses 16 bits
+      (65,536 levels). Telephony often uses 8 bits with \(\mu\)-law <b>companding</b>, a
+      deliberately nonlinear mapping that spends more levels on small amplitudes, where the ear
+      is more sensitive to a given absolute error.
+    </p>
+    <p>
+      The rounding error is <b>quantisation noise</b>, with variance \(\Delta^2/12\) for a step
+      size \(\Delta\). That \(1/12\) is not an audio constant &mdash; it is the variance of a
+      uniform distribution on an interval of width \(\Delta\), the same result you would get
+      for the rounding error in any instrument reading. It is the reason a 16-bit recording has
+      roughly 96 dB of dynamic range: each bit buys about 6 dB, which is the
+      amplitude-doubling figure from &sect;01 arriving again.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; this is instrument resolution</div>
+      <p style="margin-bottom:0">
+        A 12-bit DAQ card on a &plusmn;10 V range has \(\Delta = 20/4096 = 4.9\) mV, and no
+        amount of averaging recovers detail below it. You already reason about this when you
+        choose a measurement range: too wide and you waste resolution, too narrow and you clip.
+        Audio engineers call the same trade-off <b>gain staging</b>, and clipping is exactly
+        what it is in a strain-gauge amplifier &mdash; the top of the waveform is flat and the
+        information is gone.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="timedom">
+  <div class="col">
+    <div class="sechead"><span class="secnum">04</span><h2>Time-domain features</h2>
+      <a class="srcref" href="https://github.com/HenryNdubuaku/maths-cs-ai-compendium/blob/9850ee5/chapter%2009%20-%20audio%20and%20speech/01.%20digital%20signal%20processing.md" target="_blank" rel="noopener">source &sect;01</a>
+    </div>
+    <p>
+      Before transforming anything, three cheap measurements are taken straight off the
+      waveform. All three are objects you have already computed.
+    </p>
+
+    <h3>Energy</h3>
+  </div>
+  <div class="mathbox col">
+    $$E=\sum_{n=0}^{N-1}x[n]^2$$
+  </div>
+  <div class="col">
+    <p>
+      Speech has high energy, silence has low energy, and the simplest voice-activity detector
+      is a threshold on this number. It is the squared \(\ell_2\) norm of Chapter 01 &sect;04,
+      and dividing by \(N\) and taking the root gives RMS &mdash; the single number on the
+      overall-vibration meter you would clamp to a pump casing.
+    </p>
+
+    <h3>Zero-crossing rate</h3>
+  </div>
+  <div class="mathbox col">
+    $$\text{ZCR}=\frac{1}{2(N-1)}\sum_{n=1}^{N-1}\bigl|\operatorname{sign}(x[n])-\operatorname{sign}(x[n-1])\bigr|$$
+  </div>
+  <div class="col">
+    <p>
+      A crude frequency estimate: a pure tone at \(f\) Hz crosses zero \(2f\) times per second,
+      so ZCR is a one-line pitch tracker that costs nothing. High ZCR means high-frequency
+      content or noise &mdash; a fricative like &ldquo;s&rdquo;; low ZCR means voiced speech,
+      where the vocal folds are vibrating periodically.
+    </p>
+
+    <h3>Autocorrelation</h3>
+  </div>
+  <div class="mathbox col">
+    $$R[k]=\sum_{n=0}^{N-1-k}x[n]\,x[n+k]$$
+  </div>
+  <div class="col">
+    <p>
+      How similar is the signal to a delayed copy of itself? At lag \(k=0\) this is the energy.
+      For anything periodic, \(R[k]\) peaks at the period and its multiples, so pitch detection
+      is: find the first significant peak after zero, and the frequency is \(f_s/k_{\text{peak}}\).
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; this is how you find shaft speed</div>
+      <p>
+        Autocorrelation is the dot product of Chapter 01 between a signal and a shifted version
+        of itself, and it is the standard tool for recovering a repetition rate from a noisy
+        trace. In machinery work you use it for exactly that: extracting the running speed, or
+        the repetition interval of a bearing defect impact, when the spectrum is too cluttered
+        to read directly.
+      </p>
+      <p style="margin-bottom:0">
+        The correspondence goes further than the method. A voiced sound has a
+        <b>fundamental</b> around 85&ndash;180 Hz for an adult male voice, 165&ndash;255 Hz for
+        an adult female, with harmonics stacked above it. A rotating machine has a running
+        speed with harmonics stacked above it. Pitch detection and order tracking are the same
+        problem, and they fail in the same way: at a missing fundamental, both can lock onto a
+        harmonic and report double or half the true rate. Audio engineers call that
+        <b>octave error</b>; you would call it reading 2&times; instead of 1&times;.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="dft">
+  <div class="col">
+    <div class="sechead"><span class="secnum">05</span><h2>The DFT and the FFT</h2>
+      <a class="srcref" href="https://github.com/HenryNdubuaku/maths-cs-ai-compendium/blob/9850ee5/chapter%2009%20-%20audio%20and%20speech/01.%20digital%20signal%20processing.md" target="_blank" rel="noopener">source &sect;01</a>
+    </div>
+    <p>
+      The waveform hides its own structure. The <b>Discrete Fourier Transform</b> decomposes
+      \(N\) samples into \(N\) complex frequency components:
+    </p>
+  </div>
+  <div class="mathbox col">
+    $$X[k]=\sum_{n=0}^{N-1}x[n]\,e^{-j2\pi kn/N},\qquad k=0,\dots,N-1$$
+  </div>
+  <div class="col">
+    <p>
+      \(|X[k]|\) is the amplitude at frequency \(f_k = k f_s/N\), and \(\angle X[k]\) the phase.
+      You have pressed this button on an analyser many times. What the source says next is the
+      part worth slowing down for, because it is the connection to Chapter 02 and it is exact.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; the DFT is a change of basis, nothing more</div>
+      <p>
+        Write the transform as a matrix, \(\mathbf{X}=W\mathbf{x}\) with
+        \(W_{kn}=e^{-j2\pi kn/N}\). Then \(W W^{H}/N = I\): the columns are orthogonal, and the
+        DFT is a <b>rotation to a different orthonormal basis</b> &mdash; out of the basis of
+        unit impulses (&ldquo;how much at this instant&rdquo;) and into the basis of complex
+        exponentials (&ldquo;how much at this frequency&rdquo;). Verified numerically to
+        5&times;10<sup>&minus;15</sup>.
+      </p>
+      <p>
+        Two consequences you already believe in another form. First, no information is created
+        or destroyed &mdash; the transform is invertible, so the spectrum and the waveform are
+        the same object in two coordinate systems, exactly as a stress tensor is the same
+        object whether written in global axes or principal axes. Second, energy is preserved:
+      </p>
+      <div class="mathbox">
+        $$\sum_n |x[n]|^2=\frac{1}{N}\sum_k |X[k]|^2$$
+      </div>
+      <p style="margin-bottom:0">
+        That is <b>Parseval&rsquo;s theorem</b>, and it is the statement that an orthogonal
+        change of basis preserves length &mdash; the same fact that lets you compute von Mises
+        stress from principal stresses without worrying which frame you started in. The total
+        vibration energy is the total vibration energy whether you measure it off the waveform
+        or sum it across the spectrum lines.
+      </p>
+    </div>
+
+    <p>
+      The <b>Fast Fourier Transform</b> is not a different transform. It is an algorithm that
+      computes the same DFT in \(O(N\log N)\) instead of \(O(N^2)\), by recursively splitting
+      into even- and odd-indexed halves &mdash; Cooley&ndash;Tukey. At \(N=4096\) that is the
+      difference between about 16.8 million operations and about 49 thousand, a factor of 341.
+      Real-time spectral analysis exists because of this algorithm, and so does the entire
+      field this chapter describes.
+    </p>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>What a frequency reading actually means</div>
+      <p>
+        A spectrum does not have a frequency at every value. It has \(N\) <b>bins</b>, spaced
+        \(\Delta f = f_s/N\) apart. At 16 kHz with a 512-point FFT the spacing is
+        \(16000/512 = 31.25\) Hz, and every component lands in a bin whether or not it sits at
+        the bin&rsquo;s centre frequency.
+      </p>
+      <p style="margin-bottom:0">
+        Which gives the rule you already use on an analyser, in its exact form:
+        resolution depends only on <b>how long you captured</b>, \(\Delta f = 1/T\). A 25 ms
+        speech frame gives 40 Hz resolution no matter what FFT length you pad it to. Zero-padding
+        a 400-sample frame to 512 points, as every speech pipeline does, buys interpolation
+        between bins and a cheaper radix-2 transform &mdash; it does <em>not</em> buy resolution.
+        Two tones 20 Hz apart are not resolvable in a 25 ms frame, and no amount of padding will
+        separate them. This is the same reason you take a longer capture when you need to split
+        two close orders.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Reading a spectrum</div><div class="lab-tag">Predict, then transform</div></div>
+
+    <div class="predict">
+      <p style="margin-top:0">
+        You capture for 25 ms and see one peak. You now capture for 100 ms instead, same signal.
+        What changes in the spectrum?
+      </p>
+      <button class="pbtn" data-p2="a" type="button">Nothing</button>
+      <button class="pbtn" data-p2="b" type="button">Peak gets taller</button>
+      <button class="pbtn" data-p2="c" type="button">Lines get 4&times; finer</button>
+      <button class="pbtn" data-p2="d" type="button">Peak moves</button>
+      <div class="pverdict" id="pv2"></div>
+    </div>
+
+    <svg class="stage" id="sF" viewBox="0 0 480 300" role="img"
+         aria-label="A magnitude spectrum with movable component frequencies and a capture-length control">
+      <g id="fGrid"></g>
+      <line id="fAx" x1="40" y1="255" x2="470" y2="255"/>
+      <line id="fAy" x1="40" y1="16" x2="40" y2="255"/>
+      <g id="fBars"></g>
+      <g id="fTicks"></g>
+    </svg>
+
+    <div class="ctl">
+      <label for="sepSl">Two tones, apart by</label>
+      <input type="range" id="sepSl" min="5" max="300" value="120" step="5">
+      <span class="ro-v" id="sepVal" style="min-width:66px">120 Hz</span>
+      <label for="capSl" style="margin-left:6px">Capture length</label>
+      <input type="range" id="capSl" min="5" max="200" value="25" step="5">
+      <span class="ro-v" id="capVal" style="min-width:60px">25 ms</span>
+    </div>
+
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Resolution<br>&Delta;<span class="gk">&fnof;</span> = 1/T</div><div class="ro-v b" id="oRes">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Separation<br>in bins</div><div class="ro-v" id="oBins">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Resolved?</div><div class="ro-v" id="oResv">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Samples at<br>16 kHz</div><div class="ro-v c" id="oNsamp">&mdash;</div></div>
+    </div>
+  </div>
+
+  <div class="lab-foot col">
+    Two tones sit at 1000 Hz and 1000 Hz plus the separation you set. Shorten the capture and
+    watch them merge into one lump: not because the tones changed, but because the measurement
+    can no longer tell them apart. The rule is \(\Delta f = 1/T\) and it is the only thing
+    controlling this. The &ldquo;two peaks / one lump&rdquo; readout draws the line at 1.5
+    bins, which is a <em>convention</em> rather than a theorem &mdash; where exactly two peaks
+    become one lump depends on the window, the relative amplitudes and how confident you need
+    to be. What is not a convention is \(\Delta f = 1/T\). In speech the trade-off is forced &mdash; a 25 ms frame is chosen
+    because speech is only <em>stationary</em> for about that long, so you cannot buy resolution
+    by capturing longer without the sound itself changing underneath you. Part 2 takes this up
+    properly as the time&ndash;frequency trade-off.
+  </div>
+</section>
+
+<section id="breaks">
+  <div class="col">
+    <div class="sechead"><span class="secnum">06</span><h2>Where it breaks</h2>
+      <span class="srcref nolink" title="Added material, not in the source chapter">beyond the chapter</span>
+    </div>
+    <p>
+      This sheet claims more identity between two fields than any before it. That makes it the
+      sheet most in need of an honest list of where the identity stops.
+    </p>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>1 &mdash; The signal is non-stationary, and yours often is not</div>
+      <p style="margin-bottom:0">
+        A machine at steady speed produces a signal whose statistics do not change; you can
+        average spectra for a minute and get a cleaner answer. Speech changes completely every
+        few tens of milliseconds &mdash; that is what carries the information. You cannot
+        average it away, and every design decision downstream, starting with the 25 ms frame,
+        exists to cope with that. Where your signals <em>are</em> non-stationary, during a
+        run-up or coast-down, you already reach for a waterfall plot, which is the right
+        instinct: that is a spectrogram.
+      </p>
+    </div>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>2 &mdash; There is no ground truth to calibrate against</div>
+      <p style="margin-bottom:0">
+        An accelerometer has a calibration certificate traceable to a standard, and a
+        measurement in mm/s is a claim about the physical world that can be checked. &ldquo;This
+        audio contains the word <i>stop</i>&rdquo; has no such standard. The ground truth is
+        somebody&rsquo;s transcription, and competent annotators disagree with each other at a
+        measurable rate. Chapter 06 &sect;12 made this point about ML generally; here it is
+        sharper, because everything <em>up to</em> the features is metrologically solid and
+        everything after it is not.
+      </p>
+    </div>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>3 &mdash; Perceptual weighting has no mechanical counterpart</div>
+      <p style="margin-bottom:0">
+        This is the important one, and part 2 is built around it. Every representation in this
+        chapter after the raw spectrum &mdash; the mel scale, the log compression, the choice to
+        discard phase, \(\mu\)-law companding &mdash; is shaped by <b>human perception</b>, not
+        by the physics of the signal. There is no equivalent in vibration analysis, because a
+        bearing does not care what you can hear. The nearest thing is A-weighting on a sound
+        level meter, which is itself a perceptual correction borrowed from the same science.
+        When you meet the mel scale in part 2, resist reading it as a property of sound. It is
+        a property of cochleae.
+      </p>
+    </div>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>4 &mdash; An error the source makes about the mel scale</div>
+      <p>
+        The source chapter states that the mel scale &ldquo;is the reason that musical
+        semitones are equally spaced on a log-frequency axis&rdquo;, offering A4&rarr;A5 and
+        A5&rarr;A6 as octaves that sound equal. Both halves of that are wrong, and the arithmetic
+        settles it. Using the source&rsquo;s own formula
+        \(m=2595\log_{10}(1+f/700)\):
+      </p>
+      <div class="tw">
+        <table>
+          <caption>Octaves are <em>not</em> equal intervals on the mel scale. Computed from the source's own formula.</caption>
+          <thead><tr><th>Octave</th><th>Width in mel</th></tr></thead>
+          <tbody>
+            <tr><td>220 &rarr; 440 Hz</td><td>241.6</td></tr>
+            <tr><td>440 &rarr; 880 Hz</td><td>367.8</td></tr>
+            <tr><td>880 &rarr; 1760 Hz</td><td>499.0</td></tr>
+            <tr><td>1760 &rarr; 3520 Hz</td><td>608.2</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        They increase steadily; the third octave is 1.36&times; the second. If the mel scale
+        explained equal-sounding octaves, these numbers would be equal, and they are not remotely.
+      </p>
+      <p style="margin-bottom:0">
+        The causation is also backwards. Musical intervals are equally spaced on a
+        <b>log-frequency</b> axis, which is a fact about pitch <em>intervals</em> &mdash; ratio
+        judgements. The mel scale is a different measurement: perceived pitch <em>distance</em>,
+        obtained by asking listeners to halve a pitch. It is deliberately <b>not</b> logarithmic
+        at the bottom of its range &mdash; below roughly 700 Hz it is close to linear, which is
+        exactly why the low octaves come out narrow in the table. Two different perceptual
+        facts have been merged into one sentence. The mel scale is real and useful and part 2
+        will use it; it simply does not explain octaves.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="next">
+  <div class="col">
+    <div class="sechead"><span class="secnum">07</span><h2>What part 2 covers</h2></div>
+    <p>
+      Part 1 stopped at the spectrum of a single frame. Part 2 turns that into the
+      representation a model actually consumes:
+    </p>
+    <ul>
+      <li><b>Windowing and spectral leakage</b> &mdash; why a Hann window, what it costs, and
+        the main-lobe against side-lobe trade-off you already make on an analyser.</li>
+      <li><b>The STFT and the spectrogram</b> &mdash; frames, hop size, overlap-add, and the
+        Gabor limit \(\Delta t\,\Delta f\ge 1/4\pi\), which is a real theorem rather than a
+        rule of thumb.</li>
+      <li><b>The mel scale and MFCCs</b> &mdash; the one genuinely new idea in the chapter,
+        handled with the care break 4 above says it needs.</li>
+      <li><b>Filtering</b> &mdash; FIR, IIR, poles and zeros, straight from your controls course.</li>
+    </ul>
+    <p>
+      Parts 3 and beyond cover what the compendium does with those features: speech
+      recognition, synthesis, speaker identification and source separation.
+    </p>
+  </div>
+
+  <div class="endnote col">
+    Sheet 09 of 20, part 1 of 3. Built for a mechanical engineer with GATE-level mathematics
+    and no prior CS. Source: <a href="https://github.com/HenryNdubuaku/maths-cs-ai-compendium/tree/9850ee5/chapter%2009%20-%20audio%20and%20speech" target="_blank" rel="noopener">chapter 09 &mdash; audio and speech</a>,
+    pinned at commit <code>9850ee5</code>, Apache-2.0. Figures are the compendium's own.
+    Numerical claims on this sheet are checked by <code>verify_claims.py</code> in this
+    repository; the mel-scale table in break 4 is computed there from the source's own formula.
+  </div>
+</section>
+
+</main>
+</div>
+
+<style>
+#aGrid line, #fGrid line{stroke:var(--rule)}
+#aAx, #fAx, #fAy{stroke:var(--rule-strong); stroke-width:1.25}
+#aTrue{stroke:var(--s2)} #aAlias{stroke:var(--s1)}
+.sdot{fill:var(--ink); stroke:var(--sheet); stroke-width:.8}
+.bar{fill:var(--s2)} .bar.b2{fill:var(--s1)}
+.tk{fill:var(--ink-3); font-family:'IBM Plex Mono',monospace; font-size:10px}
+</style>
+
+<script>
+(function(){
+  'use strict';
+  var root=document.documentElement;
+  function dk(){var t=root.getAttribute('data-theme');
+    return t?t==='dark':(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);}
+  try{var sv=localStorage.getItem('ch09-theme'); if(sv==='dark'||sv==='light') root.setAttribute('data-theme',sv);}catch(e){}
+  var tb=document.getElementById('themebtn');
+  if(tb) tb.addEventListener('click',function(){var n=dk()?'light':'dark';
+    root.setAttribute('data-theme',n); try{localStorage.setItem('ch09-theme',n);}catch(e){}});
+
+  function $(id){return document.getElementById(id);}
+  function grid(g,w,h,s){var o='',x,y;
+    for(x=s;x<w;x+=s) o+='<line x1="'+x+'" y1="0" x2="'+x+'" y2="'+h+'"/>';
+    for(y=s;y<h;y+=s) o+='<line x1="0" y1="'+y+'" x2="'+w+'" y2="'+y+'"/>';
+    g.innerHTML=o;}
+
+  function predict(attr,vid,ans){
+    document.querySelectorAll('['+attr+']').forEach(function(b){
+      b.addEventListener('click',function(){
+        document.querySelectorAll('['+attr+']').forEach(function(o){o.classList.remove('picked');});
+        b.classList.add('picked');
+        var v=$(vid); v.innerHTML=ans[b.getAttribute(attr)]; v.classList.add('show');
+      });
+    });
+  }
+
+  /* ---------- LAB 1 : aliasing ---------- */
+  /* A tone at f, sampled at fs, is indistinguishable from the tone at the
+     frequency f folded into [0, fs/2].  Fold: reduce mod fs, then reflect
+     anything above fs/2 back down.  This is exactly what the samples record. */
+  function foldFreq(f,fs){
+    var r=f%fs; if(r<0) r+=fs;
+    return (r>fs/2)?(fs-r):r;
+  }
+  function drawA(){
+    var f=parseInt($('fSl').value,10), fs=parseInt($('fsSl').value,10);
+    $('fVal').textContent=f+' Hz'; $('fsVal').textContent=fs+' Hz';
+    var ny=fs/2, fa=foldFreq(f,fs), aliased=Math.abs(fa-f)>1e-9;
+
+    /* show a fixed 4 periods of whatever the ALIAS is, so the fold is visible;
+       when nothing is aliased the two curves coincide exactly. */
+    var span=(fa>0.5)?(4/fa):0.02;            /* seconds on screen */
+    function pathFor(freq){
+      var d='',i,N=600,t,y;
+      for(i=0;i<=N;i++){
+        t=span*i/N; y=Math.sin(2*Math.PI*freq*t);
+        d+=(i?'L':'M')+(8+464*i/N).toFixed(1)+' '+(150-118*y).toFixed(1);
+      }
+      return d;
+    }
+    $('aTrue').setAttribute('d',pathFor(f));
+    $('aAlias').setAttribute('d',pathFor(fa));
+
+    var dots='',k,t2,y2,nS=Math.floor(span*fs)+1;
+    if(nS<=160){
+      for(k=0;k<nS;k++){
+        t2=k/fs; if(t2>span) break;
+        y2=Math.sin(2*Math.PI*f*t2);
+        dots+='<circle class="sdot" cx="'+(8+464*t2/span).toFixed(1)+'" cy="'+(150-118*y2).toFixed(1)+'" r="3"/>';
+      }
+    }
+    $('aDots').innerHTML=dots;
+
+    $('oNy').textContent=ny.toFixed(0)+' Hz';
+    $('oSt').innerHTML = aliased
+      ? '<span class="flag bad">aliased</span>'
+      : '<span class="flag ok">safe</span>';
+    $('oAp').textContent=fa.toFixed(0)+' Hz';
+    $('oEr').textContent=aliased?('&minus;'+(f-fa).toFixed(0)+' Hz').replace('&minus;','-'):'none';
+    if(aliased) $('oEr').innerHTML='&minus;'+(f-fa).toFixed(0)+' Hz';
+  }
+  ['fSl','fsSl'].forEach(function(id){$(id).addEventListener('input',drawA);});
+  grid($('aGrid'),480,300,30); drawA();
+  predict('data-p1','pv1',{
+    a:'<b>No.</b> The samples cannot represent 700 Hz &mdash; there is no way to store a frequency above Nyquist. Set the sliders to 700 and 1000 and look at the dashed curve.',
+    b:'<b>Not by itself.</b> An anti-aliasing filter would remove it, but that is a separate piece of hardware acting <i>before</i> the sampler. Sampling alone does not discard it &mdash; it disguises it.',
+    c:'<b>Correct.</b> 700 Hz folds about the 500 Hz Nyquist line to 1000&minus;700 = 300 Hz, and the result is indistinguishable from a real 300 Hz tone. Every sample dot lies on both curves, which is why no later processing can undo it.',
+    d:'<b>No &mdash; and this is what makes aliasing dangerous.</b> Noise would at least look wrong. What you get is a clean, plausible 300 Hz tone that was never in the signal.'
+  });
+
+  /* ---------- LAB 2 : resolution ---------- */
+  var FS=16000, F0=1000;
+  function drawF(){
+    var sep=parseInt($('sepSl').value,10), capMs=parseInt($('capSl').value,10);
+    $('sepVal').textContent=sep+' Hz'; $('capVal').textContent=capMs+' ms';
+    var T=capMs/1000, df=1/T, nsamp=Math.round(FS*T);
+
+    /* Bin the two tones. Each is smeared across roughly one bin width; when the
+       separation is under ~1.5 bins the two peaks merge into a single lump. */
+    var lo=700, hi=1400, wpx=430;
+    function xOf(fq){return 40+wpx*(fq-lo)/(hi-lo);}
+    var bars='', b, fq, amp, centre1=F0, centre2=F0+sep;
+    for(b=Math.ceil(lo/df); b*df<hi; b++){
+      fq=b*df;
+      /* Dirichlet-kernel-like response of a rectangular capture to a tone */
+      function resp(fc){var u=Math.PI*(fq-fc)*T; return (Math.abs(u)<1e-9)?1:Math.abs(Math.sin(u)/u);}
+      amp=Math.max(resp(centre1),resp(centre2));
+      if(amp<0.02) continue;
+      var h=225*amp, x=xOf(fq), bw=Math.max(1.5,wpx*df/(hi-lo)*0.82);
+      bars+='<rect class="bar'+((fq>=(centre1+centre2)/2)?' b2':'')+'" x="'+(x-bw/2).toFixed(1)
+           +'" y="'+(255-h).toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+h.toFixed(1)+'"/>';
+    }
+    $('fBars').innerHTML=bars;
+    var tk='';
+    [800,1000,1200,1400].forEach(function(v){
+      tk+='<text class="tk" x="'+xOf(v).toFixed(0)+'" y="272" text-anchor="middle">'+v+'</text>';});
+    tk+='<text class="tk" x="255" y="290" text-anchor="middle">frequency (Hz)</text>';
+    $('fTicks').innerHTML=tk;
+
+    var bins=sep/df, resolved=bins>=1.5;
+    $('oRes').textContent=df.toFixed(1)+' Hz';
+    $('oBins').textContent=bins.toFixed(2);
+    $('oResv').innerHTML=resolved?'<span class="flag ok">two peaks</span>':'<span class="flag bad">one lump</span>';
+    $('oNsamp').textContent=String(nsamp);
+  }
+  ['sepSl','capSl'].forEach(function(id){$(id).addEventListener('input',drawF);});
+  grid($('fGrid'),480,300,30); drawF();
+  predict('data-p2','pv2',{
+    a:'<b>No.</b> Capture length is the one thing that sets resolution. Four times longer is four times finer.',
+    b:'<b>Not the point.</b> Scaling aside, height is about amplitude; what a longer capture changes is how finely you can <i>separate</i> frequencies.',
+    c:'<b>Correct.</b> &Delta;&fnof; = 1/T, so 25 ms gives 40 Hz and 100 ms gives 10 Hz. Nothing else in the chain changes this &mdash; not the FFT length, not zero-padding.',
+    d:'<b>No.</b> The tone is where it is. What changes is whether you can tell it apart from a neighbour.'
+  });
+})();
+</script>
+<script>
+/* Safety net: if the MathJax bundle cannot be reached, degrade the TeX to
+   readable Unicode instead of leaving raw backslash markup on the page. */
+(function () {
+  'use strict';
+  var GREEK = { theta:'θ', sigma:'σ', delta:'δ', mu:'μ', pi:'π',
+                infty:'∞', alpha:'α', beta:'β', lambda:'λ' };
+  var SUB = { '1':'₁','2':'₂','3':'₃','i':'ᵢ','j':'ⱼ','n':'ₙ','p':'ₚ','x':'ₓ','y':'ᵧ' };
+  var SUP = { '2':'²','3':'³','n':'ⁿ','p':'ᵖ','*':'*' };
+
+  function degrade(t) {
+    t = t.replace(/\$\$/g, '').replace(/\\[()[\]]/g, '');
+    t = t.replace(/\\(?:left|right|textstyle|displaystyle|!|,|;|:)/g, '');
+    t = t.replace(/\\q?quad/g, ' ');
+    t = t.replace(/\\mathbb\{R\}/g, 'ℝ').replace(/\\mathbb\{Z\}/g, 'ℤ')
+         .replace(/\\mathbb\{N\}/g, 'ℕ').replace(/\\mathbb\{Q\}/g, 'ℚ');
+    t = t.replace(/\\(?:mathbf|mathrm|text|textbf|operatorname)\{([^{}]*)\}/g, '$1');
+    t = t.replace(/\\hat\{([^{}]*)\}/g, '$1̂').replace(/\\bar\{([^{}]*)\}/g, '$1̄');
+    t = t.replace(/\\sqrt\{([^{}]*)\}/g, '√($1)');
+    t = t.replace(/\\t?frac\{([^{}]*)\}\{([^{}]*)\}/g, '($1)/($2)');
+    t = t.replace(/\\binom\{([^{}]*)\}\{([^{}]*)\}/g, 'C($1,$2)');
+    t = t.replace(/\\([a-zA-Z]+)/g, function (m, w) {
+      if (GREEK[w]) return GREEK[w];
+      switch (w) {
+        case 'cdot': return '·';
+        case 'times': return '×';
+        case 'le': case 'leq': return '≤';
+        case 'ge': case 'geq': return '≥';
+        case 'neq': return '≠';
+        case 'approx': return '≈';
+        case 'in': return '∈';
+        case 'pm': return '±';
+        case 'to': case 'rightarrow': return '→';
+        case 'Rightarrow': return '⇒';
+        case 'iff': return '⇔';
+        case 'parallel': return '∥';
+        case 'perp': return '⊥';
+        case 'sum': return 'Σ';
+        case 'langle': return '⟨';
+        case 'rangle': return '⟩';
+        case 'wedge': return '∧';
+        case 'ast': return '*';
+        case 'cdots': case 'ldots': case 'dots': return '…';
+        case 'max': case 'min': case 'cos': case 'sin': case 'log': case 'exp': return w;
+        default: return w;
+      }
+    });
+    t = t.replace(/\\\|/g, '‖').replace(/\|\|/g, '‖');
+    t = t.replace(/_\{?([0-9ijnpxy])\}?/g, function (m, c) { return SUB[c] || ('_' + c); });
+    t = t.replace(/\^\{?([23np*])\}?/g, function (m, c) { return SUP[c] || ('^' + c); });
+    t = t.replace(/[{}]/g, '');
+    return t.replace(/[ \t]{2,}/g, ' ');
+  }
+
+  function run() {
+    if (window.MathJax && window.MathJax.startup && window.MathJax.startup.document) return;
+    var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+      acceptNode: function (n) {
+        if (!n.nodeValue || n.nodeValue.indexOf('\\') < 0 && n.nodeValue.indexOf('$$') < 0)
+          return NodeFilter.FILTER_REJECT;
+        var p = n.parentNode;
+        while (p && p !== document.body) {
+          var tag = p.nodeName;
+          if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'CODE' || tag === 'PRE')
+            return NodeFilter.FILTER_REJECT;
+          p = p.parentNode;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    var hits = [], n;
+    while ((n = walker.nextNode())) hits.push(n);
+    hits.forEach(function (node) { node.nodeValue = degrade(node.nodeValue); });
+    document.querySelectorAll('.mathbox').forEach(function (el) {
+      el.style.fontFamily = "'IBM Plex Mono', monospace";
+      el.style.fontSize = '15px';
+      el.style.textAlign = 'center';
+      el.style.padding = '10px 0';
+    });
+  }
+  setTimeout(run, 6000);
+})();
+</script>
+
+<script>
+/* Long display equations can be wider than their container - especially inside a
+   callout box, which is narrower than the main column. After the typesetter
+   finishes, measure each one and shrink it just enough to fit. Only ever shrinks,
+   never grows, and never below a readable floor - so the worst case is the
+   scrollbar we already had. */
+(function () {
+  'use strict';
+  var MIN_SCALE = 0.70;   /* below this, scrolling beats illegible text */
+
+  function fitOne(box) {
+    try {
+      var c = box.querySelector('mjx-container[display="true"]');
+      if (!c) return;
+      var svg = c.querySelector('svg');
+      if (!svg) return;
+      c.style.fontSize = '';
+      var avail = box.clientWidth;
+      if (!avail) return;
+      var w = svg.getBoundingClientRect().width;
+      if (!w || w <= avail) return;
+      var k = Math.max(MIN_SCALE, (avail / w) * 0.98);
+      c.style.fontSize = (k * 100).toFixed(1) + '%';
+      var w2 = svg.getBoundingClientRect().width;      /* one refinement pass */
+      if (w2 > avail) {
+        k = Math.max(MIN_SCALE, k * (avail / w2) * 0.98);
+        c.style.fontSize = (k * 100).toFixed(1) + '%';
+      }
+    } catch (e) { /* leave the equation exactly as it was */ }
+  }
+
+  /* Inline math cannot wrap and is not inside a scrollable .mathbox, so a long
+     inline expression pushes the whole page sideways.  Shrink any that is wider
+     than the text column it sits in; the ex-based sizing keeps the baseline. */
+  function fitInline(c) {
+    try {
+      var svg = c.querySelector('svg'); if (!svg) return;
+      c.style.fontSize = '';
+      var host = c.parentElement; if (!host) return;
+      var avail = host.clientWidth; if (!avail) return;
+      var w = svg.getBoundingClientRect().width;
+      if (!w || w <= avail) return;
+      c.style.fontSize = (Math.max(MIN_SCALE, (avail / w) * 0.98) * 100).toFixed(1) + '%';
+    } catch (e) { /* leave the expression exactly as it was */ }
+  }
+
+  function fitAll() {
+    try { document.querySelectorAll('.mathbox').forEach(fitOne); } catch (e) {}
+    try {
+      document.querySelectorAll('mjx-container:not([display="true"])').forEach(fitInline);
+    } catch (e) {}
+  }
+
+  function start() {
+    fitAll();
+    var t;
+    window.addEventListener('resize', function () {
+      clearTimeout(t); t = setTimeout(fitAll, 160);
+    });
+  }
+
+  function waitForTypesetter(n) {
+    if (window.MathJax && window.MathJax.startup && window.MathJax.startup.promise) {
+      window.MathJax.startup.promise.then(start, start);
+      return;
+    }
+    if (n > 60) return;            /* typesetter never arrived - nothing to fit */
+    setTimeout(function () { waitForTypesetter(n + 1); }, 200);
+  }
+  waitForTypesetter(0);
+})();
+</script>
