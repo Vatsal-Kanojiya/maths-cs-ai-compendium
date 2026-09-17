@@ -42,8 +42,8 @@ merely structural, that is said plainly.
 | 04 | Statistics | [`ch04-statistics/`](ch04-statistics/index.html) | [Read online](https://claude.ai/artifact/XWetUvsAH8Mw25LRxecCKU) |
 | 05 | Probability | [`ch05-probability/`](ch05-probability/index.html) | [Read online](https://claude.ai/artifact/DDbGs67DwJPTwCYWFyTUMW) |
 | 06 | Machine Learning | [`ch06-machine-learning/`](ch06-machine-learning/index.html) | [Read online](https://claude.ai/artifact/AazU1pknayKewgpJQhzo3Z) |
-| 07 | Computational Linguistics | [`ch07-computational-linguistics/`](ch07-computational-linguistics/index.html) | *not yet published* |
-| 08 | Computer Vision | [`ch08-computer-vision/`](ch08-computer-vision/index.html) | *not yet published* |
+| 07 | Computational Linguistics | [`ch07-computational-linguistics/`](ch07-computational-linguistics/index.html) | [Read online](https://claude.ai/artifact/G4qe4sW6y1Av9kVibTq11R) |
+| 08 | Computer Vision | [`ch08-computer-vision/`](ch08-computer-vision/index.html) | [Read online](https://claude.ai/artifact/YGYUxoUzmFo2R2W5fb7PP7) |
 | 09 | Audio and Speech | [`ch09-audio-speech/`](ch09-audio-speech/index.html) | [Read online](https://claude.ai/artifact/UeVoa1oWJcZJL8KMsbbLHq) |
 
 ## What's in a chapter page
