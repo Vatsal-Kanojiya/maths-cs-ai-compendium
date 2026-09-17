@@ -388,7 +388,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
 
 <header class="titleblock">
   <div class="tb-main">
-    <div class="tb-k">Sheet 09 of 20 &mdash; Audio and Speech, parts 1&ndash;3</div>
+    <div class="tb-k">Sheet 09 of 20 &mdash; Audio and Speech</div>
     <h1>Sampling, Spectra, Leakage</h1>
     <p class="tb-sub">
       The chapter where you already own the mathematics. Every core operation in audio
@@ -421,8 +421,14 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
   <a href="#pretrain"><span class="n">13</span><span>Unlabelled audio</span></a>
   <a href="#stream"><span class="n">14</span><span>Streaming is causality</span></a>
   <a href="#wer"><span class="n">15</span><span>Measuring it</span></a>
-  <a href="#breaks"><span class="n">16</span><span>Where it breaks</span></a>
-  <a href="#next"><span class="n">17</span><span>What part 4 covers</span></a>
+  <a href="#tts"><span class="n">16</span><span>Synthesis</span></a>
+  <a href="#vocoder"><span class="n">17</span><span>Vocoders</span></a>
+  <a href="#speaker"><span class="n">18</span><span>Who is speaking</span></a>
+  <a href="#separate"><span class="n">19</span><span>The cocktail party</span></a>
+  <a href="#worked"><span class="n">20</span><span>Worked example</span></a>
+  <a href="#recall"><span class="n">21</span><span>Question bank</span></a>
+  <a href="#breaks"><span class="n">22</span><span>Where it breaks</span></a>
+  <a href="#next"><span class="n">23</span><span>What this feeds</span></a>
   <a href="#provenance"><span class="n">A</span><span>Provenance</span></a>
 </nav>
 
@@ -1167,7 +1173,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     </p>
 
     <div class="note brk">
-      <div class="note-h"><span class="ic">!</span>Read &sect;16 break 4 before trusting anything else about this scale</div>
+      <div class="note-h"><span class="ic">!</span>Read &sect;22 break 4 before trusting anything else about this scale</div>
       <p style="margin-bottom:0">
         The source chapter says the mel scale explains why musical octaves sound equally spaced.
         It does not, and its own formula proves it &mdash; octave widths come out at 241.6,
@@ -1175,7 +1181,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
         <em>log-frequency</em> axis, which is a fact about pitch <b>ratios</b>. The mel scale
         measures perceived pitch <b>distance</b>, is a different experiment, and is
         deliberately not logarithmic at the bottom. The full argument and the table are in
-        &sect;16.
+        &sect;22.
       </p>
     </div>
 
@@ -1758,9 +1764,453 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
   </div>
 </section>
 
+<section id="tts">
+  <div class="col">
+    <div class="sechead"><span class="secnum">16</span><h2>Synthesis: the arrow reversed</h2>
+      <a class="srcref" href="https://github.com/HenryNdubuaku/maths-cs-ai-compendium/blob/9850ee5/chapter%2009%20-%20audio%20and%20speech/03.%20text%20to%20speech%20and%20voice.md" target="_blank" rel="noopener">source &sect;03</a>
+    </div>
+    <p>
+      Text to speech runs &sect;10&ndash;&sect;15 backwards: text in, waveform out, through
+      normalisation (&ldquo;Dr.&rdquo; &rarr; &ldquo;Doctor&rdquo;, &ldquo;1984&rdquo; &rarr;
+      &ldquo;nineteen eighty-four&rdquo;), grapheme-to-phoneme conversion, an acoustic model
+      that emits a mel spectrogram, and a <b>vocoder</b> that turns that spectrogram into sound.
+    </p>
+    <p>
+      The alignment problem returns, inverted. Recognition had 100 frames and 5 letters and did
+      not know the grouping; synthesis has the phonemes and must <em>decide</em> how many frames
+      each one gets. FastSpeech handles it with an explicit <b>duration predictor</b> and a
+      length regulator that simply repeats each phoneme&rsquo;s representation the predicted
+      number of times. Tacotron 2 instead lets attention discover it, which is why its
+      characteristic failures are attention failures: words skipped, words repeated, alignment
+      collapsing entirely.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; source&ndash;filter is excitation and transfer function</div>
+      <p>
+        The oldest model of voiced speech is this: the vocal folds produce a periodic pulse
+        train at the fundamental \(F_0\), and the vocal tract filters it. Output equals
+        excitation times transfer function. That is not <em>like</em> forced vibration
+        analysis &mdash; it is the same equation you write for a structure under harmonic
+        excitation, with the tract playing the role of the FRF and the formants playing the role
+        of resonant peaks.
+      </p>
+      <p style="margin-bottom:0">
+        The correspondence is exact enough to be load-bearing in the field. <b>Neural
+        source-filter</b> models keep the explicit pulse train at \(F_0\) and replace only the
+        filter with a network, precisely because a purely data-driven model has trouble
+        controlling pitch &mdash; the same reason you would not throw away a modal model that
+        works and fit a black box to the response. And it explains the &sect;08 deconvolution:
+        the cepstrum separates source from filter because the two are multiplied, and the
+        logarithm makes multiplication into addition. Recognition wants the filter and discards
+        the source. Synthesis has to produce both.
+      </p>
+    </div>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/tts_pipeline.svg" alt="The TTS pipeline from text normalisation through phonemes and acoustic model to vocoder" width="420"></div>
+    <figcaption><b>Fig. 9.10</b> &mdash; The pipeline. Every stage&rsquo;s errors propagate: read &ldquo;St.&rdquo; as &ldquo;saint&rdquo; instead of &ldquo;street&rdquo; and nothing downstream can recover. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="vocoder">
+  <div class="col">
+    <div class="sechead"><span class="secnum">17</span><h2>Vocoders: putting the phase back</h2>
+      <a class="srcref" href="https://github.com/HenryNdubuaku/maths-cs-ai-compendium/blob/9850ee5/chapter%2009%20-%20audio%20and%20speech/03.%20text%20to%20speech%20and%20voice.md" target="_blank" rel="noopener">source &sect;03</a>
+    </div>
+    <p class="lede">
+      &sect;01 noted, almost in passing, that speech pipelines throw phase away. Here is the bill
+      for that decision.
+    </p>
+    <p>
+      A vocoder must turn a mel spectrogram into a waveform. But the mel spectrogram is
+      magnitude only &mdash; the phase was discarded at the front of the pipeline, and a
+      magnitude spectrum does not determine a waveform. Infinitely many signals share it. The
+      inversion is <b>ill-posed</b>, and every vocoder is a different way of choosing which of
+      those infinitely many signals to produce.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; this is an inverse problem, with all that implies</div>
+      <p style="margin-bottom:0">
+        You have met ill-posed inversion. Inferring a load distribution from measured strains,
+        or a source from a measured response, is the same shape of problem: the forward
+        direction is well defined and lossy, so the backward direction has many solutions and
+        needs a prior to pick one. Classical vocoders like Griffin&ndash;Lim impose the prior by
+        iterating toward consistency. Neural vocoders learn the prior from data &mdash; they
+        have heard enough real speech to produce a waveform that is <em>plausible</em>, which is
+        not the same as correct and does not need to be.
+      </p>
+    </div>
+
+    <p>
+      <b>WaveNet</b> generates one sample at a time, conditioning each on all its predecessors,
+      using <b>dilated causal convolutions</b> &mdash; causal in exactly the &sect;14 sense, and
+      dilated so that stacking layers with gaps \(1,2,4,\dots,512\) reaches 1,024 samples of
+      history from ten layers. The quality was startling and the cost was brutal: one second of
+      24 kHz audio needs 24,000 sequential passes. That single number drove a decade of vocoder
+      research.
+    </p>
+    <p>
+      <b>HiFi-GAN</b> is the answer that stuck: a generator that upsamples the spectrogram in
+      one parallel pass, trained adversarially, over a thousand times faster than WaveNet at
+      comparable quality. Its discriminator design is the interesting part.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; the multi-period discriminator is order analysis</div>
+      <p style="margin-bottom:0">
+        HiFi-GAN&rsquo;s multi-period discriminator folds the 1D waveform into 2D at periods
+        2, 3, 5, 7 and 11, then looks for structure in the folded view. Folding a signal at a
+        candidate period so that a repeating component lines up as a column is exactly what
+        synchronous averaging does in machinery diagnostics &mdash; resample against a
+        tachometer, fold at the shaft period, and anything locked to that period reinforces
+        while everything else averages away. And those five numbers are not arbitrary: they are
+        primes, so no two folds see the same periodicity, which is the same reason you choose a
+        prime number of blades or bolts to avoid reinforcing an order.
+      </p>
+    </div>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>Autoregressive means sequential, and sequential means slow</div>
+      <p style="margin-bottom:0">
+        WaveNet&rsquo;s 24,000 passes per second of audio cannot be parallelised away, because
+        sample \(t\) is an input to sample \(t+1\). This is the same wall you hit with any
+        explicit time-stepping scheme: you can make each step cheaper, but you cannot compute
+        step 500 before step 499. Every fast vocoder &mdash; flow-based, GAN-based, diffusion
+        &mdash; is an attempt to replace that recursion with something evaluable in parallel,
+        which is precisely the motivation for implicit and spectral methods over explicit
+        marching in numerical work.
+      </p>
+    </div>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/hifi_gan_generator.svg" alt="The HiFi-GAN generator upsampling a mel spectrogram through transposed convolutions and multi-receptive-field fusion blocks" width="420"></div>
+    <figcaption><b>Fig. 9.11</b> &mdash; HiFi-GAN&rsquo;s generator. Parallel multi-scale residual stacks, summed &mdash; the same instinct as the Conformer in &sect;12. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="speaker">
+  <div class="col">
+    <div class="sechead"><span class="secnum">18</span><h2>Who is speaking</h2>
+      <a class="srcref" href="https://github.com/HenryNdubuaku/maths-cs-ai-compendium/blob/9850ee5/chapter%2009%20-%20audio%20and%20speech/04.%20speaker%20and%20audio%20analysis.md" target="_blank" rel="noopener">source &sect;04</a>
+    </div>
+    <p>
+      Recognition asks what was said; this asks who said it, and wants an answer that does not
+      depend on the words. The whole field reduces to one object: a fixed-length
+      <b>speaker embedding</b> that captures identity and discards content. Verification compares
+      two embeddings by cosine similarity against a threshold; identification finds the nearest
+      in a gallery. Everything else is how to produce the embedding.
+    </p>
+    <p>
+      The architectural problem is that utterances have different lengths and an embedding must
+      not. The <b>x-vector</b> solution is a step worth naming, because it is the one you would
+      have chosen.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; statistics pooling is an overall-level reading</div>
+      <p>
+        After the frame-level layers, x-vectors take the <b>mean and standard deviation across
+        all frames</b> and concatenate them. Any length of input, always the same size out:
+        512 channels &times; 2 statistics = 1,024 numbers, whether the clip is 50 frames or
+        1,200.
+      </p>
+      <p style="margin-bottom:0">
+        That is what you do to a vibration trace when you report overall level. You do not send
+        someone the time series; you send RMS, and perhaps peak and crest factor &mdash; a small
+        set of statistics that summarise an arbitrarily long record. The mean captures the
+        average spectral character and the standard deviation captures how much it varies, and
+        both carry speaker information: how someone&rsquo;s voice sits, and how much it moves.
+        ECAPA-TDNN refines this by weighting frames unequally, on the grounds that vowels carry
+        more speaker identity than silence &mdash; which is the same judgement as excluding
+        the coast-down from an overall reading.
+      </p>
+    </div>
+
+    <p>
+      The decision stage should feel familiar, because it is Chapter 06 &sect;08 again. Set the
+      threshold low and you accept impostors; set it high and you reject legitimate users. The
+      standard metric is the <b>equal error rate</b>: the threshold at which false acceptance
+      equals false rejection. Good systems are under 1%.
+    </p>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>EER is one point on a curve, and it is rarely the point you want</div>
+      <p style="margin-bottom:0">
+        EER is convenient because it collapses a trade-off to one number, which is also what is
+        wrong with it: it assumes a false accept and a false reject cost the same. For a phone
+        unlock they roughly do. For banking authentication they emphatically do not, and the
+        operating point should sit far from EER. This is Chapter 04&rsquo;s producer&rsquo;s and
+        consumer&rsquo;s risk, and Chapter 06&rsquo;s precision&ndash;recall threshold, arriving
+        a third time. A system quoted only at EER has not told you how it behaves where you
+        intend to run it.
+      </p>
+    </div>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/xvector_architecture.svg" alt="The x-vector architecture: TDNN frame layers, statistics pooling across time, then fully connected layers" width="420"></div>
+    <figcaption><b>Fig. 9.12</b> &mdash; x-vectors. The pooling layer is where variable length becomes fixed length. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="separate">
+  <div class="col">
+    <div class="sechead"><span class="secnum">19</span><h2>The cocktail party</h2>
+      <a class="srcref" href="https://github.com/HenryNdubuaku/maths-cs-ai-compendium/blob/9850ee5/chapter%2009%20-%20audio%20and%20speech/05.%20source%20separation%20and%20noise.md" target="_blank" rel="noopener">source &sect;05</a>
+    </div>
+    <p>
+      A microphone hears a sum. Recovering the parts from
+      \(x(t)=\sum_c s_c(t)+n(t)\) with one microphone is one equation in \(C\) unknowns &mdash;
+      underdetermined in the exact Chapter 02 sense, and solvable only by adding assumptions.
+      Classical methods supply them explicitly: <b>ICA</b> assumes the sources are statistically
+      independent and non-Gaussian; <b>NMF</b> assumes the magnitude spectrogram factors as
+      \(V\approx WH\) with both factors non-negative, one a dictionary of spectral shapes and
+      the other their activations over time. Both are matrix factorisations from Chapter 02,
+      applied to a spectrogram.
+    </p>
+    <p>
+      Add a second microphone and the problem changes character entirely, because you gain
+      <em>spatial</em> information.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; beamforming is a phased array</div>
+      <p>
+        A source at angle \(\theta\) reaches microphone \(m\) delayed by
+        \(\tau_m=d_m\sin\theta/c\). Delay each channel to undo that and sum: the target adds
+        coherently while everything else adds incoherently. That is delay-and-sum beamforming,
+        and it is the identical principle to phased-array ultrasonics &mdash; steer a beam by
+        timing the elements, with the array aperture setting the angular resolution.
+      </p>
+      <p style="margin-bottom:0">
+        The array gain follows the same arithmetic too, and it is checked numerically in
+        <code>verify_claims.py</code>: with \(M\) microphones and uncorrelated noise, the signal
+        adds in amplitude while the noise adds in power, so the signal-to-noise ratio improves
+        by a factor of \(M\) &mdash; 3.01 dB for two, 12.04 dB for sixteen. The measured values
+        come out at 2.99 and 12.03 dB. This is the same \(\sqrt{M}\) averaging argument as
+        Chapter 04&rsquo;s standard error and Chapter 06&rsquo;s ensembles, for the third time in
+        the series.
+      </p>
+    </div>
+
+    <p>
+      <b>MVDR</b> does better than delay-and-sum by adapting to the noise. It asks for the
+      weights that minimise total output power subject to passing the target direction
+      undistorted:
+    </p>
+  </div>
+  <div class="mathbox col">
+    $$\min_{\mathbf{w}}\ \mathbf{w}^{H}\Phi_{nn}\mathbf{w}
+      \quad\text{subject to}\quad \mathbf{w}^{H}\mathbf{d}(\theta)=1$$
+  </div>
+  <div class="col">
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; that is a Lagrange multiplier problem, and you can solve it</div>
+      <p>
+        Quadratic objective, linear equality constraint. This is Chapter 03 &sect;08 exactly, and
+        it has the closed form that structure always has:
+      </p>
+      <div class="mathbox">
+        $$\mathbf{w}_{\text{MVDR}}=\frac{\Phi_{nn}^{-1}\mathbf{d}(\theta)}
+                                        {\mathbf{d}(\theta)^{H}\Phi_{nn}^{-1}\mathbf{d}(\theta)}$$
+      </div>
+      <p style="margin-bottom:0">
+        The numerator is the unconstrained direction of steepest descent against the noise
+        covariance; the denominator is the scaling that enforces the constraint. This page
+        checks it rather than quoting it: the closed form satisfies
+        \(\mathbf{w}^H\mathbf{d}=1\) to \(10^{-16}\), and of 20,000 randomly generated weight
+        vectors that also satisfy the constraint, <em>none</em> achieves lower output power. It
+        is the constrained minimum, and you already know why it has to have this shape.
+      </p>
+    </div>
+
+    <p>
+      Modern separation adds a learned prior instead of an assumed one. Most methods estimate a
+      <b>mask</b> in the time&ndash;frequency plane, \(\hat S_c = M_c\odot X\), where the
+      ideal ratio mask allocates each bin&rsquo;s energy in proportion to how much of it each
+      source contributed &mdash; so the masks sum to one across sources, which the verification
+      script confirms to \(10^{-12}\). A mask is a filter with a different gain in every cell of
+      the spectrogram; the machinery is &sect;09, the novelty is that the gains are predicted
+      per frame rather than designed once.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; the adaptive filter is gradient descent, running live</div>
+      <p style="margin-bottom:0">
+        Active noise cancellation uses an <b>LMS adaptive filter</b>: take a reference of the
+        noise, filter it to predict the noise in the primary channel, subtract, and update the
+        filter coefficients down the gradient of the squared error at every sample. That update
+        is Chapter 03 &sect;06 with a batch size of one, and its step size has the same stability
+        limit &mdash; too large and it diverges, exactly as in the gradient-descent panel there.
+        Noise-cancelling headphones are an optimisation algorithm converging in real time, a few
+        centimetres from your ear.
+      </p>
+    </div>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/cocktail_party.svg" alt="Several speakers and sound sources mixing at a microphone array, with the separation system recovering individual sources" width="420"></div>
+    <figcaption><b>Fig. 9.13</b> &mdash; The problem. One microphone hears a sum; with one equation and several unknowns, only an added assumption makes it solvable. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+  <figure class="col">
+    <div class="paper"><img src="img/beamforming.svg" alt="A microphone array receiving a wavefront at an angle, with per-element delays combined to steer the beam" width="420"></div>
+    <figcaption><b>Fig. 9.14</b> &mdash; Delay-and-sum. Identical in principle to a phased array. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+  <figure class="col">
+    <div class="paper"><img src="img/lms_adaptive_filter.svg" alt="An LMS adaptive filter using a noise reference to cancel noise in a primary channel" width="420"></div>
+    <figcaption><b>Fig. 9.15</b> &mdash; The LMS loop. Gradient descent with a batch size of one, per sample. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="worked">
+  <div class="col">
+    <div class="sechead"><span class="secnum">20</span><h2>Worked example: one bearing, solved twice</h2>
+      <span class="srcref nolink" title="Added material, not in the source chapter">beyond the chapter</span>
+    </div>
+    <p>
+      A gearbox runs at 1,500 rpm. You suspect an outer-race bearing defect and you have an
+      accelerometer. Someone else has a microphone and wants to know whether the machine
+      &ldquo;sounds wrong&rdquo;. Work the same measurement both ways.
+    </p>
+
+    <h3>As vibration analysis</h3>
+    <p>
+      Shaft speed is \(1500/60=25\) Hz. Say the bearing&rsquo;s outer-race defect frequency is
+      3.6 orders, so 90 Hz, and each impact excites a housing resonance near 4 kHz. To resolve
+      the 25 Hz shaft from its neighbours you need \(\Delta f\) comfortably below 25 Hz; take
+      \(\Delta f = 2\) Hz, so \(T = 1/\Delta f = 0.5\) s of capture. To see 4 kHz you need
+      \(f_s \ge 8\) kHz, and you would set 10 kHz or more for guard band. You window with
+      Hanning because the signal will not be bin-aligned, accept the 1.4 dB worst-case
+      amplitude error that costs, and read the spectrum.
+    </p>
+
+    <h3>As audio machine learning</h3>
+    <p>
+      Sample at 16 kHz. Frame at 25 ms with 10 ms hop &mdash; 400 samples per frame, 160 hop,
+      Hamming window, 512-point FFT. Take a mel filterbank, log, and you have a log-mel
+      spectrogram: 100 frames per second, 80 channels. Feed it to a classifier trained on
+      labelled healthy and faulty recordings.
+    </p>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>The second approach just threw your diagnosis away</div>
+      <p>
+        Both are legitimate. But notice what the standard speech configuration did to the
+        measurement. A 25 ms frame gives \(\Delta f = 1/0.025 = 40\) Hz. Your shaft is at 25 Hz
+        and its defect frequency at 90 Hz &mdash; the two are 65 Hz apart, so they land barely
+        more than one bin apart, and the shaft fundamental sits <em>below</em> the first bin
+        edge entirely. The mel filterbank then makes it worse: it is near-linear at the bottom
+        but its lowest triangles are still tens of Hz wide, so the entire diagnostic region
+        collapses into two or three numbers.
+      </p>
+      <p style="margin-bottom:0">
+        The pipeline is not broken. It was designed for a signal whose information lives between
+        300 Hz and 8 kHz and which is only stationary for 25 ms, and it is excellent at that.
+        Your signal is stationary for minutes and carries its information below 200 Hz. Applying
+        the configuration without reading it is how you get a model that cannot see the fault
+        and a report that says deep learning did not work.
+      </p>
+    </div>
+
+    <p>
+      <b>The fix is to choose the parameters from your own signal, which you already know how to
+      do.</b> Frame at 500 ms rather than 25 ms, since the machine is stationary and you want
+      \(\Delta f = 2\) Hz. Drop the mel scale entirely &mdash; it is a model of human hearing and
+      a bearing does not care &mdash; and use linear frequency bins, or better, resample against
+      a tachometer and work in orders so that speed variation does not smear the lines. Keep
+      the log, because fault energies span decades. Keep the windowing, for the reasons in
+      &sect;06.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>The transferable lesson</div>
+      <p style="margin-bottom:0">
+        What survives the move from speech to machinery is the <em>machinery</em>: STFT,
+        windowing, log compression, a 2D time&ndash;frequency representation fed to a classifier.
+        What does not survive is the <em>parameters</em>, because every one of them encodes an
+        assumption about speech &mdash; 25 ms because that is how long a phoneme holds still,
+        mel because that is how a cochlea resolves, 300 Hz to 8 kHz because that is where voices
+        live. You are better placed than most to notice this, because you know what your signal
+        looks like. Read every default as a question about your own signal, and the answer is
+        usually different.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="recall">
+  <div class="col">
+    <div class="sechead"><span class="secnum">21</span><h2>Question bank</h2>
+      <span class="srcref nolink" title="Added material, not in the source chapter">beyond the chapter</span>
+    </div>
+    <p>
+      Twenty-four questions in three tiers. Answer before opening each one &mdash; retrieval is
+      what makes it stick, and reading the answer feels like learning without being it.
+    </p>
+
+    <h3>Tier 1 &mdash; recall</h3>
+    <details class="q"><summary><span class="qn">R1</span><span>State the Nyquist criterion, and say what happens when it is violated.</span></summary>
+      <div class="ans">\(f_s\ge 2f_{\max}\). Above \(f_s/2\), frequencies fold back and appear as lower ones that were never present. A 15 kHz tone at \(f_s=16\) kHz records as 1 kHz. It is irreversible, because the true and aliased tones agree at <i>every sample instant</i> &mdash; the recorded data cannot distinguish them.</div></details>
+    <details class="q"><summary><span class="qn">R2</span><span>What sets frequency resolution, and what does zero-padding buy?</span></summary>
+      <div class="ans">\(\Delta f = 1/T\) &mdash; capture length alone. Zero-padding a 400-sample frame to 512 gives a cheaper radix-2 transform and interpolation between bins. It buys no resolution: two tones 20 Hz apart are unresolvable in a 25 ms frame however much you pad.</div></details>
+    <details class="q"><summary><span class="qn">R3</span><span>Why window a frame before transforming it?</span></summary>
+      <div class="ans">The DFT assumes the frame repeats forever. An incomplete final cycle creates a step discontinuity at the join, which is broadband and appears in every bin &mdash; spectral leakage. The window tapers the ends so the assumed repetition joins smoothly. Leakage is caused by the frame boundary, not by the window.</div></details>
+    <details class="q"><summary><span class="qn">R4</span><span>Give the sidelobe/main-lobe trade for the four standard windows.</span></summary>
+      <div class="ans">Rectangular &minus;13 dB / 2 bins; Hann &minus;31 dB / 4; Hamming &minus;43 dB / 4; Blackman &minus;58 dB / 6. Lower sidelobes always cost a wider main lobe, so better leakage rejection means worse ability to separate two close tones.</div></details>
+    <details class="q"><summary><span class="qn">R5</span><span>State the Gabor limit and say what it is equivalent to.</span></summary>
+      <div class="ans">\(\Delta t\,\Delta f\ge 1/4\pi\) with \(\Delta t,\Delta f\) the standard deviations in time and frequency. It is the same mathematics as the Heisenberg uncertainty principle, not an analogy to it: a function and its Fourier transform cannot both be sharply concentrated. The Gaussian attains it with equality.</div></details>
+    <details class="q"><summary><span class="qn">R6</span><span>What is the mel scale, and what is it <i>not</i>?</span></summary>
+      <div class="ans">\(m=2595\log_{10}(1+f/700)\), a curve fitted to judgements of perceived pitch distance, near-linear below about 700 Hz and logarithmic above. It is a statement about the listener, not the signal. It does <b>not</b> explain equally-spaced musical octaves &mdash; octaves span 242, 368, 499 and 608 mel, rising steadily.</div></details>
+    <details class="q"><summary><span class="qn">R7</span><span>Write the CTC collapsing rule and say why the blank is needed.</span></summary>
+      <div class="ans">Merge runs of identical symbols, then delete blanks. The blank marks silence <i>and</i> acts as a delimiter: without it a double letter is unspellable, since <code>lleetter</code> collapses to <code>leter</code>. <code>l-etter</code> keeps the two t&rsquo;s apart.</div></details>
+    <details class="q"><summary><span class="qn">R8</span><span>Define word error rate and name its two traps.</span></summary>
+      <div class="ans">\(\text{WER}=(S+D+I)/N\) over reference length. First trap: insertions are unbounded by \(N\), so WER can exceed 100% &mdash; a one-word reference against a three-word output scores 300%, and \(1-\text{WER}\) is not an accuracy. Second: it weights every word equally, so a misheard drug name costs the same as a misheard article.</div></details>
+
+    <h3>Tier 2 &mdash; apply</h3>
+    <details class="q"><summary><span class="qn">A1</span><span>A 9 kHz tone is sampled at 16 kHz with no anti-aliasing filter. What is recorded?</span></summary>
+      <div class="ans">Nyquist is 8 kHz, so it folds to \(16-9=7\) kHz. The recording contains a clean, entirely convincing 7 kHz tone that was never present. Not noise &mdash; that is what makes aliasing dangerous.</div></details>
+    <details class="q"><summary><span class="qn">A2</span><span>You must resolve two components 8 Hz apart. What capture length, and what is the catch?</span></summary>
+      <div class="ans">\(\Delta f\le 8\) Hz needs \(T\ge 1/8=0.125\) s, and in practice 1.5&ndash;2 bins of separation, so roughly 0.25 s. The catch is stationarity: the capture is only meaningful if the signal holds still that long. Speech does not, which is why 25 ms frames are used and why speech cannot resolve 8 Hz at all.</div></details>
+    <details class="q"><summary><span class="qn">A3</span><span>A tone sits exactly halfway between two bins with a rectangular window. What does the peak read?</span></summary>
+      <div class="ans">3.92 dB low &mdash; scalloping loss. Neither bin sees the true peak because it falls between them. Hann gives 1.38 dB, Blackman 1.06 dB, and a flat-top window trades resolution away entirely to get this under 0.1 dB. This matters whenever you read amplitudes against a severity chart, and not at all for speech.</div></details>
+    <details class="q"><summary><span class="qn">A4</span><span>How many 7-frame CTC paths collapse to <code>cat</code> over the alphabet {c,a,t,blank}?</span></summary>
+      <div class="ans">210, out of \(4^7=16{,}384\) &mdash; about 1.3%. The forward dynamic programme computes that sum by filling \(7\times7=49\) lattice cells rather than enumerating paths. Verified against brute-force enumeration.</div></details>
+    <details class="q"><summary><span class="qn">A5</span><span>Why can a bidirectional encoder not stream, in one sentence?</span></summary>
+      <div class="ans">Because it is a non-causal filter: its output at time \(t\) depends on input after \(t\), which has not arrived &mdash; the same reason you cannot run <code>filtfilt</code> on a live signal.</div></details>
+    <details class="q"><summary><span class="qn">A6</span><span>An eight-microphone array, uncorrelated noise. What SNR improvement, and why?</span></summary>
+      <div class="ans">A factor of 8, or 9.03 dB. The steered signal adds coherently (amplitude \(\times M\), power \(\times M^2\)) while independent noise adds in power (\(\times M\)), so SNR improves by \(M\). It is the \(\sqrt{M}\) averaging argument from Chapter 04&rsquo;s standard error.</div></details>
+    <details class="q"><summary><span class="qn">A7</span><span>Your ASR reports 4% WER on the benchmark and is unusable in the field. Give three explanations.</span></summary>
+      <div class="ans">Domain shift (benchmark is clean read speech, the field is noisy and conversational); WER hides <i>which</i> words fail, and the failures may be exactly the domain terms that matter; and the operating point may differ &mdash; a streaming deployment with limited lookahead is a different system from the offline one that was benchmarked.</div></details>
+    <details class="q"><summary><span class="qn">A8</span><span>Design an MVDR beamformer in one line, and say what makes it solvable in closed form.</span></summary>
+      <div class="ans">\(\mathbf{w}=\Phi_{nn}^{-1}\mathbf{d}/(\mathbf{d}^{H}\Phi_{nn}^{-1}\mathbf{d})\). A quadratic objective with a single linear equality constraint always has a closed form by Lagrange multipliers &mdash; Chapter 03 &sect;08. The denominator is exactly the scaling that enforces \(\mathbf{w}^H\mathbf{d}=1\).</div></details>
+
+    <h3>Tier 3 &mdash; judge</h3>
+    <details class="q"><summary><span class="qn">J1</span><span>A vendor claims 99.2% accuracy for voice authentication. What do you ask?</span></summary>
+      <div class="ans">At what threshold, and what are FAR and FRR separately there? Accuracy on a balanced test set says nothing about the operating point you care about, and for authentication the two errors have wildly different costs. Ask for the full trade-off curve, not EER, and ask what population the impostor trials were drawn from &mdash; strangers are easy, motivated attackers and family members are not.</div></details>
+    <details class="q"><summary><span class="qn">J2</span><span>Should you use a log-mel spectrogram for gearbox fault detection? Argue both ways.</span></summary>
+      <div class="ans">For: the STFT-plus-log-plus-classifier pipeline is sound, well-tooled, and the log handles the decades of dynamic range. Against: mel is a model of the cochlea and a bearing has no cochlea; 25 ms framing gives 40 Hz resolution when your defect frequencies are tens of Hz apart. Verdict: keep the machinery, discard the mel scale and the speech framing, and choose \(T\) from your own stationarity. &sect;20 works this through.</div></details>
+    <details class="q"><summary><span class="qn">J3</span><span>Is it fair to say a spectrogram &ldquo;loses information&rdquo;?</span></summary>
+      <div class="ans">The complex STFT does not &mdash; it is invertible. The <b>magnitude</b> spectrogram does, because phase is discarded, and that loss is real: vocoders exist to invent a plausible phase, and it is an ill-posed inversion. So the honest statement names which object you mean. The same care applies to &ldquo;the FFT loses information&rdquo;, which is simply false: it is an orthogonal change of basis, and Parseval says energy is preserved exactly.</div></details>
+    <details class="q"><summary><span class="qn">J4</span><span>The source says the mel scale explains equally-spaced octaves. How would you check a claim like that?</span></summary>
+      <div class="ans">Compute it from the formula the source itself gives. Octave widths come out 242, 368, 499, 608 mel &mdash; not equal, so the claim fails on its own terms. The general lesson is that a plausible sentence joining two true facts can still be false; where a claim is arithmetic, do the arithmetic rather than judging whether it sounds right.</div></details>
+    <details class="q"><summary><span class="qn">J5</span><span>Modern systems feed log-mel straight to a network and skip the DCT. What does that tell you?</span></summary>
+      <div class="ans">That the DCT was never about the signal. It decorrelated the mel bands because the models that followed &mdash; Gaussian mixtures with diagonal covariance &mdash; could not handle correlated inputs. When the model changed, the step went. It is worth asking of any pipeline step which constraint it serves, because that constraint may no longer exist.</div></details>
+    <details class="q"><summary><span class="qn">J6</span><span>Why is the alignment problem genuinely new, rather than a harder version of something you know?</span></summary>
+      <div class="ans">Because there is no elementwise correspondence to build a loss on, and constructing one is the problem. Two traces of different lengths can be resampled or cross-correlated because they are the same kind of object; 100 spectra and 5 characters are not, and the grouping is variable-rate, many-to-one and content-dependent. CTC answers it by refusing to choose an alignment and summing over all of them.</div></details>
+    <details class="q"><summary><span class="qn">J7</span><span>Every claim on this sheet about a named model will date. Which claims will not?</span></summary>
+      <div class="ans">Nyquist, \(\Delta f = 1/T\), the leakage trade-off, Parseval, the Gabor limit and the CTC recursion are mathematics and will not move. Model names, parameter counts, hour counts and benchmark rankings are a 2023&ndash;2024 snapshot. The pattern behind them &mdash; self-supervised pre-training then fine-tuning &mdash; will likely outlast the names, but that is a judgement, not a theorem.</div></details>
+    <details class="q"><summary><span class="qn">J8</span><span>What is the strongest argument that this chapter is <i>not</i> just vibration analysis renamed?</span></summary>
+      <div class="ans">Two things resist the reduction. Perceptual weighting &mdash; the mel scale, log compression, discarding phase, \(\mu\)-law &mdash; is shaped by human hearing, and has no counterpart in a measurement whose consumer is a bearing. And the alignment problem has no mechanical analogue at all. Everything up to the spectrogram really is the same toolkit; what is built on top of it answers a different question, and is judged against annotator agreement rather than against a calibration standard.</div></details>
+  </div>
+</section>
+
 <section id="breaks">
   <div class="col">
-    <div class="sechead"><span class="secnum">16</span><h2>Where it breaks</h2>
+    <div class="sechead"><span class="secnum">22</span><h2>Where it breaks</h2>
       <span class="srcref nolink" title="Added material, not in the source chapter">beyond the chapter</span>
     </div>
     <p>
@@ -1848,31 +2298,28 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
 
 <section id="next">
   <div class="col">
-    <div class="sechead"><span class="secnum">17</span><h2>What part 4 covers</h2></div>
+    <div class="sechead"><span class="secnum">23</span><h2>What this feeds</h2></div>
     <p>
-      Parts 1 and 2 have carried a pressure wave all the way to a log-mel spectrogram. Every
-      step was signal processing, and almost every step was something you had already done under
-      another name. From here the chapter stops being about the signal and starts being about
-      the models, which is where the mechanical bridges thin out and Chapters 06 and 07 take
-      over as the prerequisites.
+      This sheet was the one where the reader already owned the mathematics, and that turned out
+      to be true for about two thirds of it. Sampling, the FFT, windowing, the spectrogram,
+      filtering, beamforming and adaptive noise cancellation are the same operations you ran on
+      an accelerometer, with the same trade-offs and the same failure modes. What was new was
+      narrower than it first looked: perceptual weighting, which describes a listener rather than
+      a signal, and the alignment problem, which changes what a loss function can be.
     </p>
-    <ul>
-      <li><b>Text to speech</b> &mdash; the pipeline in reverse, ending at a vocoder that has to
-        invent the phase &sect;01 threw away.</li>
-      <li><b>Speaker analysis</b> &mdash; verification, diarisation, x-vectors. Classification
-        with a very large number of classes and no fixed list of them.</li>
-      <li><b>Source separation</b> &mdash; the cocktail party problem, beamforming, adaptive
-        filters. Beamforming is array phased-addition and will feel familiar; the LMS adaptive
-        filter is gradient descent from Chapter 03 running in real time.</li>
-    </ul>
-  </div>
-
-  <div class="endnote col">
-    Sheet 09 of 20, parts 1&ndash;3 of 4. Built for a mechanical engineer with GATE-level mathematics
-    and no prior CS. Source: <a href="https://github.com/HenryNdubuaku/maths-cs-ai-compendium/tree/9850ee5/chapter%2009%20-%20audio%20and%20speech" target="_blank" rel="noopener">chapter 09 &mdash; audio and speech</a>,
-    pinned at commit <code>9850ee5</code>, Apache-2.0. Figures are the compendium's own.
-    Numerical claims on this sheet are checked by <code>verify_claims.py</code> in this
-    repository; the mel-scale table in break 4 is computed there from the source's own formula.
+    <p>
+      Forward from here: <b>Chapter 10, multimodal</b>, combines audio with vision and text, and
+      the fusion problem there is sensor fusion &mdash; you have a Kalman filter&rsquo;s worth of
+      intuition for it already. <b>Chapter 11, autonomous systems</b>, is mostly mechanical
+      already: Denavit&ndash;Hartenberg matrices, manipulator Jacobians, control loops, state
+      estimation.
+    </p>
+    <p>
+      And the most useful thing to carry out of this chapter is the habit in &sect;20. Every
+      default in an audio pipeline encodes an assumption about speech. You are unusually well
+      placed to notice when your signal violates one, because you know what your signal looks
+      like. Read the defaults as questions, not as settings.
+    </p>
   </div>
 </section>
 
@@ -1904,8 +2351,13 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
         <tr><td>08</td><td>same</td><td><b>Corrects the source.</b> Its claim that the mel scale explains equally-spaced octaves is wrong; see &sect;10 break 4. Added the deconvolution reading of the log-plus-DCT steps, the A-weighting correspondence, and the reason the DCT is now usually dropped.</td></tr>
         <tr><td>09</td><td>same</td><td>Added the \(z=e^{sT}\) mapping that makes the unit circle and the left half-plane the same condition.</td></tr>
         <tr><td>10&ndash;15</td><td><code>02. automatic speech recognition.md</code></td><td>Re-narrated. Added the statement of why the alignment problem has no mechanical counterpart, the CTC path-counting panel checked against brute-force enumeration, the streaming/causal-filter identification, the RTF/control-loop correspondence, and the warning that WER exceeds 100%. The model roll-call is explicitly marked as a dating snapshot.</td></tr>
-        <tr><td>16</td><td>&mdash;</td><td><b>Added.</b> Where the correspondences stop, including the mel-scale correction with its table.</td></tr>
-        <tr><td>17</td><td>&mdash;</td><td><b>Added.</b> Forward pointer.</td></tr>
+        <tr><td>22</td><td>&mdash;</td><td><b>Added.</b> Where the correspondences stop, including the mel-scale correction with its table.</td></tr>
+        <tr><td>16&ndash;17</td><td><code>03. text to speech and voice.md</code></td><td>Re-narrated. Added the source&ndash;filter/forced-vibration identification, the reading of the vocoder as an ill-posed inverse problem paying for the phase discarded in &sect;01, and the multi-period discriminator as synchronous averaging (with the observation that its five periods are prime).</td></tr>
+        <tr><td>18</td><td><code>04. speaker and audio analysis.md</code></td><td>Re-narrated. Added statistics pooling as an overall-level reading, and the caution that EER assumes both error types cost the same.</td></tr>
+        <tr><td>19</td><td><code>05. source separation and noise.md</code></td><td>Re-narrated. Added the phased-array identification with the array gain computed, the MVDR closed form checked against 20,000 constrained alternatives, and the LMS filter as live gradient descent.</td></tr>
+        <tr><td>20</td><td>&mdash;</td><td><b>Added.</b> Worked example: the same bearing measurement done as vibration analysis and as audio ML, showing what the speech defaults destroy and how to choose the parameters instead.</td></tr>
+        <tr><td>21</td><td>&mdash;</td><td><b>Added.</b> 24 questions in three tiers.</td></tr>
+        <tr><td>23</td><td>&mdash;</td><td><b>Added.</b> Forward pointer.</td></tr>
       </tbody>
     </table>
   </div>

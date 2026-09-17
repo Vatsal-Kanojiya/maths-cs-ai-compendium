@@ -975,3 +975,86 @@ print(f"[Ch09 s15] WER EXCEEDS 100%: 1-word ref, 3-word hyp -> {w*100:.0f}%     
 print(f"[Ch09 s15] so 1 - WER is not an accuracy                        {P(1 - w < 0)}")
 
 print("\n" + "="*66)
+
+print("=" * 66)
+print("CHAPTER 09 - AUDIO AND SPEECH (part 4)")
+print("=" * 66)
+
+# --- WaveNet's dilated causal stack, and the cost of being autoregressive --
+dil = [2**k for k in range(10)]
+print(f"\n[Ch09 s17] dilations {dil[0]}..{dil[-1]} -> receptive field sum+1 = {sum(dil)+1}   {P(sum(dil)+1 == 1024)}")
+print(f"[Ch09 s17] 1 s of 24 kHz audio = {24000:,} sequential passes            {P(24000 == 24*1000)}")
+print(f"[Ch09 s17] 16-bit = {2**16:,} levels; mu-law companding -> {2**8}      {P(2**16 == 65536 and 2**8 == 256)}")
+print(f"[Ch09 s16] 80 mel frames/s x 5 s = {80*5} autoregressive decoder steps  {P(80*5 == 400)}")
+isprime = lambda n: n > 1 and all(n % i for i in range(2, int(n**0.5)+1))
+mpd = [2, 3, 5, 7, 11]
+pair = all(np.gcd(a, b) == 1 for i, a in enumerate(mpd) for b in mpd[i+1:])
+print(f"[Ch09 s17] HiFi-GAN MPD periods {mpd}: all prime {all(map(isprime, mpd))}, "
+      f"pairwise coprime {pair}   {P(all(map(isprime, mpd)) and pair)}")
+
+# --- delay-and-sum array gain: signal coherent, noise not -----------------
+print()
+rngb = np.random.default_rng(1)
+for M in (2, 4, 8, 16):
+    T = 200000
+    sig = rngb.normal(size=T)
+    noise = rngb.normal(size=(M, T))
+    y = (sig[None, :] + noise).mean(axis=0)
+    gain = (np.var(sig)/np.var(y - sig)) / (np.var(sig)/np.var(noise[0]))
+    print(f"[Ch09 s19] M={M:2d} mics: SNR gain {gain:5.2f}x = {10*np.log10(gain):5.2f} dB "
+          f"(theory {M}x = {10*np.log10(M):5.2f} dB)   {P(abs(gain - M) < 0.1*M)}")
+
+# --- MVDR: the closed form IS the constrained minimum ---------------------
+Mm = 6
+rngv = np.random.default_rng(7)
+Am = rngv.normal(size=(Mm, Mm)) + 1j*rngv.normal(size=(Mm, Mm))
+Phi = Am @ Am.conj().T + np.eye(Mm)*0.1
+dv = np.exp(-1j*2*np.pi*(np.arange(Mm)*0.5)*np.sin(np.deg2rad(25)))
+wv = np.linalg.solve(Phi, dv); wv = wv/(dv.conj() @ wv)
+con = wv.conj() @ dv
+pw = float((wv.conj() @ Phi @ wv).real)
+beat = 0
+for _ in range(20000):
+    v = rngv.normal(size=Mm) + 1j*rngv.normal(size=Mm)
+    v = v/(v.conj() @ dv)                       # any other weights meeting the constraint
+    if float((v.conj() @ Phi @ v).real) < pw - 1e-9: beat += 1
+print(f"\n[Ch09 s19] MVDR satisfies w^H d = {con.real:.6f} (must be 1), err {abs(con-1):.1e}  {P(abs(con-1) < 1e-9)}")
+print(f"[Ch09 s19] output power {pw:.6f}; of 20000 constrained alternatives {beat} beat it  {P(beat == 0)}")
+print(f"[Ch09 s19] -> it is the Lagrange-multiplier minimum of Ch03 s08       {P(beat == 0)}")
+
+# --- the ideal ratio mask partitions the energy --------------------------
+Sm = np.abs(rngv.normal(size=(3, 40, 50)))
+irm = Sm**2 / (Sm**2).sum(axis=0, keepdims=True)
+print(f"\n[Ch09 s19] IRM over 3 sources sums to 1, max err {np.abs(irm.sum(axis=0)-1).max():.1e}   "
+      f"{P(np.abs(irm.sum(axis=0)-1).max() < 1e-12)}")
+
+# --- statistics pooling: any length in, one length out -------------------
+print()
+for T in (50, 300, 1200):
+    h = rngb.normal(size=(T, 512))
+    print(f"[Ch09 s18] {T:5d} frames x 512 dims -> [mean; std] = "
+          f"{np.concatenate([h.mean(0), h.std(0)]).shape[0]} numbers   "
+          f"{P(np.concatenate([h.mean(0), h.std(0)]).shape[0] == 1024)}")
+
+# --- EER is where the two error rates cross ------------------------------
+same = rngb.normal(0.72, 0.11, 200000)
+diff = rngb.normal(0.18, 0.13, 200000)
+ths = np.linspace(-0.2, 1.1, 4000)
+far = np.array([(diff > t).mean() for t in ths])
+frr = np.array([(same <= t).mean() for t in ths])
+i = int(np.argmin(np.abs(far - frr)))
+print(f"\n[Ch09 s18] EER at threshold {ths[i]:.3f}: FAR {far[i]*100:.2f}% = FRR {frr[i]*100:.2f}%  "
+      f"{P(abs(far[i]-frr[i]) < 0.005)}")
+print(f"[Ch09 s18] the two move oppositely, so EER is one point on a trade-off  "
+      f"{P(far[i-200] > far[i] and frr[i-200] < frr[i])}")
+
+# --- the worked example in s20 -------------------------------------------
+print(f"\n[Ch09 s20] 1500 rpm -> {1500/60:.0f} Hz shaft; 3.6 orders -> {1500/60*3.6:.0f} Hz defect  "
+      f"{P(1500/60 == 25 and abs(1500/60*3.6 - 90) < 1e-9)}")
+print(f"[Ch09 s20] a 25 ms speech frame gives df = {1/0.025:.0f} Hz, so 25 Hz and 90 Hz sit "
+      f"{(90-25)/(1/0.025):.2f} bins apart   {P((90-25)/40 < 2)}")
+print(f"[Ch09 s20] the shaft line at 25 Hz is below the first bin edge at {1/0.025:.0f} Hz   {P(25 < 40)}")
+print(f"[Ch09 s20] 500 ms framing instead gives df = {1/0.5:.0f} Hz -> {(90-25)/(1/0.5):.0f} bins apart  "
+      f"{P((90-25)/2 > 30)}")
+
+print("\n" + "="*66)
