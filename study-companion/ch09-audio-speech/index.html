@@ -388,7 +388,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
 
 <header class="titleblock">
   <div class="tb-main">
-    <div class="tb-k">Sheet 09 of 20 &mdash; Audio and Speech, part 1</div>
+    <div class="tb-k">Sheet 09 of 20 &mdash; Audio and Speech, parts 1&ndash;2</div>
     <h1>Sampling, Spectra, Leakage</h1>
     <p class="tb-sub">
       The chapter where you already own the mathematics. Every core operation in audio
@@ -411,8 +411,13 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
   <a href="#quant"><span class="n">03</span><span>Quantisation</span></a>
   <a href="#timedom"><span class="n">04</span><span>Time-domain features</span></a>
   <a href="#dft"><span class="n">05</span><span>The DFT and the FFT</span></a>
-  <a href="#breaks"><span class="n">06</span><span>Where it breaks</span></a>
-  <a href="#next"><span class="n">07</span><span>What part 2 covers</span></a>
+  <a href="#window"><span class="n">06</span><span>Windowing and leakage</span></a>
+  <a href="#stft"><span class="n">07</span><span>STFT and spectrogram</span></a>
+  <a href="#mel"><span class="n">08</span><span>Mel scale and MFCCs</span></a>
+  <a href="#filters"><span class="n">09</span><span>Filtering</span></a>
+  <a href="#breaks"><span class="n">10</span><span>Where it breaks</span></a>
+  <a href="#next"><span class="n">11</span><span>What part 3 covers</span></a>
+  <a href="#provenance"><span class="n">A</span><span>Provenance</span></a>
 </nav>
 
 <main>
@@ -434,9 +439,10 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
       at all &mdash; the mel scale, which is a fact about your ear rather than about the signal.
     </p>
     <p>
-      Part 1 takes the signal as far as its spectrum: what sampling costs you, what the
-      FFT is, and what a frequency reading actually means. Part 2 picks up at windowing and
-      the spectrogram.
+      Parts 1 and 2 cover the whole of the source chapter&rsquo;s signal-processing file: from
+      a pressure wave to the log-mel spectrogram that a modern speech model actually consumes.
+      &sect;01&ndash;&sect;05 take the signal to its spectrum; &sect;06&ndash;&sect;09 turn that
+      spectrum into features. Part 3 picks up where the machine learning starts.
     </p>
   </div>
 </section>
@@ -470,7 +476,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
         <tr><td>Change of basis (Chapter 02)</td><td>The DFT matrix \(W\)</td><td><b style="color:var(--bridge)">Exact.</b> The DFT is an orthogonal basis change, nothing more.</td></tr>
         <tr><td>Convolution (Chapter 06 &sect;09)</td><td>Filtering</td><td><b style="color:var(--bridge)">Identical.</b> And the convolution theorem makes it a multiply.</td></tr>
         <tr><td>Uncertainty in measurement resolution</td><td>Gabor limit, \(\Delta t\,\Delta f\ge 1/4\pi\)</td><td><b style="color:var(--brk)">Related, stated precisely.</b> A real theorem, not a rule of thumb.</td></tr>
-        <tr><td>&mdash; nothing &mdash;</td><td>The mel scale</td><td><b style="color:var(--brk)">No mechanical analogue.</b> It describes your cochlea, not the signal. &sect;08 in part 2.</td></tr>
+        <tr><td>&mdash; nothing &mdash;</td><td>The mel scale</td><td><b style="color:var(--brk)">No mechanical analogue.</b> It describes your cochlea, not the signal. &sect;08.</td></tr>
       </tbody>
     </table>
   </div>
@@ -930,14 +936,413 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     become one lump depends on the window, the relative amplitudes and how confident you need
     to be. What is not a convention is \(\Delta f = 1/T\). In speech the trade-off is forced &mdash; a 25 ms frame is chosen
     because speech is only <em>stationary</em> for about that long, so you cannot buy resolution
-    by capturing longer without the sound itself changing underneath you. Part 2 takes this up
-    properly as the time&ndash;frequency trade-off.
+    by capturing longer without the sound itself changing underneath you. &sect;07 takes this up properly as the
+    time&ndash;frequency trade-off.
+  </div>
+</section>
+
+<section id="window">
+  <div class="col">
+    <div class="sechead"><span class="secnum">06</span><h2>Windowing and spectral leakage</h2>
+      <a class="srcref" href="https://github.com/HenryNdubuaku/maths-cs-ai-compendium/blob/9850ee5/chapter%2009%20-%20audio%20and%20speech/01.%20digital%20signal%20processing.md" target="_blank" rel="noopener">source &sect;01</a>
+    </div>
+    <p>
+      &sect;05 left one thing unsaid. The DFT does not analyse your frame in isolation &mdash;
+      it assumes the frame <em>repeats forever</em>. Cut a sinusoid at an arbitrary point and
+      the assumed repetition has a step discontinuity at the join, and that step is not part of
+      the signal. The transform has to represent it, so it does, by spraying energy across
+      every bin. This is <b>spectral leakage</b>: a single pure tone reported as a smear.
+    </p>
+    <p>
+      The fix is to taper the frame to zero at both ends before transforming, so the assumed
+      repetition joins smoothly. That taper is the <b>window function</b>.
+    </p>
+  </div>
+
+  <div class="tw col">
+    <table>
+      <caption>The four standard windows. Sidelobe and main-lobe figures computed, not quoted &mdash; see <code>verify_claims.py</code>.</caption>
+      <thead><tr><th>Window</th><th>Definition</th><th>Peak sidelobe</th><th>Main lobe</th></tr></thead>
+      <tbody>
+        <tr><td>Rectangular</td><td>\(w[n]=1\)</td><td>&minus;13 dB</td><td>2 bins</td></tr>
+        <tr><td>Hann</td><td>\(0.5-0.5\cos\frac{2\pi n}{N-1}\)</td><td>&minus;31 dB</td><td>4 bins</td></tr>
+        <tr><td>Hamming</td><td>\(0.54-0.46\cos\frac{2\pi n}{N-1}\)</td><td>&minus;43 dB</td><td>4 bins</td></tr>
+        <tr><td>Blackman</td><td>\(0.42-0.5\cos\frac{2\pi n}{N-1}+0.08\cos\frac{4\pi n}{N-1}\)</td><td>&minus;58 dB</td><td>6 bins</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="col">
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; this is the Hanning button on the analyser</div>
+      <p>
+        You have pressed it. Vibration analysers default to Hanning for general spectral work,
+        offer flat-top when you need an accurate <em>amplitude</em> reading, and rectangular
+        (&ldquo;uniform&rdquo;) for transient capture where the signal already starts and ends
+        at zero &mdash; an impact test. Those are the same three cases for the same three
+        reasons.
+      </p>
+      <p style="margin-bottom:0">
+        The rule behind all of them: <b>lower sidelobes cost you a wider main lobe</b>. Read the
+        table as a single trade-off, not four products. Blackman buries the leakage 45 dB
+        further down than rectangular and pays by being three times worse at separating two
+        close tones. Hamming sits where speech wants it, which is why it is the default in
+        every MFCC pipeline.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Leakage, and what a window costs</div><div class="lab-tag">Predict, then window</div></div>
+
+    <div class="predict">
+      <p style="margin-top:0">
+        You analyse one perfectly pure tone with a rectangular window. It does not land exactly
+        on a bin centre. What does the spectrum show?
+      </p>
+      <button class="pbtn" data-p3="a" type="button">One clean line</button>
+      <button class="pbtn" data-p3="b" type="button">Two lines</button>
+      <button class="pbtn" data-p3="c" type="button">Energy in every bin</button>
+      <button class="pbtn" data-p3="d" type="button">Nothing &mdash; it is missed</button>
+      <div class="pverdict" id="pv3"></div>
+    </div>
+
+    <svg class="stage" id="sW" viewBox="0 0 480 320" role="img"
+         aria-label="The magnitude spectrum of a single tone in decibels, under a selectable window function">
+      <g id="wGrid"></g>
+      <line id="wAx" x1="42" y1="268" x2="470" y2="268"/>
+      <line id="wAy" x1="42" y1="14" x2="42" y2="268"/>
+      <path id="wSpec" fill="none" stroke-width="2"/>
+      <g id="wTicks"></g>
+    </svg>
+
+    <div class="ctl">
+      <label>Window</label>
+      <button class="btn on" data-w="rect" type="button">Rectangular</button>
+      <button class="btn" data-w="hann" type="button">Hann</button>
+      <button class="btn" data-w="hamm" type="button">Hamming</button>
+      <button class="btn" data-w="black" type="button">Blackman</button>
+    </div>
+    <div class="ctl">
+      <label for="offSl">Tone offset from bin centre</label>
+      <input type="range" id="offSl" min="0" max="50" value="50" step="1">
+      <span class="ro-v" id="offVal" style="min-width:74px">0.50 bin</span>
+    </div>
+
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Peak<br>sidelobe</div><div class="ro-v a" id="oSL">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Main lobe<br>width</div><div class="ro-v b" id="oML">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Energy beyond<br>3 bins</div><div class="ro-v c" id="oLk">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Peak height<br>error</div><div class="ro-v" id="oPk">&mdash;</div></div>
+    </div>
+  </div>
+
+  <div class="lab-foot col">
+    Set the offset to zero and the rectangular window is <em>perfect</em> &mdash; one line, no
+    leakage at all, because the tone then completes a whole number of cycles in the frame and
+    the assumed repetition joins seamlessly. Nudge it off bin centre and the skirt appears.
+    That is the honest statement of the problem: leakage is not caused by the window, it is
+    caused by the frame boundary, and the window is damage control. Real signals are never
+    bin-aligned, so you always pay.
+  </div>
+
+  <div class="lab-foot col">
+    <b>The peak-height column is the reason flat-top windows exist.</b> Off bin centre, the
+    true peak falls <em>between</em> two bins and neither shows its full height &mdash; up to
+    3.9 dB low for rectangular, about 1.4 dB for Hann. If you are reading a vibration amplitude
+    off a spectrum to judge it against a severity chart, that error matters, which is why
+    analysers offer a flat-top window that trades frequency resolution away entirely in exchange
+    for amplitude accuracy better than 0.1 dB. Speech does not care, because nothing downstream
+    reads absolute amplitudes off individual bins.
+    <br><br>
+    The panel measures a 64-sample window, so its main-lobe readout lands within a few percent
+    of the table&rsquo;s figures rather than exactly on them &mdash; those are the asymptotic
+    values for a long window. Hamming in particular has no true null at all: its first minimum
+    is shallow, which is the price of its unusually low first sidelobe.
+  </div>
+</section>
+
+<section id="stft">
+  <div class="col">
+    <div class="sechead"><span class="secnum">07</span><h2>The STFT, the spectrogram, and a real limit</h2>
+      <a class="srcref" href="https://github.com/HenryNdubuaku/maths-cs-ai-compendium/blob/9850ee5/chapter%2009%20-%20audio%20and%20speech/01.%20digital%20signal%20processing.md" target="_blank" rel="noopener">source &sect;01</a>
+    </div>
+    <p>
+      One spectrum describes one frame. Speech changes, so you chop the signal into overlapping
+      frames, window each one, transform each one, and stack the results. That is the
+      <b>Short-Time Fourier Transform</b>:
+    </p>
+  </div>
+  <div class="mathbox col">
+    $$\text{STFT}\{x\}(m,k)=\sum_{n=0}^{N-1}x[n+mH]\,w[n]\,e^{-j2\pi kn/N}$$
+  </div>
+  <div class="col">
+    <p>
+      with \(m\) the frame index and \(H\) the <b>hop size</b>. The magnitude of that 2D array,
+      drawn with time across and frequency up, is a <b>spectrogram</b>. Standard speech
+      settings: 25 ms frames (\(N=400\) at 16 kHz), 10 ms hop (\(H=160\)), Hamming window,
+      512-point FFT.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; a spectrogram is a waterfall plot</div>
+      <p style="margin-bottom:0">
+        When you run a machine up through its speed range and plot a spectrum per RPM step,
+        stacked, you have built a spectrogram &mdash; the axes and the construction are
+        identical, and you read it the same way. A horizontal band is a constant frequency: a
+        line resonance, or in speech a sustained vowel formant. A diagonal ridge is a frequency
+        that tracks something: an order tracking shaft speed, or in speech a formant gliding
+        between vowels. Vertical streaks are impulses: a bearing impact, or a plosive
+        consonant. You can already read one of these; you just have not been shown one of speech.
+      </p>
+    </div>
+
+    <p>
+      <strong>Overlap-add.</strong> If you modify frames and want audio back, the frames must
+      sum correctly on reconstruction. A Hann window at 50% overlap sums to <em>exactly</em> a
+      constant &mdash; verified to \(10^{-16}\) &mdash; which is why that pairing is the default
+      everywhere. This is the constant-overlap-add condition, and it is what makes noise
+      reduction, pitch shifting and time stretching possible without audible seams.
+    </p>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>The Gabor limit is a theorem, not a rule of thumb</div>
+      <p>
+        &sect;05 gave \(\Delta f = 1/T\): longer capture, finer frequency lines. Turned round,
+        that says good frequency resolution requires a long frame, and a long frame cannot tell
+        you <em>when</em> within it something happened. You cannot have both. The bound is exact:
+      </p>
+      <div class="mathbox">
+        $$\Delta t\,\Delta f\ \ge\ \frac{1}{4\pi}$$
+      </div>
+      <p style="margin-bottom:0">
+        with \(\Delta t\) and \(\Delta f\) the standard deviations of the signal in time and in
+        frequency. This is the <b>Gabor limit</b>, and it is the same mathematics as the
+        Heisenberg uncertainty principle &mdash; not an analogy to it. Both are the statement
+        that a function and its Fourier transform cannot both be sharply concentrated. The
+        Gaussian is the unique shape that attains the bound with equality, which is checked
+        numerically in <code>verify_claims.py</code> and comes out at a ratio of 1.0000. Every
+        spectrogram you will ever see is a choice of where to sit on this trade-off, and no
+        cleverness in the algorithm moves the line.
+      </p>
+    </div>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/spectrogram_stft.svg" alt="A spectrogram with time on the horizontal axis, frequency on the vertical, and magnitude as colour" width="420"></div>
+    <figcaption><b>Fig. 9.3</b> &mdash; A spectrogram. Read it as a waterfall plot, because that is what it is. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="mel">
+  <div class="col">
+    <div class="sechead"><span class="secnum">08</span><h2>The mel scale and MFCCs</h2>
+      <a class="srcref" href="https://github.com/HenryNdubuaku/maths-cs-ai-compendium/blob/9850ee5/chapter%2009%20-%20audio%20and%20speech/01.%20digital%20signal%20processing.md" target="_blank" rel="noopener">source &sect;01</a>
+    </div>
+    <p class="lede">
+      This is the one idea in the chapter with no mechanical counterpart. Everything so far has
+      been a statement about the signal. The mel scale is a statement about the listener.
+    </p>
+    <p>
+      Ask people to adjust a tone until it sounds &ldquo;half as high&rdquo; as a reference, and
+      their answers do not follow frequency. Fit a curve to what they actually say and you get
+      the <b>mel scale</b>:
+    </p>
+  </div>
+  <div class="mathbox col">
+    $$m = 2595\log_{10}\!\left(1+\frac{f}{700}\right),\qquad f = 700\left(10^{m/2595}-1\right)$$
+  </div>
+  <div class="col">
+    <p>
+      The constants are curve-fitting constants; 2595 is chosen so that 1000 Hz maps to
+      1000 mel. Below about 700 Hz the scale is close to linear, and above it close to
+      logarithmic. That kink is the whole content of the scale: your ear resolves low
+      frequencies in roughly absolute terms and high frequencies in roughly proportional terms.
+    </p>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>Read &sect;10 break 4 before trusting anything else about this scale</div>
+      <p style="margin-bottom:0">
+        The source chapter says the mel scale explains why musical octaves sound equally spaced.
+        It does not, and its own formula proves it &mdash; octave widths come out at 241.6,
+        367.8, 499.0 and 608.2 mel, rising steadily. Musical intervals are equal on a
+        <em>log-frequency</em> axis, which is a fact about pitch <b>ratios</b>. The mel scale
+        measures perceived pitch <b>distance</b>, is a different experiment, and is
+        deliberately not logarithmic at the bottom. The full argument and the table are in
+        &sect;10.
+      </p>
+    </div>
+
+    <p>
+      A <b>mel filterbank</b> is a bank of triangular band-pass filters spaced evenly on the
+      mel axis &mdash; which means narrow at low frequencies and wide at high ones. Each
+      triangle sums the spectral energy in its band to a single number. Forty to eighty filters
+      is typical. The effect is to re-bin a linear-frequency spectrum onto a perceptual axis,
+      spending resolution where the ear has it.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; it is a weighting filter, and you have used one</div>
+      <p style="margin-bottom:0">
+        The nearest thing in your world is <b>A-weighting</b> on a sound level meter: a curve
+        applied to measured data purely because human hearing is not flat, so that the number
+        reported correlates with what a person would report. Both are the same species of
+        object &mdash; a perceptual correction bolted onto a physical measurement. The
+        difference is scope. A-weighting adjusts one number; the mel filterbank restructures the
+        entire frequency axis, and everything downstream is trained on that restructured view.
+      </p>
+    </div>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/mel_filterbank.svg" alt="Triangular mel-scale filters on a linear frequency axis, narrow at low frequencies and wide at high" width="420"></div>
+    <figcaption><b>Fig. 9.4</b> &mdash; The filterbank. Even spacing in mel becomes uneven spacing in Hz &mdash; that unevenness <i>is</i> the perceptual content. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+
+  <div class="col">
+    <h3>MFCCs</h3>
+    <p>
+      <b>Mel-Frequency Cepstral Coefficients</b> were the standard speech feature for three
+      decades. The pipeline, in order:
+    </p>
+    <ol>
+      <li><b>Pre-emphasis</b>, \(y[n]=x[n]-0.97\,x[n-1]\) &mdash; a first-order high-pass
+        filter. Its gain at Nyquist is 66&times; its gain at DC, which lifts the weak high
+        frequencies before anything else looks at them.</li>
+      <li><b>Framing</b> into 25 ms frames with 10 ms hop.</li>
+      <li><b>Windowing</b> with Hamming, for the reasons in &sect;06.</li>
+      <li><b>FFT</b>, take the power spectrum.</li>
+      <li><b>Mel filterbank</b>, giving 40&ndash;80 band energies.</li>
+      <li><b>Logarithm</b> of those energies &mdash; compresses dynamic range, and turns the
+        multiplication of source and filter into an addition.</li>
+      <li><b>DCT</b>, keeping the first 13 coefficients.</li>
+    </ol>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; steps 6 and 7 are deconvolution</div>
+      <p>
+        This is the step worth understanding properly, because it is the cleverest thing in the
+        chapter and it is pure signal processing. A voiced sound is a buzz from the vocal folds
+        <em>filtered</em> by the vocal tract. In the frequency domain, filtering is
+        multiplication (the convolution theorem, &sect;09), so the spectrum is
+        source &times; filter. Take the logarithm and it becomes
+        log(source) + log(filter) &mdash; an <b>addition</b>.
+      </p>
+      <p>
+        Now the two parts are separable, because they vary at different rates <em>along the
+        frequency axis</em>: the vocal-tract response is a slow undulation (a few broad bumps,
+        the <b>formants</b>), while the pitch harmonics are a fast ripple. So take a Fourier
+        transform <em>of the spectrum</em> and the slow part lands in low coefficients, the fast
+        part in high ones. Keep the first 13 and you have the vocal tract with the pitch
+        removed &mdash; which is exactly what you want, since <em>which word</em> is in the
+        tract shape and <em>who said it</em> is largely in the pitch.
+      </p>
+      <p style="margin-bottom:0">
+        That is a <b>cepstrum</b> &mdash; &ldquo;spectrum&rdquo; with the first four letters
+        reversed, and its axis is called quefrency, which tells you the field knew it was being
+        cute. You have met the same manoeuvre: cepstral analysis is a standard gearbox
+        diagnostic, used to pull periodic sideband families out of a cluttered vibration
+        spectrum. Same transform, same reason, different fault.
+      </p>
+    </div>
+
+    <p>
+      Deltas and delta-deltas &mdash; first and second differences across frames &mdash; are
+      usually appended, giving the classic 39-dimensional vector: 13 static, 13 velocity,
+      13 acceleration. They exist because a single frame has no idea what came before it.
+    </p>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>MFCCs are now mostly historical, and the reason is worth knowing</div>
+      <p style="margin-bottom:0">
+        Modern systems feed <b>log-mel spectrograms</b> straight to a neural network &mdash;
+        step 6, skipping the DCT. The DCT was there to decorrelate the mel bands, because the
+        classical models that followed (Gaussian mixtures with diagonal covariance) could not
+        cope with correlated inputs. A neural network has no such constraint and would rather
+        have the correlated, un-thrown-away version. So step 7 was never about the signal; it
+        was about the limitations of the model behind it &mdash; and when the model changed, the
+        step went. MFCCs remain in low-resource and classical pipelines, and remain the right
+        thing to understand, but do not learn them as current practice.
+      </p>
+    </div>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/mfcc_pipeline.svg" alt="The MFCC pipeline from raw audio through framing, FFT, mel filterbank, log and DCT" width="420"></div>
+    <figcaption><b>Fig. 9.5</b> &mdash; The full pipeline. Steps 6 and 7 together are a deconvolution: they separate the vocal tract from the pitch. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="filters">
+  <div class="col">
+    <div class="sechead"><span class="secnum">09</span><h2>Filtering</h2>
+      <a class="srcref" href="https://github.com/HenryNdubuaku/maths-cs-ai-compendium/blob/9850ee5/chapter%2009%20-%20audio%20and%20speech/01.%20digital%20signal%20processing.md" target="_blank" rel="noopener">source &sect;01</a>
+    </div>
+    <p>
+      This section needs the least explanation of anything in the compendium, because it is
+      your controls course with the variable renamed. A <b>filter</b> amplifies some frequencies
+      and attenuates others, characterised by its frequency response \(H(f)\). Low-pass,
+      high-pass, band-pass, band-stop: the anti-aliasing filter of &sect;02 is a low-pass, the
+      pre-emphasis of &sect;08 is a high-pass, and each triangle of the mel filterbank is a
+      band-pass.
+    </p>
+    <p>An <b>FIR</b> filter is a weighted sum of recent inputs:</p>
+  </div>
+  <div class="mathbox col">
+    $$y[n]=\sum_{k=0}^{M}b_k\,x[n-k]$$
+  </div>
+  <div class="col">
+    <p>
+      which is a convolution of the input with the coefficient vector &mdash; the same 1D
+      convolution as Chapter 06 &sect;09, and the same operation a CNN applies to an image.
+      FIR filters are unconditionally stable and can have exactly linear phase, meaning every
+      frequency is delayed equally and the waveform shape survives. The cost is that a sharp
+      cutoff needs many taps.
+    </p>
+    <p>An <b>IIR</b> filter adds feedback:</p>
+  </div>
+  <div class="mathbox col">
+    $$y[n]=\sum_{k=0}^{M}b_k\,x[n-k]-\sum_{k=1}^{L}a_k\,y[n-k]$$
+  </div>
+  <div class="col">
+    <p>
+      which buys a sharp cutoff for far fewer coefficients, and costs stability and linear
+      phase. Take the \(z\)-transform and the transfer function is a ratio of polynomials whose
+      numerator roots are <b>zeros</b> and denominator roots are <b>poles</b>. The filter is
+      stable if and only if every pole lies strictly inside the unit circle. Butterworth,
+      Chebyshev and elliptic are IIR designs.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; the unit circle is the imaginary axis</div>
+      <p>
+        You learned stability in continuous time: a system is stable when its poles lie in the
+        left half of the \(s\)-plane. Discrete time uses \(z=e^{sT}\), and that map sends the
+        left half-plane to the <em>inside of the unit circle</em> and the imaginary axis to the
+        circle itself. So &ldquo;poles inside the unit circle&rdquo; and &ldquo;poles in the left
+        half-plane&rdquo; are the same condition in two coordinate systems &mdash; the same
+        Routh&ndash;Hurwitz reasoning, relabelled.
+      </p>
+      <p style="margin-bottom:0">
+        And the FIR/IIR trade is one you have already made. FIR is an open-loop compensator:
+        predictable, unconditionally stable, needs a lot of hardware for a sharp response. IIR
+        is feedback: far more effect per component, and capable of going unstable if you place
+        the poles carelessly. The engineering judgement is identical.
+      </p>
+    </div>
+
+    <p>
+      One fact does real work: the <b>convolution theorem</b>. Convolution in time is
+      multiplication in frequency, so filtering can be done by transforming, multiplying, and
+      transforming back &mdash; \(O(N\log N)\) instead of \(O(NM)\). For long filters this is
+      not a marginal gain, and it is why frequency-domain processing dominates audio in practice.
+    </p>
   </div>
 </section>
 
 <section id="breaks">
   <div class="col">
-    <div class="sechead"><span class="secnum">06</span><h2>Where it breaks</h2>
+    <div class="sechead"><span class="secnum">10</span><h2>Where it breaks</h2>
       <span class="srcref nolink" title="Added material, not in the source chapter">beyond the chapter</span>
     </div>
     <p>
@@ -974,13 +1379,13 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     <div class="note brk">
       <div class="note-h"><span class="ic">!</span>3 &mdash; Perceptual weighting has no mechanical counterpart</div>
       <p style="margin-bottom:0">
-        This is the important one, and part 2 is built around it. Every representation in this
+        This is the important one, and &sect;08 is built around it. Every representation in this
         chapter after the raw spectrum &mdash; the mel scale, the log compression, the choice to
         discard phase, \(\mu\)-law companding &mdash; is shaped by <b>human perception</b>, not
         by the physics of the signal. There is no equivalent in vibration analysis, because a
         bearing does not care what you can hear. The nearest thing is A-weighting on a sound
         level meter, which is itself a perceptual correction borrowed from the same science.
-        When you meet the mel scale in part 2, resist reading it as a property of sound. It is
+        When you meet the mel scale in &sect;08, resist reading it as a property of sound. It is
         a property of cochleae.
       </p>
     </div>
@@ -1017,8 +1422,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
         obtained by asking listeners to halve a pitch. It is deliberately <b>not</b> logarithmic
         at the bottom of its range &mdash; below roughly 700 Hz it is close to linear, which is
         exactly why the low octaves come out narrow in the table. Two different perceptual
-        facts have been merged into one sentence. The mel scale is real and useful and part 2
-        will use it; it simply does not explain octaves.
+        facts have been merged into one sentence. The mel scale is real and useful and &sect;08 uses it; it simply does not explain octaves.
       </p>
     </div>
   </div>
@@ -1026,33 +1430,76 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
 
 <section id="next">
   <div class="col">
-    <div class="sechead"><span class="secnum">07</span><h2>What part 2 covers</h2></div>
+    <div class="sechead"><span class="secnum">11</span><h2>What part 3 covers</h2></div>
     <p>
-      Part 1 stopped at the spectrum of a single frame. Part 2 turns that into the
-      representation a model actually consumes:
+      Parts 1 and 2 have carried a pressure wave all the way to a log-mel spectrogram. Every
+      step was signal processing, and almost every step was something you had already done under
+      another name. From here the chapter stops being about the signal and starts being about
+      the models, which is where the mechanical bridges thin out and Chapters 06 and 07 take
+      over as the prerequisites.
     </p>
     <ul>
-      <li><b>Windowing and spectral leakage</b> &mdash; why a Hann window, what it costs, and
-        the main-lobe against side-lobe trade-off you already make on an analyser.</li>
-      <li><b>The STFT and the spectrogram</b> &mdash; frames, hop size, overlap-add, and the
-        Gabor limit \(\Delta t\,\Delta f\ge 1/4\pi\), which is a real theorem rather than a
-        rule of thumb.</li>
-      <li><b>The mel scale and MFCCs</b> &mdash; the one genuinely new idea in the chapter,
-        handled with the care break 4 above says it needs.</li>
-      <li><b>Filtering</b> &mdash; FIR, IIR, poles and zeros, straight from your controls course.</li>
+      <li><b>Automatic speech recognition</b> &mdash; CTC alignment, encoder architectures,
+        wav2vec pre-training. The alignment problem is genuinely new: you have a sequence of
+        frames and a sequence of letters and no correspondence between them.</li>
+      <li><b>Text to speech</b> &mdash; the pipeline in reverse, ending at a vocoder that has to
+        invent the phase &sect;01 threw away.</li>
+      <li><b>Speaker analysis</b> &mdash; verification, diarisation, x-vectors. Classification
+        with a very large number of classes and no fixed list of them.</li>
+      <li><b>Source separation</b> &mdash; the cocktail party problem, beamforming, adaptive
+        filters. Beamforming is array phased-addition and will feel familiar; the LMS adaptive
+        filter is gradient descent from Chapter 03 running in real time.</li>
     </ul>
-    <p>
-      Parts 3 and beyond cover what the compendium does with those features: speech
-      recognition, synthesis, speaker identification and source separation.
-    </p>
   </div>
 
   <div class="endnote col">
-    Sheet 09 of 20, part 1 of 3. Built for a mechanical engineer with GATE-level mathematics
+    Sheet 09 of 20, parts 1&ndash;2 of 4. Built for a mechanical engineer with GATE-level mathematics
     and no prior CS. Source: <a href="https://github.com/HenryNdubuaku/maths-cs-ai-compendium/tree/9850ee5/chapter%2009%20-%20audio%20and%20speech" target="_blank" rel="noopener">chapter 09 &mdash; audio and speech</a>,
     pinned at commit <code>9850ee5</code>, Apache-2.0. Figures are the compendium's own.
     Numerical claims on this sheet are checked by <code>verify_claims.py</code> in this
     repository; the mel-scale table in break 4 is computed there from the source's own formula.
+  </div>
+</section>
+
+
+<section id="provenance">
+  <div class="col">
+    <div class="sechead"><span class="secnum">A</span><h2>Provenance</h2></div>
+    <p>
+      This sheet is a derivative work of
+      <a href="https://github.com/HenryNdubuaku/maths-cs-ai-compendium" target="_blank" rel="noopener">maths-cs-ai-compendium</a>,
+      licensed Apache-2.0. Section 4(b) of that licence requires derivative works to carry
+      prominent notice of modification, which is what this table is for. The source is pinned at
+      commit <code>9850ee5</code>; every section chip above links to the exact file it draws on.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>What each section takes from the source, and what was changed or added.</caption>
+      <thead><tr><th>&sect;</th><th>Source</th><th>Change made here</th></tr></thead>
+      <tbody>
+        <tr><td>00</td><td>&mdash;</td><td><b>Added.</b> Bridge table with an honest verdict per row. Not in the source.</td></tr>
+        <tr><td>01</td><td><code>01. digital signal processing.md</code></td><td>Re-narrated for a reader who owns the mathematics. Added the timbre/vibration-signature correspondence and the caution on phase, neither in the source.</td></tr>
+        <tr><td>02</td><td>same</td><td>Added the interactive folding panel, the 2.56&times; analyser guard-band note, the software-resampling failure mode, and the correction that sampling exactly at Nyquist is not safe.</td></tr>
+        <tr><td>03</td><td>same</td><td>Added the 6 dB/bit and 12-bit DAQ worked figures, and the gain-staging correspondence.</td></tr>
+        <tr><td>04</td><td>same</td><td>Added the order-tracking correspondence and the shared octave-error failure mode.</td></tr>
+        <tr><td>05</td><td>same</td><td>Added Parseval, the change-of-basis argument with numerical check, the bin/resolution panel, and the zero-padding caution.</td></tr>
+        <tr><td>06</td><td>same</td><td>Added the computed sidelobe and main-lobe table, the leakage panel, the peak-amplitude error discussion and flat-top windows. Source lists the windows without the trade-off figures.</td></tr>
+        <tr><td>07</td><td>same</td><td>Added the waterfall-plot correspondence and the Gabor-limit equality case. Source states the bound; the Gaussian attaining it is checked here.</td></tr>
+        <tr><td>08</td><td>same</td><td><b>Corrects the source.</b> Its claim that the mel scale explains equally-spaced octaves is wrong; see &sect;10 break 4. Added the deconvolution reading of the log-plus-DCT steps, the A-weighting correspondence, and the reason the DCT is now usually dropped.</td></tr>
+        <tr><td>09</td><td>same</td><td>Added the \(z=e^{sT}\) mapping that makes the unit circle and the left half-plane the same condition.</td></tr>
+        <tr><td>10</td><td>&mdash;</td><td><b>Added.</b> Where the correspondences stop, including the mel-scale correction with its table.</td></tr>
+        <tr><td>11</td><td>&mdash;</td><td><b>Added.</b> Forward pointer.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p style="margin-bottom:0">
+      Figures 9.1&ndash;9.5 are the compendium&rsquo;s own SVGs, unmodified. The interactive
+      panels, the bridge table, the break boxes and all numerical figures quoted on this sheet
+      are new. Every number is checked by <code>verify_claims.py</code> in this repository,
+      including the mel-octave table, the four window figures and the Gabor equality case.
+    </p>
   </div>
 </section>
 
@@ -1192,6 +1639,125 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     c:'<b>Correct.</b> &Delta;&fnof; = 1/T, so 25 ms gives 40 Hz and 100 ms gives 10 Hz. Nothing else in the chain changes this &mdash; not the FFT length, not zero-padding.',
     d:'<b>No.</b> The tone is where it is. What changes is whether you can tell it apart from a neighbour.'
   });
+
+  /* ---------- LAB 3 : windowing and leakage ---------- */
+  /* Direct DFT of a windowed tone.  N is small and the transform is evaluated on
+     a dense frequency grid, so the skirt between bins is visible -- which is the
+     whole point: leakage is what happens BETWEEN the bins. */
+  var WN = 64, WCUR = 'rect';
+  function winCoef(kind, n, N){
+    var c = Math.cos(2*Math.PI*n/(N-1));
+    if (kind === 'hann')  return 0.5  - 0.5*c;
+    if (kind === 'hamm')  return 0.54 - 0.46*c;
+    if (kind === 'black') return 0.42 - 0.5*c + 0.08*Math.cos(4*Math.PI*n/(N-1));
+    return 1;
+  }
+  /* |X(f)| for a real tone at bin position b0, sampled on a dense grid of bins */
+  function toneSpec(kind, b0, nGrid){
+    var w = [], n, coh = 0;
+    for (n = 0; n < WN; n++){ w.push(winCoef(kind, n, WN)); coh += w[n]; }
+    var out = [], g, bq, re, im, ph;
+    for (g = 0; g < nGrid; g++){
+      bq = g * (WN/2) / (nGrid - 1);          /* bin index, 0 .. N/2 */
+      re = 0; im = 0;
+      for (n = 0; n < WN; n++){
+        ph = 2*Math.PI*(b0 - bq)*n/WN;
+        re += w[n]*Math.cos(ph); im += w[n]*Math.sin(ph);
+      }
+      out.push({b: bq, m: Math.sqrt(re*re + im*im)/coh});
+    }
+    return out;
+  }
+  function drawW(){
+    var off = parseInt($('offSl').value,10)/100;
+    $('offVal').textContent = off.toFixed(2)+' bin';
+    var b0 = 16 + off, S = toneSpec(WCUR, b0, 430);
+    var FLOOR = -90;
+    function dB(m){ return 20*Math.log10(Math.max(m, 1e-12)); }
+    function px(b){ return 42 + 428*b/(WN/2); }
+    function py(d){ return 268 - 254*(d - FLOOR)/(0 - FLOOR); }
+    var d = '', i;
+    for (i = 0; i < S.length; i++)
+      d += (i?'L':'M') + px(S[i].b).toFixed(1) + ' ' + py(Math.max(dB(S[i].m), FLOOR)).toFixed(1);
+    $('wSpec').setAttribute('d', d);
+    $('wSpec').setAttribute('stroke', 'var(--s2)');
+
+    var tk = '', v;
+    for (v = -80; v <= 0; v += 20)
+      tk += '<text class="tk" x="36" y="'+(py(v)+3).toFixed(0)+'" text-anchor="end">'+v+'</text>';
+    tk += '<text class="tk" x="255" y="290" text-anchor="middle">bin index &mdash; the tone sits at 16.'
+        + String(Math.round(off*100)).padStart(2,'0') + '</text>';
+    tk += '<text class="tk" x="12" y="20">dB</text>';
+    $('wTicks').innerHTML = tk;
+
+    /* Sidelobe and main lobe are properties of the WINDOW, so measure them on the
+       window's own response |W(b)|, walking OUTWARD from its peak at b=0.  (An
+       earlier version started the search at the left edge of the plot, where the
+       response is still climbing toward the peak, so it found no null at all and
+       reported the main peak as the sidelobe.) */
+    var wv = [], n3, coh3 = 0;
+    for (n3 = 0; n3 < WN; n3++){ wv.push(winCoef(WCUR, n3, WN)); coh3 += wv[n3]; }
+    function Wmag(bq){
+      var re3 = 0, im3 = 0, k3, ph3;
+      for (k3 = 0; k3 < WN; k3++){
+        ph3 = 2*Math.PI*bq*k3/WN;
+        re3 += wv[k3]*Math.cos(ph3); im3 += wv[k3]*Math.sin(ph3);
+      }
+      return Math.sqrt(re3*re3 + im3*im3)/coh3;
+    }
+    var STEP = 0.01, bq3 = STEP, prev = Wmag(0), cur;
+    while (bq3 < WN/2){                       /* walk down the main lobe to the first null */
+      cur = Wmag(bq3);
+      if (cur > prev) break;
+      prev = cur; bq3 += STEP;
+    }
+    var nullAt = bq3, sl3 = 0;
+    for (bq3 = nullAt; bq3 < WN/2; bq3 += STEP) sl3 = Math.max(sl3, Wmag(bq3));
+    $('oSL').textContent = dB(sl3).toFixed(1)+' dB';
+    $('oML').textContent = (2*nullAt).toFixed(1)+' bins';
+
+    /* Leakage must be counted on the real BIN grid, not the dense display grid:
+       "how much energy lands in bins more than 3 away" is a statement about bins.
+       On a dense grid a bin-aligned rectangular window looks leaky when it is in
+       fact exact. */
+    var tot = 0, far = 0, kk, reK, imK, phK, eK;
+    for (kk = 0; kk <= WN/2; kk++){
+      reK = 0; imK = 0;
+      for (n3 = 0; n3 < WN; n3++){
+        phK = 2*Math.PI*(b0 - kk)*n3/WN;
+        reK += wv[n3]*Math.cos(phK); imK += wv[n3]*Math.sin(phK);
+      }
+      eK = (reK*reK + imK*imK)/(coh3*coh3);
+      tot += eK;
+      if (Math.abs(kk - b0) > 3) far += eK;
+    }
+    $('oLk').textContent = (100*far/Math.max(tot,1e-30)).toFixed(2)+' %';
+
+    /* Scalloping loss: what the nearest bin reports against the true peak. */
+    var bi = Math.round(b0), re2 = 0, im2 = 0, ph2;
+    for (n3 = 0; n3 < WN; n3++){
+      ph2 = 2*Math.PI*(b0 - bi)*n3/WN;
+      re2 += wv[n3]*Math.cos(ph2); im2 += wv[n3]*Math.sin(ph2);
+    }
+    var atBin = Math.sqrt(re2*re2 + im2*im2)/coh3;
+    $('oPk').textContent = (dB(atBin) < -0.005 ? dB(atBin).toFixed(2) : '0.00')+' dB';
+  }
+  document.querySelectorAll('[data-w]').forEach(function(b){
+    b.addEventListener('click', function(){
+      WCUR = b.getAttribute('data-w');
+      document.querySelectorAll('[data-w]').forEach(function(o){o.classList.remove('on');});
+      b.classList.add('on'); drawW();
+    });
+  });
+  $('offSl').addEventListener('input', drawW);
+  grid($('wGrid'),480,320,30); drawW();
+  predict('data-p3','pv3',{
+    a:'<b>Only if it lands exactly on a bin centre.</b> Set the offset to zero and you do get one clean line. Any other offset and the frame no longer holds a whole number of cycles.',
+    b:'<b>No.</b> There is one tone, so there is one peak &mdash; it just is not confined to one bin.',
+    c:'<b>Correct.</b> The DFT assumes the frame repeats forever, and an incomplete final cycle makes a step discontinuity at the join. That step is broadband, so it appears in every bin. The rectangular window leaves its worst sidelobe only 13 dB down.',
+    d:'<b>No.</b> The energy is all still there &mdash; Parseval guarantees it. It is just spread out instead of concentrated.'
+  });
+
 })();
 </script>
 <script>

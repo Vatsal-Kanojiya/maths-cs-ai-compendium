@@ -831,3 +831,75 @@ print(f"[Ch09 s04] naive global-max lag {naive} = {naive/per:.1f} periods -> the
 print(f"[Ch09 s04] first peak at lag {pk} vs period {per}; f = fs/k = {fs9/pk:.2f} Hz (true {ft9:.0f})  {P(abs(fs9/pk - ft9) < 0.01*ft9)}")
 
 print("\n" + "="*66)
+
+print("=" * 66)
+print("CHAPTER 09 - AUDIO AND SPEECH (part 2)")
+print("=" * 66)
+
+# --- the four window functions: sidelobe and main-lobe figures -----------
+NW = 4096; nw = np.arange(NW); cw = np.cos(2*np.pi*nw/(NW-1))
+WINS = {'rectangular': (np.ones(NW),               -13, 2),
+        'Hann':        (0.5 - 0.5*cw,              -31, 4),
+        'Hamming':     (0.54 - 0.46*cw,            -43, 4),
+        'Blackman':    (0.42 - 0.5*cw + 0.08*np.cos(4*np.pi*nw/(NW-1)), -58, 6)}
+print()
+for name, (w, sl_exp, ml_exp) in WINS.items():
+    PAD = 1 << 16
+    S = np.abs(np.fft.rfft(w, PAD)); S /= S.max()
+    S = 20*np.log10(S + 1e-300)
+    i = 1
+    while i < len(S)-1 and S[i] > S[i+1]: i += 1     # walk down to the first null
+    binsz = PAD/NW
+    sl, ml = S[i:].max(), 2*i/binsz
+    print(f"[Ch09 s06] {name:12} sidelobe {sl:6.1f} dB (page {sl_exp:+d})  "
+          f"main lobe {ml:.2f} bins (page {ml_exp})   {P(abs(sl-sl_exp) < 2.5 and abs(ml-ml_exp) < 0.3)}")
+
+# scalloping loss: what the nearest bin reports for a tone half a bin off
+print()
+for name, (w, _, _) in WINS.items():
+    N2 = 64
+    n2 = np.arange(N2); c2 = np.cos(2*np.pi*n2/(N2-1))
+    ww = {'rectangular': np.ones(N2), 'Hann': 0.5-0.5*c2, 'Hamming': 0.54-0.46*c2,
+          'Blackman': 0.42-0.5*c2+0.08*np.cos(4*np.pi*n2/(N2-1))}[name]
+    loss = 20*np.log10(abs((ww*np.exp(1j*2*np.pi*0.5*n2/N2)).sum())/ww.sum())
+    print(f"[Ch09 s06] {name:12} half-bin scalloping loss {loss:6.2f} dB")
+rectl = 20*np.log10(abs((np.ones(64)*np.exp(1j*2*np.pi*0.5*np.arange(64)/64)).sum())/64)
+print(f"[Ch09 s06] rectangular loss {rectl:.2f} dB -- page says 'up to 3.9 dB'   {P(abs(rectl+3.92) < 0.05)}")
+
+# --- the Gabor limit, and the Gaussian attaining it ----------------------
+sg = 0.05
+tg = np.linspace(-1, 1, 200001)
+gg = np.exp(-tg**2/(2*sg*sg)); gg /= np.linalg.norm(gg)
+dt = np.sqrt((tg**2*gg**2).sum()/(gg**2).sum())
+fg = np.fft.fftshift(np.fft.fftfreq(len(tg), tg[1]-tg[0]))
+Gg = np.abs(np.fft.fftshift(np.fft.fft(gg)))
+df_ = np.sqrt((fg**2*Gg**2).sum()/(Gg**2).sum())
+print(f"\n[Ch09 s07] Gabor: dt*df = {dt*df_:.5f} >= 1/(4pi) = {1/(4*np.pi):.5f}   {P(dt*df_ >= 1/(4*np.pi) - 1e-4)}")
+print(f"[Ch09 s07] the Gaussian attains it: ratio {dt*df_/(1/(4*np.pi)):.4f} (page 1.0000)  {P(abs(dt*df_/(1/(4*np.pi)) - 1) < 0.02)}")
+
+# --- constant overlap-add: Hann at 50% sums to a constant ----------------
+Nh = 512; Hh = Nh//2
+wh = 0.5 - 0.5*np.cos(2*np.pi*np.arange(Nh)/Nh)
+acc = np.zeros(6*Nh)
+for m in range(0, 5*Nh, Hh): acc[m:m+Nh] += wh
+core = acc[Nh:4*Nh]
+print(f"\n[Ch09 s07] Hann @50% overlap sums to {core.mean():.4f}, spread {core.std():.2e}   {P(core.std() < 1e-12)}")
+
+# --- pre-emphasis really is a high-pass ----------------------------------
+ae = 0.97; we = np.linspace(0, np.pi, 2000); He = np.abs(1 - ae*np.exp(-1j*we))
+print(f"\n[Ch09 s08] pre-emphasis |H|: DC {He[0]:.4f}, Nyquist {He[-1]:.4f} -> high-pass  {P(He[0] < He[-1])}")
+print(f"[Ch09 s08] Nyquist/DC gain = {He[-1]/He[0]:.0f}x (page says 66x)          {P(abs(He[-1]/He[0] - 65.7) < 1.5)}")
+
+# --- mel round trip ------------------------------------------------------
+imel = lambda m: 700*(10**(m/2595) - 1)
+rt = max(abs(imel(mel(f)) - f) for f in (50, 100, 440, 1000, 4000, 8000))
+print(f"[Ch09 s08] mel <-> inverse round trip, max err {rt:.2e}             {P(rt < 1e-9)}")
+
+# --- z = e^{sT} maps the left half-plane inside the unit circle ----------
+rngz = np.random.default_rng(5)
+sp = rngz.normal(size=4000) + 1j*rngz.normal(size=4000)*3
+zz_ = np.exp(sp*0.1)
+ok = np.all((sp.real < 0) == (np.abs(zz_) < 1))
+print(f"\n[Ch09 s09] z=e^(sT): Re(s)<0 <=> |z|<1 over 4000 poles          {P(ok)}")
+
+print("\n" + "="*66)
