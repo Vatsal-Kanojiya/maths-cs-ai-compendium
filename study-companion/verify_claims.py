@@ -1180,3 +1180,83 @@ print(f"[Ch10 s06]   -> entropy regularisation and MoE load balancing (Ch07 s08)
 print(f"[Ch10 s06]      are the same objective: push usage towards uniform")
 
 print("\n" + "="*66)
+
+print("=" * 66)
+print("CHAPTER 10 - MULTIMODAL LEARNING (part 2)")
+print("=" * 66)
+
+import scipy.linalg as _sla
+def _msqrt(M):
+    r = _sla.sqrtm(M)
+    return np.real(r[0] if isinstance(r, tuple) else r)
+
+def fid(mu1, Sa, mu2, Sb):
+    """Frechet distance between two Gaussians -- the Wasserstein-2 distance.
+    Uses Tr((Sa^1/2 Sb Sa^1/2)^1/2): the argument is symmetric PSD, where the
+    textbook Tr((Sa Sb)^1/2) takes a root of a non-symmetric product."""
+    h = _msqrt(Sa)
+    return float(((mu1-mu2)**2).sum() + np.trace(Sa + Sb - 2*_msqrt(h @ Sb @ h)))
+
+rngf = np.random.default_rng(5); df = 8
+Af = rngf.normal(size=(df, df)); Sf = Af @ Af.T + np.eye(df); mf = rngf.normal(size=df)
+Bf = rngf.normal(size=(df, df)); Sg = Bf @ Bf.T + np.eye(df); mg = rngf.normal(size=df)
+print()
+print(f"[Ch10 s13] FID(p,p) = {fid(mf,Sf,mf,Sf):.2e} -- zero for identical distributions  {P(abs(fid(mf,Sf,mf,Sf)) < 1e-8)}")
+print(f"[Ch10 s13] symmetric: |FID(p,q)-FID(q,p)| = {abs(fid(mf,Sf,mg,Sg)-fid(mg,Sg,mf,Sf)):.1e}   "
+      f"{P(abs(fid(mf,Sf,mg,Sg)-fid(mg,Sg,mf,Sf)) < 1e-8)}")
+print(f"[Ch10 s13] equal covariances -> FID reduces to ||mu1-mu2||^2: {fid(mf,Sf,mg,Sf):.5f} "
+      f"vs {((mf-mg)**2).sum():.5f}   {P(abs(fid(mf,Sf,mg,Sf)-((mf-mg)**2).sum()) < 1e-6)}")
+s_a, s_b, m_a, m_b = 2.0, 3.0, 1.0, 4.0
+print(f"[Ch10 s13] 1-D: (mu1-mu2)^2+(s1-s2)^2 = {(m_a-m_b)**2+(s_a-s_b)**2:.3f} vs "
+      f"{fid(np.r_[m_a], np.r_[[[s_a**2]]], np.r_[m_b], np.r_[[[s_b**2]]]):.3f}   "
+      f"{P(abs((m_a-m_b)**2+(s_a-s_b)**2 - fid(np.r_[m_a], np.r_[[[s_a**2]]], np.r_[m_b], np.r_[[[s_b**2]]])) < 1e-9)}")
+print(f"[Ch10 s13]   -> FID is built from a MEAN and a COVARIANCE and nothing else:")
+print(f"[Ch10 s13]      Chapter 04's centroid and second moment, in a feature space")
+
+# FID's finite-sample bias: two figures are comparable only at the same N
+Lf = np.linalg.cholesky(Sf)
+print()
+biases = []
+for N in (500, 2000, 10000, 40000, 160000):
+    Xf = rngf.normal(size=(N, df)) @ Lf.T + mf
+    b = fid(mf, Sf, Xf.mean(0), np.cov(Xf.T)); biases.append(b)
+    print(f"[Ch10 s13] N={N:>6}: FID against its OWN distribution = {b:.5f} (true value 0)")
+print(f"[Ch10 s13] the bias falls towards zero with N          {P(biases[-1] < biases[0]/50)}")
+print(f"[Ch10 s13]   -> an FID is only comparable with another computed at the same N,")
+print(f"[Ch10 s13]      which is why the field fixes N = 50,000 by convention")
+
+# --- classifier-free guidance is over-relaxation -------------------------
+print()
+eu, ec = np.array([0.2, -0.1]), np.array([0.9, 0.6])
+cfg  = lambda s: eu + s*(ec - eu)
+relx = lambda s: (1-s)*eu + s*ec
+worst = max(np.abs(cfg(s)-relx(s)).max() for s in (0, 0.5, 1, 3, 7.5, 20))
+print(f"[Ch10 s12] e_u + s(e_c - e_u) == (1-s)e_u + s e_c, max err {worst:.1e}   {P(worst < 1e-15)}")
+print(f"[Ch10 s12] s=0 returns the unconditional exactly                {P(np.abs(cfg(0)-eu).max() == 0)}")
+print(f"[Ch10 s12] s=1 returns the conditional exactly                  {P(np.abs(cfg(1)-ec).max() < 1e-15)}")
+step = np.linalg.norm(cfg(7.5)-eu)/np.linalg.norm(ec-eu)
+print(f"[Ch10 s12] s=7.5 takes {step:.1f}x the conditional correction -- it EXTRAPOLATES  {P(abs(step-7.5) < 1e-9)}")
+print(f"[Ch10 s12]   -> identical in form to SOR, x + w(x_new - x) with w > 1")
+
+# --- token compression is a quadratic-cost argument ----------------------
+print()
+print(f"[Ch10 s11] 336px image, 14px patches -> N = (336/14)^2 = {(336//14)**2}   {P((336//14)**2 == 576)}")
+for N, M in ((576, 64), (576, 256), (1024, 64)):
+    print(f"[Ch10 s11] N={N} -> M={M}: {N//M}x fewer tokens, {(N/M)**2:.0f}x cheaper attention")
+print(f"[Ch10 s11] Flamingo's 576 -> 64 is a {(576/64)**2:.0f}x reduction in pair interactions  {P(576//64 == 9)}")
+
+# --- the combinatorial argument for unification --------------------------
+print()
+for k in (2, 4, 6, 10):
+    print(f"[Ch10 s14] k={k:2d} modalities -> up to k(k-1) = {k*(k-1):3d} directed pipelines, or one model")
+print(f"[Ch10 s14] source quotes k(k-1); at k=6 that is {6*5}               {P(6*5 == 30)}")
+
+# --- Flamingo's zero-initialised gate is a bumpless transfer -------------
+print()
+xg, cag = np.array([1.0, 2.0]), np.array([5.0, -3.0])
+print(f"[Ch10 s11] alpha=0: x + alpha*CrossAttn = {xg + 0*cag} == x exactly       "
+      f"{P(np.abs((xg + 0*cag) - xg).max() == 0)}")
+print(f"[Ch10 s11] so training starts as the untouched frozen language model, and")
+print(f"[Ch10 s11] the visual path is ramped in -- a soft start, not a step change")
+
+print("\n" + "="*66)

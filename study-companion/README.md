@@ -45,7 +45,7 @@ merely structural, that is said plainly.
 | 07 | Computational Linguistics | [`ch07-computational-linguistics/`](ch07-computational-linguistics/index.html) | [Read online](https://claude.ai/artifact/G4qe4sW6y1Av9kVibTq11R) |
 | 08 | Computer Vision | [`ch08-computer-vision/`](ch08-computer-vision/index.html) | [Read online](https://claude.ai/artifact/YGYUxoUzmFo2R2W5fb7PP7) |
 | 09 | Audio and Speech | [`ch09-audio-speech/`](ch09-audio-speech/index.html) | [Read online](https://claude.ai/artifact/UeVoa1oWJcZJL8KMsbbLHq) |
-| 10 | Multimodal Learning | [`ch10-multimodal/`](ch10-multimodal/index.html) | *part 1 of 2, not yet published* |
+| 10 | Multimodal Learning | [`ch10-multimodal/`](ch10-multimodal/index.html) | [Read online](https://claude.ai/artifact/VVW3i2z1z8dxCEUsvupMAW) |
 
 ## What's in a chapter page
 

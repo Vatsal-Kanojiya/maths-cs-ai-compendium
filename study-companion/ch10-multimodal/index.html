@@ -388,7 +388,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
 
 <header class="titleblock">
   <div class="tb-main">
-    <div class="tb-k">Sheet 10 of 20 &mdash; Multimodal Learning, part 1</div>
+    <div class="tb-k">Sheet 10 of 20 &mdash; Multimodal Learning</div>
     <h1>Fusion, Alignment, Codebooks</h1>
     <p class="tb-sub">
       Combining sensors is something you already do. This sheet is about what
@@ -413,8 +413,15 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
   <a href="#residual"><span class="n">06</span><span>Successive approximation</span></a>
   <a href="#collapse"><span class="n">07</span><span>Codebook collapse</span></a>
   <a href="#video"><span class="n">08</span><span>Video and causality</span></a>
-  <a href="#breaks"><span class="n">09</span><span>Where it breaks</span></a>
-  <a href="#next"><span class="n">10</span><span>What part 2 covers</span></a>
+  <a href="#vlm"><span class="n">09</span><span>Eye to language model</span></a>
+  <a href="#generate"><span class="n">10</span><span>Generation and guidance</span></a>
+  <a href="#fid"><span class="n">11</span><span>Judging the output</span></a>
+  <a href="#unified"><span class="n">12</span><span>One model, commissioned</span></a>
+  <a href="#breaks"><span class="n">13</span><span>Where it breaks</span></a>
+  <a href="#worked"><span class="n">14</span><span>Worked example</span></a>
+  <a href="#recall"><span class="n">15</span><span>Question bank</span></a>
+  <a href="#next"><span class="n">16</span><span>What this feeds</span></a>
+  <a href="#provenance"><span class="n">A</span><span>Provenance</span></a>
 </nav>
 
 <main>
@@ -436,10 +443,9 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
       observability test that tells you whether the fusion is even possible.
     </p>
     <p>
-      Part 1 covers how modalities are brought into a common representation: fusion strategies,
+      Sections 01&ndash;08 bring the modalities into a common representation: fusion strategies,
       contrastive alignment, and the vector quantisation that turns a picture into something a
-      language model can read. Part 2 covers what gets built on top &mdash; vision-language
-      models, cross-modal generation, and unified architectures.
+      language model can read. Sections 09&ndash;12 are what gets built on top of them.
     </p>
   </div>
 </section>
@@ -1173,9 +1179,432 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
   </figure>
 </section>
 
+<section id="vlm">
+  <div class="col">
+    <div class="sechead"><span class="secnum">09</span><h2>Wiring an eye to a language model</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2010%20-%20multimodal%20learning/02.%20vision%20language%20models.md" target="_blank" rel="noopener">src 02. VLMs &#8599;</a>
+    </div>
+    <p>
+      A vision-language model has to get an image into a machine built for token sequences. The
+      pipeline is five steps, and only one of them is new.
+    </p>
+    <ol>
+      <li><b>Patch extraction.</b> Cut the image into \(P\times P\) patches. At 336 px with
+        14 px patches that is \((336/14)^2=576\) patches.</li>
+      <li><b>Vision encoding.</b> Run them through a ViT (Chapter 08 &sect;08) to get contextual
+        patch embeddings.</li>
+      <li><b>Token compression</b> (optional). Reduce \(N\) patches to \(M\ll N\) tokens.</li>
+      <li><b>Projection.</b> A linear map or small MLP into the language model&rsquo;s embedding
+        dimension.</li>
+      <li><b>Injection.</b> Splice the projected tokens into the sequence and let ordinary
+        self-attention do the rest.</li>
+    </ol>
+    <p>
+      <b>LLaVA</b>&rsquo;s contribution was to show that step 3 is optional and step 4 can be a
+      single linear layer: project CLIP patch features, concatenate with the text embeddings, and
+      the language model treats them as foreign words. No cross-attention, no resampler.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; token compression is degree-of-freedom reduction</div>
+      <p>
+        Attention costs \(O(N^2)\), so the token count is not a detail. Flamingo&rsquo;s
+        Perceiver Resampler squeezes 576 patches to 64 learned queries: nine times fewer tokens
+        and <b>81 times fewer pair interactions</b>. Qwen-VL does the same to 256, BLIP-2 with a
+        Q-Former.
+      </p>
+      <p style="margin-bottom:0">
+        That is static condensation. In a large finite element model you nominate a small set of
+        master degrees of freedom and condense the rest onto them, because the solve cost grows
+        far faster than linearly in the DOF count and most of those DOFs carry little independent
+        information. Guyan reduction picks the masters by hand; the Perceiver learns them. Both
+        are betting that the retained set spans what matters, and both are wrong in the same way
+        when it does not &mdash; which is exactly why high-resolution document and OCR tasks
+        forced the field towards <em>more</em> visual tokens and dynamic resolution rather than
+        fewer.
+      </p>
+    </div>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; Flamingo&rsquo;s zero gate is a bumpless transfer</div>
+      <p>
+        Flamingo keeps the vision encoder and the language model frozen and learns only the
+        connection, through gated cross-attention layers inserted between the frozen blocks:
+      </p>
+      <div class="mathbox">
+        $$\hat{x}=x+\alpha\cdot\text{CrossAttn}(x,z),\qquad \alpha \text{ initialised to } 0$$
+      </div>
+      <p style="margin-bottom:0">
+        At \(\alpha=0\) the new path contributes <em>exactly nothing</em> and the model is
+        bit-for-bit the original language model; the gate then opens under training. That is how
+        you commission a new control loop on a running plant. You do not close the loop at full
+        gain and hope &mdash; you bring it in at zero and ramp, so the transfer is bumpless and
+        the existing system is never disturbed by a step change. The reason is the same in both
+        cases: the incumbent works, and the risk is not that the addition is useless but that it
+        destabilises what already works.
+      </p>
+    </div>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; dual against fusion is precompute against recompute</div>
+      <p style="margin-bottom:0">
+        A <b>dual encoder</b> embeds image and text separately, so you can compute every image
+        embedding once and store it; retrieval over a million images is then a matrix product.
+        A <b>fusion encoder</b> couples them with cross-attention, which is far more expressive
+        and means every image-text pair needs its own forward pass &mdash; nothing can be cached.
+        That is the influence-coefficient trade of Chapter 07 &sect;05: a flexibility matrix is
+        computed once and reused for every load case precisely because it does not depend on the
+        load, and the moment your analysis becomes load-dependent you lose that and must re-solve
+        per case. Same structure, same cost consequence, same reason.
+      </p>
+    </div>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>Coordinate tokens, and what they quietly assume</div>
+      <p>
+        To make a language model point at things, discretise the image into (say) 1,000 bins per
+        axis and add tokens <code>&lt;loc_0&gt;</code>&hellip;<code>&lt;loc_999&gt;</code> to the
+        vocabulary. The model then emits a box as four ordinary tokens. No architecture change at
+        all &mdash; it simply learns to speak coordinates. This is &sect;05&rsquo;s quantisation
+        applied to geometry, and Chapter 09 &sect;03&rsquo;s amplitude quantisation applied to
+        position.
+      </p>
+      <p style="margin-bottom:0">
+        The assumption worth naming: the bins are a <em>nominal</em> vocabulary as far as the
+        model is concerned. Nothing in the architecture knows that <code>&lt;loc_500&gt;</code>
+        lies between <code>&lt;loc_499&gt;</code> and <code>&lt;loc_501&gt;</code>, or that being
+        wrong by one bin is a small error and being wrong by four hundred is a large one. Ordinal
+        structure has to be learned from data rather than being built in, and the cross-entropy
+        loss treats every wrong bin as equally wrong. You would never dimension a drawing with a
+        scale whose intervals had no defined ordering; this does, and it works anyway, which is
+        worth finding surprising.
+      </p>
+    </div>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>The VQA v2 fix is a designed experiment</div>
+      <p style="margin-bottom:0">
+        VQA v1 turned out to be answerable without looking at the image: say &ldquo;2&rdquo; to
+        &ldquo;how many&rdquo; and &ldquo;yes&rdquo; to &ldquo;is there&rdquo; and you score
+        respectably. The model had learned the marginal distribution of answers, not the
+        conditional. VQA v2&rsquo;s remedy is to pair every question with <em>two</em> similar
+        images that have different answers, so the question carries no information on its own.
+        That is blocking: hold the factor you do not want to measure constant, vary only the one
+        you do. The lesson generalises past this dataset &mdash; if a benchmark can be beaten
+        without the input you care about, it is measuring something else, and no amount of
+        accuracy on it means what you think.
+      </p>
+    </div>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/visual_token_pipeline.svg" alt="Patches extracted, encoded by a ViT, optionally compressed, projected and concatenated with text tokens" width="420"></div>
+    <figcaption><b>Fig. 10.12</b> &mdash; The five steps. After step 4 a visual token is indistinguishable from a word. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+  <figure class="col">
+    <div class="paper"><img src="img/flamingo_architecture.svg" alt="Frozen vision encoder and language model joined by a Perceiver Resampler and gated cross-attention" width="420"></div>
+    <figcaption><b>Fig. 10.13</b> &mdash; Two frozen systems and a gate that opens slowly. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+  <figure class="col">
+    <div class="paper"><img src="img/dual_vs_fusion_encoder.svg" alt="Dual encoder computing separate embeddings against a fusion encoder merging through cross-attention" width="420"></div>
+    <figcaption><b>Fig. 10.14</b> &mdash; Cacheable and cheap, or coupled and expressive. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="generate">
+  <div class="col">
+    <div class="sechead"><span class="secnum">10</span><h2>Generation, and a guidance scale that overshoots</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2010%20-%20multimodal%20learning/04.%20cross-modal%20generation.md" target="_blank" rel="noopener">src 04. generation &#8599;</a>
+    </div>
+    <p>
+      There are two ways to make an image from a sentence, and the chapter covers both.
+      <b>DALL-E</b> tokenises the image (&sect;05) and predicts the tokens autoregressively, which
+      reuses the whole of Chapter 07 unchanged &mdash; and inherits its cost, 1,024 sequential
+      steps per picture. <b>Stable Diffusion</b> instead denoises in a compressed latent space,
+      with a U-Net that cross-attends to the text embedding at every step. Chapter 08 &sect;06
+      already identified that U-Net as a multigrid V-cycle and &sect;09 identified the reverse
+      process as transport along a learned velocity field; neither needs restating.
+    </p>
+    <p>
+      One thing does. <b>Classifier-free guidance</b> is what makes these models actually obey
+      the prompt, and it is not a neural-network idea at all.
+    </p>
+  </div>
+  <div class="mathbox col">
+    $$\hat{\epsilon}=\epsilon_\theta(x_t,\varnothing)+s\cdot\big(\epsilon_\theta(x_t,c)-\epsilon_\theta(x_t,\varnothing)\big)$$
+  </div>
+  <div class="col">
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; that is successive over-relaxation</div>
+      <p>
+        Rearrange it. Writing \(\epsilon_u\) for the unconditional prediction and
+        \(\epsilon_c\) for the conditional:
+      </p>
+      <div class="mathbox">
+        $$\hat{\epsilon}=(1-s)\,\epsilon_u+s\,\epsilon_c$$
+      </div>
+      <p>
+        which is a relaxation between two estimates, and identical to the CFG form to
+        \(4\times10^{-16}\). At \(s=0\) you get the unconditional prediction, at \(s=1\) exactly
+        the conditional one. Everything interesting happens at \(s>1\), where the weights become
+        \((1-s)<0\) and \(s>1\) &mdash; you are no longer interpolating between the two
+        predictions, you are <b>extrapolating past</b> the conditional one, along the line from
+        unconditional to conditional. Stable Diffusion&rsquo;s default \(s=7.5\) takes a step
+        7.5 times the length of the correction the model actually computed.
+      </p>
+      <p style="margin-bottom:0">
+        You have done this deliberately before. <b>Successive over-relaxation</b> takes the
+        update a Gauss&ndash;Seidel sweep hands you and applies \(x\leftarrow x+\omega(x_{\text{new}}-x)\)
+        with \(\omega>1\), overshooting on the reasoning that the computed correction is
+        systematically in the right direction but systematically too small. The algebra is the
+        same, the justification is the same, and so is the failure mode: too much relaxation and
+        the iteration stops being stable and starts ringing. In CFG that shows up as the
+        oversaturated, high-contrast, repetitive look of images generated at \(s=20\), and
+        Imagen&rsquo;s &ldquo;dynamic thresholding&rdquo; is a limiter bolted on to keep an
+        over-relaxed update inside the valid range.
+      </p>
+    </div>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>Where the SOR reading stops</div>
+      <p style="margin-bottom:0">
+        SOR has a theory. For a linear system you can compute the optimal \(\omega\) from the
+        spectral radius of the Jacobi iteration matrix, and you can prove divergence for
+        \(\omega\ge2\). None of that exists here: \(s=7.5\) is a number people settled on, there
+        is no operator whose spectrum you could examine, and the &ldquo;correct&rdquo; value
+        depends on whether you want a faithful illustration or an interesting one. The
+        <em>structure</em> is over-relaxation exactly. The <em>selection rule</em> for
+        \(\omega\), which is the part of SOR that took a decade of numerical analysis to work
+        out, has no counterpart.
+      </p>
+    </div>
+
+    <p>
+      <b>Video</b> adds temporal coherence, and the dominant approach is the one an engineer
+      would pick: keep the spatial model you already trained on billions of images and add
+      temporal layers, so appearance comes from the image prior and motion is learned separately.
+      Sora&rsquo;s spacetime patches drop that separation and treat the video as a native 3D
+      signal, which is the same choice as full 3D convolution against the factorised
+      space-then-time encoding of &sect;08.
+    </p>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Guidance scale as over-relaxation</div><div class="lab-tag">Predict, then push</div></div>
+
+    <div class="predict">
+      <p style="margin-top:0">
+        A guidance scale of \(s=7.5\) is standard. What is the model&rsquo;s prediction at that
+        setting, relative to what it computed for the prompt?
+      </p>
+      <button class="pbtn" data-p3="a" type="button">7.5&times; more confident, same direction</button>
+      <button class="pbtn" data-p3="b" type="button">A blend, mostly conditional</button>
+      <button class="pbtn" data-p3="c" type="button">Far past the conditional prediction</button>
+      <button class="pbtn" data-p3="d" type="button">The average of the two</button>
+      <div class="pverdict" id="pv3"></div>
+    </div>
+
+    <svg class="stage" id="sG" viewBox="0 0 480 300" role="img"
+         aria-label="The unconditional and conditional predictions as points, with the guided prediction moving along and beyond the line joining them as the scale increases">
+      <g id="gGrid"></g>
+      <line id="gLine" stroke-dasharray="4 4"/>
+      <path id="gTrail" fill="none" stroke-width="2"/>
+      <g id="gPts"></g>
+      <g id="gLab"></g>
+    </svg>
+
+    <div class="ctl">
+      <label for="gsSl">Guidance scale s</label>
+      <input type="range" id="gsSl" min="0" max="200" value="75" step="1">
+      <span class="ro-v" id="gsVal" style="min-width:52px">7.5</span>
+      <button class="btn" data-gp="0" type="button">0</button>
+      <button class="btn" data-gp="10" type="button">1</button>
+      <button class="btn on" data-gp="75" type="button">7.5</button>
+      <button class="btn" data-gp="200" type="button">20</button>
+    </div>
+
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Weight on<br>unconditional</div><div class="ro-v b" id="oWu">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Weight on<br>conditional</div><div class="ro-v a" id="oWc">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Step length<br>&divide; correction</div><div class="ro-v c" id="oStep">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Regime</div><div class="ro-v" id="oReg">&mdash;</div></div>
+    </div>
+  </div>
+
+  <div class="lab-foot col">
+    The two circles are the model&rsquo;s two predictions for the same noisy image: with the
+    prompt, and with the prompt removed. The moving marker is what actually gets used. Below
+    \(s=1\) it lies <em>between</em> them &mdash; interpolation, and the weights are both
+    positive. At \(s=1\) it sits exactly on the conditional prediction. Above it the marker keeps
+    going in the same direction and leaves the segment entirely, and the weight on the
+    unconditional prediction goes <b>negative</b>: the model is being pushed away from what it
+    would have said with no prompt. That negative weight is the whole mechanism, and it is what
+    &ldquo;over-relaxation&rdquo; means. Push to 20 and you are taking a step twenty times the
+    computed correction, which is where the saturation artefacts come from.
+  </div>
+  <figure class="col">
+    <div class="paper"><img src="img/stable_diffusion_architecture.svg" alt="Text encoded by CLIP, latent noise denoised by a U-Net cross-attending to the text, decoded by a VAE" width="420"></div>
+    <figcaption><b>Fig. 10.15</b> &mdash; A V-cycle from Chapter 08, steered by a text embedding from &sect;02. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="fid">
+  <div class="col">
+    <div class="sechead"><span class="secnum">11</span><h2>Judging a generated image</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2010%20-%20multimodal%20learning/04.%20cross-modal%20generation.md" target="_blank" rel="noopener">src 04. generation &#8599;</a>
+    </div>
+    <p>
+      There is no reference image to compare against, so the standard metric compares
+      <em>distributions</em>. Push a set of real images and a set of generated ones through a
+      fixed network, collect the penultimate-layer activations, fit a Gaussian to each, and
+      measure the distance between the two Gaussians. That is the <b>Fr&eacute;chet Inception
+      Distance</b>:
+    </p>
+  </div>
+  <div class="mathbox col">
+    $$\text{FID}=\|\mu_r-\mu_g\|^2+\operatorname{Tr}\!\left(\Sigma_r+\Sigma_g-2\big(\Sigma_r\Sigma_g\big)^{1/2}\right)$$
+  </div>
+  <div class="col">
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; it is a centroid and a second moment, and nothing else</div>
+      <p>
+        Read what the formula uses. A <b>mean</b> and a <b>covariance</b>. Those are Chapter 04
+        &sect;10&rsquo;s centroid and second moment about it, which that chapter identified with
+        the centroid and the inertia tensor of a section. FID compares two clouds of points by
+        asking where each sits and how it is spread &mdash; first moment and second moment &mdash;
+        and the trace makes the second-moment term a tensor invariant, independent of the
+        coordinate frame, exactly as \(I_1\) is.
+      </p>
+      <p style="margin-bottom:0">
+        The checks bear the reading out. With equal covariances FID collapses to
+        \(\|\mu_r-\mu_g\|^2\), a pure centroid distance. In one dimension it is
+        \((\mu_1-\mu_2)^2+(\sigma_1-\sigma_2)^2\) exactly. It is zero for identical
+        distributions and symmetric in its arguments. It is the Wasserstein-2 distance between
+        two Gaussians, which is why it has those properties and why it deserves the word
+        &ldquo;distance&rdquo;.
+      </p>
+    </div>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>Three things an FID number does not tell you</div>
+      <p>
+        <b>It is biased at finite sample size, badly.</b> Measuring a sample against the
+        distribution it was drawn from should give zero. It does not:
+      </p>
+      <div class="tw">
+        <table>
+          <caption>FID of a sample against its own generating distribution &mdash; the true value is zero. From <code>verify_claims.py</code>.</caption>
+          <thead><tr><th>Sample size</th><th>500</th><th>2,000</th><th>10,000</th><th>40,000</th><th>160,000</th></tr></thead>
+          <tbody><tr><td>Measured FID</td><td class="mono">0.639</td><td class="mono">0.082</td><td class="mono">0.017</td><td class="mono">0.0035</td><td class="mono">0.0008</td></tr></tbody>
+        </table>
+      </div>
+      <p>
+        The bias falls with \(N\) but is never zero, so an FID of 8 computed on 10,000 samples
+        and an FID of 8 computed on 50,000 are not the same claim. That is why the field fixes
+        \(N=50{,}000\) by convention &mdash; the convention is doing real work, and a paper that
+        quietly uses a different \(N\) is not comparable.
+      </p>
+      <p>
+        <b>The feature space is arbitrary.</b> &ldquo;Inception&rdquo; in the name is a specific
+        network trained on a specific dataset in 2015. FID measures distance in <em>its</em>
+        activations, so the metric inherits whatever that network happens to be sensitive to.
+        There is nothing physical underneath, and this is &sect;02&rsquo;s traceability problem
+        arriving in a new place.
+      </p>
+      <p style="margin-bottom:0">
+        <b>It assumes the features are Gaussian.</b> They are not. Fitting a mean and a
+        covariance to a distribution with any real structure discards everything above the second
+        moment &mdash; Chapter 04 &sect;10 computed skewness and kurtosis precisely because two
+        distributions can share a mean and variance and look nothing alike. FID cannot see that
+        difference by construction.
+      </p>
+    </div>
+
+    <p>
+      <b>CLIPScore</b> takes the other route: cosine similarity between the CLIP embedding of the
+      generated image and of the prompt. It needs no reference image, which is its appeal, and it
+      inherits every limitation of &sect;02 &mdash; including that a model optimised against
+      CLIPScore is being optimised against one particular model&rsquo;s idea of similarity.
+    </p>
+  </div>
+  <figure class="col">
+    <div class="paper"><img src="img/generation_evaluation_metrics.svg" alt="FID comparing feature distributions, Inception Score, and CLIPScore comparing image and text embeddings" width="420"></div>
+    <figcaption><b>Fig. 10.16</b> &mdash; Three proxies, none of them a measurement. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="unified">
+  <div class="col">
+    <div class="sechead"><span class="secnum">12</span><h2>One model, and how it is commissioned</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2010%20-%20multimodal%20learning/05.%20unified%20multimodal%20architectures.md" target="_blank" rel="noopener">src 05. unified &#8599;</a>
+    </div>
+    <p>
+      The argument for a single model is combinatorial. Maintaining a specialist for every
+      ordered pair of modalities needs up to \(k(k-1)\) pipelines: 30 of them for six modalities,
+      90 for ten. One model with thin per-modality adapters replaces all of them, and anything
+      learned in one modality is available to the others.
+    </p>
+    <p>
+      The architecture is what &sect;01 would have predicted: modality-specific encoders, a
+      shared transformer backbone, modality-specific decoders. A <b>modality embedding</b>
+      \(e_m\) is added to every token so the backbone knows which channel it came from &mdash;
+      the same device as a positional embedding, and the same device as tagging every reading in
+      a datalogger with its channel ID.
+    </p>
+    <p>
+      The training recipe is the part worth transferring, because it is one you already follow.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; staged training is a commissioning sequence</div>
+      <div class="tw">
+        <table>
+          <caption>The four stages, and what each one is in a plant.</caption>
+          <thead><tr><th>Stage</th><th>What is trained</th><th>The commissioning step</th></tr></thead>
+          <tbody>
+            <tr><td>1 &mdash; Unimodal pretraining</td><td>Each encoder alone, on its own data</td><td>Bench-test and characterise every instrument on its own, before it goes near the plant.</td></tr>
+            <tr><td>2 &mdash; Cross-modal alignment</td><td>The connectors, with encoders frozen</td><td>Loop checks. Confirm each instrument reads correctly into the system, one channel at a time, with nothing else running.</td></tr>
+            <tr><td>3 &mdash; Joint pretraining</td><td>Everything, on mixed data</td><td>Run the assembled system, all channels live.</td></tr>
+            <tr><td>4 &mdash; Instruction tuning</td><td>Behaviour on curated tasks</td><td>Tune it for the duty it will actually perform.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="margin-bottom:0">
+        The source asks why you cannot skip to stage 3 and train everything at once. Its answer
+        is that the model must learn low-level features and cross-modal reasoning at the same
+        time, and that the modality with the most data dominates. Both are true, and there is a
+        cleaner way to say it that you already believe: <b>you cannot diagnose a fault in a
+        coupled system you never characterised uncoupled.</b> If you commission everything
+        simultaneously and the result is wrong, nothing in the result tells you which subsystem
+        is at fault. Staging is not primarily about optimisation. It is about keeping the failure
+        attributable.
+      </p>
+    </div>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>Modality collapse is a real failure with a familiar shape</div>
+      <p style="margin-bottom:0">
+        The source notes that if one modality &mdash; usually text, which has by far the most
+        data &mdash; dominates the gradient, the model can effectively stop using the others.
+        That is the load-balancing failure of &sect;07 and Chapter 07 &sect;08 for the third
+        time, now across modalities rather than across codebook entries or experts, and the
+        remedies are the same family: reweight the loss, warm up the weaker channels, control the
+        data mixing ratio. It is worth noticing how often this pattern recurs. Any system with a
+        shared resource and unequal demand will starve something, and the fix is always either a
+        penalty on imbalance or a controller on the queue.
+      </p>
+    </div>
+  </div>
+  <figure class="col">
+    <div class="paper"><img src="img/unified_multimodal_overview.svg" alt="Several modalities feeding one shared transformer backbone and producing output in any modality" width="420"></div>
+    <figcaption><b>Fig. 10.17</b> &mdash; Many loading docks, one assembly line. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+
 <section id="breaks">
   <div class="col">
-    <div class="sechead"><span class="secnum">09</span><h2>Where it breaks</h2>
+    <div class="sechead"><span class="secnum">13</span><h2>Where it breaks</h2>
       <span class="srcref nolink" title="Added material, not in the source chapter">beyond the chapter</span>
     </div>
     <p>
@@ -1241,35 +1670,219 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
   </div>
 </section>
 
+
+<section id="worked">
+  <div class="col">
+    <div class="sechead"><span class="secnum">14</span><h2>Worked example: reading a gauge from a photograph</h2>
+      <span class="srcref nolink" title="Added material, not in the source chapter">beyond the chapter</span>
+    </div>
+    <p>
+      You have ten thousand photographs of analogue pressure gauges taken by technicians on
+      rounds, and you want the readings as numbers. Work it as instrumentation, then as a
+      multimodal ML problem, and notice where the two part company.
+    </p>
+
+    <h3>As instrumentation</h3>
+    <p>
+      You would not do this. You would fit a transmitter and read the pressure electrically, and
+      if you had to work from images you would fix the camera, control the lighting, calibrate
+      the geometry once, and then it is a pointer-angle measurement with a stated uncertainty:
+      needle angle to pressure through a known scale, with error terms you can enumerate
+      &mdash; parallax, lens distortion, quantisation of the pixel grid.
+    </p>
+
+    <h3>As a multimodal model</h3>
+    <p>
+      Photographs are hand-held, lighting varies, gauges differ. The pipeline is &sect;09: patch
+      the image, encode with a ViT, project, and prompt a language model with
+      &ldquo;what does this gauge read?&rdquo;. Grounding via coordinate tokens (&sect;09) can
+      return the needle tip. Fine-tuning needs labelled examples; &sect;02&rsquo;s zero-shot route
+      gets you a baseline with none.
+    </p>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>What you have given up, stated precisely</div>
+      <p>
+        The second approach will work, in the sense of producing plausible numbers most of the
+        time. Here is what it cannot do, and each item is a bridge from part 1 failing in a way
+        that matters:
+      </p>
+      <ul>
+        <li><b>No uncertainty.</b> The instrument version gives you a reading and a bound. The
+          model gives you a token sequence. The softmax probability over
+          <code>&lt;loc_&gt;</code> tokens is not a measurement uncertainty and must not be
+          reported as one &mdash; &sect;11&rsquo;s point about proxies, applied where it costs
+          money.</li>
+        <li><b>No traceability.</b> &sect;02: there is no reference standard, so
+          &ldquo;the model is confident&rdquo; is a statement about training data, not about the
+          gauge.</li>
+        <li><b>No observability test.</b> &sect;01 break 1: nothing tells you in advance whether
+          the reading is recoverable from a given photograph. A Kalman filter would refuse an
+          unobservable state; this returns an answer regardless.</li>
+        <li><b>No innovation to monitor.</b> If the gauges are replaced with a different dial
+          face, the model degrades silently. There is no residual that goes non-white to warn you.</li>
+        <li><b>Ordinal structure is not built in.</b> &sect;09: being wrong by one coordinate bin
+          and wrong by four hundred are the same event to the loss.</li>
+      </ul>
+      <p style="margin-bottom:0">
+        None of this makes the approach wrong. It makes it the right tool for a job the
+        instrument version cannot do at all &mdash; ten thousand uncontrolled photographs that
+        already exist &mdash; while being the wrong tool for anything where the number carries
+        consequence. The honest framing is that you have traded a measurement for an estimate,
+        and the trade is worth making exactly when you could not have had the measurement.
+      </p>
+    </div>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>And the design that gets you both</div>
+      <p style="margin-bottom:0">
+        Use the model as a <em>screen</em>, not an instrument. Let it read all ten thousand,
+        flag the ones outside an expected band, and send those to a person. You have then built
+        an acceptance-sampling scheme (Chapter 04) in which the model is a cheap, imperfect gauge
+        and the human is the reference &mdash; and the quantity you must characterise is not its
+        accuracy but its false-negative rate on the readings you cannot afford to miss. That is a
+        question you know how to ask, and it is the right one.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="recall">
+  <div class="col">
+    <div class="sechead"><span class="secnum">15</span><h2>Question bank</h2>
+      <span class="srcref nolink" title="Added material, not in the source chapter">beyond the chapter</span>
+    </div>
+    <p>Twenty-four prompts across both parts, in three tiers. Answer before opening anything.</p>
+
+    <h3>Tier 1 &mdash; recall</h3>
+    <details class="q"><summary><span class="qn">R1</span><span>Name the three fusion levels and the engineering terms they correspond to.</span></summary>
+      <div class="ans">Early, middle and late fusion &mdash; raw-data-level, feature-level and decision-level fusion. Same taxonomy, arrived at independently in two fields.</div></details>
+    <details class="q"><summary><span class="qn">R2</span><span>What does cosine similarity reduce to on \(L_2\)-normalised embeddings, and why does that matter?</span></summary>
+      <div class="ans">The plain dot product. It matters because retrieval over millions of items becomes one matrix multiplication, and because only direction carries meaning &mdash; magnitude has been normalised away.</div></details>
+    <details class="q"><summary><span class="qn">R3</span><span>Write the contrastive softmax and say what \(\tau\) corresponds to physically.</span></summary>
+      <div class="ans">\(\exp(s_i/\tau)/\sum_k\exp(s_k/\tau)\). It has the form of the Boltzmann distribution \(\exp(-E_i/kT)/Z\) with \(E=-s\) and \(kT=\tau\). The functional form is exact; there is no energy or heat bath behind it.</div></details>
+    <details class="q"><summary><span class="qn">R4</span><span>What are the two limits of \(\tau\)?</span></summary>
+      <div class="ans">As \(\tau\to0\) the softmax approaches an argmax, so the gradient comes from the single hardest negative. As \(\tau\to\infty\) it approaches uniform and the loss stops distinguishing anything.</div></details>
+    <details class="q"><summary><span class="qn">R5</span><span>What operation is codebook quantisation, in Chapter 06's terms?</span></summary>
+      <div class="ans">The k-means assignment step. The codebook update &mdash; move each entry to the mean of the vectors assigned to it &mdash; is the k-means update step, so a codebook minimises the total second moment about its entries.</div></details>
+    <details class="q"><summary><span class="qn">R6</span><span>State the residual quantisation recursion and its storage advantage.</span></summary>
+      <div class="ans">\(r^{(t)}=r^{(t-1)}-\text{Quantise}(r^{(t-1)},\mathcal{C}^{(t)})\). \(T\) stages of a \(K\)-entry codebook reach \(K^T\) representations from \(T\times K\) stored vectors &mdash; \(1.2\times10^{24}\) from 8,192 at \(K=1024,T=8\).</div></details>
+    <details class="q"><summary><span class="qn">R7</span><span>How do you measure codebook collapse?</span></summary>
+      <div class="ans">Usage perplexity \(e^{H}\) over the assignment distribution &mdash; the effective number of entries in play. A uniformly used codebook of \(K\) entries scores exactly \(K\); a collapsed one scores near 1.</div></details>
+    <details class="q"><summary><span class="qn">R8</span><span>Write the classifier-free guidance formula in relaxation form.</span></summary>
+      <div class="ans">\(\hat\epsilon=(1-s)\epsilon_u+s\,\epsilon_c\). At \(s>1\) the weight on the unconditional prediction is negative, so it extrapolates past the conditional one rather than interpolating.</div></details>
+
+    <h3>Tier 2 &mdash; apply</h3>
+    <details class="q"><summary><span class="qn">A1</span><span>You must combine vibration and thermal data and one sensor sometimes fails. Which fusion level, and why?</span></summary>
+      <div class="ans">Late, decision-level. Each channel reaches its own verdict, so losing one degrades gracefully rather than corrupting a concatenated feature vector. You give up any correlation visible only in the raw signals &mdash; that is the price.</div></details>
+    <details class="q"><summary><span class="qn">A2</span><span>Eight stages of residual quantisation with a fixed-scale codebook. What happens, and why?</span></summary>
+      <div class="ans">The error stalls at roughly 82% of its initial value and can rise. Once the residual is smaller than the codebook vectors, the nearest entry is farther away than zero, so adding it makes things worse. The quantiser must shrink with the residual &mdash; which is why a SAR converter halves its test voltage every bit.</div></details>
+    <details class="q"><summary><span class="qn">A3</span><span>A contrastive batch holds 1,024 pairs. What ceiling does that put on the objective?</span></summary>
+      <div class="ans">InfoNCE lower-bounds mutual information by \(\log(K{+}1)\), so with 1,023 negatives the ceiling is about 6.93 nats, or 10 bits. Batch size is not a tuning convenience; it sets how much information the objective can extract.</div></details>
+    <details class="q"><summary><span class="qn">A4</span><span>Flamingo compresses 576 patches to 64 tokens. What does that save?</span></summary>
+      <div class="ans">Nine times fewer tokens, and since attention is quadratic, 81 times fewer pair interactions. It is static condensation: nominate a few masters and condense the rest onto them.</div></details>
+    <details class="q"><summary><span class="qn">A5</span><span>At \(s=7.5\), how far does the guided prediction move relative to what the model computed?</span></summary>
+      <div class="ans">7.5 times the length of the conditional correction, along the line from unconditional to conditional and well past it. That is over-relaxation with \(\omega=7.5\).</div></details>
+    <details class="q"><summary><span class="qn">A6</span><span>Two papers report FID 8, on 10,000 and 50,000 samples. Are they comparable?</span></summary>
+      <div class="ans">No. FID is biased upward at finite \(N\) &mdash; a sample scored against its own generating distribution gives 0.017 at \(N=10{,}000\) and 0.0035 at \(N=40{,}000\) where the true value is zero. The convention of \(N=50{,}000\) exists to make the numbers comparable, and departing from it silently breaks that.</div></details>
+    <details class="q"><summary><span class="qn">A7</span><span>Why does Flamingo initialise its cross-attention gate to exactly zero?</span></summary>
+      <div class="ans">So that training begins with the frozen language model completely undisturbed &mdash; the visual path contributes nothing at \(\alpha=0\) &mdash; and the new capability ramps in. It is a bumpless transfer, the same reason you bring a new loop in at zero gain rather than closing it at full gain.</div></details>
+    <details class="q"><summary><span class="qn">A8</span><span>You have six modalities. How many specialist pipelines, and what is the alternative?</span></summary>
+      <div class="ans">Up to \(k(k-1)=30\) directed pipelines. One shared backbone with thin per-modality adapters replaces all of them, and lets structure learned in one modality serve the others.</div></details>
+
+    <h3>Tier 3 &mdash; judge</h3>
+    <details class="q"><summary><span class="qn">J1</span><span>Is it fair to call multimodal fusion "sensor fusion"?</span></summary>
+      <div class="ans">As architecture, yes &mdash; the three levels are identical and chosen for identical reasons. As engineering, no. Kalman fusion derives its weighting from an observation model and a noise covariance, exposes an innovation you can monitor, and comes with an observability test. Learned fusion has none of those; it has a validation score. Both combine sensors and only one can tell you when it has stopped working.</div></details>
+    <details class="q"><summary><span class="qn">J2</span><span>The source calls temperature a physical analogy. Is that safe?</span></summary>
+      <div class="ans">The functional form is exactly Boltzmann, which is more than an analogy and licenses both limiting behaviours. Everything past the form is unsafe: no energy, no heat bath, no equilibrium, and \(\tau\) is fitted by gradient descent. This is the boundary Chapter 07 drew around Shannon entropy, and the same rule applies &mdash; a shared functional form is not a shared mechanism.</div></details>
+    <details class="q"><summary><span class="qn">J3</span><span>Defend and then attack the claim that a cosine similarity of 0.8 means something.</span></summary>
+      <div class="ans">Defend: within one model it ranks reliably, and ranking is what retrieval needs. Attack: it is not comparable across models, there is no reference standard, and no physical quantity is being measured. Use it as an ordering device, never as a reading.</div></details>
+    <details class="q"><summary><span class="qn">J4</span><span>The straight-through estimator computes the wrong gradient deliberately. Why is that not fatal?</span></summary>
+      <div class="ans">Because nothing here requires the gradient to be the derivative of the loss &mdash; only that it points somewhere useful often enough for the optimiser to make progress. It is worth noticing how different that is from every numerical method you have used, where the approximation is justified by a limit. Here there is no limit: the true derivative is zero, so any usable signal is invented.</div></details>
+    <details class="q"><summary><span class="qn">J5</span><span>FID uses a mean and a covariance. What does that let through?</span></summary>
+      <div class="ans">Everything above the second moment. Two distributions can share a mean and covariance and look nothing alike &mdash; Chapter 04 computed skewness and kurtosis for exactly this reason. FID also lives in one particular network's feature space and is biased by sample size. It is a useful proxy and not a measurement.</div></details>
+    <details class="q"><summary><span class="qn">J6</span><span>Would you use a VLM to read safety-critical instruments? Argue it properly.</span></summary>
+      <div class="ans">Not as the instrument. No uncertainty bound, no traceability, no observability test, no innovation to monitor, and silent degradation when the world shifts. But as a screen ahead of a human it is well-posed: characterise its false-negative rate on the readings that matter, treat it as a cheap imperfect gauge in an acceptance-sampling scheme, and the human is the reference. &sect;14 works this through.</div></details>
+    <details class="q"><summary><span class="qn">J7</span><span>Why does staged training work better than training everything at once?</span></summary>
+      <div class="ans">The source cites optimisation difficulty and modality imbalance, both real. The sharper reason is diagnostic: if you commission every subsystem simultaneously and the result is wrong, nothing tells you which subsystem is at fault. Staging keeps the failure attributable, which is why you bench-test instruments before loop checks and loop-check before running the plant.</div></details>
+    <details class="q"><summary><span class="qn">J8</span><span>Which bridge in this chapter is weakest, and which would you stake the most on?</span></summary>
+      <div class="ans">Weakest is the calibration reading of a joint embedding space &mdash; it captures the shape and none of the traceability that makes calibration useful, so it is close to decorative. Strongest is residual quantisation as successive approximation, because it predicted a failure the source does not mention: with a fixed-scale codebook the method stalls and reverses. A bridge that predicts a failure mode is load-bearing; one that only renames things is not.</div></details>
+  </div>
+</section>
+
 <section id="next">
   <div class="col">
-    <div class="sechead"><span class="secnum">10</span><h2>What part 2 covers</h2></div>
+    <div class="sechead"><span class="secnum">16</span><h2>What this feeds</h2></div>
     <p>
-      Part 1 built the shared representation and the tokeniser. Part 2 is what gets built on them:
+      This sheet has a different shape from the rest of the series, and it is worth naming as you
+      leave it. Most chapters found mathematics you already owned. This one found an
+      <em>architecture</em> you already owned &mdash; combine several imperfect channels, each
+      blind to what the others see &mdash; and then spent most of its length on what is missing
+      from the version presented here.
     </p>
-    <ul>
-      <li><b>Vision-language models</b> &mdash; the five-step path from image patches to tokens a
-        language model can read, and the architectures that do it.</li>
-      <li><b>Cross-modal generation</b> &mdash; text to image, video and audio; and
-        <b>classifier-free guidance</b>, which turns out to be over-relaxation: you compute a
-        correction and then deliberately overshoot it.</li>
-      <li><b>Evaluating generated output</b> &mdash; where FID is a distance between two Gaussians
-        fitted to feature distributions, built from a mean and a covariance, which is Chapter 04's
-        centroid and second moment.</li>
-      <li><b>Unified architectures and staged training</b> &mdash; which reads as a commissioning
-        sequence: characterise each instrument alone, then cross-check pairs, then run the
-        assembled system.</li>
-    </ul>
+    <p>
+      That is not a complaint about the field. Learned fusion does things Kalman fusion cannot:
+      it works when you have no observation model, no noise characterisation, and no idea what
+      state you are estimating, which describes a photograph and a caption exactly. The point is
+      only that the two are not interchangeable, and the vocabulary invites you to think they
+      are.
+    </p>
+    <p>
+      Forward from here: <b>Chapter 11, autonomous systems</b>, is where the Kalman filter comes
+      back properly &mdash; state estimation on a moving platform, with DH matrices and
+      manipulator Jacobians, most of which is mechanical already. <b>Chapter 12</b> takes graph
+      neural networks onto irregular meshes, where the coarsening operation is the multigrid of
+      Chapter 08 &sect;06.
+    </p>
+  </div>
+</section>
+
+<section id="provenance">
+  <div class="col">
+    <div class="sechead"><span class="secnum">A</span><h2>Provenance and changes</h2></div>
+    <p>
+      A derivative work under Apache-2.0, which requires a statement of changes. Source links are
+      pinned at commit <code>9850ee5</code>. This sheet covers source files 01, 03, 02, 04 and 05
+      in that order &mdash; representation and tokenisation first, then what is built on them.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>What each section takes, and what was changed or added.</caption>
+      <thead><tr><th>&sect;</th><th>Source</th><th>What changed</th></tr></thead>
+      <tbody>
+        <tr><td>00</td><td>&mdash;</td><td><b>Added.</b> Bridge table with an honest verdict per row.</td></tr>
+        <tr><td>01</td><td>01</td><td>Re-narrated. <b>Added:</b> the identification with raw-data, feature and decision-level fusion, and the enumeration of what Kalman fusion has that learned fusion does not &mdash; observation model, covariance, innovation, observability.</td></tr>
+        <tr><td>02</td><td>01</td><td>Joint embeddings and cosine similarity as in source. <b>Added:</b> the two-instruments-on-one-scale reading and the traceability caution.</td></tr>
+        <tr><td>03</td><td>01</td><td>CLIP, InfoNCE and temperature as in source. <b>Added:</b> the explicit Boltzmann identification with its edge marked, the interactive matrix, the effective-negatives statistic, and the \(\log(K{+}1)\) mutual-information ceiling as the reason for large batches.</td></tr>
+        <tr><td>04</td><td>01</td><td>Zero-shot and Recall@K as in source. <b>Added:</b> the operating-point reading, and cautions on prompt sensitivity and compositional failure.</td></tr>
+        <tr><td>05</td><td>03</td><td>VQ-VAE and VQ-GAN as in source. <b>Added:</b> the three simultaneous identifications &mdash; lookup table, Chapter 09 quantisation, Chapter 06 k-means &mdash; and the break box on the straight-through estimator.</td></tr>
+        <tr><td>06</td><td>03</td><td><b>Corrects the source by extension.</b> The source calls residual quantisation &ldquo;analogous to successive approximation&rdquo; without stating the condition that makes it work. With a fixed-scale codebook the error stalls at 82% and reverses; fitted per stage it falls geometrically. Table, lab and the SAR-converter reading are added and verified.</td></tr>
+        <tr><td>07</td><td>03</td><td>Codebook collapse as in source. <b>Added:</b> the identification with Chapter 07's MoE load balancing, and usage perplexity as the diagnostic.</td></tr>
+        <tr><td>08</td><td>03</td><td>Video tokenisation as in source. <b>Added:</b> the identification of causal tokenisers with Chapter 09's causal filters.</td></tr>
+        <tr><td>13, 16</td><td>&mdash;</td><td><b>Added.</b> Where the correspondences stop; forward pointer.</td></tr>
+        <tr><td>09</td><td>02</td><td>The five-step pipeline, Flamingo, LLaVA and grounding as in source. <b>Added:</b> token compression as static condensation, the zero gate as a bumpless transfer, dual-versus-fusion as precompute-versus-recompute, the ordinality caution on coordinate tokens, and VQA v2 as a designed experiment.</td></tr>
+        <tr><td>10</td><td>04</td><td>DALL-E, Stable Diffusion and CFG as in source. <b>Added:</b> the algebraic rearrangement showing CFG is over-relaxation with a negative weight on the unconditional branch, the lab, and the note on where the SOR reading stops.</td></tr>
+        <tr><td>11</td><td>04</td><td>FID and CLIPScore as in source. <b>Added:</b> the first-and-second-moment reading, and three cautions &mdash; finite-sample bias with measured figures, the arbitrary feature space, and the Gaussian assumption.</td></tr>
+        <tr><td>12</td><td>05</td><td>Unified architectures and staged training as in source. <b>Added:</b> the commissioning-sequence table, and the diagnostic rather than optimisation argument for staging.</td></tr>
+        <tr><td>14, 15</td><td>&mdash;</td><td><b>Added.</b> Worked example and 24 questions.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p style="margin-bottom:0">
+      Figures are the compendium&rsquo;s own SVGs, unmodified. Every numeric claim is checked in
+      <code>verify_claims.py</code> under <code>[Ch10 &hellip;]</code>: the residual-quantisation
+      convergence table, the temperature limits, the mutual-information ceiling, cosine identity,
+      compression ratios, usage perplexity, the FID properties and its sample-size bias, the CFG
+      rearrangement, token-compression costs, and the zero-gate identity. Model names, parameter
+      counts and benchmark figures are reported as of the source rather than asserted as current.
+    </p>
   </div>
 
   <div class="endnote col">
-    Sheet 10 of 20, part 1 of 2. Built for a mechanical engineer with GATE-level mathematics and
-    no prior CS. Source: <a href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/tree/9850ee5/chapter%2010%20-%20multimodal%20learning" target="_blank" rel="noopener">chapter 10 &mdash; multimodal learning</a>,
-    pinned at commit <code>9850ee5</code>, Apache-2.0. Figures are the compendium's own.
-    Numerical claims are checked in <code>verify_claims.py</code> under the
-    <code>[Ch10 &hellip;]</code> tags &mdash; including the residual-quantisation convergence
-    table in &sect;06, which is the reason that section says what it says. The provenance
-    appendix lands with part 2, covering both parts.
+    Sheet 10 of 20, complete. Built for a mechanical engineer with GATE-level mathematics and no
+    prior CS. Source: <a href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/tree/9850ee5/chapter%2010%20-%20multimodal%20learning" target="_blank" rel="noopener">chapter 10 &mdash; multimodal learning</a>, Apache-2.0.
   </div>
 </section>
 
@@ -1277,7 +1890,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
 </div>
 
 <style>
-#rGrid line{stroke:var(--rule)}
+#rGrid line, #gGrid line{stroke:var(--rule)}
 #rAx, #rAy{stroke:var(--rule-strong); stroke-width:1.25}
 #rFit{stroke:var(--s3)} #rFix{stroke:var(--s1)}
 .rdot{fill:var(--s3); stroke:var(--sheet); stroke-width:.8}
@@ -1452,6 +2065,59 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     c:'<b>Correct.</b> Once the residual is smaller than the codebook vectors themselves, adding the nearest entry moves you away from the target. Successive approximation needs the step to shrink with the residual &mdash; which is why a SAR converter halves its test voltage at every bit.',
     d:'<b>That is the fitted case, not the fixed one.</b> A per-stage-fitted codebook does give geometric decay &mdash; a straight line on this log axis &mdash; but a fixed-scale one does not.'
   });
+
+  /* ---------- LAB 3 : guidance scale as over-relaxation ---------- */
+  /* CFG:  e_hat = e_u + s(e_c - e_u) == (1-s)e_u + s e_c.  Drawn as a point
+     moving along the line through the two predictions -- inside the segment
+     for s<=1, outside it for s>1, which is what over-relaxation means. */
+  var EU=[-0.55,-0.30], EC=[0.30,0.42];
+  function drawG(){
+    var sv=parseInt($('gsSl').value,10)/10;
+    $('gsVal').textContent=fmt(sv,1);
+    function PX(u){return 240+u*300;} function PY(v){return 150-v*300;}
+    var hx=EU[0]+sv*(EC[0]-EU[0]), hy=EU[1]+sv*(EC[1]-EU[1]);
+    var L=$('gLine');
+    L.setAttribute('x1',PX(EU[0]-1.2*(EC[0]-EU[0])).toFixed(1));
+    L.setAttribute('y1',PY(EU[1]-1.2*(EC[1]-EU[1])).toFixed(1));
+    L.setAttribute('x2',PX(EU[0]+22*(EC[0]-EU[0])).toFixed(1));
+    L.setAttribute('y2',PY(EU[1]+22*(EC[1]-EU[1])).toFixed(1));
+    L.setAttribute('stroke','var(--rule-strong)');
+    var d='',k,ss;
+    for(k=0;k<=120;k++){ ss=sv*k/120;
+      d+=(k?'L':'M')+PX(EU[0]+ss*(EC[0]-EU[0])).toFixed(1)+' '+PY(EU[1]+ss*(EC[1]-EU[1])).toFixed(1);}
+    $('gTrail').setAttribute('d',d);
+    $('gTrail').setAttribute('stroke', sv>1?'var(--brk)':'var(--s2)');
+    $('gPts').innerHTML=
+      '<circle cx="'+PX(EU[0]).toFixed(1)+'" cy="'+PY(EU[1]).toFixed(1)+'" r="7" fill="var(--s1)" stroke="var(--sheet)" stroke-width="1.5"/>'+
+      '<circle cx="'+PX(EC[0]).toFixed(1)+'" cy="'+PY(EC[1]).toFixed(1)+'" r="7" fill="var(--s3)" stroke="var(--sheet)" stroke-width="1.5"/>'+
+      '<circle cx="'+PX(hx).toFixed(1)+'" cy="'+PY(hy).toFixed(1)+'" r="6.5" fill="none" stroke="'+(sv>1?'var(--brk)':'var(--s2)')+'" stroke-width="3"/>';
+    $('gLab').innerHTML=
+      '<text class="tk" x="'+(PX(EU[0])-8).toFixed(1)+'" y="'+(PY(EU[1])+22).toFixed(1)+'" text-anchor="middle">no prompt</text>'+
+      '<text class="tk" x="'+(PX(EC[0])+6).toFixed(1)+'" y="'+(PY(EC[1])-14).toFixed(1)+'" text-anchor="middle">with prompt</text>'+
+      '<text class="tk" x="12" y="18">the two predictions, and what is actually used</text>';
+    $('oWu').textContent=fmt(1-sv,2);
+    $('oWc').textContent=fmt(sv,2);
+    $('oStep').textContent=fmt(sv,1)+'x';
+    $('oReg').innerHTML = sv<1 ? '<span class="flag ok">interpolating</span>'
+      : (sv===1 ? '<span class="flag ok">the conditional</span>'
+      : '<span class="flag bad">extrapolating</span>');
+  }
+  $('gsSl').addEventListener('input',function(){
+    document.querySelectorAll('[data-gp]').forEach(function(o){o.classList.remove('on');}); drawG();});
+  document.querySelectorAll('[data-gp]').forEach(function(b){
+    b.addEventListener('click',function(){
+      $('gsSl').value=b.getAttribute('data-gp');
+      document.querySelectorAll('[data-gp]').forEach(function(o){o.classList.remove('on');});
+      b.classList.add('on'); drawG();});
+  });
+  grid($('gGrid'),480,300,30); drawG();
+  predict('data-p3','pv3',{
+    a:'<b>Not quite &mdash; "confidence" is the wrong frame.</b> The output is a noise prediction, not a probability. What s scales is the <i>difference</i> between the two predictions, and at 7.5 it takes 7.5 times that difference.',
+    b:'<b>That is the s &lt; 1 case.</b> Blending happens below 1, where both weights are positive. At 7.5 the weight on the unconditional prediction is &minus;6.5, which is not a blend.',
+    c:'<b>Correct.</b> Writing it as (1&minus;s)e_u + s&middot;e_c, at s = 7.5 the weights are &minus;6.5 and +7.5. The result lies far outside the segment joining the two predictions, pushed away from the no-prompt answer. That is over-relaxation, and it is why very high s saturates the image.',
+    d:'<b>No &mdash; that would be s = 0.5.</b> The average is the midpoint; s = 7.5 is far outside the segment entirely.'
+  });
+
 })();
 </script>
 <script>
