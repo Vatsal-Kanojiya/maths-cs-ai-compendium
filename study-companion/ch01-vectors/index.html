@@ -264,7 +264,9 @@ figcaption b{color:var(--ink-2); font-weight:700; letter-spacing:.04em}
 .ro{background:var(--sheet); padding:8px 11px}
 .ro-k{
   font-family:var(--f-disp); font-size:9px; letter-spacing:.13em; text-transform:uppercase;
-  color:var(--ink-3); margin-bottom:2px; white-space:nowrap;
+  color:var(--ink-3); margin-bottom:2px;
+  /* was white-space:nowrap, which clipped the longer keys instead of wrapping */
+  white-space:normal; overflow-wrap:break-word; line-height:1.3; min-height:2.6em;
 }
 .ro-v{
   font-family:var(--f-mono); font-size:15px; font-weight:500; font-variant-numeric:tabular-nums;

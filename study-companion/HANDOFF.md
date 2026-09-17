@@ -282,6 +282,20 @@ What the probe must check, at widths 1180 / 900 / 700 / 480 / 390:
 - **Ship only the figures the page uses.** Chapters 05 and 06 both ship exactly as many SVGs
   as they reference. Copy the chapter's full figure set into the workspace while drafting,
   then prune before committing.
+- **A design-system fix does not travel backwards on its own.** Each chapter inlines its own
+  copy of the token block, so a rule repaired while writing chapter N stays broken in
+  chapters 1..N-1 until someone backports it. This bit `.ro-k`: the `white-space:nowrap`
+  that clipped long readout keys was fixed at Chapter 06 and carried forward to 07 and 08,
+  while Chapters 01-05 kept the broken rule and Chapters 03, 04 and 05 shipped with visibly
+  clipped labels (`sigma - radius of gyra...`, `H(p,q) - cross-ent...`). Fixed everywhere now.
+  **After repairing anything in the shared head block, grep the earlier chapters for the old
+  rule and backport it**, then re-probe them. A one-line diff per chapter; the alternative is
+  a series that drifts apart chapter by chapter.
+- **Probe the whole series occasionally, not just the chapter you are writing.** The clipped
+  labels above were invisible for three chapters because nobody re-ran the earlier pages. A
+  sweep over every `ch0*/index.html` at 1180 and 390 catches this in about a minute:
+  horizontal scroll, `scrollWidth > clientWidth` on `.ro-k`/`.ro-v`/`.lab-t`, display
+  equations wider than their `.mathbox`, broken images, and page errors.
 
 ## The Chapter 06 lesson worth generalising
 
