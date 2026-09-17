@@ -903,3 +903,75 @@ ok = np.all((sp.real < 0) == (np.abs(zz_) < 1))
 print(f"\n[Ch09 s09] z=e^(sT): Re(s)<0 <=> |z|<1 over 4000 poles          {P(ok)}")
 
 print("\n" + "="*66)
+
+print("=" * 66)
+print("CHAPTER 09 - AUDIO AND SPEECH (part 3)")
+print("=" * 66)
+
+import itertools
+BLANK = '-'
+def ctc_collapse(path):
+    out, prev = [], None
+    for c in path:
+        if c != prev and c != BLANK: out.append(c)
+        prev = c
+    return ''.join(out)
+
+def ctc_count_dp(y, T):
+    """Path-counting form of the CTC forward recursion: every emission weighted 1.
+    This is exactly the recursion the Ch09 s11 lattice panel runs in the browser."""
+    ext = [BLANK]
+    for ch in y: ext += [ch, BLANK]
+    S = len(ext)
+    a = [0]*S; a[0] = 1
+    if S > 1: a[1] = 1
+    for _ in range(1, T):
+        b = [0]*S
+        for s_ in range(S):
+            v = a[s_]
+            if s_ > 0: v += a[s_-1]
+            # the skip is forbidden across a repeated label: "tt" needs a blank
+            if s_ > 1 and ext[s_] != BLANK and ext[s_] != ext[s_-2]: v += a[s_-2]
+            b[s_] = v
+        a = b
+    return a[S-1] + (a[S-2] if S > 1 else 0)
+
+ALPHA = ['c', 'a', 't']
+print("\n[Ch09 s11] CTC forward DP against brute-force enumeration, target 'cat':")
+allok = True
+for T in (3, 4, 5, 6, 7):
+    bf = sum(1 for p in itertools.product(ALPHA + [BLANK], repeat=T) if ctc_collapse(p) == 'cat')
+    dp = ctc_count_dp('cat', T)
+    allok &= (bf == dp)
+    print(f"[Ch09 s11]   T={T}: brute force {bf:4d}, DP {dp:4d}   {P(bf == dp)}")
+print(f"[Ch09 s11] page quotes 1, 7, 28, 84, 210                      "
+      f"{P([ctc_count_dp('cat', T) for T in (3,4,5,6,7)] == [1,7,28,84,210])}")
+print(f"[Ch09 s11] T=12 gives {ctc_count_dp('cat',12):,} of 4^12 = {4**12:,} paths, DP fills {12*7} cells  "
+      f"{P(ctc_count_dp('cat',12) == 5005 and 12*7 == 84)}")
+print(f"[Ch09 s11] a repeat costs alignments: 'tt' {ctc_count_dp('tt',7)} vs 'at' {ctc_count_dp('at',7)} at T=7  "
+      f"{P(ctc_count_dp('tt',7) < ctc_count_dp('at',7))}")
+print(f"[Ch09 s11] and needs T >= 2|y|-1: 'tt' at T=2 gives {ctc_count_dp('tt',2)} alignments  {P(ctc_count_dp('tt',2) == 0)}")
+print(f"[Ch09 s11] collapse('--cc-aa-t--') = {ctc_collapse('--cc-aa-t--')!r}                   {P(ctc_collapse('--cc-aa-t--') == 'cat')}")
+print(f"[Ch09 s11] without a blank a repeat is unspellable: collapse('lleetter') = {ctc_collapse('lleetter')!r}  "
+      f"{P(ctc_collapse('lleetter') != 'letter')}")
+
+# --- countable facts from the source ------------------------------------
+print()
+print(f"[Ch09 s10] 40 phonemes cubed = {40**3:,} triphones (source says 64,000)   {P(40**3 == 64000)}")
+print(f"[Ch09 s13] wav2vec latent rate: 320 samples at 16 kHz = {320/16000*1000:.0f} ms   {P(320/16000 == 0.020)}")
+print(f"[Ch09 s12] Fast Conformer 8x downsample -> attention cost / {8**2}        {P(8**2 == 64)}")
+
+def edit(a, b):
+    d = np.zeros((len(a)+1, len(b)+1), int)
+    d[:, 0] = np.arange(len(a)+1); d[0, :] = np.arange(len(b)+1)
+    for i in range(1, len(a)+1):
+        for j in range(1, len(b)+1):
+            d[i, j] = min(d[i-1, j]+1, d[i, j-1]+1, d[i-1, j-1] + (a[i-1] != b[j-1]))
+    return int(d[-1, -1])
+print(f"\n[Ch09 s15] 'cat' vs 'bat': WER {edit(['cat'],['bat'])*100:.0f}%, CER {edit('cat','bat')/3*100:.0f}%  "
+      f"(source 100 / 33)   {P(edit('cat','bat') == 1)}")
+w = edit(['a'], ['x','y','z'])/1
+print(f"[Ch09 s15] WER EXCEEDS 100%: 1-word ref, 3-word hyp -> {w*100:.0f}%      {P(w > 1)}")
+print(f"[Ch09 s15] so 1 - WER is not an accuracy                        {P(1 - w < 0)}")
+
+print("\n" + "="*66)

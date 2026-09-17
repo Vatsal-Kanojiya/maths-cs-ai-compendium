@@ -388,7 +388,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
 
 <header class="titleblock">
   <div class="tb-main">
-    <div class="tb-k">Sheet 09 of 20 &mdash; Audio and Speech, parts 1&ndash;2</div>
+    <div class="tb-k">Sheet 09 of 20 &mdash; Audio and Speech, parts 1&ndash;3</div>
     <h1>Sampling, Spectra, Leakage</h1>
     <p class="tb-sub">
       The chapter where you already own the mathematics. Every core operation in audio
@@ -415,8 +415,14 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
   <a href="#stft"><span class="n">07</span><span>STFT and spectrogram</span></a>
   <a href="#mel"><span class="n">08</span><span>Mel scale and MFCCs</span></a>
   <a href="#filters"><span class="n">09</span><span>Filtering</span></a>
-  <a href="#breaks"><span class="n">10</span><span>Where it breaks</span></a>
-  <a href="#next"><span class="n">11</span><span>What part 3 covers</span></a>
+  <a href="#align"><span class="n">10</span><span>The alignment problem</span></a>
+  <a href="#ctc"><span class="n">11</span><span>CTC</span></a>
+  <a href="#beyond"><span class="n">12</span><span>Past CTC</span></a>
+  <a href="#pretrain"><span class="n">13</span><span>Unlabelled audio</span></a>
+  <a href="#stream"><span class="n">14</span><span>Streaming is causality</span></a>
+  <a href="#wer"><span class="n">15</span><span>Measuring it</span></a>
+  <a href="#breaks"><span class="n">16</span><span>Where it breaks</span></a>
+  <a href="#next"><span class="n">17</span><span>What part 4 covers</span></a>
   <a href="#provenance"><span class="n">A</span><span>Provenance</span></a>
 </nav>
 
@@ -1161,7 +1167,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     </p>
 
     <div class="note brk">
-      <div class="note-h"><span class="ic">!</span>Read &sect;10 break 4 before trusting anything else about this scale</div>
+      <div class="note-h"><span class="ic">!</span>Read &sect;16 break 4 before trusting anything else about this scale</div>
       <p style="margin-bottom:0">
         The source chapter says the mel scale explains why musical octaves sound equally spaced.
         It does not, and its own formula proves it &mdash; octave widths come out at 241.6,
@@ -1169,7 +1175,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
         <em>log-frequency</em> axis, which is a fact about pitch <b>ratios</b>. The mel scale
         measures perceived pitch <b>distance</b>, is a different experiment, and is
         deliberately not logarithmic at the bottom. The full argument and the table are in
-        &sect;10.
+        &sect;16.
       </p>
     </div>
 
@@ -1340,9 +1346,421 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
   </div>
 </section>
 
+<section id="align">
+  <div class="col">
+    <div class="sechead"><span class="secnum">10</span><h2>The alignment problem</h2>
+      <a class="srcref" href="https://github.com/HenryNdubuaku/maths-cs-ai-compendium/blob/9850ee5/chapter%2009%20-%20audio%20and%20speech/02.%20automatic%20speech%20recognition.md" target="_blank" rel="noopener">source &sect;02</a>
+    </div>
+    <p class="lede">
+      Everything so far had a mechanical counterpart. This does not. It is worth stating clearly
+      before the machinery arrives, because it is the problem the whole of speech recognition is
+      organised around.
+    </p>
+    <p>
+      One second of speech at 16 kHz, framed at 10 ms hop, is 100 feature vectors. The word
+      spoken in that second might be five letters. So you have an input of length 100 and a
+      target of length 5, and <b>nothing tells you which frames belong to which letter</b>. The
+      training data is a recording and a transcript. It does not come with boundaries.
+    </p>
+    <p>
+      That is not a difficulty of degree. It changes what a loss function can be. Every model in
+      the compendium so far compared a prediction to a target <em>elementwise</em>: this pixel
+      against that pixel, this value against that value. Here there is no elementwise
+      correspondence to compare, and constructing one is the problem.
+    </p>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>Why your instincts do not port</div>
+      <p>
+        The closest mechanical situation is comparing two traces of different lengths &mdash;
+        say a measured response against a simulated one when the time bases do not match. You
+        would resample one onto the other, or cross-correlate to find the lag. Both work because
+        the two signals are <em>the same kind of object</em>, sampled differently.
+      </p>
+      <p style="margin-bottom:0">
+        Frames and letters are not the same kind of object. There is no resampling that turns
+        100 spectra into 5 characters, and no lag to find, because the relationship is not a
+        shift &mdash; it is a variable-rate, many-to-one, content-dependent grouping. A long
+        vowel might own 30 frames and the following stop consonant 4. The correct answer is
+        genuinely unknown at training time, for every single training example.
+      </p>
+    </div>
+
+    <p>
+      The classical solution was to <em>assume</em> an alignment and refine it. Model each
+      phoneme as a small left-to-right <b>HMM</b>, let its state-transition probabilities absorb
+      duration, and train with Baum&ndash;Welch &mdash; which is the EM algorithm of Chapter 05,
+      alternating between &ldquo;given my current model, where are the boundaries probably?&rdquo;
+      and &ldquo;given those boundaries, what is the best model?&rdquo;. Decoding then picks the
+      most likely state path with <b>Viterbi</b>, the dynamic programme you have already met.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; the classical stack is all Chapter 05</div>
+      <p style="margin-bottom:0">
+        A GMM&ndash;HMM system is a Markov chain over sub-phonetic states, with a Gaussian
+        mixture for the emission density at each state, fitted by EM and searched by dynamic
+        programming. Every one of those pieces is in Chapter 05, and the diagonal covariance
+        that made it tractable is the <em>reason</em> the DCT in &sect;08 existed &mdash; the
+        model needed decorrelated inputs, so the pipeline produced them. The engineering
+        hangs together; it just got replaced.
+      </p>
+    </div>
+
+    <p>
+      One detail is worth keeping because it is a real acoustic fact, not an implementation
+      artefact. A phoneme&rsquo;s sound depends heavily on its neighbours &mdash;
+      <b>coarticulation</b> &mdash; so systems model <b>triphones</b> rather than phonemes. With
+      around 40 English phonemes that is \(40^3=64{,}000\) units, far too many to train
+      individually, so acoustically similar triphones are clustered into 2,000&ndash;10,000
+      <b>senones</b> using the decision trees of Chapter 06. That is a capacity-versus-data
+      trade-off handled by tying parameters, which is a move you have seen: it is the same
+      reasoning as using one material model for a family of similar components rather than
+      characterising each one.
+    </p>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/asr_pipeline.svg" alt="The classical ASR pipeline from audio through features, acoustic model, decoder and language model to text" width="420"></div>
+    <figcaption><b>Fig. 9.6</b> &mdash; The classical pipeline. Each box was trained separately, which is exactly what end-to-end models removed. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="ctc">
+  <div class="col">
+    <div class="sechead"><span class="secnum">11</span><h2>CTC: summing over every alignment</h2>
+      <a class="srcref" href="https://github.com/HenryNdubuaku/maths-cs-ai-compendium/blob/9850ee5/chapter%2009%20-%20audio%20and%20speech/02.%20automatic%20speech%20recognition.md" target="_blank" rel="noopener">source &sect;02</a>
+    </div>
+    <p>
+      <b>Connectionist Temporal Classification</b> takes the opposite approach to assuming an
+      alignment. It refuses to choose one, and sums over all of them.
+    </p>
+    <p>
+      Add one symbol to the alphabet: a <b>blank</b>, written &ldquo;&ndash;&rdquo;, meaning
+      &ldquo;no output here&rdquo;. The network emits one symbol per frame, so a 100-frame input
+      gives a 100-symbol path. Then define a collapsing rule: merge runs of identical symbols,
+      then delete blanks. Under that rule many paths give the same transcript &mdash;
+      <code>--cc-aa-t--</code> and <code>c-a-t</code> both collapse to <code>cat</code>.
+    </p>
+    <p>The probability of a transcript is the total probability of every path that collapses to it:</p>
+  </div>
+  <div class="mathbox col">
+    $$P(\mathbf{y}\mid\mathbf{x})=\sum_{\boldsymbol{\pi}\in\mathcal{B}^{-1}(\mathbf{y})}\ \prod_{t=1}^{T}p(\pi_t\mid\mathbf{x})$$
+  </div>
+  <div class="col">
+    <p>
+      Train by maximising that. The network is never told where the boundaries are; it is told
+      only that <em>some</em> valid arrangement must be right, and gradient descent finds one.
+    </p>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>Why the blank is not optional, and what it fixes</div>
+      <p style="margin-bottom:0">
+        Merging repeats alone would make double letters unspellable &mdash; the path
+        <code>lleetter</code> collapses to <code>leter</code>, and there would be no way to write
+        <code>letter</code> at all. The blank is what separates a genuine repeat from a held
+        sound: <code>l-etter</code> keeps the two t&rsquo;s apart because a blank breaks the run.
+        So the blank is doing two jobs: marking silence, and acting as a delimiter. That second
+        job is the one people miss.
+      </p>
+    </div>
+
+    <p>
+      The sum looks impossible. At \(T=100\) over a four-symbol alphabet there are
+      \(4^{100}\approx1.6\times10^{60}\) paths. But paths that agree on how much of the
+      transcript they have emitted so far are interchangeable from that point on, so the sum
+      factorises and a dynamic programme over a
+      \(T\times 2|\mathbf{y}{+}1|\) lattice computes it in \(O(T|\mathbf{y}|)\) &mdash; 300 cells
+      rather than \(10^{60}\) paths. It is the forward algorithm of Chapter 05, and this page
+      checks it against brute-force enumeration for short cases in
+      <code>verify_claims.py</code>: 1, 7, 28, 84 and 210 alignments at \(T=3\dots7\), by both
+      methods.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; this is a path-counting dynamic programme</div>
+      <p style="margin-bottom:0">
+        The structure is one you have used: a lattice where each cell&rsquo;s value depends on a
+        few predecessors, filled left to right, turning an exponential search into a linear
+        sweep. Critical-path scheduling, shortest-route problems and Viterbi all have this shape.
+        What is unusual here is <em>what</em> is being summed &mdash; not the best path, but all
+        of them &mdash; because the loss is a marginal probability rather than a maximum.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Every path that spells the word</div><div class="lab-tag">Predict, then count</div></div>
+
+    <div class="predict">
+      <p style="margin-top:0">
+        A CTC network runs for 7 frames over the alphabet &#123;c, a, t, blank&#125;. How many of
+        the \(4^7=16{,}384\) possible paths collapse to <code>cat</code>?
+      </p>
+      <button class="pbtn" data-p4="a" type="button">Exactly 1</button>
+      <button class="pbtn" data-p4="b" type="button">About 20</button>
+      <button class="pbtn" data-p4="c" type="button">210</button>
+      <button class="pbtn" data-p4="d" type="button">Over 8,000</button>
+      <div class="pverdict" id="pv4"></div>
+    </div>
+
+    <svg class="stage" id="sC" viewBox="0 0 480 300" role="img"
+         aria-label="A CTC lattice with time across and the blank-extended label sequence up the side, showing the number of paths reaching each cell">
+      <g id="cGrid"></g>
+      <g id="cCells"></g>
+      <g id="cLabels"></g>
+    </svg>
+
+    <div class="ctl">
+      <label for="tSl">Frames T</label>
+      <input type="range" id="tSl" min="3" max="12" value="7" step="1">
+      <span class="ro-v" id="tVal" style="min-width:40px">7</span>
+      <label for="wSel" style="margin-left:6px">Target</label>
+      <button class="btn on" data-y="cat" type="button">cat</button>
+      <button class="btn" data-y="at" type="button">at</button>
+      <button class="btn" data-y="tt" type="button">tt</button>
+    </div>
+
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Valid<br>alignments</div><div class="ro-v a" id="oCnt">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">All possible<br>paths</div><div class="ro-v" id="oAll">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Fraction<br>that are valid</div><div class="ro-v c" id="oFrac">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Lattice cells<br>the DP fills</div><div class="ro-v b" id="oCells">&mdash;</div></div>
+    </div>
+  </div>
+
+  <div class="lab-foot col">
+    Each cell shows how many paths reach it. The count in the last cell is the sum CTC needs, and
+    it is obtained by filling \(T\times(2|\mathbf{y}|+1)\) cells instead of enumerating
+    \(4^T\) paths &mdash; at \(T=12\) that is 84 cells against 16.8 million paths. Try the target
+    <b>tt</b>: the double letter forces a blank between the two t&rsquo;s, which is why it has
+    far fewer valid alignments than <b>at</b> at the same \(T\), and why \(T\) must be at least
+    \(2|\mathbf{y}|-1\) for a word with a repeat rather than \(|\mathbf{y}|\).
+  </div>
+
+  <div class="col">
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>What CTC gives up</div>
+      <p style="margin-bottom:0">
+        CTC assumes each frame&rsquo;s output is independent of the others given the audio. That
+        is what makes the dynamic programme factorise, and it is false about language: the model
+        cannot learn that <code>q</code> is nearly always followed by <code>u</code>, because it
+        never conditions one output on another. In practice an external language model is bolted
+        on at decoding time to supply what the architecture structurally cannot represent. The
+        independence assumption is not an approximation that gets better with more data &mdash;
+        it is a property of the model, and the fix is a second model.
+      </p>
+    </div>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/ctc_alignment.svg" alt="Many paths through blank and character tokens that all collapse to the same transcript" width="420"></div>
+    <figcaption><b>Fig. 9.7</b> &mdash; Different paths, same transcript. Training sums over all of them. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="beyond">
+  <div class="col">
+    <div class="sechead"><span class="secnum">12</span><h2>Past CTC: three ways to keep the context</h2>
+      <a class="srcref" href="https://github.com/HenryNdubuaku/maths-cs-ai-compendium/blob/9850ee5/chapter%2009%20-%20audio%20and%20speech/02.%20automatic%20speech%20recognition.md" target="_blank" rel="noopener">source &sect;02</a>
+    </div>
+    <p>
+      CTC&rsquo;s independence assumption is the thing to fix, and there are three standard ways,
+      all of which trade something for it.
+    </p>
+    <p>
+      The <b>RNN-Transducer</b> adds a second network that reads what has been emitted so far and
+      feeds it into the output decision, so each token is conditioned on its predecessors. That
+      restores the language modelling CTC threw away while keeping the left-to-right structure,
+      which is why RNN-T is what runs on your phone. <b>Listen, Attend and Spell</b> instead uses
+      the encoder&ndash;decoder attention of Chapter 07: the decoder attends over the whole
+      encoded utterance for each output character. Strong, but it must see the entire utterance
+      first. And the <b>Conformer</b> is not a different loss but a better encoder for either
+      &mdash; a block that interleaves self-attention with a depthwise convolution.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; the Conformer is a two-scale filter</div>
+      <p style="margin-bottom:0">
+        A convolution has a fixed, local receptive field: it sees a few neighbouring frames, like
+        a short FIR filter sliding along the signal. Self-attention has unbounded reach but no
+        built-in notion of nearness &mdash; it must learn locality from data. Speech has both
+        kinds of structure: formant transitions that live in a few tens of milliseconds, and
+        agreement across a whole sentence. Putting both operators in the same block is the same
+        engineering instinct as running a high-pass and a low-pass branch and summing them,
+        rather than trying to make one filter do everything. The specific ordering
+        &mdash; feed-forward, attention, convolution, feed-forward, with half-weight residuals on
+        the outer pair &mdash; is <em>empirical</em>. The source says so, and it is worth
+        believing: it was found by trying orderings, not derived.
+      </p>
+    </div>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/conformer_block.svg" alt="A Conformer block with feed-forward, self-attention, convolution and feed-forward modules" width="420"></div>
+    <figcaption><b>Fig. 9.8</b> &mdash; The Conformer block. Local operator and global operator in the same sandwich. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="pretrain">
+  <div class="col">
+    <div class="sechead"><span class="secnum">13</span><h2>Learning from audio nobody labelled</h2>
+      <a class="srcref" href="https://github.com/HenryNdubuaku/maths-cs-ai-compendium/blob/9850ee5/chapter%2009%20-%20audio%20and%20speech/02.%20automatic%20speech%20recognition.md" target="_blank" rel="noopener">source &sect;02</a>
+    </div>
+    <p>
+      Transcribed speech is expensive; recorded speech is nearly free. <b>wav2vec 2.0</b>
+      exploits that gap. A convolutional front end turns the raw waveform into one latent vector
+      per 20 ms &mdash; 320 samples at 16 kHz &mdash; spans of those latents are masked out, and
+      a transformer must identify the true content of each masked span against a set of
+      decoys drawn from elsewhere in the same recording.
+    </p>
+    <p>
+      No transcript is involved. The supervision comes entirely from the structure of the audio:
+      to fill a gap you must have learned what speech sounds like. Afterwards a small
+      classification head is added and fine-tuned on whatever labelled data exists. The source
+      reports near-state-of-the-art results from <b>ten minutes</b> of labelled speech on top of
+      53,000 hours of unlabelled pre-training.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; it is a proof-loading test for a representation</div>
+      <p style="margin-bottom:0">
+        The mechanism is worth naming precisely because it recurs everywhere in modern ML. You
+        construct a task whose answer you already know &mdash; here, what was under the mask,
+        since you removed it yourself &mdash; and force the model to recover it. The task itself
+        is disposable. What you keep is the internal representation that solving it required.
+        The nearest engineering habit is a proof load or a commissioning test: you do not care
+        about the test result, you care that passing it certifies a property you will rely on
+        later.
+      </p>
+    </div>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>Two honest notes on this section</div>
+      <p>
+        <b>The specific systems will date.</b> The source names Whisper, Parakeet, Canary,
+        Moonshine, Distil-Whisper, USM, MMS and HuBERT with parameter counts, hour counts and
+        benchmark claims. Those were true when written and some are already stale. Read that part
+        of the source as a snapshot of 2023&ndash;2024, not as current fact, and check
+        benchmark claims against the leaderboard of the day rather than against a page.
+      </p>
+      <p style="margin-bottom:0">
+        <b>The durable part is the pattern.</b> Self-supervised pre-training on unlabelled
+        audio, then fine-tuning on a little labelled data, is the structural idea, and it is the
+        same idea as BERT in Chapter 07 and contrastive pre-training in vision. That will
+        outlast every model name in the list.
+      </p>
+    </div>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/wav2vec2_pretraining.svg" alt="The wav2vec 2.0 architecture with CNN feature encoder, masking, transformer context network and quantised contrastive targets" width="420"></div>
+    <figcaption><b>Fig. 9.9</b> &mdash; wav2vec 2.0. The mask is the supervision. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="stream">
+  <div class="col">
+    <div class="sechead"><span class="secnum">14</span><h2>Streaming, which is causality</h2>
+      <a class="srcref" href="https://github.com/HenryNdubuaku/maths-cs-ai-compendium/blob/9850ee5/chapter%2009%20-%20audio%20and%20speech/02.%20automatic%20speech%20recognition.md" target="_blank" rel="noopener">source &sect;02</a>
+    </div>
+    <p>
+      An offline system may read the whole recording before saying anything. A streaming system
+      must produce output as the audio arrives. The source treats this as a deployment
+      constraint. It is more than that &mdash; it is the same constraint you already know by
+      another name, and &sect;09 set it up.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; streaming is causal filtering, exactly</div>
+      <p>
+        A <b>causal</b> filter computes its output from present and past input only. That is what
+        lets it run in real time on a machine, and it is why every controller you have designed
+        is causal: the plant cannot wait for data that has not happened yet. A
+        <b>non-causal</b> filter uses future samples too. It is not a fiction &mdash; you use one
+        whenever you post-process a recorded signal, and zero-phase filtering (running a filter
+        forwards then backwards over stored data) is exactly that.
+      </p>
+      <p style="margin-bottom:0">
+        A unidirectional encoder is a causal filter. A bidirectional encoder is a non-causal one.
+        Everything else follows without any new ideas: bidirectional models are more accurate for
+        the same reason zero-phase filtering is cleaner &mdash; more information, including
+        information from after the moment in question &mdash; and they cannot stream for the same
+        reason you cannot run <code>filtfilt</code> on a live signal.
+      </p>
+    </div>
+
+    <p>
+      The engineering compromises follow the same pattern too. <b>Chunked attention</b> processes
+      a block at a time, allowing bidirectional context <em>within</em> the block: a buffer, with
+      latency equal to the buffer length. <b>Lookahead</b> lets the model peek a few hundred
+      milliseconds ahead before committing to the current frame &mdash; accepting a fixed delay
+      to get a better answer, which is the group-delay trade you make every time you choose a
+      filter order.
+    </p>
+    <p>
+      One metric from this section deserves to be carried across verbatim. The <b>real-time
+      factor</b> is processing time divided by audio duration, and a streaming system needs
+      RTF &lt; 1 or it falls progressively further behind. That is the condition that your
+      control loop must finish its computation inside the sample period, and it fails the same
+      way: not gracefully, but by accumulating lag until the system is useless.
+    </p>
+  </div>
+</section>
+
+<section id="wer">
+  <div class="col">
+    <div class="sechead"><span class="secnum">15</span><h2>Measuring it, and the trap in the number</h2>
+      <a class="srcref" href="https://github.com/HenryNdubuaku/maths-cs-ai-compendium/blob/9850ee5/chapter%2009%20-%20audio%20and%20speech/02.%20automatic%20speech%20recognition.md" target="_blank" rel="noopener">source &sect;02</a>
+    </div>
+    <p>
+      <b>Word error rate</b> aligns the output to the reference by edit distance and reports
+    </p>
+  </div>
+  <div class="mathbox col">
+    $$\text{WER}=\frac{S+D+I}{N}$$
+  </div>
+  <div class="col">
+    <p>
+      substitutions plus deletions plus insertions, over the number of reference words. Roughly
+      5% is human-level on clean read speech; conversational or noisy audio is far harder.
+    </p>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>WER is not a percentage of anything</div>
+      <p>
+        The denominator is the reference length, but insertions are counted in the numerator and
+        are not bounded by it. So <b>WER can exceed 100%</b>. A one-word reference against a
+        three-word output scores 300%, which is checked in <code>verify_claims.py</code>. It is
+        not an accuracy, it is not a proportion, and 1&nbsp;&minus;&nbsp;WER is not
+        &ldquo;accuracy&rdquo; &mdash; treating it as one is the standard way to misread an ASR
+        result.
+      </p>
+      <p style="margin-bottom:0">
+        It also has no notion of how wrong a word is. <code>cat</code> heard as <code>bat</code>
+        is 100% WER on that word; character error rate calls the same mistake 33%. Neither knows
+        that mishearing a drug name matters more than mishearing an article. Chapter 06 &sect;08
+        made this argument about accuracy on rare classes; it is the same argument, and the fix
+        is the same &mdash; look at what the errors <em>are</em>, not only how many.
+      </p>
+    </div>
+
+    <p>
+      <b>Language model fusion</b> is the last piece. Combine the acoustic score with a language
+      model score, \(\log p_{\text{AM}} + \lambda\log p_{\text{LM}}\), and tune \(\lambda\). The
+      subtlety the source raises is worth keeping: an end-to-end model has already absorbed an
+      implicit language model from its training transcripts, so adding an external one
+      double-counts the linguistic prior. The correction is to estimate the internal model and
+      subtract it. You have met that structure &mdash; it is double-counting a safety factor,
+      once in the load case and once in the allowable, and the remedy is likewise to find where
+      it was already applied rather than to tune the total until it looks right.
+    </p>
+  </div>
+</section>
+
 <section id="breaks">
   <div class="col">
-    <div class="sechead"><span class="secnum">10</span><h2>Where it breaks</h2>
+    <div class="sechead"><span class="secnum">16</span><h2>Where it breaks</h2>
       <span class="srcref nolink" title="Added material, not in the source chapter">beyond the chapter</span>
     </div>
     <p>
@@ -1430,7 +1848,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
 
 <section id="next">
   <div class="col">
-    <div class="sechead"><span class="secnum">11</span><h2>What part 3 covers</h2></div>
+    <div class="sechead"><span class="secnum">17</span><h2>What part 4 covers</h2></div>
     <p>
       Parts 1 and 2 have carried a pressure wave all the way to a log-mel spectrogram. Every
       step was signal processing, and almost every step was something you had already done under
@@ -1439,9 +1857,6 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
       over as the prerequisites.
     </p>
     <ul>
-      <li><b>Automatic speech recognition</b> &mdash; CTC alignment, encoder architectures,
-        wav2vec pre-training. The alignment problem is genuinely new: you have a sequence of
-        frames and a sequence of letters and no correspondence between them.</li>
       <li><b>Text to speech</b> &mdash; the pipeline in reverse, ending at a vocoder that has to
         invent the phase &sect;01 threw away.</li>
       <li><b>Speaker analysis</b> &mdash; verification, diarisation, x-vectors. Classification
@@ -1453,7 +1868,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
   </div>
 
   <div class="endnote col">
-    Sheet 09 of 20, parts 1&ndash;2 of 4. Built for a mechanical engineer with GATE-level mathematics
+    Sheet 09 of 20, parts 1&ndash;3 of 4. Built for a mechanical engineer with GATE-level mathematics
     and no prior CS. Source: <a href="https://github.com/HenryNdubuaku/maths-cs-ai-compendium/tree/9850ee5/chapter%2009%20-%20audio%20and%20speech" target="_blank" rel="noopener">chapter 09 &mdash; audio and speech</a>,
     pinned at commit <code>9850ee5</code>, Apache-2.0. Figures are the compendium's own.
     Numerical claims on this sheet are checked by <code>verify_claims.py</code> in this
@@ -1488,8 +1903,9 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
         <tr><td>07</td><td>same</td><td>Added the waterfall-plot correspondence and the Gabor-limit equality case. Source states the bound; the Gaussian attaining it is checked here.</td></tr>
         <tr><td>08</td><td>same</td><td><b>Corrects the source.</b> Its claim that the mel scale explains equally-spaced octaves is wrong; see &sect;10 break 4. Added the deconvolution reading of the log-plus-DCT steps, the A-weighting correspondence, and the reason the DCT is now usually dropped.</td></tr>
         <tr><td>09</td><td>same</td><td>Added the \(z=e^{sT}\) mapping that makes the unit circle and the left half-plane the same condition.</td></tr>
-        <tr><td>10</td><td>&mdash;</td><td><b>Added.</b> Where the correspondences stop, including the mel-scale correction with its table.</td></tr>
-        <tr><td>11</td><td>&mdash;</td><td><b>Added.</b> Forward pointer.</td></tr>
+        <tr><td>10&ndash;15</td><td><code>02. automatic speech recognition.md</code></td><td>Re-narrated. Added the statement of why the alignment problem has no mechanical counterpart, the CTC path-counting panel checked against brute-force enumeration, the streaming/causal-filter identification, the RTF/control-loop correspondence, and the warning that WER exceeds 100%. The model roll-call is explicitly marked as a dating snapshot.</td></tr>
+        <tr><td>16</td><td>&mdash;</td><td><b>Added.</b> Where the correspondences stop, including the mel-scale correction with its table.</td></tr>
+        <tr><td>17</td><td>&mdash;</td><td><b>Added.</b> Forward pointer.</td></tr>
       </tbody>
     </table>
   </div>
@@ -1756,6 +2172,85 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     b:'<b>No.</b> There is one tone, so there is one peak &mdash; it just is not confined to one bin.',
     c:'<b>Correct.</b> The DFT assumes the frame repeats forever, and an incomplete final cycle makes a step discontinuity at the join. That step is broadband, so it appears in every bin. The rectangular window leaves its worst sidelobe only 13 dB down.',
     d:'<b>No.</b> The energy is all still there &mdash; Parseval guarantees it. It is just spread out instead of concentrated.'
+  });
+
+
+  /* ---------- LAB 4 : the CTC lattice ---------- */
+  /* Counts paths rather than probabilities, which is the same recursion with every
+     emission weighted 1.  Checked against brute-force enumeration in
+     verify_claims.py for T = 3..7: 1, 7, 28, 84, 210. */
+  var CY = 'cat';
+  function ctcCounts(y, T){
+    var ext = ['-'], i;
+    for (i = 0; i < y.length; i++){ ext.push(y[i]); ext.push('-'); }
+    var S = ext.length, rows = [], a = [], t, sIdx, v;
+    for (sIdx = 0; sIdx < S; sIdx++) a.push(0);
+    a[0] = 1; if (S > 1) a[1] = 1;
+    rows.push(a.slice());
+    for (t = 1; t < T; t++){
+      var b = [];
+      for (sIdx = 0; sIdx < S; sIdx++){
+        v = a[sIdx];
+        if (sIdx > 0) v += a[sIdx-1];
+        /* skip straight past a blank only when the two labels differ -- a repeat
+           must be separated by one, which is what makes "tt" so much rarer */
+        if (sIdx > 1 && ext[sIdx] !== '-' && ext[sIdx] !== ext[sIdx-2]) v += a[sIdx-2];
+        b.push(v);
+      }
+      a = b; rows.push(a.slice());
+    }
+    var total = a[S-1] + (S > 1 ? a[S-2] : 0);
+    return { rows: rows, ext: ext, total: total, S: S };
+  }
+  function drawC(){
+    var T = parseInt($('tSl').value, 10);
+    $('tVal').textContent = String(T);
+    var R = ctcCounts(CY, T), S = R.S;
+    var x0 = 74, y0 = 30, cw = Math.min(34, (452 - x0)/T), ch = Math.min(30, 228/S);
+    var g = '', t, sIdx, val, mx = 0;
+    for (t = 0; t < T; t++) for (sIdx = 0; sIdx < S; sIdx++) mx = Math.max(mx, R.rows[t][sIdx]);
+    for (t = 0; t < T; t++){
+      for (sIdx = 0; sIdx < S; sIdx++){
+        val = R.rows[t][sIdx];
+        var yy = y0 + (S-1-sIdx)*ch, op = val ? (0.18 + 0.62*Math.sqrt(val/mx)) : 0;
+        g += '<rect x="'+(x0+t*cw).toFixed(1)+'" y="'+yy.toFixed(1)+'" width="'+(cw-2).toFixed(1)
+           + '" height="'+(ch-2).toFixed(1)+'" rx="1.5" fill="var(--s2)" fill-opacity="'+op.toFixed(3)
+           + '" stroke="var(--rule)" stroke-width="0.5"/>';
+        if (val && cw > 20)
+          g += '<text x="'+(x0+t*cw+(cw-2)/2).toFixed(1)+'" y="'+(yy+ch/2+2.5).toFixed(1)
+             + '" text-anchor="middle" class="tk" style="font-size:9px">'
+             + (val > 9999 ? '' : val) + '</text>';
+      }
+    }
+    $('cCells').innerHTML = g;
+    var L = '';
+    for (sIdx = 0; sIdx < S; sIdx++)
+      L += '<text x="66" y="'+(y0 + (S-1-sIdx)*ch + ch/2 + 3).toFixed(1)
+         + '" text-anchor="end" class="tk">'+(R.ext[sIdx] === '-' ? 'blank' : R.ext[sIdx])+'</text>';
+    L += '<text x="'+(x0 + T*cw/2).toFixed(1)+'" y="'+(y0 + S*ch + 20).toFixed(1)
+       + '" text-anchor="middle" class="tk">frame &rarr;</text>';
+    $('cLabels').innerHTML = L;
+
+    var all = Math.pow(4, T);
+    $('oCnt').textContent = R.total.toLocaleString();
+    $('oAll').textContent = all >= 1e6 ? all.toExponential(2) : all.toLocaleString();
+    $('oFrac').textContent = (100*R.total/all).toFixed(3) + ' %';
+    $('oCells').textContent = String(T*S);
+  }
+  $('tSl').addEventListener('input', drawC);
+  document.querySelectorAll('[data-y]').forEach(function(b){
+    b.addEventListener('click', function(){
+      CY = b.getAttribute('data-y');
+      document.querySelectorAll('[data-y]').forEach(function(o){o.classList.remove('on');});
+      b.classList.add('on'); drawC();
+    });
+  });
+  grid($('cGrid'),480,300,30); drawC();
+  predict('data-p4','pv4',{
+    a:'<b>No &mdash; that is the point of CTC.</b> If only one alignment were valid you would need to know where the boundaries are, which is exactly the information you do not have.',
+    b:'<b>Too few.</b> The count grows fast: 1 at T=3, then 7, 28, 84, 210. Set the slider to 7 and read the last cell.',
+    c:'<b>Correct.</b> 210 of the 16,384 paths collapse to <code>cat</code> &mdash; about 1.3%. Training sums the probability of all 210, so the network is free to place the boundaries wherever the audio suggests.',
+    d:'<b>Too many.</b> Valid alignments are a small fraction &mdash; 210 out of 16,384, about 1.3%. Most paths spell something else entirely.'
   });
 
 })();

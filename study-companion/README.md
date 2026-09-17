@@ -44,7 +44,7 @@ merely structural, that is said plainly.
 | 06 | Machine Learning | [`ch06-machine-learning/`](ch06-machine-learning/index.html) | [Read online](https://claude.ai/artifact/AazU1pknayKewgpJQhzo3Z) |
 | 07 | Computational Linguistics | [`ch07-computational-linguistics/`](ch07-computational-linguistics/index.html) | *not yet published* |
 | 08 | Computer Vision | [`ch08-computer-vision/`](ch08-computer-vision/index.html) | *not yet published* |
-| 09 | Audio and Speech | [`ch09-audio-speech/`](ch09-audio-speech/index.html) | *parts 1-2 of 4, not yet published* |
+| 09 | Audio and Speech | [`ch09-audio-speech/`](ch09-audio-speech/index.html) | *parts 1-3 of 4, not yet published* |
 
 ## What's in a chapter page
 
