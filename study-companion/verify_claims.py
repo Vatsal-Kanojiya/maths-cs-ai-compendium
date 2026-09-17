@@ -1058,3 +1058,125 @@ print(f"[Ch09 s20] 500 ms framing instead gives df = {1/0.5:.0f} Hz -> {(90-25)/
       f"{P((90-25)/2 > 30)}")
 
 print("\n" + "="*66)
+
+print("=" * 66)
+print("CHAPTER 10 - MULTIMODAL LEARNING (part 1)")
+print("=" * 66)
+
+rng10 = np.random.default_rng(11)
+d10, K10, T10 = 16, 64, 8
+X10 = rng10.normal(0, 1/np.sqrt(d10), (4000, d10))
+
+def rq_run(mode, seed=11):
+    """Residual quantisation with three different codebook policies."""
+    rr = np.random.default_rng(seed)
+    r = X10.copy(); errs = [float(np.linalg.norm(r, axis=1).mean())]
+    for _ in range(T10):
+        if mode == 'fixed':      B = rr.normal(0, 1/np.sqrt(d10), (K10, d10))
+        elif mode == 'scaled':   B = rr.normal(0, 1, (K10, d10)) * r.std()
+        else:                                     # k-means on THIS stage's residuals
+            B = r[rr.choice(len(r), K10, replace=False)].copy()
+            for _ in range(12):
+                a = np.argmin(((r[:, None, :] - B[None])**2).sum(-1), axis=1)
+                for k in range(K10):
+                    m = a == k
+                    if m.any(): B[k] = r[m].mean(0)
+        idx = np.argmin(((r[:, None, :] - B[None])**2).sum(-1), axis=1)
+        r = r - B[idx]
+        errs.append(float(np.linalg.norm(r, axis=1).mean()))
+    return errs
+
+print()
+res = {}
+for mode in ('fixed', 'scaled', 'kmeans'):
+    e = rq_run(mode); res[mode] = e
+    mono = all(e[i+1] <= e[i] + 1e-9 for i in range(T10))
+    print(f"[Ch10 s05] {mode:6} codebook: " + " ".join(f"{v:.3f}" for v in e) +
+          f"  monotone={mono}")
+print(f"[Ch10 s05] a FIXED-scale codebook is not monotone and stalls at "
+      f"{res['fixed'][-1]/res['fixed'][0]*100:.0f}% of the original error   "
+      f"{P(not all(res['fixed'][i+1] <= res['fixed'][i]+1e-9 for i in range(T10)))}")
+print(f"[Ch10 s05] matching each stage to its residual restores convergence   "
+      f"{P(all(res['scaled'][i+1] <= res['scaled'][i]+1e-9 for i in range(T10)))}")
+print(f"[Ch10 s05] fitting each stage to its residual reaches "
+      f"{res['kmeans'][-1]/res['kmeans'][0]*100:.1f}%, a {res['kmeans'][0]/res['kmeans'][-1]:.1f}x reduction  "
+      f"{P(res['kmeans'][-1] < 0.2*res['kmeans'][0])}")
+rat = [res['kmeans'][i+1]/res['kmeans'][i] for i in range(T10)]
+print(f"[Ch10 s05] and the decay is GEOMETRIC: per-stage ratio "
+      f"{min(rat):.3f}..{max(rat):.3f}   {P(max(rat)-min(rat) < 0.02)}")
+print(f"[Ch10 s05]   -> log(error) falls linearly in the number of stages, which is")
+print(f"[Ch10 s05]      what 'one more bit' means in a successive-approximation ADC")
+
+# --- exponential vocabulary from linear storage --------------------------
+import math
+print()
+for (KK, TT) in ((1024, 8), (256, 8), (64, 4)):
+    print(f"[Ch10 s05] K={KK:5d}, T={TT}: {math.log10(KK**TT):.1f} decades of codes "
+          f"from {KK*TT:,} stored vectors")
+print(f"[Ch10 s05] source says 1024^8 ~ 1e24 storing 8192: log10 = "
+      f"{math.log10(1024**8):.2f}, stored {1024*8:,}   {P(abs(math.log10(1024**8)-24.08) < 0.05 and 1024*8 == 8192)}")
+print(f"[Ch10 s06] FSQ with L=5 levels over d=6 dims -> implicit codebook {5**6:,}  {P(5**6 == 15625)}")
+
+# --- temperature: softmax(s/tau) IS the Boltzmann distribution ------------
+print()
+s10 = np.array([0.9, 0.5, 0.45, 0.4, 0.2, 0.1])
+for tau in (0.01, 0.07, 0.3, 1.0):
+    p = np.exp(s10/tau); p /= p.sum()
+    H = float(-(p*np.log(p)).sum())
+    print(f"[Ch10 s03] tau={tau:5.2f}: p(match)={p[0]:.4f}  usage perplexity={np.exp(H):.3f}")
+def softmax_stable(z):
+    """exp(0.9/0.001) overflows a float64, so subtract the max first -- the
+    log-sum-exp trick, which every real softmax implementation uses for
+    exactly this reason and which leaves the result unchanged."""
+    z = z - z.max()
+    e = np.exp(z)
+    return e/e.sum()
+p_lo = softmax_stable(s10/0.001)
+p_hi = softmax_stable(s10/1e6)
+chk = softmax_stable(s10/0.3)
+naive = np.exp(s10/0.3); naive /= naive.sum()
+print(f"[Ch10 s03] stable and naive softmax agree where naive is safe, err "
+      f"{np.abs(chk-naive).max():.1e}   {P(np.abs(chk-naive).max() < 1e-15)}")
+print(f"[Ch10 s03] tau->0 approaches argmax, p(best) = {p_lo[0]:.6f}          {P(p_lo[0] > 0.999)}")
+print(f"[Ch10 s03] tau->inf approaches uniform, max dev {np.abs(p_hi-1/len(s10)).max():.1e}  {P(np.abs(p_hi-1/len(s10)).max() < 1e-5)}")
+print(f"[Ch10 s03] the form exp(s/tau)/Z is exp(-E/kT)/Z with E=-s and kT=tau  {P(True)}")
+
+# --- InfoNCE is a (K+1)-way classification and bounds mutual information --
+print()
+for Kn in (7, 63, 1023, 32767):
+    print(f"[Ch10 s03] K={Kn:5d} negatives -> MI bound log(K+1) = {np.log(Kn+1):5.2f} nats "
+          f"= {np.log2(Kn+1):5.2f} bits")
+print(f"[Ch10 s03] the bound grows with batch size, hence large-batch contrastive training  "
+      f"{P(np.log(32768) > np.log(256))}")
+
+# --- cosine similarity on unit vectors is the dot product ----------------
+U10 = rng10.normal(size=(2000, 64)); V10 = rng10.normal(size=(2000, 64))
+Un = U10/np.linalg.norm(U10, axis=1, keepdims=True)
+Vn = V10/np.linalg.norm(V10, axis=1, keepdims=True)
+cos10 = (U10*V10).sum(1)/(np.linalg.norm(U10, axis=1)*np.linalg.norm(V10, axis=1))
+print(f"\n[Ch10 s02] cos(u,v) == dot of L2-normalised, max err "
+      f"{np.abs(cos10-(Un*Vn).sum(1)).max():.1e}   {P(np.abs(cos10-(Un*Vn).sum(1)).max() < 1e-12)}")
+
+# --- compression ratios quoted by the source -----------------------------
+print()
+print(f"[Ch10 s04] 256x256 = {256*256:,} pixels -> 16x16 = {16*16} tokens, {256*256//(16*16)}x  "
+      f"{P(256*256//(16*16) == 256)}")
+print(f"[Ch10 s07] 16 frames of 256x256x3 = {16*256*256*3:,} values           {P(16*256*256*3 == 3145728)}")
+print(f"[Ch10 s07] fs=16, ft=4 -> {(16//4)}x{256//16}x{256//16} = {(16//4)*(256//16)**2:,} tokens  "
+      f"{P((16//4)*(256//16)**2 == 1024)}")
+print(f"[Ch10 s07] a compression of {16*256*256*3/((16//4)*(256//16)**2):,.0f}x                        {P(True)}")
+
+# --- codebook collapse is measured by usage perplexity -------------------
+print()
+for name, c in (('healthy',   np.full(64, 1/64)),
+                ('skewed',    np.r_[np.full(8, 0.115), np.full(56, 0.0014)]),
+                ('collapsed', np.r_[[0.99], np.full(63, 0.01/63)])):
+    c = c/c.sum(); H = float(-(c[c > 0]*np.log(c[c > 0])).sum())
+    print(f"[Ch10 s06] {name:9} codebook: usage perplexity {np.exp(H):6.2f} of 64 "
+          f"({100*np.exp(H)/64:5.1f}% utilised)")
+print(f"[Ch10 s06] a uniformly used codebook has perplexity exactly K = 64     "
+      f"{P(abs(np.exp(-np.sum(np.full(64, 1/64)*np.log(1/64))) - 64) < 1e-9)}")
+print(f"[Ch10 s06]   -> entropy regularisation and MoE load balancing (Ch07 s08)")
+print(f"[Ch10 s06]      are the same objective: push usage towards uniform")
+
+print("\n" + "="*66)

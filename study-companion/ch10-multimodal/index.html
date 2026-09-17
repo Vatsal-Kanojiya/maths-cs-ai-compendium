@@ -1,0 +1,1612 @@
+<title>Fusion, Alignment, Codebooks</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(', '\\)']], displayMath: [['$$', '$$']], processEscapes: true },
+  svg: { fontCache: 'global', scale: 1.0 },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-svg.js" id="MathJax-script" async></script>
+
+<style>
+/* ============ TOKENS: light is complete and authoritative ============ */
+:root{
+  --ground:#F0F2F1;
+  --sheet:#FBFCFB;
+  --sheet-2:#F4F6F5;
+  --ink:#14181A;
+  --ink-2:#4E575B;
+  --ink-3:#77838A;
+  --rule:#D3DAD7;
+  --rule-strong:#A8B4B0;
+  --accent:#12507E;
+  --accent-ink:#0E4267;
+  --accent-soft:#E4EEF6;
+  --bridge:#1F8A4C;
+  --bridge-soft:#E4F2EA;
+  --brk:#A8500F;
+  --brk-soft:#FAEBDF;
+  --s1:#BF5B00;
+  --s2:#0F74C7;
+  --s3:#1F8A4C;
+  --paper:#FFFFFF;            /* pasted-drawing ground, both themes */
+  --paper-ink:#1b1b1b;
+  --shadow:0 1px 2px rgba(20,24,26,.06), 0 6px 18px rgba(20,24,26,.05);
+  --f-disp:'Archivo Narrow', 'Arial Narrow', Helvetica, sans-serif;
+  --f-body:'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --f-mono:'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+    --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+    --rule:#293134; --rule-strong:#3F494C;
+    --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+    --bridge:#35AC63; --bridge-soft:#11281B;
+    --brk:#E0913F; --brk-soft:#2E2012;
+    --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+  --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+  --rule:#293134; --rule-strong:#3F494C;
+  --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+  --bridge:#35AC63; --bridge-soft:#11281B;
+  --brk:#E0913F; --brk-soft:#2E2012;
+  --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:var(--f-body); font-size:17px; line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ============ TITLE BLOCK (engineering drawing header) ============ */
+.titleblock{
+  position:sticky; top:env(safe-area-inset-top,0px); z-index:40;
+  background:var(--sheet); border-bottom:1px solid var(--rule-strong);
+}
+.tb-in{
+  max-width:1240px; margin:0 auto; padding:0 16px;
+  display:flex; align-items:stretch; gap:0; min-height:46px;
+}
+.tb-cell{
+  display:flex; flex-direction:column; justify-content:center;
+  padding:5px 14px; border-right:1px solid var(--rule);
+  font-family:var(--f-disp);
+}
+.tb-cell:first-child{padding-left:0}
+.tb-cell:last-child{border-right:0; margin-left:auto; padding-right:0}
+.tb-k{
+  font-size:8.5px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); line-height:1.4;
+}
+.tb-v{font-size:13px; font-weight:700; letter-spacing:.02em; color:var(--ink); line-height:1.3}
+.tb-v.accent{color:var(--accent)}
+.tb-hide{display:none}
+@media (min-width:680px){ .tb-hide{display:flex} }
+
+.themebtn{
+  appearance:none; background:transparent; border:1px solid var(--rule-strong);
+  color:var(--ink-2); font-family:var(--f-disp); font-size:10px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:6px 10px; border-radius:2px;
+  cursor:pointer; align-self:center; white-space:nowrap;
+}
+.themebtn:hover{border-color:var(--accent); color:var(--accent)}
+.themebtn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+/* ============ SHELL ============ */
+.shell{max-width:1240px; margin:0 auto; padding:0 16px; padding-block:0 64px}
+@media (min-width:1080px){
+  .shell{display:grid; grid-template-columns:212px minmax(0,1fr); gap:44px; align-items:start}
+}
+.rail{display:none}
+@media (min-width:1080px){
+  .rail{
+    display:block; position:sticky; top:calc(env(safe-area-inset-top,0px) + 70px);
+    padding-block:28px; font-family:var(--f-disp); font-size:12.5px;
+  }
+}
+.rail-h{
+  font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-3);
+  padding-bottom:8px; border-bottom:1px solid var(--rule); margin-bottom:10px;
+}
+.rail a{
+  display:flex; gap:9px; padding:4px 0; color:var(--ink-2); text-decoration:none;
+  border-left:2px solid transparent; padding-left:9px; margin-left:-11px; line-height:1.35;
+}
+.rail a:hover{color:var(--accent)}
+.rail a.on{color:var(--accent); border-left-color:var(--accent); font-weight:700}
+.rail a .n{font-family:var(--f-mono); font-size:10.5px; color:var(--ink-3); flex:none; padding-top:1px}
+.rail a.on .n{color:var(--accent)}
+
+main{min-width:0; padding-block:0 0}
+.col{max-width:70ch}
+
+/* ============ TYPE ============ */
+h1,h2,h3,h4{font-family:var(--f-disp); text-wrap:balance; margin:0; line-height:1.14}
+h1{font-size:clamp(34px,7vw,58px); font-weight:700; letter-spacing:-.015em}
+h2{font-size:clamp(25px,4.2vw,34px); font-weight:700; letter-spacing:-.01em}
+h3{font-size:19px; font-weight:700; letter-spacing:.005em; margin-top:2px}
+h4{font-size:14px; font-weight:700; letter-spacing:.06em; text-transform:uppercase}
+p{margin:0 0 1.05em}
+a{color:var(--accent-ink)}
+strong{font-weight:600}
+em{font-style:italic}
+code{font-family:var(--f-mono); font-size:.87em; background:var(--sheet-2); padding:1px 5px; border-radius:2px; border:1px solid var(--rule)}
+.lead{font-size:19.5px; line-height:1.56; color:var(--ink-2)}
+.eyebrow{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--ink-3); margin:0 0 10px;
+}
+.srcref{
+  font-family:var(--f-mono); font-size:11px; color:var(--ink-3);
+  border:1px solid var(--rule); border-radius:2px; padding:2px 7px; display:inline-block;
+  background:var(--sheet-2); white-space:nowrap;
+}
+
+/* ============ SECTION ============ */
+section{padding-block:38px 0; scroll-margin-top:calc(env(safe-area-inset-top,0px) + 62px)}
+.sechead{display:flex; align-items:baseline; gap:13px; margin-bottom:6px; flex-wrap:wrap}
+.secnum{
+  font-family:var(--f-mono); font-size:12px; font-weight:600; color:var(--accent);
+  border:1px solid var(--accent); border-radius:2px; padding:2px 7px; flex:none;
+  background:var(--accent-soft);
+}
+.rule-h{border:0; border-top:1px solid var(--rule); margin:0 0 22px}
+.rule-d{border:0; border-top:1px dashed var(--rule-strong); margin:34px 0}
+
+/* ============ CALLOUTS ============ */
+.note{
+  border:1px solid var(--rule); border-left:3px solid var(--accent);
+  background:var(--sheet); border-radius:2px; padding:16px 18px; margin:22px 0;
+}
+/* Greek letters must never be uppercased: text-transform turns beta into
+   a capital Beta, which is the Latin letter B on screen -- likewise eta->H,
+   kappa->K, lambda->A-shape.  Any Greek inside an uppercased label wears .gk. */
+.gk{text-transform:none}
+.note.bridge{border-left-color:var(--bridge); background:var(--bridge-soft)}
+.note.brk{border-left-color:var(--brk); background:var(--brk-soft)}
+.note-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; margin-bottom:7px; display:flex; align-items:center; gap:8px;
+}
+.note.bridge .note-h{color:var(--bridge)}
+.note.brk .note-h{color:var(--brk)}
+.note .note-h{color:var(--accent)}
+.note p:last-child, .note ul:last-child{margin-bottom:0}
+.note-h .ic{
+  width:15px; height:15px; border-radius:50%; border:1.5px solid currentColor; flex:none;
+  display:grid; place-items:center; font-size:9.5px; font-weight:700; font-family:var(--f-mono);
+}
+ul,ol{margin:0 0 1.05em; padding-left:1.25em}
+li{margin-bottom:.4em}
+li::marker{color:var(--ink-3)}
+
+/* ============ DEFINITION BLOCK ============ */
+.defn{
+  background:var(--sheet); border:1px solid var(--rule); border-radius:3px;
+  padding:18px 20px; margin:22px 0; box-shadow:var(--shadow);
+}
+.defn-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:10px;
+  padding-bottom:8px; border-bottom:1px solid var(--rule);
+}
+.defn p:last-child{margin-bottom:0}
+
+/* ============ TABLES ============ */
+.tw{overflow-x:auto; margin:22px 0; border:1px solid var(--rule); border-radius:3px; background:var(--sheet)}
+table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:480px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule); vertical-align:top}
+thead th{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); background:var(--sheet-2); font-weight:700; white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:0}
+td.mono,th.mono{font-family:var(--f-mono); font-size:13px; font-variant-numeric:tabular-nums}
+.tw caption{
+  caption-side:bottom; text-align:left; padding:9px 14px; font-size:12.5px;
+  color:var(--ink-3); border-top:1px solid var(--rule); font-family:var(--f-disp);
+}
+
+/* ============ FIGURES ============ */
+figure{margin:24px 0}
+.paper{
+  background:var(--paper); border:1px solid var(--rule-strong); border-radius:3px;
+  padding:16px; display:flex; justify-content:center; box-shadow:var(--shadow);
+}
+.paper img{max-width:100%; height:auto; display:block}
+figcaption{
+  font-family:var(--f-disp); font-size:12.5px; color:var(--ink-3); margin-top:9px;
+  line-height:1.45; padding-left:2px;
+}
+figcaption b{color:var(--ink-2); font-weight:700; letter-spacing:.04em}
+
+/* ============ INTERACTIVE PANELS ============ */
+.lab{
+  background:var(--sheet); border:1px solid var(--rule-strong); border-radius:3px;
+  margin:26px 0; overflow:hidden; box-shadow:var(--shadow);
+}
+.lab-h{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:11px 16px; border-bottom:1px solid var(--rule); background:var(--sheet-2);
+}
+.lab-t{font-family:var(--f-disp); font-size:13px; font-weight:700; letter-spacing:.05em; text-transform:uppercase}
+.lab-tag{
+  font-family:var(--f-mono); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--accent); border:1px solid var(--accent); border-radius:2px; padding:2px 6px;
+  margin-left:auto; white-space:nowrap;
+}
+.lab-body{padding:16px}
+.lab-foot{
+  padding:11px 16px; border-top:1px solid var(--rule); background:var(--sheet-2);
+  font-size:13.5px; color:var(--ink-2); line-height:1.5;
+}
+.lab-foot b{color:var(--ink)}
+.stage{width:100%; max-width:560px; height:auto; display:block; margin-inline:auto; touch-action:none; cursor:grab}
+.stage.drag{cursor:grabbing}
+
+/* Dividers are drawn as cell borders rather than as 1px grid gaps over a grey
+   backdrop: when the item count does not fill the last row, a gap-based grid
+   leaves the backdrop showing as an empty grey block. */
+.readout{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr)); gap:0;
+  background:var(--sheet); border:1px solid var(--rule); border-radius:2px;
+  margin-top:14px; overflow:hidden;
+}
+.ro{background:var(--sheet); padding:8px 11px;
+  border-right:1px solid var(--rule); border-bottom:1px solid var(--rule)}
+.ro-k{
+  font-family:var(--f-disp); font-size:9px; letter-spacing:.13em; text-transform:uppercase;
+  color:var(--ink-3); margin-bottom:2px;
+  /* was white-space:nowrap, which clipped the longer keys instead of wrapping */
+  white-space:normal; overflow-wrap:break-word; line-height:1.3; min-height:2.6em;
+}
+.ro-v{
+  font-family:var(--f-mono); font-size:15px; font-weight:500; font-variant-numeric:tabular-nums;
+  color:var(--ink); line-height:1.25;
+}
+.ro-v.a{color:var(--s2)} .ro-v.b{color:var(--s1)} .ro-v.c{color:var(--s3)}
+
+.ctl{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:14px}
+.ctl label{
+  font-family:var(--f-disp); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-2); white-space:nowrap;
+}
+input[type=range]{
+  -webkit-appearance:none; appearance:none; height:22px; background:transparent;
+  flex:1 1 160px; min-width:130px; cursor:pointer;
+}
+input[type=range]:focus-visible{outline:2px solid var(--accent); outline-offset:3px}
+input[type=range]::-webkit-slider-runnable-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-moz-range-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:16px; height:16px; border-radius:50%;
+  background:var(--accent); border:2px solid var(--sheet); margin-top:-6.5px;
+}
+input[type=range]::-moz-range-thumb{
+  width:16px; height:16px; border-radius:50%; background:var(--accent);
+  border:2px solid var(--sheet);
+}
+.btn{
+  appearance:none; font-family:var(--f-disp); font-size:11px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:7px 13px; border-radius:2px;
+  border:1px solid var(--rule-strong); background:var(--sheet); color:var(--ink-2); cursor:pointer;
+}
+.btn:hover{border-color:var(--accent); color:var(--accent)}
+.btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.btn.on{background:var(--accent); border-color:var(--accent); color:var(--sheet)}
+
+.legend{display:flex; gap:16px; flex-wrap:wrap; margin-top:12px}
+.lg{display:flex; align-items:center; gap:7px; font-family:var(--f-disp); font-size:12px; color:var(--ink-2)}
+.lg i{width:15px; height:3px; border-radius:2px; flex:none; display:block}
+
+/* ============ MISC ============ */
+.mathbox{overflow-x:auto; overflow-y:hidden; margin:18px 0}
+mjx-container[display="true"]{margin:0 !important}
+.kv{display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:15px; margin:16px 0}
+.kv dt{font-family:var(--f-mono); font-size:13px; color:var(--accent); white-space:nowrap}
+.kv dd{margin:0; color:var(--ink-2)}
+
+details.q{
+  border:1px solid var(--rule); border-radius:3px; background:var(--sheet);
+  margin-bottom:9px; overflow:hidden;
+}
+details.q summary{
+  cursor:pointer; padding:12px 15px; font-weight:600; list-style:none;
+  display:flex; gap:11px; align-items:flex-start; font-size:15.5px;
+}
+details.q summary::-webkit-details-marker{display:none}
+details.q summary::after{
+  content:'+'; margin-left:auto; font-family:var(--f-mono); color:var(--accent);
+  font-size:17px; line-height:1; flex:none; padding-top:2px;
+}
+details.q[open] summary::after{content:'\2212'}
+details.q summary:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
+details.q summary .qn{
+  font-family:var(--f-mono); font-size:12px; color:var(--ink-3); flex:none; padding-top:3px;
+}
+details.q .ans{padding:0 15px 14px 41px; font-size:15.5px; color:var(--ink-2); border-top:1px solid var(--rule); padding-top:13px}
+details.q .ans p:last-child{margin-bottom:0}
+
+.endnote{
+  margin-top:44px; padding-top:20px; border-top:1px solid var(--rule-strong);
+  font-size:13.5px; color:var(--ink-3); font-family:var(--f-disp); line-height:1.55;
+}
+.endnote a{color:var(--accent)}
+
+.srcref{text-decoration:none}
+a.srcref{color:var(--ink-2); transition:none}
+
+</style>
+<style>
+.srcref{text-decoration:none}
+a.srcref{color:var(--ink-2)}
+a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(--accent-soft)}
+.srcref.nolink{opacity:.75; font-style:italic}
+.pv{font-family:var(--f-disp); font-size:9.5px; font-weight:700; letter-spacing:.1em;
+    text-transform:uppercase; padding:2px 7px; border-radius:2px; white-space:nowrap}
+.pv.ok{background:var(--bridge-soft); color:var(--bridge)}
+.pv.add{background:var(--accent-soft); color:var(--accent)}
+.pv.corr{background:var(--brk-soft); color:var(--brk)}
+.flag{display:inline-block; padding:1px 7px; border-radius:2px; font-family:var(--f-disp);
+      font-size:10px; letter-spacing:.1em; text-transform:uppercase; font-weight:700}
+.flag.ok{background:var(--bridge-soft); color:var(--bridge)}
+.flag.bad{background:var(--brk-soft); color:var(--brk)}
+.predict{border:1px solid var(--rule-strong); border-left:3px solid var(--brk);
+  background:var(--brk-soft); border-radius:2px; padding:13px 15px; margin:0 0 14px}
+.predict-h{font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--brk); margin-bottom:6px}
+.predict p{margin:0 0 10px; font-size:15px}
+.predict .opts{display:flex; gap:8px; flex-wrap:wrap}
+.pbtn{appearance:none; font-family:var(--f-disp); font-size:12px; font-weight:600;
+  padding:6px 12px; border-radius:2px; border:1px solid var(--rule-strong);
+  background:var(--sheet); color:var(--ink-2); cursor:pointer}
+.pbtn:hover{border-color:var(--brk); color:var(--brk)}
+.pbtn.picked{background:var(--brk); border-color:var(--brk); color:var(--sheet)}
+.pverdict{margin-top:10px; font-size:14.5px; color:var(--ink-2); display:none}
+.pverdict.show{display:block}
+.pverdict b{color:var(--ink)}
+.gap{border:1px solid var(--rule); border-left:3px solid var(--ink-3); background:var(--sheet-2);
+  border-radius:2px; padding:14px 16px; margin:18px 0}
+.gap-h{font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:7px}
+</style>
+
+<div class="sheet">
+
+<header class="titleblock">
+  <div class="tb-main">
+    <div class="tb-k">Sheet 10 of 20 &mdash; Multimodal Learning, part 1</div>
+    <h1>Fusion, Alignment, Codebooks</h1>
+    <p class="tb-sub">
+      Combining sensors is something you already do. This sheet is about what
+      transfers from that habit &mdash; which is the whole architecture &mdash; and the one
+      thing that does not, which is every guarantee you are used to having.
+    </p>
+  </div>
+  <div class="tb-meta">
+    <div class="tb-cell"><div class="tb-k">Reader</div><div class="tb-v">B.E. Mechanical</div></div>
+    <div class="tb-cell"><div class="tb-k">Prerequisite</div><div class="tb-v">Sheets 1&ndash;9</div></div>
+    <button class="btn" id="themebtn" type="button">Theme</button>
+  </div>
+</header>
+
+<nav class="toc">
+  <a href="#bridge"><span class="n">00</span><span>The bridge</span></a>
+  <a href="#fusion"><span class="n">01</span><span>Fusion is sensor fusion</span></a>
+  <a href="#embed"><span class="n">02</span><span>A shared scale</span></a>
+  <a href="#contrast"><span class="n">03</span><span>Contrastive alignment</span></a>
+  <a href="#retrieve"><span class="n">04</span><span>Zero-shot and retrieval</span></a>
+  <a href="#vq"><span class="n">05</span><span>Quantising a picture</span></a>
+  <a href="#residual"><span class="n">06</span><span>Successive approximation</span></a>
+  <a href="#collapse"><span class="n">07</span><span>Codebook collapse</span></a>
+  <a href="#video"><span class="n">08</span><span>Video and causality</span></a>
+  <a href="#breaks"><span class="n">09</span><span>Where it breaks</span></a>
+  <a href="#next"><span class="n">10</span><span>What part 2 covers</span></a>
+</nav>
+
+<main>
+
+<section id="top" style="padding-top:44px">
+  <div class="col">
+    <p class="lede">
+      A machine is never instrumented with one sensor. You put an accelerometer on the bearing
+      housing, a thermocouple in the oil, a pressure tap on the discharge, and you form a
+      judgement from all three &mdash; because each one is blind to what the others see. That is
+      multimodal learning, and you have been doing it for years.
+    </p>
+    <p>
+      So this chapter starts from an unusually strong position, and the risk is the opposite of
+      the usual one. The architecture transfers almost completely: the three ways of combining
+      modalities are the three levels of sensor fusion, under the same names, chosen for the same
+      reasons. What does <em>not</em> transfer is everything that makes your version trustworthy
+      &mdash; the observation model, the noise covariance, the innovation you can monitor, the
+      observability test that tells you whether the fusion is even possible.
+    </p>
+    <p>
+      Part 1 covers how modalities are brought into a common representation: fusion strategies,
+      contrastive alignment, and the vector quantisation that turns a picture into something a
+      language model can read. Part 2 covers what gets built on top &mdash; vision-language
+      models, cross-modal generation, and unified architectures.
+    </p>
+  </div>
+</section>
+
+<section id="bridge">
+  <div class="col">
+    <div class="sechead"><span class="secnum">00</span><h2>The bridge</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2010%20-%20multimodal%20learning/01.%20multimodal%20representations.md" target="_blank" rel="noopener">src 01. representations &#8599;</a>
+    </div>
+    <p>
+      The verdict column splits unusually cleanly in this chapter: the <em>structures</em> are
+      identical and the <em>guarantees</em> are absent. Read it with that in mind.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>What transfers from sensor fusion, and what conspicuously does not.</caption>
+      <thead><tr><th>What you already know</th><th>What this chapter calls it</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td>Raw-signal, feature-level and decision-level fusion</td><td>Early, middle and late fusion</td><td><b style="color:var(--bridge)">The same taxonomy.</b> Same three levels, same trade-offs. See &sect;01.</td></tr>
+        <tr><td>Direction cosines, unit vectors (Ch 01 &sect;03)</td><td>Cosine similarity on L<sub>2</sub>-normalised embeddings</td><td><b style="color:var(--bridge)">Identical.</b> On the unit sphere it <i>is</i> the dot product. See &sect;02.</td></tr>
+        <tr><td>Boltzmann factor \(e^{-E/kT}\)</td><td>Contrastive temperature \(\tau\)</td><td><b style="color:var(--bridge)">The same functional form,</b> with \(kT\to\tau\). See &sect;03.</td></tr>
+        <tr><td>Nearest-entry lookup in a property table</td><td>Codebook quantisation</td><td><b style="color:var(--bridge)">Identical operation,</b> and it is Chapter 06&rsquo;s k-means assignment. See &sect;05.</td></tr>
+        <tr><td>Successive-approximation ADC</td><td>Residual quantisation</td><td><b style="color:var(--bridge)">The same algorithm,</b> including the condition it needs to converge. See &sect;06.</td></tr>
+        <tr><td>Line balancing, idle stations (Ch 07 &sect;08)</td><td>Codebook collapse</td><td><b style="color:var(--bridge)">The same failure and the same fix.</b> See &sect;07.</td></tr>
+        <tr><td>Separable filters, low-rank updates (Ch 08 &sect;01)</td><td>Product quantisation</td><td><b style="color:var(--bridge)">The same factorisation argument.</b> Exponential reach, linear storage. See &sect;06.</td></tr>
+        <tr><td>Causal filtering (Ch 09 &sect;14)</td><td>Causal video tokenisers</td><td><b style="color:var(--bridge)">Identical constraint,</b> for identical reasons. See &sect;08.</td></tr>
+        <tr><td>Quantisation error, ADC resolution (Ch 09 &sect;03)</td><td>Reconstruction error of a tokeniser</td><td><b style="color:var(--bridge)">The same quantity.</b> See &sect;05.</td></tr>
+        <tr><td>Calibrating two instruments to one scale</td><td>Joint embedding space</td><td><b style="color:var(--brk)">Structure yes, traceability no.</b> There is no reference standard. See &sect;02.</td></tr>
+        <tr><td>Kalman filter: observation model and covariance</td><td>Learned cross-modal alignment</td><td><b style="color:var(--brk)">Absent.</b> No \(H\), no \(R\), no innovation to monitor. See &sect;09.</td></tr>
+        <tr><td>Observability &mdash; can this state be recovered?</td><td>&mdash; nothing &mdash;</td><td><b style="color:var(--brk)">No counterpart.</b> There is no test for whether alignment is possible. See &sect;09.</td></tr>
+        <tr><td>A differentiable model you can linearise</td><td>The straight-through estimator</td><td><b style="color:var(--brk)">Deliberately false.</b> The gradient is of a different function. See &sect;05.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <figure class="col">
+    <div class="paper"><img src="img/multimodal_overview.svg" alt="Separate encoders for image, text and audio meeting in a shared embedding space" width="420"></div>
+    <figcaption><b>Fig. 10.1</b> &mdash; Separate front ends, one shared space. The architecture of any multi-sensor system. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="fusion">
+  <div class="col">
+    <div class="sechead"><span class="secnum">01</span><h2>Fusion is sensor fusion</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2010%20-%20multimodal%20learning/01.%20multimodal%20representations.md" target="_blank" rel="noopener">src 01. representations &#8599;</a>
+    </div>
+    <p>
+      The source offers an analogy about a group project. You do not need it. There are three
+      places you can combine information from several sources, and the field has independently
+      arrived at the same three, with the same names.
+    </p>
+    <p>
+      <b>Early fusion</b> concatenates the raw or low-level features and processes them together:
+      \(x_{\text{fused}}=[x_1;x_2]\). <b>Late fusion</b> runs each modality to a decision and
+      combines the decisions, \(\hat y=\alpha\hat y_1+(1-\alpha)\hat y_2\). <b>Middle fusion</b>
+      encodes each modality separately, then couples the representations partway through, usually
+      by cross-attention.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; these are the three levels of the fusion literature</div>
+      <p>
+        Multi-sensor data fusion has classified exactly this way for decades:
+        <b>raw-data-level</b>, <b>feature-level</b> and <b>decision-level</b> fusion. Early is
+        raw-data level, middle is feature level, late is decision level. The correspondence is
+        not approximate; it is the same taxonomy arrived at twice.
+      </p>
+      <p style="margin-bottom:0">
+        And the trade-offs are the ones you would predict. Raw-level fusion sees every
+        interaction between the channels but needs them commensurable, synchronised and
+        co-registered, and it is expensive. Decision-level fusion is cheap, lets you reuse
+        instruments you already trust, and survives one channel dropping out &mdash; but it
+        cannot see a correlation that only shows up in the raw signals, because by the time the
+        channels meet, each has already thrown away everything except its own verdict. If you
+        have ever argued about whether to combine vibration and temperature at the
+        signal level or just take two independent diagnoses and vote, you have had this exact
+        argument.
+      </p>
+    </div>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>Where it stops &mdash; and this is the important one</div>
+      <p>
+        Your fusion has a <em>model</em>. When you combine an accelerometer and a gyroscope you
+        write an observation model \(z=Hx+v\) that says how each sensor sees the state, and a
+        covariance \(R\) that says how much to trust each one. The Kalman gain follows from those
+        two, and the weighting is <em>derived</em>, not fitted. You can monitor the innovation,
+        and if it stops looking like noise you know the model is wrong. You can run an
+        observability test beforehand and find out whether the state is recoverable from these
+        sensors <em>at all</em>.
+      </p>
+      <p style="margin-bottom:0">
+        None of that exists here. There is no state being estimated, so there is no \(H\) and no
+        \(R\); the mixing weight \(\alpha\) in late fusion is fitted, not derived. There is no
+        innovation sequence, so there is no online check that the fusion is still valid. And
+        there is no observability criterion &mdash; nothing tells you in advance whether a caption
+        and an image <em>can</em> be aligned, only whether the loss went down. The architecture
+        transfers completely. Every guarantee attached to it stays behind.
+      </p>
+    </div>
+  </div>
+  <figure class="col">
+    <div class="paper"><img src="img/fusion_strategies.svg" alt="Early, middle and late fusion compared" width="420"></div>
+    <figcaption><b>Fig. 10.2</b> &mdash; Raw-data, feature and decision level, in the vocabulary of a different field. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="embed">
+  <div class="col">
+    <div class="sechead"><span class="secnum">02</span><h2>A shared scale</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2010%20-%20multimodal%20learning/01.%20multimodal%20representations.md" target="_blank" rel="noopener">src 01. representations &#8599;</a>
+    </div>
+    <p>
+      Middle fusion needs the two representations to be comparable. That is what a <b>joint
+      embedding space</b> is: two encoders, \(f\) for images and \(g\) for text, trained so that
+      matched pairs land near each other in one \(d\)-dimensional space. Once they do, an image
+      and a caption become <em>the same kind of thing</em> and you can measure the distance
+      between them.
+    </p>
+    <p>
+      The measure is cosine similarity, and after \(L_2\)-normalisation it is just the dot
+      product &mdash; which is Chapter 01 &sect;03 exactly, and checked here to \(10^{-16}\):
+    </p>
+  </div>
+  <div class="mathbox col">
+    $$\text{sim}(u,v)=\frac{u\cdot v}{\|u\|\,\|v\|}\ \xrightarrow{\ \|u\|=\|v\|=1\ }\ u\cdot v$$
+  </div>
+  <div class="col">
+    <p>
+      Every embedding sits on the unit hypersphere, so only direction carries meaning. Magnitude
+      has been normalised away deliberately &mdash; the same move as working with direction
+      cosines rather than components.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; it is two instruments brought onto one scale</div>
+      <p style="margin-bottom:0">
+        A thermocouple produces millivolts and an infrared pyrometer produces a radiance. Neither
+        reading is comparable to the other until both are mapped onto a common scale, and once
+        they are, you can ask whether they agree. That mapping is exactly what \(f\) and \(g\)
+        do. The joint embedding space is the shared scale, and cosine similarity is the
+        comparison it makes possible. Zero-shot classification then follows without any new
+        machinery: describe the classes in text, embed them, and read off which one the image is
+        nearest &mdash; the text encoder has become a classifier head you can reprogramme by
+        typing.
+      </p>
+    </div>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>Where the calibration analogy breaks &mdash; there is no standard</div>
+      <p>
+        Calibration is traceable. Your thermocouple is checked against a reference that is
+        checked against a national standard that terminates in a definition of the kelvin, and
+        the whole chain exists so that &ldquo;300 K&rdquo; means the same thing in two different
+        laboratories.
+      </p>
+      <p style="margin-bottom:0">
+        A joint embedding space has no such terminus. It is defined entirely by which pairs
+        appeared together in the training data, so the &ldquo;scale&rdquo; is a consensus of the
+        corpus rather than a reference. Two CLIP models trained on different data produce
+        embedding spaces that are not comparable at all &mdash; there is no conversion between
+        them, because there is no quantity underneath that both are measuring. A cosine
+        similarity of 0.8 is not a physical statement. It is a statement about one particular
+        model&rsquo;s training set, and it does not travel.
+      </p>
+    </div>
+  </div>
+  <figure class="col">
+    <div class="paper"><img src="img/joint_embedding_space.svg" alt="Image and text encoders mapping into one shared vector space where matched pairs cluster" width="420"></div>
+    <figcaption><b>Fig. 10.3</b> &mdash; Two encoders, one space. Matched pairs are meant to land together. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="contrast">
+  <div class="col">
+    <div class="sechead"><span class="secnum">03</span><h2>Contrastive alignment, and a temperature that is a real temperature</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2010%20-%20multimodal%20learning/01.%20multimodal%20representations.md" target="_blank" rel="noopener">src 01. representations &#8599;</a>
+    </div>
+    <p>
+      How do you train \(f\) and \(g\) to agree? Take a batch of \(N\) matched pairs, compute
+      all \(N^2\) similarities, and note that the correct answers are exactly the diagonal. Then
+      train the diagonal up and the off-diagonal down. That is <b>CLIP</b>, and the loss is an
+      ordinary cross-entropy over each row:
+    </p>
+  </div>
+  <div class="mathbox col">
+    $$\mathcal{L}_{i\to t}=-\frac1N\sum_{i=1}^{N}\log
+      \frac{\exp\!\big(\text{sim}(z^{\text{img}}_i,z^{\text{txt}}_i)/\tau\big)}
+           {\sum_{k=1}^{N}\exp\!\big(\text{sim}(z^{\text{img}}_i,z^{\text{txt}}_k)/\tau\big)}$$
+  </div>
+  <div class="col">
+    <p>
+      with the symmetric term for text-to-image, averaged. Each row is an \(N\)-way
+      multiple-choice question: <em>which of these captions goes with this image?</em> Getting it
+      right requires understanding both sides, which is the entire trick.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; \(\tau\) is a temperature in the literal sense</div>
+      <p>
+        The source reaches for a physical analogy here &mdash; molecules moving randomly at high
+        temperature, settling into rigid structures at low. That analogy is usually where this
+        page would add a caution. Not this time: the correspondence is exact as a functional form.
+        Write the softmax out and set \(E=-\text{sim}\):
+      </p>
+      <div class="mathbox">
+        $$\frac{e^{\,s_i/\tau}}{\sum_k e^{\,s_k/\tau}}
+          \qquad\text{against}\qquad
+          \frac{e^{-E_i/kT}}{\sum_k e^{-E_k/kT}}$$
+      </div>
+      <p style="margin-bottom:0">
+        It is the Boltzmann distribution, with \(\tau\) standing where \(kT\) stands. Every
+        instinct you have about it holds: as \(\tau\to0\) the distribution collapses onto the
+        single lowest-energy state, so only the hardest negative matters and the gradient is
+        enormous; as \(\tau\to\infty\) it flattens to uniform and the loss stops distinguishing
+        anything. Both limits are checked in <code>verify_claims.py</code>. CLIP initialises
+        \(\tau=0.07\) and <em>learns</em> it, which is a system choosing its own annealing
+        schedule.
+      </p>
+    </div>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>How far that goes, and no further</div>
+      <p style="margin-bottom:0">
+        The functional form is identical. Nothing else is. There is no energy, no heat bath, no
+        equilibrium and no physical temperature &mdash; \(\tau\) has units of inverse similarity,
+        which is to say no units at all, and it is fitted by gradient descent. This is the same
+        boundary Chapter 07 drew around Shannon entropy against thermodynamic entropy: a shared
+        functional form is a real and useful fact, and it is not a shared mechanism. The safe
+        statement is &ldquo;softmax is a Boltzmann distribution&rdquo;, which is true. The unsafe
+        one is anything that follows about the <em>system</em> from thermodynamics.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">The contrastive matrix, and what <span class="gk">&tau;</span> does to it</div><div class="lab-tag">Predict, then cool</div></div>
+
+    <div class="predict">
+      <p style="margin-top:0">
+        You lower the temperature \(\tau\) towards zero in a contrastive loss. What happens to
+        which negatives the model learns from?
+      </p>
+      <button class="pbtn" data-p1="a" type="button">All of them, equally</button>
+      <button class="pbtn" data-p1="b" type="button">Only the hardest one</button>
+      <button class="pbtn" data-p1="c" type="button">None &mdash; the loss vanishes</button>
+      <button class="pbtn" data-p1="d" type="button">The easiest ones</button>
+      <div class="pverdict" id="pv1"></div>
+    </div>
+
+    <svg class="stage" id="sT" viewBox="0 0 480 300" role="img"
+         aria-label="An 8 by 8 image-text similarity matrix shaded by softmax probability, with the diagonal marked">
+      <g id="tCells"></g>
+      <g id="tLabels"></g>
+    </svg>
+
+    <div class="ctl">
+      <label for="tauSl">Temperature <span class="gk">&tau;</span></label>
+      <input type="range" id="tauSl" min="1" max="200" value="30" step="1">
+      <span class="ro-v" id="tauVal" style="min-width:66px">0.30</span>
+      <button class="btn" data-tp="7" type="button">CLIP's 0.07</button>
+      <button class="btn" data-tp="100" type="button">1.00</button>
+    </div>
+
+    <div class="readout">
+      <div class="ro"><div class="ro-k">p(correct)<br>on the diagonal</div><div class="ro-v a" id="oPd">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Effective<br>negatives</div><div class="ro-v b" id="oEff">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Loss<br>per row</div><div class="ro-v c" id="oLoss">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Hardest negative<br>share of mass</div><div class="ro-v" id="oHard">&mdash;</div></div>
+    </div>
+  </div>
+
+  <div class="lab-foot col">
+    Each row is one image asking which of eight captions is its own; the diagonal is the right
+    answer. Shading is the softmax probability the model assigns. Cool towards
+    <b>CLIP&rsquo;s 0.07</b> and almost all the probability in each row collapses onto one cell
+    &mdash; the effective-negatives readout falls towards 1, which means the gradient is
+    dominated by a single hardest negative per row. That is automatic hard-negative mining, and
+    it is why InfoNCE displaced triplet loss: the softmax does the mining for free. Warm it to
+    1.0 and the rows flatten, every negative contributes about equally, and the loss stops caring
+    whether the match is actually best. The effective-negatives number is the perplexity of the
+    row, \(e^{H}\), which is the same quantity &sect;07 uses to detect codebook collapse.
+  </div>
+
+  <div class="col">
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Why bigger batches genuinely help here</div>
+      <p style="margin-bottom:0">
+        InfoNCE is a \((K{+}1)\)-way classification, and it is a <em>lower bound</em> on the
+        mutual information between the two views, capped at \(\log(K{+}1)\). With 7 negatives the
+        ceiling is 3 bits; with 32,767 it is 15 bits. So the batch size is not a tuning
+        convenience &mdash; it sets how much information the objective is even capable of
+        extracting. This is why contrastive training pushes batch sizes to tens of thousands, and
+        why SigLIP&rsquo;s per-pair sigmoid loss mattered: it removes the global softmax, and with
+        it the all-to-all communication that made those batch sizes a distributed-systems problem.
+      </p>
+    </div>
+  </div>
+  <figure class="col">
+    <div class="paper"><img src="img/clip_contrastive_matrix.svg" alt="An N by N similarity matrix with the diagonal maximised and off-diagonal minimised" width="420"></div>
+    <figcaption><b>Fig. 10.4</b> &mdash; The whole of CLIP: make the diagonal win. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+  <figure class="col">
+    <div class="paper"><img src="img/contrastive_temperature.svg" alt="Low temperature giving a peaked distribution and high temperature a flat one" width="420"></div>
+    <figcaption><b>Fig. 10.5</b> &mdash; The same two limits, drawn. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="retrieve">
+  <div class="col">
+    <div class="sechead"><span class="secnum">04</span><h2>Zero-shot and retrieval</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2010%20-%20multimodal%20learning/01.%20multimodal%20representations.md" target="_blank" rel="noopener">src 01. representations &#8599;</a>
+    </div>
+    <p>
+      Once the space is shared, both headline capabilities are nearest-neighbour search and
+      nothing more. <b>Zero-shot classification</b> embeds \(K\) class names as text and takes
+      \(\hat y=\arg\max_k\text{sim}(f(x),g(t_k))\). <b>Retrieval</b> ranks a catalogue by
+      similarity to a query. The metric is <b>Recall@K</b> &mdash; the fraction of queries whose
+      correct match appears in the top \(K\) &mdash; with <b>median rank</b> as a companion.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; Recall@K is an acceptance criterion</div>
+      <p style="margin-bottom:0">
+        R@1, R@5 and R@10 are three points on one curve, chosen because they match how the result
+        gets used: R@1 for an automatic decision, R@10 for a shortlist a person will scan. This
+        is the same reasoning as choosing an operating point on an ROC curve in Chapter 06
+        &sect;08, or an acceptance number in a sampling plan in Chapter 04. A single reported
+        R@1 tells you as little as a single reported accuracy, and for the same reason.
+      </p>
+    </div>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>Two cautions on the numbers the source quotes</div>
+      <p>
+        <b>Prompt sensitivity is large.</b> The source reports CLIP&rsquo;s ImageNet zero-shot
+        accuracy rising from 63.2% to 68.4% purely by changing the template from
+        &ldquo;{class}&rdquo; to &ldquo;a photo of a {class}&rdquo;. Take that seriously: five
+        points of accuracy from rephrasing the question means the measurement is not only of the
+        model. An instrument whose reading moved that much when you reworded the request would
+        not be considered calibrated. These figures are reported from the source and are not
+        independently checked here.
+      </p>
+      <p style="margin-bottom:0">
+        <b>Contrastive models match bags of words.</b> Benchmarks built to test composition
+        &mdash; Winoground, ARO &mdash; ask whether a model can tell &ldquo;a mug in a dog&rdquo;
+        from &ldquo;a dog in a mug&rdquo;, and CLIP-style models do poorly. The training objective
+        rewards matching an image to the right caption <em>within a batch</em>, and word order
+        rarely helps with that, so the model is never pushed to represent it. High R@1 with poor
+        compositional performance is not a contradiction; it is what the objective asked for.
+      </p>
+    </div>
+  </div>
+  <figure class="col">
+    <div class="paper"><img src="img/zero_shot_classification.svg" alt="Class names embedded as text prompts and compared to an image embedding by cosine similarity" width="420"></div>
+    <figcaption><b>Fig. 10.6</b> &mdash; A classifier head you reprogramme by typing. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="vq">
+  <div class="col">
+    <div class="sechead"><span class="secnum">05</span><h2>Quantising a picture</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2010%20-%20multimodal%20learning/03.%20image%20and%20video%20tokenisation.md" target="_blank" rel="noopener">src 03. tokenisation &#8599;</a>
+    </div>
+    <p>
+      A transformer predicts the next symbol from a finite vocabulary. Text already comes as
+      symbols; an image does not. A \(256\times256\) image is 65,536 pixels, and the job of a
+      <b>tokeniser</b> is to turn it into a short sequence of integers &mdash; typically a
+      \(16\times16\) grid, so 256 tokens, a 256-fold reduction.
+    </p>
+    <p>
+      The mechanism is <b>vector quantisation</b>. An encoder produces a grid of continuous
+      vectors; each is replaced by the nearest entry of a learned <b>codebook</b>
+      \(\mathcal{C}=\{e_1,\dots,e_K\}\), and the index of that entry is the token:
+    </p>
+  </div>
+  <div class="mathbox col">
+    $$z_q(i,j)=e_{k^\ast},\qquad k^\ast=\arg\min_k\|z_e(i,j)-e_k\|_2$$
+  </div>
+  <div class="col">
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; three things at once, and all of them exact</div>
+      <p>
+        <b>It is a lookup table.</b> You have a continuous measured value and a finite table of
+        entries, and you take the nearest row. That is what you do with steam tables, with a
+        materials database, with any property table &mdash; and the error you accept is the
+        table&rsquo;s granularity.
+      </p>
+      <p>
+        <b>It is Chapter 09 &sect;03 in higher dimensions.</b> Sampling discretised time,
+        quantisation discretised amplitude, and the rounding error had variance
+        \(\Delta^2/12\). This is the same operation with the scalar replaced by a vector and the
+        uniform grid replaced by a learned set of points. A tokeniser&rsquo;s reconstruction
+        error <em>is</em> quantisation error.
+      </p>
+      <p style="margin-bottom:0">
+        <b>It is Chapter 06 &sect;02.</b> Assigning each point to its nearest codebook entry is
+        precisely the k-means assignment step, and the codebook update &mdash; move each entry to
+        the mean of the vectors assigned to it &mdash; is precisely the k-means update step. The
+        source says the EMA version is &ldquo;equivalent to running online k-means&rdquo;, and it
+        is right. So the codebook minimises the summed squared distance of the encoder outputs
+        from their assigned entries, which is the total second moment about the cluster centres:
+        a moment of inertia, exactly as in Chapter 06.
+      </p>
+    </div>
+
+    <p>
+      One step does not survive the crossing, and it is worth naming plainly.
+    </p>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>The straight-through estimator is a deliberate falsehood</div>
+      <p>
+        \(\arg\min\) has zero gradient almost everywhere, so backpropagation through the
+        quantiser would deliver nothing to the encoder. VQ-VAE&rsquo;s solution is to write
+      </p>
+      <div class="mathbox">
+        $$z_q=z_e+\text{sg}(z_q-z_e)$$
+      </div>
+      <p style="margin-bottom:0">
+        which evaluates to \(z_q\) going forward and to the identity coming back. The backward
+        pass is computing the gradient <em>of a different function</em> from the one the forward
+        pass evaluated, on purpose. There is no engineering analogue for this. You linearise a
+        model about an operating point and the linearisation is an approximation that converges
+        as the perturbation shrinks; this does not converge to anything, because the true
+        derivative it is standing in for is zero. It is a device that works, is known to work,
+        and is not justified by any limit argument. Treat it as a fact about the field rather
+        than something to make sense of.
+      </p>
+    </div>
+
+    <p>
+      <b>VQ-GAN</b> adds a patch discriminator and a perceptual loss on top, because a plain
+      \(\ell_2\) reconstruction penalty averages over plausible details and produces blur &mdash;
+      the same reason Chapter 08 &sect;07 preferred a loss that yields to one that does not.
+    </p>
+  </div>
+  <figure class="col">
+    <div class="paper"><img src="img/image_tokenisation_overview.svg" alt="An image encoded to latents, quantised against a codebook, and emitted as a grid of token indices" width="420"></div>
+    <figcaption><b>Fig. 10.7</b> &mdash; Encoder, codebook, indices. The indices are the tokens. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+  <figure class="col">
+    <div class="paper"><img src="img/vqvae_architecture.svg" alt="VQ-VAE with encoder, nearest-neighbour codebook lookup and decoder" width="420"></div>
+    <figcaption><b>Fig. 10.8</b> &mdash; The nearest-entry lookup is k-means assignment, and the codebook update is the k-means update. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="residual">
+  <div class="col">
+    <div class="sechead"><span class="secnum">06</span><h2>Residual quantisation is successive approximation</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2010%20-%20multimodal%20learning/03.%20image%20and%20video%20tokenisation.md" target="_blank" rel="noopener">src 03. tokenisation &#8599;</a>
+    </div>
+    <p class="lede">
+      One codebook puts a hard floor under reconstruction quality: every position gets exactly
+      one entry, and anything finer is lost. The fix is the one you would reach for, and it is
+      the same algorithm as the converter in your data-acquisition card.
+    </p>
+    <p>
+      <b>Residual quantisation</b> quantises, subtracts, and quantises what is left:
+    </p>
+  </div>
+  <div class="mathbox col">
+    $$r^{(0)}=z_e,\qquad
+      z_q^{(t)}=\text{Quantise}\big(r^{(t-1)},\,\mathcal{C}^{(t)}\big),\qquad
+      r^{(t)}=r^{(t-1)}-z_q^{(t)}$$
+  </div>
+  <div class="col">
+    <p>
+      with the final representation \(\hat z=\sum_t z_q^{(t)}\). The first codebook gets the
+      coarse structure, the second corrects it, the third corrects that.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; this is a successive-approximation ADC</div>
+      <p>
+        A SAR converter finds a voltage by bisection: compare against half the range, keep or
+        discard that bit, then compare the <em>remainder</em> against a quarter, then an eighth.
+        Each step quantises the residual left by the step before, and \(n\) comparisons give
+        \(n\) bits. Residual quantisation is that algorithm with a scalar comparison replaced by
+        a nearest-entry lookup in \(d\) dimensions.
+      </p>
+      <p style="margin-bottom:0">
+        The accounting is the same too. \(T\) stages of a \(K\)-entry codebook reach \(K^T\)
+        distinct representations while storing only \(T\times K\) vectors &mdash; eight stages of
+        1,024 entries give \(1.2\times10^{24}\) combinations from 8,192 stored vectors. That is
+        the separability argument of Chapter 08 &sect;01 and the low-rank argument of Chapter 07
+        &sect;08 once more: exponential reach, linear storage, because the representation
+        factorises. Product quantisation makes the same trade by splitting the vector instead of
+        the residual.
+      </p>
+    </div>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>The condition the source does not state &mdash; and it is the whole thing</div>
+      <p>
+        The source calls this &ldquo;analogous to successive approximation&rdquo; and moves on.
+        Building it showed that the analogy carries a requirement, and that without it the method
+        <em>does not work at all</em>.
+      </p>
+      <p>
+        Run eight stages with codebooks of a fixed scale and the error does not converge. It
+        falls for a few stages, stalls at about 82% of the original, and then goes
+        <em>up</em> &mdash; because once the residual is smaller than the codebook vectors
+        themselves, the nearest entry is farther away than zero, and adding it makes things
+        worse. Fit each stage&rsquo;s codebook to the residual it actually has to quantise and
+        the error falls monotonically to 16% of the original, a sixfold reduction over the same
+        eight stages:
+      </p>
+      <div class="tw">
+        <table>
+          <caption>Mean residual norm by stage, from <code>verify_claims.py</code>. Identical data, identical stage count; only the codebook policy differs.</caption>
+          <thead><tr><th>Codebook policy</th><th>Stage 0</th><th>2</th><th>4</th><th>6</th><th>8</th><th>Monotone?</th></tr></thead>
+          <tbody>
+            <tr><td>Fixed scale</td><td class="mono">0.986</td><td class="mono">0.857</td><td class="mono">0.811</td><td class="mono">0.842</td><td class="mono">0.807</td><td><span class="flag bad">no</span></td></tr>
+            <tr><td>Scale-matched</td><td class="mono">0.986</td><td class="mono">0.826</td><td class="mono">0.686</td><td class="mono">0.593</td><td class="mono">0.500</td><td><span class="flag ok">yes</span></td></tr>
+            <tr><td>Fitted per stage</td><td class="mono">0.986</td><td class="mono">0.621</td><td class="mono">0.393</td><td class="mono">0.249</td><td class="mono">0.159</td><td><span class="flag ok">yes</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="margin-bottom:0">
+        This is exactly why a SAR converter halves its test voltage at every bit rather than
+        using the same step throughout. A fixed step stops resolving as soon as the remainder
+        drops below it; the ladder has to shrink with the residual. The analogy is not decorative
+        &mdash; it predicts the failure mode, which is the test &sect;12 of Chapter 08 proposed
+        for whether a bridge is load-bearing.
+      </p>
+    </div>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>And the decay is geometric, which is what &ldquo;one more bit&rdquo; means</div>
+      <p style="margin-bottom:0">
+        With each stage fitted, the per-stage error ratio comes out between 0.793 and 0.799
+        &mdash; constant to within 1%. So the error falls as \(\rho^{T}\) and \(\log(\text{error})\)
+        is linear in the number of stages. That is precisely the statement that each stage buys a
+        fixed number of bits, and it is why a converter is specified in bits rather than in
+        volts: every additional stage divides the remaining uncertainty by the same factor.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Approximating by stages</div><div class="lab-tag">Predict, then refine</div></div>
+
+    <div class="predict">
+      <p style="margin-top:0">
+        You run eight rounds of residual quantisation, but every round uses a codebook of the
+        same fixed scale. What does the reconstruction error do?
+      </p>
+      <button class="pbtn" data-p2="a" type="button">Falls to nearly zero</button>
+      <button class="pbtn" data-p2="b" type="button">Falls steadily, never reaching zero</button>
+      <button class="pbtn" data-p2="c" type="button">Stalls, and can rise again</button>
+      <button class="pbtn" data-p2="d" type="button">Halves every round</button>
+      <div class="pverdict" id="pv2"></div>
+    </div>
+
+    <svg class="stage" id="sR" viewBox="0 0 480 300" role="img"
+         aria-label="A target vector approximated in successive stages, with the residual error plotted against stage number on a logarithmic axis">
+      <g id="rGrid"></g>
+      <line id="rAx" x1="46" y1="252" x2="466" y2="252"/>
+      <line id="rAy" x1="46" y1="18" x2="46" y2="252"/>
+      <path id="rFix" fill="none" stroke-width="2" stroke-dasharray="5 4"/>
+      <path id="rFit" fill="none" stroke-width="2.5"/>
+      <g id="rDots"></g>
+      <g id="rTicks"></g>
+    </svg>
+
+    <div class="ctl">
+      <label for="stgSl">Stages T</label>
+      <input type="range" id="stgSl" min="1" max="10" value="8" step="1">
+      <span class="ro-v" id="stgVal" style="min-width:34px">8</span>
+      <label for="kSl" style="margin-left:6px">Codebook K</label>
+      <input type="range" id="kSl" min="2" max="6" value="6" step="1">
+      <span class="ro-v" id="kVal" style="min-width:48px">64</span>
+    </div>
+
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Error &mdash; fitted<br>per stage</div><div class="ro-v c" id="oFit">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Error &mdash; fixed<br>scale</div><div class="ro-v b" id="oFix">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Codes<br>reachable</div><div class="ro-v a" id="oCodes">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Vectors<br>stored</div><div class="ro-v" id="oStore">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Bits per<br>position</div><div class="ro-v" id="oBits">&mdash;</div></div>
+    </div>
+
+    <div class="legend">
+      <span class="lg"><i style="background:var(--s3)"></i>codebook fitted to each stage's residual</span>
+      <span class="lg"><i style="background:var(--s1)"></i>fixed-scale codebook</span>
+    </div>
+  </div>
+
+  <div class="lab-foot col">
+    The vertical axis is logarithmic, so the fitted curve being a straight line <em>is</em> the
+    geometric decay: constant slope means a constant factor per stage, which means a fixed number
+    of bits per stage. The dashed curve is the same algorithm with a codebook whose scale never
+    changes; watch it flatten and then turn back upward once the residual has shrunk past the
+    codebook&rsquo;s own spacing. Raising \(K\) steepens the fitted line &mdash; more entries,
+    more bits per stage &mdash; while the stored-vector count grows only as \(T\times K\) and the
+    reachable codes grow as \(K^{T}\). That gap between the last two readouts is the entire
+    argument for doing it this way.
+  </div>
+  <figure class="col">
+    <div class="paper"><img src="img/residual_quantisation.svg" alt="A vector approximated in successive stages, each quantising the previous stage's residual" width="420"></div>
+    <figcaption><b>Fig. 10.9</b> &mdash; Quantise, subtract, repeat. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="collapse">
+  <div class="col">
+    <div class="sechead"><span class="secnum">07</span><h2>Codebook collapse is a balancing problem</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2010%20-%20multimodal%20learning/03.%20image%20and%20video%20tokenisation.md" target="_blank" rel="noopener">src 03. tokenisation &#8599;</a>
+    </div>
+    <p>
+      The standard failure of a learned codebook is that most of it goes unused. An entry that
+      is not selected for a while drifts away from where the encoder puts things, which makes it
+      even less likely to be selected, which lets it drift further. The source calls this
+      <b>codebook collapse</b> and names it a positive feedback loop, which is exactly right.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; you have balanced this line before</div>
+      <p>
+        Chapter 07 &sect;08 had the identical problem under a different name. A mixture-of-experts
+        router that sends most tokens to a few popular experts leaves the rest idle; the fix was
+        an auxiliary load-balancing loss pushing utilisation towards uniform, and DeepSeek&rsquo;s
+        preferred alternative was a per-expert bias nudged by observed load &mdash; feedback
+        control on the queue rather than a penalty in the objective.
+      </p>
+      <p style="margin-bottom:0">
+        Every remedy the source lists for codebook collapse is one of those two moves.
+        <b>Entropy regularisation</b> is the load-balancing loss verbatim, penalising departure
+        from uniform usage. <b>Codebook reset</b> &mdash; reinitialise dead entries onto recent
+        encoder outputs &mdash; is re-siting an idle station where the work actually is.
+        <b>Laplace smoothing</b> on the usage counts guarantees every entry keeps a trickle of
+        signal, which is a minimum-flow constraint. And <b>factorised codes</b> attack it
+        structurally, by shrinking the effective codebook each lookup must populate.
+      </p>
+    </div>
+
+    <p>
+      Utilisation has a natural measurement, and it is one you have now met three times. Let
+      \(p_k\) be the fraction of assignments landing on entry \(k\); the <b>usage perplexity</b>
+      \(e^{H}\) with \(H=-\sum_k p_k\log p_k\) is the effective number of entries in play. A
+      uniformly used codebook of \(K\) entries scores exactly \(K\).
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Usage perplexity on a 64-entry codebook, computed in <code>verify_claims.py</code>. The same statistic as &sect;03's effective-negatives readout.</caption>
+      <thead><tr><th>Codebook</th><th>Usage perplexity</th><th>Effectively utilised</th></tr></thead>
+      <tbody>
+        <tr><td>Healthy &mdash; uniform usage</td><td class="mono">64.00</td><td class="mono">100.0%</td></tr>
+        <tr><td>Skewed &mdash; 8 entries carry 92%</td><td class="mono">12.27</td><td class="mono">19.2%</td></tr>
+        <tr><td>Collapsed &mdash; one entry carries 99%</td><td class="mono">1.10</td><td class="mono">1.7%</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      <b>Finite scalar quantisation</b> sidesteps the problem rather than managing it: drop the
+      learned codebook entirely and round each latent dimension to one of a few fixed integer
+      levels. With \(L\) levels over \(d\) dimensions the implicit codebook is \(L^d\) &mdash;
+      15,625 for five levels over six dimensions &mdash; and no entry can die, because no entry
+      was ever learned. It is the difference between balancing a line and redesigning it so the
+      imbalance cannot occur.
+    </p>
+  </div>
+  <figure class="col">
+    <div class="paper"><img src="img/codebook_collapse.svg" alt="A healthy codebook with even usage against a collapsed one where most entries are unused" width="420"></div>
+    <figcaption><b>Fig. 10.10</b> &mdash; Idle stations, in a different industry. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="video">
+  <div class="col">
+    <div class="sechead"><span class="secnum">08</span><h2>Video, and causality again</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2010%20-%20multimodal%20learning/03.%20image%20and%20video%20tokenisation.md" target="_blank" rel="noopener">src 03. tokenisation &#8599;</a>
+    </div>
+    <p>
+      Video adds a time axis, and adjacent frames are enormously redundant. A <b>3D VQ-VAE</b>
+      replaces 2D convolutions with 3D ones and compresses space and time together. With spatial
+      factor 16 and temporal factor 4, sixteen frames of \(256\times256\) become
+      \(4\times16\times16=1{,}024\) tokens &mdash; against 3,145,728 raw values, a compression of
+      3,072&times;.
+    </p>
+
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; a causal tokeniser is a causal filter</div>
+      <p>
+        An ordinary 3D convolution looks at past, present and future frames, so you must have the
+        whole clip before you can tokenise any of it. A <b>causal</b> video tokeniser pads the
+        temporal kernel asymmetrically &mdash; \(k-1\) zeros on the past side, none on the future
+        side &mdash; so each output depends only on the current frame and earlier ones.
+      </p>
+      <p style="margin-bottom:0">
+        That is Chapter 09 &sect;14 unchanged, and the two reasons the source gives are the two
+        reasons from that section. <b>Streaming</b>: you cannot buffer frames that have not
+        arrived, which is why a controller is causal. <b>Autoregressive generation</b>: the tokens
+        for frame \(t\) must be computable without frame \(t+1\), because frame \(t+1\) does not
+        exist yet. The elegant consequence the source notes &mdash; that a causal tokeniser
+        handles a still image as a one-frame video with no special case &mdash; follows directly:
+        with no past to look at, the first frame is encoded from itself alone.
+      </p>
+    </div>
+
+    <p>
+      <b>Factorised compression</b> splits the job &mdash; a 2D encoder per frame, then a 1D
+      encoder across time &mdash; which is cheaper than full 3D convolution and lets you set the
+      two ratios independently. That is the separability argument again, now over the time axis.
+      And <b>temporal interpolation tokens</b>, which encode keyframes fully and intermediate
+      frames as morphing instructions, are I-frames and P-frames from H.264 rebuilt in a learned
+      latent space.
+    </p>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>Discrete or continuous is a decision about the consumer, not the signal</div>
+      <p style="margin-bottom:0">
+        Quantisation costs fidelity, so why quantise at all? Only because of what reads the
+        tokens. An autoregressive transformer predicts from a finite vocabulary with a softmax
+        and cross-entropy, so it <em>requires</em> discrete symbols. A diffusion or flow-matching
+        model works natively in continuous space and is better off without the quantisation error.
+        This is the same question as choosing the resolution of a DAQ channel: the answer is set
+        by what happens downstream, not by the signal. The honest framing is that discretisation
+        is a cost paid to access the language-model machinery &mdash; and that is also the whole
+        argument for paying it, since that machinery is what Chapter 07 spent a chapter
+        describing.
+      </p>
+    </div>
+  </div>
+  <figure class="col">
+    <div class="paper"><img src="img/video_3d_vqvae.svg" alt="A video clip encoded by 3D convolutions into a spatiotemporal grid of quantised latents" width="420"></div>
+    <figcaption><b>Fig. 10.11</b> &mdash; Space and time compressed together, then quantised. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="breaks">
+  <div class="col">
+    <div class="sechead"><span class="secnum">09</span><h2>Where it breaks</h2>
+      <span class="srcref nolink" title="Added material, not in the source chapter">beyond the chapter</span>
+    </div>
+    <p>
+      This chapter's bridges are structurally strong and epistemically weak, which is an unusual
+      combination and worth being precise about.
+    </p>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>1 &mdash; The fusion has no model, and therefore no guarantees</div>
+      <p style="margin-bottom:0">
+        Stated once more because it is the one that matters. Kalman fusion is derived from an
+        observation model and a noise covariance; the weighting is a consequence, the innovation
+        is monitorable, and observability tells you in advance whether the job is possible.
+        Learned fusion has none of these. It has a loss that went down on a validation set. Both
+        are called fusion and both combine sensors, and only one of them can tell you when it has
+        stopped working.
+      </p>
+    </div>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>2 &mdash; The embedding space is not a measurement scale</div>
+      <p style="margin-bottom:0">
+        A cosine similarity of 0.8 has no interpretation outside the model that produced it. Two
+        models trained on different corpora produce incomparable spaces with no conversion
+        between them, because there is no underlying quantity both are measuring. Treat a
+        similarity as a ranking device, which is what retrieval uses it for, and not as a reading.
+      </p>
+    </div>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>3 &mdash; The gradient is knowingly wrong</div>
+      <p style="margin-bottom:0">
+        The straight-through estimator computes the derivative of a function other than the one
+        evaluated, because the true derivative is zero. It is not an approximation that improves
+        in a limit. Every intuition you have about linearisation, about step size, about
+        convergence of a numerical derivative, is inapplicable &mdash; not wrong, inapplicable.
+      </p>
+    </div>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>4 &mdash; A shared functional form is not a shared mechanism</div>
+      <p style="margin-bottom:0">
+        &sect;03 identified the contrastive softmax with the Boltzmann distribution, and that
+        identification is exact as algebra. It licenses the limiting behaviour in \(\tau\) and
+        nothing else. There is no energy, no heat bath, no equilibrium, and no physical
+        temperature. This sheet states the correspondence because it genuinely helps &mdash; and
+        marks its edge for the same reason Chapter 07 marked the edge around Shannon entropy.
+      </p>
+    </div>
+
+    <div class="note brk">
+      <div class="note-h"><span class="ic">!</span>5 &mdash; The model names in the source are a snapshot</div>
+      <p style="margin-bottom:0">
+        CLIP, ALIGN, SigLIP, ImageBind, Chameleon, Gemini, Cosmos, LlamaGen, and the quoted
+        accuracy and codebook figures, were current when the source was written. The durable
+        content of part 1 is narrower and will outlast all of them: the three fusion levels,
+        cosine similarity on a shared sphere, the temperature limit, nearest-entry quantisation
+        and its k-means identity, successive approximation with its scale-matching condition, and
+        usage perplexity as the diagnostic for collapse. Everything in this list is arithmetic or
+        architecture. None of it depends on which laboratory is ahead this year.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="next">
+  <div class="col">
+    <div class="sechead"><span class="secnum">10</span><h2>What part 2 covers</h2></div>
+    <p>
+      Part 1 built the shared representation and the tokeniser. Part 2 is what gets built on them:
+    </p>
+    <ul>
+      <li><b>Vision-language models</b> &mdash; the five-step path from image patches to tokens a
+        language model can read, and the architectures that do it.</li>
+      <li><b>Cross-modal generation</b> &mdash; text to image, video and audio; and
+        <b>classifier-free guidance</b>, which turns out to be over-relaxation: you compute a
+        correction and then deliberately overshoot it.</li>
+      <li><b>Evaluating generated output</b> &mdash; where FID is a distance between two Gaussians
+        fitted to feature distributions, built from a mean and a covariance, which is Chapter 04's
+        centroid and second moment.</li>
+      <li><b>Unified architectures and staged training</b> &mdash; which reads as a commissioning
+        sequence: characterise each instrument alone, then cross-check pairs, then run the
+        assembled system.</li>
+    </ul>
+  </div>
+
+  <div class="endnote col">
+    Sheet 10 of 20, part 1 of 2. Built for a mechanical engineer with GATE-level mathematics and
+    no prior CS. Source: <a href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/tree/9850ee5/chapter%2010%20-%20multimodal%20learning" target="_blank" rel="noopener">chapter 10 &mdash; multimodal learning</a>,
+    pinned at commit <code>9850ee5</code>, Apache-2.0. Figures are the compendium's own.
+    Numerical claims are checked in <code>verify_claims.py</code> under the
+    <code>[Ch10 &hellip;]</code> tags &mdash; including the residual-quantisation convergence
+    table in &sect;06, which is the reason that section says what it says. The provenance
+    appendix lands with part 2, covering both parts.
+  </div>
+</section>
+
+</main>
+</div>
+
+<style>
+#rGrid line{stroke:var(--rule)}
+#rAx, #rAy{stroke:var(--rule-strong); stroke-width:1.25}
+#rFit{stroke:var(--s3)} #rFix{stroke:var(--s1)}
+.rdot{fill:var(--s3); stroke:var(--sheet); stroke-width:.8}
+.tk{fill:var(--ink-3); font-family:'IBM Plex Mono',monospace; font-size:10px}
+.cellv{font-family:'IBM Plex Mono',monospace; font-size:8.5px}
+</style>
+
+<script>
+(function(){
+  'use strict';
+  var root=document.documentElement;
+  function dk(){var t=root.getAttribute('data-theme');
+    return t?t==='dark':(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);}
+  try{var sv=localStorage.getItem('ch10-theme'); if(sv==='dark'||sv==='light') root.setAttribute('data-theme',sv);}catch(e){}
+  var tb=document.getElementById('themebtn');
+  if(tb) tb.addEventListener('click',function(){var n=dk()?'light':'dark';
+    root.setAttribute('data-theme',n); try{localStorage.setItem('ch10-theme',n);}catch(e){}});
+  function $(id){return document.getElementById(id);}
+  function fmt(n,d){d=d===undefined?2:d; return (Math.abs(n)<5e-7?0:n).toFixed(d);}
+  function grid(g,w,h,s){var o='',x,y;
+    for(x=s;x<w;x+=s) o+='<line x1="'+x+'" y1="0" x2="'+x+'" y2="'+h+'"/>';
+    for(y=s;y<h;y+=s) o+='<line x1="0" y1="'+y+'" x2="'+w+'" y2="'+y+'"/>';
+    g.innerHTML=o;}
+  function predict(attr,vid,ans){
+    document.querySelectorAll('['+attr+']').forEach(function(b){
+      b.addEventListener('click',function(){
+        document.querySelectorAll('['+attr+']').forEach(function(o){o.classList.remove('picked');});
+        b.classList.add('picked');
+        var v=$(vid); v.innerHTML=ans[b.getAttribute(attr)]; v.classList.add('show');
+      });
+    });
+  }
+  /* deterministic generator, so the page looks the same on every load */
+  function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;
+    var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;
+    return ((t^t>>>14)>>>0)/4294967296;};}
+  function gauss(rnd){var u=0,v=0;while(!u)u=rnd();while(!v)v=rnd();
+    return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+
+  /* ---------- LAB 1 : the contrastive matrix and temperature ---------- */
+  var NC=8, SIM=[];
+  (function(){
+    var rnd=mulberry(7),i,j;
+    for(i=0;i<NC;i++){ SIM.push([]);
+      for(j=0;j<NC;j++) SIM[i].push(i===j ? 0.62+0.22*rnd() : 0.04+0.40*rnd());
+    }
+  })();
+  /* numerically stable softmax: exp(0.9/0.01) overflows, so subtract the row max */
+  function softmaxRow(row,tau){
+    var i,mx=-1e30,out=[],s=0;
+    for(i=0;i<row.length;i++) mx=Math.max(mx,row[i]/tau);
+    for(i=0;i<row.length;i++){ var e=Math.exp(row[i]/tau-mx); out.push(e); s+=e; }
+    for(i=0;i<row.length;i++) out[i]/=s;
+    return out;
+  }
+  function drawT(){
+    var tau=parseInt($('tauSl').value,10)/100;
+    $('tauVal').textContent=fmt(tau,2);
+    var x0=52,y0=26,cw=50,chh=30,g='',i,j;
+    var pdiag=0,H=0,loss=0,hardest=0;
+    for(i=0;i<NC;i++){
+      var p=softmaxRow(SIM[i],tau);
+      pdiag+=p[i]; loss+=-Math.log(Math.max(p[i],1e-300));
+      for(j=0;j<NC;j++){ if(p[j]>0) H+=-p[j]*Math.log(p[j]); }
+      var best=0,bj=-1;
+      for(j=0;j<NC;j++) if(j!==i && p[j]>best){best=p[j];bj=j;}
+      hardest+=best;
+      for(j=0;j<NC;j++){
+        var op=Math.min(1,0.06+0.94*Math.pow(p[j],0.55));
+        g+='<rect x="'+(x0+j*cw)+'" y="'+(y0+i*chh)+'" width="'+(cw-2)+'" height="'+(chh-2)
+          +'" rx="1.5" fill="var(--s2)" fill-opacity="'+op.toFixed(3)+'"/>';
+        if(i===j) g+='<rect x="'+(x0+j*cw)+'" y="'+(y0+i*chh)+'" width="'+(cw-2)+'" height="'+(chh-2)
+          +'" rx="1.5" fill="none" stroke="var(--brk)" stroke-width="2"/>';
+      }
+    }
+    $('tCells').innerHTML=g;
+    pdiag/=NC; H/=NC; loss/=NC; hardest/=NC;
+    var lab='<text class="tk" x="6" y="'+(y0+12)+'">image</text>'
+          + '<text class="tk" x="'+(x0+NC*cw/2)+'" y="18" text-anchor="middle">caption &rarr;</text>'
+          + '<text class="tk" x="'+(x0)+'" y="'+(y0+NC*chh+16)+'">amber outline = the correct pairing</text>';
+    $('tLabels').innerHTML=lab;
+    $('oPd').textContent=fmt(pdiag,4);
+    $('oEff').textContent=fmt(Math.exp(H),2);
+    $('oLoss').textContent=fmt(loss,4);
+    $('oHard').textContent=fmt(hardest,4);
+  }
+  $('tauSl').addEventListener('input',function(){
+    document.querySelectorAll('[data-tp]').forEach(function(o){o.classList.remove('on');}); drawT();});
+  document.querySelectorAll('[data-tp]').forEach(function(b){
+    b.addEventListener('click',function(){
+      $('tauSl').value=b.getAttribute('data-tp');
+      document.querySelectorAll('[data-tp]').forEach(function(o){o.classList.remove('on');});
+      b.classList.add('on'); drawT();});
+  });
+  drawT();
+  predict('data-p1','pv1',{
+    a:'<b>That is the high-temperature limit, not the low one.</b> As &tau; grows the row flattens and every negative contributes equally. Drag to 1.00 and watch the effective-negatives readout climb.',
+    b:'<b>Correct.</b> As &tau; falls the softmax concentrates on the largest off-diagonal entry, so the gradient comes almost entirely from the single hardest negative. That is automatic hard-negative mining &mdash; the reason InfoNCE displaced triplet loss, which needed the mining done by hand.',
+    c:'<b>No.</b> The loss on the diagonal falls, but the gradient does not vanish &mdash; it concentrates. Very low &tau; makes training unstable precisely because those concentrated gradients are large.',
+    d:'<b>The opposite.</b> A peaked softmax weights the <i>closest</i> incorrect caption most heavily, which is the hardest negative, not the easiest.'
+  });
+
+  /* ---------- LAB 2 : residual quantisation ---------- */
+  /* Mirrors verify_claims.py [Ch10 s05]: the same three codebook policies, at a
+     size the browser can run live. The fitted policy runs a few Lloyd iterations
+     on each stage's residuals; the fixed policy never rescales. */
+  var DIM=8, NPTS=600;   /* must stay well above K, or k-means simply
+                          memorises every point and the error hits 0 */
+  function makeData(rnd){var X=[],i,j;
+    for(i=0;i<NPTS;i++){var v=[];for(j=0;j<DIM;j++)v.push(gauss(rnd)/Math.sqrt(DIM));X.push(v);}
+    return X;}
+  function meanNorm(R){var s=0,i,j;
+    for(i=0;i<R.length;i++){var a=0;for(j=0;j<DIM;j++)a+=R[i][j]*R[i][j];s+=Math.sqrt(a);}
+    return s/R.length;}
+  function nearest(v,B){var bi=0,bd=1e30,k,j;
+    for(k=0;k<B.length;k++){var dd=0;for(j=0;j<DIM;j++){var t=v[j]-B[k][j];dd+=t*t;}
+      if(dd<bd){bd=dd;bi=k;}}
+    return bi;}
+  function rqCurve(K,T,policy,seed){
+    var rnd=mulberry(seed), R=makeData(mulberry(3)), errs=[meanNorm(R)], t,i,j,k;
+    for(t=0;t<T;t++){
+      var B=[];
+      if(policy==='fixed'){
+        for(k=0;k<K;k++){var v=[];for(j=0;j<DIM;j++)v.push(gauss(rnd)/Math.sqrt(DIM));B.push(v);}
+      } else {
+        for(k=0;k<K;k++) B.push(R[Math.floor(rnd()*R.length)].slice());
+        for(var it=0;it<6;it++){
+          var sum=[],cnt=[];
+          for(k=0;k<K;k++){sum.push(new Array(DIM).fill(0));cnt.push(0);}
+          for(i=0;i<R.length;i++){var a=nearest(R[i],B);cnt[a]++;
+            for(j=0;j<DIM;j++)sum[a][j]+=R[i][j];}
+          for(k=0;k<K;k++) if(cnt[k]) for(j=0;j<DIM;j++) B[k][j]=sum[k][j]/cnt[k];
+        }
+      }
+      for(i=0;i<R.length;i++){var b=B[nearest(R[i],B)];
+        for(j=0;j<DIM;j++) R[i][j]-=b[j];}
+      errs.push(meanNorm(R));
+    }
+    return errs;
+  }
+  function drawR(){
+    var T=parseInt($('stgSl').value,10), K=Math.pow(2,parseInt($('kSl').value,10));
+    $('stgVal').textContent=String(T); $('kVal').textContent=String(K);
+    var fit=rqCurve(K,T,'fit',17), fix=rqCurve(K,T,'fixed',17);
+    var lo=-3.2, hi=0.35;                       /* log10 axis bounds */
+    function PX(t){return 46+(T<1?0:t/Math.max(T,1))*420;}
+    function PY(e){var L=Math.log(Math.max(e,1e-4))/Math.LN10;
+      return 252-((L-lo)/(hi-lo))*234;}
+    function path(A){var d='',i;for(i=0;i<A.length;i++)d+=(i?'L':'M')+PX(i).toFixed(1)+' '+PY(A[i]).toFixed(1);return d;}
+    $('rFit').setAttribute('d',path(fit));
+    $('rFix').setAttribute('d',path(fix));
+    var dots='',i;
+    for(i=0;i<fit.length;i++) dots+='<circle class="rdot" cx="'+PX(i).toFixed(1)+'" cy="'+PY(fit[i]).toFixed(1)+'" r="3"/>';
+    $('rDots').innerHTML=dots;
+    var tk='',v;
+    for(v=0;v>=-3;v--) tk+='<text class="tk" x="40" y="'+(PY(Math.pow(10,v))+3).toFixed(0)+'" text-anchor="end">1e'+v+'</text>';
+    tk+='<text class="tk" x="256" y="272" text-anchor="middle">stage</text>';
+    tk+='<text class="tk" x="12" y="16">error</text>';
+    $('rTicks').innerHTML=tk;
+    $('oFit').textContent=fmt(fit[T],4);
+    $('oFix').textContent=fmt(fix[T],4);
+    var codes=T*Math.log(K)/Math.LN10;
+    $('oCodes').textContent = codes>6 ? ('1e'+codes.toFixed(1)) : String(Math.round(Math.pow(K,T)));
+    $('oStore').textContent=(T*K).toLocaleString();
+    $('oBits').textContent=fmt(T*Math.log(K)/Math.LN2,1);
+  }
+  ['stgSl','kSl'].forEach(function(id){$(id).addEventListener('input',drawR);});
+  grid($('rGrid'),480,300,30); drawR();
+  predict('data-p2','pv2',{
+    a:'<b>Only if each stage is matched to its residual.</b> With a fixed scale it stalls &mdash; drag the stage slider out and watch the dashed curve flatten.',
+    b:'<b>Close, but it does worse than that.</b> It does not merely slow down; past a certain stage the error can increase, because the nearest codebook entry is then farther away than zero.',
+    c:'<b>Correct.</b> Once the residual is smaller than the codebook vectors themselves, adding the nearest entry moves you away from the target. Successive approximation needs the step to shrink with the residual &mdash; which is why a SAR converter halves its test voltage at every bit.',
+    d:'<b>That is the fitted case, not the fixed one.</b> A per-stage-fitted codebook does give geometric decay &mdash; a straight line on this log axis &mdash; but a fixed-scale one does not.'
+  });
+})();
+</script>
+<script>
+/* Safety net: if the MathJax bundle cannot be reached, degrade the TeX to
+   readable Unicode instead of leaving raw backslash markup on the page. */
+(function () {
+  'use strict';
+  var GREEK = { theta:'θ', sigma:'σ', delta:'δ', mu:'μ', pi:'π',
+                infty:'∞', alpha:'α', beta:'β', lambda:'λ' };
+  var SUB = { '1':'₁','2':'₂','3':'₃','i':'ᵢ','j':'ⱼ','n':'ₙ','p':'ₚ','x':'ₓ','y':'ᵧ' };
+  var SUP = { '2':'²','3':'³','n':'ⁿ','p':'ᵖ','*':'*' };
+
+  function degrade(t) {
+    t = t.replace(/\$\$/g, '').replace(/\\[()[\]]/g, '');
+    t = t.replace(/\\(?:left|right|textstyle|displaystyle|!|,|;|:)/g, '');
+    t = t.replace(/\\q?quad/g, ' ');
+    t = t.replace(/\\mathbb\{R\}/g, 'ℝ').replace(/\\mathbb\{Z\}/g, 'ℤ')
+         .replace(/\\mathbb\{N\}/g, 'ℕ').replace(/\\mathbb\{Q\}/g, 'ℚ');
+    t = t.replace(/\\(?:mathbf|mathrm|text|textbf|operatorname)\{([^{}]*)\}/g, '$1');
+    t = t.replace(/\\hat\{([^{}]*)\}/g, '$1̂').replace(/\\bar\{([^{}]*)\}/g, '$1̄');
+    t = t.replace(/\\sqrt\{([^{}]*)\}/g, '√($1)');
+    t = t.replace(/\\t?frac\{([^{}]*)\}\{([^{}]*)\}/g, '($1)/($2)');
+    t = t.replace(/\\binom\{([^{}]*)\}\{([^{}]*)\}/g, 'C($1,$2)');
+    t = t.replace(/\\([a-zA-Z]+)/g, function (m, w) {
+      if (GREEK[w]) return GREEK[w];
+      switch (w) {
+        case 'cdot': return '·';
+        case 'times': return '×';
+        case 'le': case 'leq': return '≤';
+        case 'ge': case 'geq': return '≥';
+        case 'neq': return '≠';
+        case 'approx': return '≈';
+        case 'in': return '∈';
+        case 'pm': return '±';
+        case 'to': case 'rightarrow': return '→';
+        case 'Rightarrow': return '⇒';
+        case 'iff': return '⇔';
+        case 'parallel': return '∥';
+        case 'perp': return '⊥';
+        case 'sum': return 'Σ';
+        case 'langle': return '⟨';
+        case 'rangle': return '⟩';
+        case 'wedge': return '∧';
+        case 'ast': return '*';
+        case 'cdots': case 'ldots': case 'dots': return '…';
+        case 'max': case 'min': case 'cos': case 'sin': case 'log': case 'exp': return w;
+        default: return w;
+      }
+    });
+    t = t.replace(/\\\|/g, '‖').replace(/\|\|/g, '‖');
+    t = t.replace(/_\{?([0-9ijnpxy])\}?/g, function (m, c) { return SUB[c] || ('_' + c); });
+    t = t.replace(/\^\{?([23np*])\}?/g, function (m, c) { return SUP[c] || ('^' + c); });
+    t = t.replace(/[{}]/g, '');
+    return t.replace(/[ \t]{2,}/g, ' ');
+  }
+
+  function run() {
+    if (window.MathJax && window.MathJax.startup && window.MathJax.startup.document) return;
+    var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+      acceptNode: function (n) {
+        if (!n.nodeValue || n.nodeValue.indexOf('\\') < 0 && n.nodeValue.indexOf('$$') < 0)
+          return NodeFilter.FILTER_REJECT;
+        var p = n.parentNode;
+        while (p && p !== document.body) {
+          var tag = p.nodeName;
+          if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'CODE' || tag === 'PRE')
+            return NodeFilter.FILTER_REJECT;
+          p = p.parentNode;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    var hits = [], n;
+    while ((n = walker.nextNode())) hits.push(n);
+    hits.forEach(function (node) { node.nodeValue = degrade(node.nodeValue); });
+    document.querySelectorAll('.mathbox').forEach(function (el) {
+      el.style.fontFamily = "'IBM Plex Mono', monospace";
+      el.style.fontSize = '15px';
+      el.style.textAlign = 'center';
+      el.style.padding = '10px 0';
+    });
+  }
+  setTimeout(run, 6000);
+})();
+</script>
+
+<script>
+/* Long display equations can be wider than their container - especially inside a
+   callout box, which is narrower than the main column. After the typesetter
+   finishes, measure each one and shrink it just enough to fit. Only ever shrinks,
+   never grows, and never below a readable floor - so the worst case is the
+   scrollbar we already had. */
+(function () {
+  'use strict';
+  var MIN_SCALE = 0.70;   /* below this, scrolling beats illegible text */
+
+  function fitOne(box) {
+    try {
+      var c = box.querySelector('mjx-container[display="true"]');
+      if (!c) return;
+      var svg = c.querySelector('svg');
+      if (!svg) return;
+      c.style.fontSize = '';
+      var avail = box.clientWidth;
+      if (!avail) return;
+      var w = svg.getBoundingClientRect().width;
+      if (!w || w <= avail) return;
+      var k = Math.max(MIN_SCALE, (avail / w) * 0.98);
+      c.style.fontSize = (k * 100).toFixed(1) + '%';
+      var w2 = svg.getBoundingClientRect().width;      /* one refinement pass */
+      if (w2 > avail) {
+        k = Math.max(MIN_SCALE, k * (avail / w2) * 0.98);
+        c.style.fontSize = (k * 100).toFixed(1) + '%';
+      }
+    } catch (e) { /* leave the equation exactly as it was */ }
+  }
+
+  /* Inline math cannot wrap and is not inside a scrollable .mathbox, so a long
+     inline expression pushes the whole page sideways.  Shrink any that is wider
+     than the text column it sits in; the ex-based sizing keeps the baseline. */
+  function fitInline(c) {
+    try {
+      var svg = c.querySelector('svg'); if (!svg) return;
+      c.style.fontSize = '';
+      var host = c.parentElement; if (!host) return;
+      var avail = host.clientWidth; if (!avail) return;
+      var w = svg.getBoundingClientRect().width;
+      if (!w || w <= avail) return;
+      c.style.fontSize = (Math.max(MIN_SCALE, (avail / w) * 0.98) * 100).toFixed(1) + '%';
+    } catch (e) { /* leave the expression exactly as it was */ }
+  }
+
+  function fitAll() {
+    try { document.querySelectorAll('.mathbox').forEach(fitOne); } catch (e) {}
+    try {
+      document.querySelectorAll('mjx-container:not([display="true"])').forEach(fitInline);
+    } catch (e) {}
+  }
+
+  function start() {
+    fitAll();
+    var t;
+    window.addEventListener('resize', function () {
+      clearTimeout(t); t = setTimeout(fitAll, 160);
+    });
+  }
+
+  function waitForTypesetter(n) {
+    if (window.MathJax && window.MathJax.startup && window.MathJax.startup.promise) {
+      window.MathJax.startup.promise.then(start, start);
+      return;
+    }
+    if (n > 60) return;            /* typesetter never arrived - nothing to fit */
+    setTimeout(function () { waitForTypesetter(n + 1); }, 200);
+  }
+  waitForTypesetter(0);
+})();
+</script>
