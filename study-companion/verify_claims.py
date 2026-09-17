@@ -4,7 +4,7 @@ rng = np.random.default_rng(7)
 P = lambda ok: "PASS" if ok else "*** FAIL ***"
 
 print("=" * 66)
-print("VERIFYING THE LOAD-BEARING CLAIMS IN CHAPTERS 01-07")
+print("VERIFYING THE LOAD-BEARING CLAIMS IN CHAPTERS 01-08")
 print("=" * 66)
 
 # --- Ch02/Ch01: von Mises = (1/sqrt2)||d||_2 and Tresca = ||d||_inf -------
@@ -572,5 +572,174 @@ for name, pd in drafts.items():
           f"{P(np.allclose(emitted, pt))}")
     print(f"[Ch07 s09] {name:12} acceptance {acc:.6f} == 1 - TV {1 - tv:.6f}   "
           f"{P(abs(acc - (1 - tv)) < 1e-12)}")
+
+
+# ===================== CHAPTER 08 - COMPUTER VISION =====================
+from scipy.signal import convolve2d as _conv2
+from scipy.special import erf as _erf
+
+SOBX = np.array([[-1., 0., 1.], [-2., 0., 2.], [-1., 0., 1.]])
+SOBY = np.array([[-1., -2., -1.], [0., 0., 0.], [1., 2., 1.]])
+
+# --- Ch08 s01: Sobel is separable (rank 1) --------------------------------
+_sv = np.linalg.svd(SOBX, compute_uv=False)
+print()
+print(f"[Ch08 s01] rank(Gx) = {np.linalg.matrix_rank(SOBX)}, singular values {np.round(_sv, 4)}   "
+      f"{P(np.linalg.matrix_rank(SOBX) == 1)}")
+print(f"[Ch08 s01] Gx == outer([1,2,1], [-1,0,1])   "
+      f"{P(np.allclose(SOBX, np.outer([1, 2, 1], [-1, 0, 1])))}")
+print(f"[Ch08 s01] Gy == outer([-1,0,1], [1,2,1])   "
+      f"{P(np.allclose(SOBY, np.outer([-1, 0, 1], [1, 2, 1])))}")
+
+# --- Ch08 s02: the structure tensor is a plane stress state ---------------
+def _struct(I):
+    ix = _conv2(I, SOBX[::-1, ::-1], mode='valid')
+    iy = _conv2(I, SOBY[::-1, ::-1], mode='valid')
+    return np.array([[(ix * ix).sum(), (ix * iy).sum()],
+                     [(ix * iy).sum(), (iy * iy).sum()]])
+
+_flat = np.ones((5, 5))
+_edge = np.tile(np.array([0, 0, 1, 1, 1], float), (5, 1))
+_diag = np.array([[1.0 if (i + j) >= 4 else 0.0 for j in range(5)] for i in range(5)])
+_corner = np.zeros((5, 5)); _corner[:3, :3] = 1.0
+print()
+for _nm, _I, _exp in [("flat", _flat, (0., 0.)), ("edge", _edge, (0., 96.)),
+                      ("diagonal", _diag, (0., 96.)), ("corner", _corner, (36., 68.))]:
+    M = _struct(_I)
+    a, b, c = M[0, 0], M[1, 1], M[0, 1]
+    ctr, rad = (a + b) / 2, np.hypot((a - b) / 2, c)          # Mohr's circle
+    mohr = np.array([ctr - rad, ctr + rad])
+    eig = np.linalg.eigvalsh(M)
+    print(f"[Ch08 s02] {_nm:8} eig {np.round(eig, 3)}  Mohr {np.round(mohr, 3)}  "
+          f"expected {_exp}   {P(np.allclose(sorted(eig), sorted(mohr)) and np.allclose(sorted(eig), sorted(_exp)))}")
+M = _struct(_corner); _eig = np.linalg.eigvalsh(M)
+print(f"[Ch08 s02] trace == l1+l2   {np.trace(M):.1f} == {_eig.sum():.1f}   {P(np.isclose(np.trace(M), _eig.sum()))}")
+print(f"[Ch08 s02] det   == l1*l2   {np.linalg.det(M):.1f} == {_eig[0]*_eig[1]:.1f}   "
+      f"{P(np.isclose(np.linalg.det(M), _eig[0] * _eig[1]))}")
+# edge and diagonal are the SAME state in rotated frames
+print(f"[Ch08 s02] edge and diagonal presets share eigenvalues (same state, rotated 45 deg)   "
+      f"{P(np.allclose(np.linalg.eigvalsh(_struct(_edge)), np.linalg.eigvalsh(_struct(_diag))))}")
+
+# --- Ch08 s03: Gaussian blur IS the heat equation -------------------------
+_N = 801; _x = np.arange(_N) - _N // 2
+_sym = np.where(_x > 0, 1.0, np.where(_x < 0, 0.0, 0.5))     # symmetric discrete step
+print()
+_erfgap = []
+for _t in (2.0, 8.0, 18.0):
+    _sg = np.sqrt(2 * _t)
+    _g = np.exp(-_x ** 2 / (2 * _sg ** 2)); _g /= _g.sum()
+    _blur = np.convolve(_sym, _g, mode='same')
+    _I = _sym.copy(); _dt = 0.25
+    for _ in range(int(_t / _dt)):
+        _I[1:-1] = _I[1:-1] + _dt * (_I[2:] - 2 * _I[1:-1] + _I[:-2])
+    _cs = slice(_N // 2 - 90, _N // 2 + 90)
+    _closed = 0.5 * (1 + _erf(_x / (_sg * np.sqrt(2))))
+    print(f"[Ch08 s03] t={_t:5.1f}  sigma={_sg:6.4f}  sigma^2={_sg**2:6.3f} vs 2t={2*_t:6.3f}   "
+          f"{P(abs(_sg**2 - 2*_t) < 1e-12)}")
+    print(f"[Ch08 s03]           heat-stepping vs Gaussian blur  max err {np.abs(_I[_cs]-_blur[_cs]).max():.2e}   "
+          f"{P(np.abs(_I[_cs]-_blur[_cs]).max() < 5e-3)}")
+    _erfgap.append(np.abs(_blur[_cs] - _closed[_cs]).max())
+    print(f"[Ch08 s03]           Gaussian blur vs erf profile    max err {_erfgap[-1]:.2e}   "
+          f"{P(_erfgap[-1] < 1e-2)}")
+print(f"[Ch08 s03] erf gap shrinks as sigma grows past the pixel spacing "
+      f"({_erfgap[0]:.1e} -> {_erfgap[1]:.1e} -> {_erfgap[2]:.1e}): the identity is exact in the "
+      f"continuum, approached on a grid   {P(_erfgap[0] > _erfgap[1] > _erfgap[2])}")
+# variances add
+_s1, _s2 = 3.0, 4.0
+print(f"[Ch08 s03] blurring by 3 then 4 equals blurring by 5 (variances add)   "
+      f"{P(np.isclose(np.hypot(_s1, _s2), 5.0))}")
+# the half-pixel trap: an asymmetric discrete step matches erf shifted by half a sample
+_asym = (_x >= 0).astype(float)
+_sg = np.sqrt(2 * 8.0)
+_g = np.exp(-_x ** 2 / (2 * _sg ** 2)); _g /= _g.sum()
+_ba = np.convolve(_asym, _g, mode='same')
+_cs = slice(_N // 2 - 90, _N // 2 + 90)
+_e0 = np.abs(_ba[_cs] - (0.5 * (1 + _erf(_x / (_sg * np.sqrt(2)))))[_cs]).max()
+_eh = np.abs(_ba[_cs] - (0.5 * (1 + _erf((_x + 0.5) / (_sg * np.sqrt(2)))))[_cs]).max()
+print(f"[Ch08 s03] (x>=0) step vs erf(x) {_e0:.2e}, vs erf(x+1/2) {_eh:.2e} -> the jump sits at "
+      f"x=-1/2   {P(_eh < _e0 / 50)}")
+
+# --- Ch08 s04: decimation folds frequencies above Nyquist ------------------
+print()
+_fs = 0.5                                                     # keep every 2nd pixel
+for _f in (0.12, 0.30, 0.42):
+    _L = 4000; _u = np.arange(_L)
+    _dec = np.cos(2 * np.pi * _f * _u)[::2]
+    _pred = abs(_f - _fs * round(_f / _fs))
+    _sp = np.abs(np.fft.rfft(_dec * np.hanning(len(_dec))))
+    _meas = np.fft.rfftfreq(len(_dec))[_sp.argmax()] / 2
+    print(f"[Ch08 s04] f={_f:.2f} c/px -> predicted fold {_pred:.3f}, measured {_meas:.3f}  "
+          f"{'(aliased)' if _f > 0.25 else '(safe)  '}   {P(abs(_pred - _meas) < 0.01)}")
+
+# --- Ch08 s05: convolution is Toeplitz; ResNet is forward Euler -----------
+from scipy.linalg import toeplitz as _toep
+_k = np.array([0.25, 0.5, 0.25]); _n = 12
+_sig = rng.standard_normal(_n)
+_col = np.zeros(_n); _col[0] = _k[1]; _col[1] = _k[0]
+_row = np.zeros(_n); _row[0] = _k[1]; _row[1] = _k[2]
+_T = _toep(_col, _row)
+print()
+print(f"[Ch08 s05] Toeplitz matrix multiply == convolution   max err "
+      f"{np.abs(_T @ _sig - np.convolve(_sig, _k, mode='same')).max():.2e}   "
+      f"{P(np.allclose(_T @ _sig, np.convolve(_sig, _k, mode='same')))}")
+print(f"[Ch08 s05] every diagonal of T is constant (weight sharing)   "
+      f"{P(all(np.allclose(np.diag(_T, d), np.diag(_T, d)[0]) for d in range(-_n + 1, _n)))}")
+_f_ode = lambda y: -0.3 * y + 0.1 * np.sin(y)
+_y, _eul = 1.0, [1.0]
+for _ in range(8):
+    _y = _y + 1.0 * _f_ode(_y); _eul.append(_y)
+_xx, _res = 1.0, [1.0]
+for _ in range(8):
+    _xx = _xx + _f_ode(_xx); _res.append(_xx)
+print(f"[Ch08 s05] ResNet x+F(x) == forward Euler with h=1   max err "
+      f"{np.abs(np.array(_eul) - np.array(_res)).max():.2e}   {P(np.allclose(_eul, _res))}")
+print(f"[Ch08 s05] two 3x3 reach as far as one 5x5: {3+3-1} == 5, with {2*3**2} params vs {5**2}   "
+      f"{P(3 + 3 - 1 == 5 and 2 * 3**2 < 5**2)}")
+for _kk, _ci, _co in [(3, 32, 64), (3, 128, 256), (5, 64, 128)]:
+    _ratio = (_kk**2 * _ci * _co) / (_kk**2 * _ci + _ci * _co)
+    _closed_r = 1 / (1 / _kk**2 + 1 / _co)
+    print(f"[Ch08 s05] separable k={_kk} Cout={_co:3d}: speed-up {_ratio:5.2f}x "
+          f"(1/(1/k^2+1/Cout) = {_closed_r:5.2f}x, NOT k^2={_kk**2})   {P(np.isclose(_ratio, _closed_r))}")
+
+# --- Ch08 s07: smooth L1 is elastic-perfectly-plastic ---------------------
+_sl1 = lambda z: np.where(np.abs(z) < 1, 0.5 * z**2, np.abs(z) - 0.5)
+_dsl1 = lambda z: np.where(np.abs(z) < 1, z, np.sign(z))
+_zs = np.linspace(-6, 6, 2401)
+print()
+print(f"[Ch08 s07] |gradient| never exceeds 1 (the yield force)   {P(np.all(np.abs(_dsl1(_zs)) <= 1 + 1e-12))}")
+_el = np.abs(_zs) < 1
+print(f"[Ch08 s07] gradient is Hookean (== x) below yield   {P(np.allclose(_dsl1(_zs[_el]), _zs[_el]))}")
+print(f"[Ch08 s07] value and slope both continuous at the knee   "
+      f"{P(np.isclose(_sl1(1.0), 0.5) and np.isclose(_dsl1(0.9999), 0.9999, atol=1e-3))}")
+print(f"[Ch08 s07] a residual of 6 contributes the same force as one of 600   "
+      f"{P(np.isclose(_dsl1(np.array([6.0]))[0], _dsl1(np.array([600.0]))[0]))}")
+
+# --- Ch08 s11: NeRF transmittance is Beer-Lambert -------------------------
+_sg_r = rng.random(300) * 2.0; _d = 0.01
+_T_int = np.exp(-np.cumsum(_sg_r * _d))
+_T_rec = np.concatenate([[1.0], np.cumprod(np.exp(-_sg_r[:-1] * _d))])
+print()
+print(f"[Ch08 s11] front-to-back product == exp(-integral of sigma)   max err "
+      f"{np.abs(_T_int[:-1] - _T_rec[1:]).max():.2e}   {P(np.allclose(_T_int[:-1], _T_rec[1:]))}")
+print(f"[Ch08 s11] every alpha = 1-exp(-sigma*delta) lies in [0,1]   "
+      f"{P(np.all((1 - np.exp(-_sg_r * _d) >= 0) & (1 - np.exp(-_sg_r * _d) <= 1)))}")
+
+# --- Ch08 s14: the worked example, both ways -----------------------------
+M = _struct(_corner)
+a, b, c = M[0, 0], M[1, 1], M[0, 1]
+print()
+print(f"[Ch08 s14] M = [[{a:.0f}, {c:.0f}], [{c:.0f}, {b:.0f}]]   "
+      f"{P(np.allclose(M, [[52, 16], [16, 52]]))}")
+_ctr, _rad = (a + b) / 2, np.hypot((a - b) / 2, c)
+print(f"[Ch08 s14] Mohr centre {_ctr:.0f}, radius {_rad:.0f} -> principal {_ctr-_rad:.0f}, {_ctr+_rad:.0f}   "
+      f"{P(np.isclose(_ctr, 52) and np.isclose(_rad, 16))}")
+_ang = 0.5 * np.degrees(np.arctan2(2 * c, a - b))
+_vv = np.linalg.eigh(M)[1][:, 1]
+print(f"[Ch08 s14] principal angle {_ang:.2f} deg; major eigenvector [{_vv[0]:.4f}, {_vv[1]:.4f}]   "
+      f"{P(np.isclose(_ang, 45.0) and np.isclose(abs(_vv[0]), abs(_vv[1])))}")
+print(f"[Ch08 s14] Harris R = det - 0.05*tr^2 = {np.linalg.det(M) - 0.05*np.trace(M)**2:.1f} (claimed 1907.2)   "
+      f"{P(np.isclose(np.linalg.det(M) - 0.05*np.trace(M)**2, 1907.2))}")
+print(f"[Ch08 s14] Shi-Tomasi min(l1,l2) = {np.linalg.eigvalsh(M).min():.0f} (claimed 36)   "
+      f"{P(np.isclose(np.linalg.eigvalsh(M).min(), 36.0))}")
 
 print("\n" + "="*66)

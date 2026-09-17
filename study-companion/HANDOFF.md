@@ -5,7 +5,7 @@ minutes instead of re-deriving decisions already made.
 
 ## State
 
-Branch `claude/blissful-euler-0c6xih`, latest commit carries sheets 1–7 of 20.
+Branch `claude/blissful-euler-0c6xih`, latest commit carries sheets 1–8 of 20.
 
 | # | Chapter | Folder | Published |
 |---|---------|--------|-----------|
@@ -16,11 +16,13 @@ Branch `claude/blissful-euler-0c6xih`, latest commit carries sheets 1–7 of 20.
 | 05 | Probability | `ch05-probability/` | https://claude.ai/artifact/DDbGs67DwJPTwCYWFyTUMW |
 | 06 | Machine Learning | `ch06-machine-learning/` | https://claude.ai/artifact/AazU1pknayKewgpJQhzo3Z |
 | 07 | Computational Linguistics | `ch07-computational-linguistics/` | *not yet published* |
+| 08 | Computer Vision | `ch08-computer-vision/` | *not yet published* |
 
-Next up: **Chapter 08 — Computer Vision**.
+Next up: **Chapter 09 — Audio and Speech**, which the bridge bank calls the strongest chapter
+in the series for this reader.
 
-Chapter 07 is written, probed and verified but **not published** — the artifact link is the
-only thing outstanding. Publish it and fill the row in, here and in `README.md`.
+Chapters 07 and 08 are written, probed and verified but **not published** — the artifact links
+are the only thing outstanding. Publish them and fill the rows in, here and in `README.md`.
 
 ## The reader
 
@@ -132,9 +134,17 @@ L1/L2 norms of Ch01 §04. Cross-validation ↔ holdout test specimens.
 Embeddings are the feature vectors of Ch01 §02. Positional encoding ↔ Fourier series.
 RNNs ↔ difference equations and discrete state-space models.
 
-**08 Computer vision.** Convolution ↔ the Toeplitz matrix of Ch02 §04 and ↔ impulse
-response in signal processing. Pooling and downsampling ↔ **Nyquist and aliasing**.
-Image gradients ↔ spatial derivatives.
+**08 Computer vision.** ~~Convolution ↔ the Toeplitz matrix of Ch02 §04. Pooling ↔ Nyquist
+and aliasing. Image gradients ↔ spatial derivatives.~~ **Written.** All three held, but none
+was the headline. The strongest bridge was not in this bank: the **Harris structure tensor is
+a plane stress tensor** — symmetric 2×2, eigenvalues are principal values via Mohr's circle,
+and `det`/`trace` are exactly the invariants `I₁,I₂`. It appears twice in the chapter, as
+corner detection and again as the matrix Lucas–Kanade inverts for optical flow. Also exact and
+not in the bank: **Gaussian blur is the heat equation** with σ²=2t, **a ResNet block is
+forward Euler** with h=1, **smooth-L1 is an elastic–perfectly-plastic law**, **U-Net is a
+multigrid V-cycle**, **the optical-flow constraint is the material derivative**, and **NeRF
+transmittance is Beer–Lambert**. Lesson for the remaining chapters: the bank is a floor, not a
+ceiling — read the source before trusting it.
 
 **09 Audio and speech.** The strongest chapter for this reader. FFT, sampling, Nyquist,
 spectrograms and windowing *are* machinery vibration analysis: order tracking, envelope
@@ -311,3 +321,37 @@ delta. The kernel is non-zero at `j=0` where `h(0)=0`, and the ratio only conver
 after several steps. Nothing in the prose would have caught this; computing both columns did.
 The true statement (kernel == *discrete* impulse response, exactly) is stronger and more
 useful than the false one, which is usually how these go.
+
+## The Chapter 08 lesson worth generalising
+
+Three things came out of Chapter 08 that apply to everything after it.
+
+**The bridge bank undersold the chapter badly.** It listed three correspondences for computer
+vision; the chapter shipped with eight, and the strongest one — the Harris structure tensor as
+a plane stress tensor — was not in the bank at all. The bank was written from the chapter
+titles. The real bridges were found by reading the source and noticing that a symmetric 2×2
+matrix classified by `det` and `trace` is a thing this reader has done by hand a hundred times.
+**Read the source before trusting the bank.** Budget for the bank being a floor.
+
+**The same object appearing twice is the strongest possible signal.** The structure tensor
+turns up in file 01 as corner detection and again in file 05 as the matrix Lucas–Kanade
+inverts. That repetition is what made it the headline rather than one bridge among several,
+and it also supplied the chapter's best single insight: flow is recoverable exactly where the
+tensor is well-conditioned, which is why trackers track corners. When a chapter reuses one
+piece of mathematics under two names, that is the spine.
+
+**The discrete-versus-continuum trap has now bitten twice, in the same shape.** Chapter 07:
+the SSM kernel is the discrete impulse response, not the sampled continuous one, because a
+unit sample is a held pulse and not a delta. Chapter 08: a blurred step matches the error
+function, but only once σ exceeds the pixel spacing, and an asymmetric discrete step
+`(x>=0)` matches `erf(x+½)` rather than `erf(x)` because its jump sits half a sample off
+centre. Both were invisible in prose and obvious the moment two columns of numbers were put
+side by side. **When a page claims a discrete object equals a continuous one, compute both and
+print the ratio.** State which identity is exact and which is a limit; the exact one is always
+the more useful claim, and it is usually not the one you first reached for.
+
+One process note: the traps recorded after Chapter 07 — the `.paper` wrapper, block-level
+`ro-k`/`ro-v` divs, the corrected `sed -n '1,385p'` head boundary, the 17-selector uppercase
+list — all held. Chapter 08 needed no layout rework at the probe stage beyond widening one
+diagram for legibility. The notes are worth keeping current; they paid for themselves in one
+chapter.

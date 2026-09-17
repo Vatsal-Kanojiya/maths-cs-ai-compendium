@@ -43,6 +43,7 @@ merely structural, that is said plainly.
 | 05 | Probability | [`ch05-probability/`](ch05-probability/index.html) | [Read online](https://claude.ai/artifact/DDbGs67DwJPTwCYWFyTUMW) |
 | 06 | Machine Learning | [`ch06-machine-learning/`](ch06-machine-learning/index.html) | [Read online](https://claude.ai/artifact/AazU1pknayKewgpJQhzo3Z) |
 | 07 | Computational Linguistics | [`ch07-computational-linguistics/`](ch07-computational-linguistics/index.html) | *not yet published* |
+| 08 | Computer Vision | [`ch08-computer-vision/`](ch08-computer-vision/index.html) | *not yet published* |
 
 ## What's in a chapter page
 
@@ -79,7 +80,7 @@ chapters rely on the linked chips instead.
 
 ## Verification
 
-`verify_claims.py` checks the load-bearing mathematical claims across all seven chapters
+`verify_claims.py` checks the load-bearing mathematical claims across all eight chapters
 against independent computation rather than against anybody's memory — the von Mises and
 Tresca norm identities, the unit-change nearest-neighbour flip, the worked bracket example,
 the `1/sqrt(d)` concentration of cosine similarity, the inertia tensor eigenvalues, polar
@@ -87,7 +88,10 @@ decomposition recovered from SVD, the rank of a truss element stiffness matrix, 
 series against the exact elliptic integral, the gradient descent stability threshold, the
 beam's Fundamental Theorem check, the BPE merge invariant, the RoPE relative-position
 identity, the equivalence of the state-space recurrence and its convolution kernel, and the
-proof that speculative decoding leaves the output distribution exactly unchanged.
+proof that speculative decoding leaves the output distribution exactly unchanged, the
+structure tensor against the Mohr's-circle principal values, Gaussian blur against an explicit
+heat-equation solver, the aliasing fold frequency, and the Beer-Lambert form of NeRF
+transmittance.
 
 ```
 pip install numpy scipy

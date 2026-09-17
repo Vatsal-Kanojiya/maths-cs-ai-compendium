@@ -1,0 +1,2022 @@
+<title>Gradients, Scale, Structure</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(', '\\)']], displayMath: [['$$', '$$']], processEscapes: true },
+  svg: { fontCache: 'global', scale: 1.0 },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-svg.js" id="MathJax-script" async></script>
+
+<style>
+/* ============ TOKENS: light is complete and authoritative ============ */
+:root{
+  --ground:#F0F2F1;
+  --sheet:#FBFCFB;
+  --sheet-2:#F4F6F5;
+  --ink:#14181A;
+  --ink-2:#4E575B;
+  --ink-3:#77838A;
+  --rule:#D3DAD7;
+  --rule-strong:#A8B4B0;
+  --accent:#12507E;
+  --accent-ink:#0E4267;
+  --accent-soft:#E4EEF6;
+  --bridge:#1F8A4C;
+  --bridge-soft:#E4F2EA;
+  --brk:#A8500F;
+  --brk-soft:#FAEBDF;
+  --s1:#BF5B00;
+  --s2:#0F74C7;
+  --s3:#1F8A4C;
+  --paper:#FFFFFF;            /* pasted-drawing ground, both themes */
+  --paper-ink:#1b1b1b;
+  --shadow:0 1px 2px rgba(20,24,26,.06), 0 6px 18px rgba(20,24,26,.05);
+  --f-disp:'Archivo Narrow', 'Arial Narrow', Helvetica, sans-serif;
+  --f-body:'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --f-mono:'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+    --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+    --rule:#293134; --rule-strong:#3F494C;
+    --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+    --bridge:#35AC63; --bridge-soft:#11281B;
+    --brk:#E0913F; --brk-soft:#2E2012;
+    --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+  --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+  --rule:#293134; --rule-strong:#3F494C;
+  --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+  --bridge:#35AC63; --bridge-soft:#11281B;
+  --brk:#E0913F; --brk-soft:#2E2012;
+  --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:var(--f-body); font-size:17px; line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ============ TITLE BLOCK (engineering drawing header) ============ */
+.titleblock{
+  position:sticky; top:env(safe-area-inset-top,0px); z-index:40;
+  background:var(--sheet); border-bottom:1px solid var(--rule-strong);
+}
+.tb-in{
+  max-width:1240px; margin:0 auto; padding:0 16px;
+  display:flex; align-items:stretch; gap:0; min-height:46px;
+}
+.tb-cell{
+  display:flex; flex-direction:column; justify-content:center;
+  padding:5px 14px; border-right:1px solid var(--rule);
+  font-family:var(--f-disp);
+}
+.tb-cell:first-child{padding-left:0}
+.tb-cell:last-child{border-right:0; margin-left:auto; padding-right:0}
+.tb-k{
+  font-size:8.5px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); line-height:1.4;
+}
+.tb-v{font-size:13px; font-weight:700; letter-spacing:.02em; color:var(--ink); line-height:1.3}
+.tb-v.accent{color:var(--accent)}
+.tb-hide{display:none}
+@media (min-width:680px){ .tb-hide{display:flex} }
+
+.themebtn{
+  appearance:none; background:transparent; border:1px solid var(--rule-strong);
+  color:var(--ink-2); font-family:var(--f-disp); font-size:10px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:6px 10px; border-radius:2px;
+  cursor:pointer; align-self:center; white-space:nowrap;
+}
+.themebtn:hover{border-color:var(--accent); color:var(--accent)}
+.themebtn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+/* ============ SHELL ============ */
+.shell{max-width:1240px; margin:0 auto; padding:0 16px; padding-block:0 64px}
+@media (min-width:1080px){
+  .shell{display:grid; grid-template-columns:212px minmax(0,1fr); gap:44px; align-items:start}
+}
+.rail{display:none}
+@media (min-width:1080px){
+  .rail{
+    display:block; position:sticky; top:calc(env(safe-area-inset-top,0px) + 70px);
+    padding-block:28px; font-family:var(--f-disp); font-size:12.5px;
+  }
+}
+.rail-h{
+  font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-3);
+  padding-bottom:8px; border-bottom:1px solid var(--rule); margin-bottom:10px;
+}
+.rail a{
+  display:flex; gap:9px; padding:4px 0; color:var(--ink-2); text-decoration:none;
+  border-left:2px solid transparent; padding-left:9px; margin-left:-11px; line-height:1.35;
+}
+.rail a:hover{color:var(--accent)}
+.rail a.on{color:var(--accent); border-left-color:var(--accent); font-weight:700}
+.rail a .n{font-family:var(--f-mono); font-size:10.5px; color:var(--ink-3); flex:none; padding-top:1px}
+.rail a.on .n{color:var(--accent)}
+
+main{min-width:0; padding-block:0 0}
+.col{max-width:70ch}
+
+/* ============ TYPE ============ */
+h1,h2,h3,h4{font-family:var(--f-disp); text-wrap:balance; margin:0; line-height:1.14}
+h1{font-size:clamp(34px,7vw,58px); font-weight:700; letter-spacing:-.015em}
+h2{font-size:clamp(25px,4.2vw,34px); font-weight:700; letter-spacing:-.01em}
+h3{font-size:19px; font-weight:700; letter-spacing:.005em; margin-top:2px}
+h4{font-size:14px; font-weight:700; letter-spacing:.06em; text-transform:uppercase}
+p{margin:0 0 1.05em}
+a{color:var(--accent-ink)}
+strong{font-weight:600}
+em{font-style:italic}
+code{font-family:var(--f-mono); font-size:.87em; background:var(--sheet-2); padding:1px 5px; border-radius:2px; border:1px solid var(--rule)}
+.lead{font-size:19.5px; line-height:1.56; color:var(--ink-2)}
+.eyebrow{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--ink-3); margin:0 0 10px;
+}
+.srcref{
+  font-family:var(--f-mono); font-size:11px; color:var(--ink-3);
+  border:1px solid var(--rule); border-radius:2px; padding:2px 7px; display:inline-block;
+  background:var(--sheet-2); white-space:nowrap;
+}
+
+/* ============ SECTION ============ */
+section{padding-block:38px 0; scroll-margin-top:calc(env(safe-area-inset-top,0px) + 62px)}
+.sechead{display:flex; align-items:baseline; gap:13px; margin-bottom:6px; flex-wrap:wrap}
+.secnum{
+  font-family:var(--f-mono); font-size:12px; font-weight:600; color:var(--accent);
+  border:1px solid var(--accent); border-radius:2px; padding:2px 7px; flex:none;
+  background:var(--accent-soft);
+}
+.rule-h{border:0; border-top:1px solid var(--rule); margin:0 0 22px}
+.rule-d{border:0; border-top:1px dashed var(--rule-strong); margin:34px 0}
+
+/* ============ CALLOUTS ============ */
+.note{
+  border:1px solid var(--rule); border-left:3px solid var(--accent);
+  background:var(--sheet); border-radius:2px; padding:16px 18px; margin:22px 0;
+}
+/* Greek letters must never be uppercased: text-transform turns beta into
+   a capital Beta, which is the Latin letter B on screen -- likewise eta->H,
+   kappa->K, lambda->A-shape.  Any Greek inside an uppercased label wears .gk. */
+.gk{text-transform:none}
+.note.bridge{border-left-color:var(--bridge); background:var(--bridge-soft)}
+.note.brk{border-left-color:var(--brk); background:var(--brk-soft)}
+.note-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; margin-bottom:7px; display:flex; align-items:center; gap:8px;
+}
+.note.bridge .note-h{color:var(--bridge)}
+.note.brk .note-h{color:var(--brk)}
+.note .note-h{color:var(--accent)}
+.note p:last-child, .note ul:last-child{margin-bottom:0}
+.note-h .ic{
+  width:15px; height:15px; border-radius:50%; border:1.5px solid currentColor; flex:none;
+  display:grid; place-items:center; font-size:9.5px; font-weight:700; font-family:var(--f-mono);
+}
+ul,ol{margin:0 0 1.05em; padding-left:1.25em}
+li{margin-bottom:.4em}
+li::marker{color:var(--ink-3)}
+
+/* ============ DEFINITION BLOCK ============ */
+.defn{
+  background:var(--sheet); border:1px solid var(--rule); border-radius:3px;
+  padding:18px 20px; margin:22px 0; box-shadow:var(--shadow);
+}
+.defn-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:10px;
+  padding-bottom:8px; border-bottom:1px solid var(--rule);
+}
+.defn p:last-child{margin-bottom:0}
+
+/* ============ TABLES ============ */
+.tw{overflow-x:auto; margin:22px 0; border:1px solid var(--rule); border-radius:3px; background:var(--sheet)}
+table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:480px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule); vertical-align:top}
+thead th{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); background:var(--sheet-2); font-weight:700; white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:0}
+td.mono,th.mono{font-family:var(--f-mono); font-size:13px; font-variant-numeric:tabular-nums}
+.tw caption{
+  caption-side:bottom; text-align:left; padding:9px 14px; font-size:12.5px;
+  color:var(--ink-3); border-top:1px solid var(--rule); font-family:var(--f-disp);
+}
+
+/* ============ FIGURES ============ */
+figure{margin:24px 0}
+.paper{
+  background:var(--paper); border:1px solid var(--rule-strong); border-radius:3px;
+  padding:16px; display:flex; justify-content:center; box-shadow:var(--shadow);
+}
+.paper img{max-width:100%; height:auto; display:block}
+figcaption{
+  font-family:var(--f-disp); font-size:12.5px; color:var(--ink-3); margin-top:9px;
+  line-height:1.45; padding-left:2px;
+}
+figcaption b{color:var(--ink-2); font-weight:700; letter-spacing:.04em}
+
+/* ============ INTERACTIVE PANELS ============ */
+.lab{
+  background:var(--sheet); border:1px solid var(--rule-strong); border-radius:3px;
+  margin:26px 0; overflow:hidden; box-shadow:var(--shadow);
+}
+.lab-h{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:11px 16px; border-bottom:1px solid var(--rule); background:var(--sheet-2);
+}
+.lab-t{font-family:var(--f-disp); font-size:13px; font-weight:700; letter-spacing:.05em; text-transform:uppercase}
+.lab-tag{
+  font-family:var(--f-mono); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--accent); border:1px solid var(--accent); border-radius:2px; padding:2px 6px;
+  margin-left:auto; white-space:nowrap;
+}
+.lab-body{padding:16px}
+.lab-foot{
+  padding:11px 16px; border-top:1px solid var(--rule); background:var(--sheet-2);
+  font-size:13.5px; color:var(--ink-2); line-height:1.5;
+}
+.lab-foot b{color:var(--ink)}
+.stage{width:100%; max-width:560px; height:auto; display:block; margin-inline:auto; touch-action:none; cursor:grab}
+.stage.drag{cursor:grabbing}
+
+/* Dividers are drawn as cell borders rather than as 1px grid gaps over a grey
+   backdrop: when the item count does not fill the last row, a gap-based grid
+   leaves the backdrop showing as an empty grey block. */
+.readout{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr)); gap:0;
+  background:var(--sheet); border:1px solid var(--rule); border-radius:2px;
+  margin-top:14px; overflow:hidden;
+}
+.ro{background:var(--sheet); padding:8px 11px;
+  border-right:1px solid var(--rule); border-bottom:1px solid var(--rule)}
+.ro-k{
+  font-family:var(--f-disp); font-size:9px; letter-spacing:.13em; text-transform:uppercase;
+  color:var(--ink-3); margin-bottom:2px;
+  /* was white-space:nowrap, which clipped the longer keys instead of wrapping */
+  white-space:normal; overflow-wrap:break-word; line-height:1.3; min-height:2.6em;
+}
+.ro-v{
+  font-family:var(--f-mono); font-size:15px; font-weight:500; font-variant-numeric:tabular-nums;
+  color:var(--ink); line-height:1.25;
+}
+.ro-v.a{color:var(--s2)} .ro-v.b{color:var(--s1)} .ro-v.c{color:var(--s3)}
+
+.ctl{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:14px}
+.ctl label{
+  font-family:var(--f-disp); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-2); white-space:nowrap;
+}
+input[type=range]{
+  -webkit-appearance:none; appearance:none; height:22px; background:transparent;
+  flex:1 1 160px; min-width:130px; cursor:pointer;
+}
+input[type=range]:focus-visible{outline:2px solid var(--accent); outline-offset:3px}
+input[type=range]::-webkit-slider-runnable-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-moz-range-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:16px; height:16px; border-radius:50%;
+  background:var(--accent); border:2px solid var(--sheet); margin-top:-6.5px;
+}
+input[type=range]::-moz-range-thumb{
+  width:16px; height:16px; border-radius:50%; background:var(--accent);
+  border:2px solid var(--sheet);
+}
+.btn{
+  appearance:none; font-family:var(--f-disp); font-size:11px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:7px 13px; border-radius:2px;
+  border:1px solid var(--rule-strong); background:var(--sheet); color:var(--ink-2); cursor:pointer;
+}
+.btn:hover{border-color:var(--accent); color:var(--accent)}
+.btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.btn.on{background:var(--accent); border-color:var(--accent); color:var(--sheet)}
+
+.legend{display:flex; gap:16px; flex-wrap:wrap; margin-top:12px}
+.lg{display:flex; align-items:center; gap:7px; font-family:var(--f-disp); font-size:12px; color:var(--ink-2)}
+.lg i{width:15px; height:3px; border-radius:2px; flex:none; display:block}
+
+/* ============ MISC ============ */
+.mathbox{overflow-x:auto; overflow-y:hidden; margin:18px 0}
+mjx-container[display="true"]{margin:0 !important}
+.kv{display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:15px; margin:16px 0}
+.kv dt{font-family:var(--f-mono); font-size:13px; color:var(--accent); white-space:nowrap}
+.kv dd{margin:0; color:var(--ink-2)}
+
+details.q{
+  border:1px solid var(--rule); border-radius:3px; background:var(--sheet);
+  margin-bottom:9px; overflow:hidden;
+}
+details.q summary{
+  cursor:pointer; padding:12px 15px; font-weight:600; list-style:none;
+  display:flex; gap:11px; align-items:flex-start; font-size:15.5px;
+}
+details.q summary::-webkit-details-marker{display:none}
+details.q summary::after{
+  content:'+'; margin-left:auto; font-family:var(--f-mono); color:var(--accent);
+  font-size:17px; line-height:1; flex:none; padding-top:2px;
+}
+details.q[open] summary::after{content:'\2212'}
+details.q summary:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
+details.q summary .qn{
+  font-family:var(--f-mono); font-size:12px; color:var(--ink-3); flex:none; padding-top:3px;
+}
+details.q .ans{padding:0 15px 14px 41px; font-size:15.5px; color:var(--ink-2); border-top:1px solid var(--rule); padding-top:13px}
+details.q .ans p:last-child{margin-bottom:0}
+
+.endnote{
+  margin-top:44px; padding-top:20px; border-top:1px solid var(--rule-strong);
+  font-size:13.5px; color:var(--ink-3); font-family:var(--f-disp); line-height:1.55;
+}
+.endnote a{color:var(--accent)}
+
+.srcref{text-decoration:none}
+a.srcref{color:var(--ink-2); transition:none}
+
+</style>
+<style>
+.srcref{text-decoration:none}
+a.srcref{color:var(--ink-2)}
+a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(--accent-soft)}
+.srcref.nolink{opacity:.75; font-style:italic}
+.pv{font-family:var(--f-disp); font-size:9.5px; font-weight:700; letter-spacing:.1em;
+    text-transform:uppercase; padding:2px 7px; border-radius:2px; white-space:nowrap}
+.pv.ok{background:var(--bridge-soft); color:var(--bridge)}
+.pv.add{background:var(--accent-soft); color:var(--accent)}
+.pv.corr{background:var(--brk-soft); color:var(--brk)}
+.flag{display:inline-block; padding:1px 7px; border-radius:2px; font-family:var(--f-disp);
+      font-size:10px; letter-spacing:.1em; text-transform:uppercase; font-weight:700}
+.flag.ok{background:var(--bridge-soft); color:var(--bridge)}
+.flag.bad{background:var(--brk-soft); color:var(--brk)}
+.predict{border:1px solid var(--rule-strong); border-left:3px solid var(--brk);
+  background:var(--brk-soft); border-radius:2px; padding:13px 15px; margin:0 0 14px}
+.predict-h{font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--brk); margin-bottom:6px}
+.predict p{margin:0 0 10px; font-size:15px}
+.predict .opts{display:flex; gap:8px; flex-wrap:wrap}
+.pbtn{appearance:none; font-family:var(--f-disp); font-size:12px; font-weight:600;
+  padding:6px 12px; border-radius:2px; border:1px solid var(--rule-strong);
+  background:var(--sheet); color:var(--ink-2); cursor:pointer}
+.pbtn:hover{border-color:var(--brk); color:var(--brk)}
+.pbtn.picked{background:var(--brk); border-color:var(--brk); color:var(--sheet)}
+.pverdict{margin-top:10px; font-size:14.5px; color:var(--ink-2); display:none}
+.pverdict.show{display:block}
+.pverdict b{color:var(--ink)}
+.gap{border:1px solid var(--rule); border-left:3px solid var(--ink-3); background:var(--sheet-2);
+  border-radius:2px; padding:14px 16px; margin:18px 0}
+.gap-h{font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:7px}
+</style>
+<style>
+/* ---- chapter 08 lab graphics ---- */
+.axl{stroke:var(--rule-strong); stroke-width:1.4}
+.tk{fill:var(--ink-3); font-family:'IBM Plex Mono',monospace; font-size:10px}
+.al{fill:var(--ink-2); font-family:'Archivo Narrow',sans-serif; font-size:11px; letter-spacing:.07em}
+.gridln{stroke:var(--rule)}
+/* structure-tensor lab */
+.px{stroke:var(--rule); stroke-width:.6}
+.mcirc{fill:none; stroke:var(--s2); stroke-width:2}
+.mpt{fill:var(--s1)}
+.mprin{fill:var(--s3)}
+.mline{stroke:var(--rule-strong); stroke-width:1.2; stroke-dasharray:3 3}
+.evec{stroke:var(--s3); stroke-width:2.5; marker-end:url(#ahg)}
+.patchsel{fill:none; stroke:var(--brk); stroke-width:2}
+/* diffusion lab */
+.pf0{fill:none; stroke:var(--rule-strong); stroke-width:1.5; stroke-dasharray:4 3}
+.pfheat{fill:none; stroke:var(--s1); stroke-width:3}
+.pfgauss{fill:none; stroke:var(--s2); stroke-width:2; stroke-dasharray:6 4}
+/* aliasing lab */
+.gr{stroke-width:0}
+.samp{fill:var(--s1); stroke:var(--sheet); stroke-width:1}
+.recon{fill:none; stroke:var(--s1); stroke-width:2.5}
+.truef{fill:none; stroke:var(--s2); stroke-width:1.5; opacity:.55}
+.lgd{font-family:'Archivo Narrow',sans-serif; font-size:11px; fill:var(--ink-2)}
+</style>
+
+<header class="titleblock">
+  <div class="tb-in">
+    <div class="tb-cell"><div class="tb-k">Chapter</div><div class="tb-v accent">08 &middot; Computer Vision</div></div>
+    <div class="tb-cell tb-hide"><div class="tb-k">Sheet</div><div class="tb-v">8 of 20</div></div>
+    <div class="tb-cell tb-hide"><div class="tb-k">Reader</div><div class="tb-v">B.E. Mechanical</div></div>
+    <div class="tb-cell tb-hide"><div class="tb-k">Prerequisite</div><div class="tb-v">Sheets 1&ndash;7</div></div>
+    <div class="tb-cell"><button class="themebtn" id="themebtn" type="button" aria-label="Switch colour theme">Theme</button></div>
+  </div>
+</header>
+
+<div class="shell">
+
+<nav class="rail" aria-label="Chapter contents">
+  <div class="rail-h">Contents</div>
+  <a href="#bridge" class="on"><span class="n">00</span><span>The bridge</span></a>
+  <a href="#field"><span class="n">01</span><span>An image is a field</span></a>
+  <a href="#tensor"><span class="n">02</span><span>The structure tensor</span></a>
+  <a href="#blur"><span class="n">03</span><span>Blur is diffusion</span></a>
+  <a href="#sample"><span class="n">04</span><span>What Nyquist warned</span></a>
+  <a href="#learned"><span class="n">05</span><span>Learned filters</span></a>
+  <a href="#vcycle"><span class="n">06</span><span>U-Net is a V-cycle</span></a>
+  <a href="#detect"><span class="n">07</span><span>A loss that yields</span></a>
+  <a href="#patch"><span class="n">08</span><span>Patches, not pixels</span></a>
+  <a href="#transport"><span class="n">09</span><span>Generation as transport</span></a>
+  <a href="#motion"><span class="n">10</span><span>Motion is a derivative</span></a>
+  <a href="#depth"><span class="n">11</span><span>Seeing in three dimensions</span></a>
+  <a href="#breaks"><span class="n">12</span><span>Where it breaks</span></a>
+  <a href="#gaps"><span class="n">13</span><span>What is missing</span></a>
+  <a href="#worked"><span class="n">14</span><span>Worked example</span></a>
+  <a href="#recall"><span class="n">15</span><span>Question bank</span></a>
+  <a href="#next"><span class="n">16</span><span>What this feeds</span></a>
+  <a href="#provenance"><span class="n">A</span><span>Provenance</span></a>
+</nav>
+
+<main>
+
+<section id="top" style="padding-top:44px">
+  <div class="col">
+    <p class="eyebrow">Maths, CS &amp; AI Compendium &middot; Chapter 08</p>
+    <h1>Gradients, Scale, Structure</h1>
+    <p class="lead" style="margin-top:18px">
+      Chapter 07 had one exact bridge and spent the chapter earning it. This chapter has the
+      opposite problem: there are so many that the difficulty is choosing. An image is a scalar
+      field sampled on a regular grid, and almost everything done to it in the first half of
+      this chapter is something you have done to a temperature field or a stress field.
+    </p>
+    <p>
+      The headline is in <a href="#tensor">&sect;02</a>. <strong>The structure tensor of an
+      image is a stress tensor.</strong> It is a symmetric \(2\times2\) matrix, its eigenvalues
+      are principal values, its invariants are the trace and the determinant, and the whole
+      classification of flat versus edge versus corner is read off Mohr's circle exactly as you
+      read a stress state. That object appears twice in this chapter under two different names
+      &mdash; Harris corner detection in &sect;02 and Lucas&ndash;Kanade optical flow in
+      &sect;10 &mdash; and it is the same matrix both times.
+    </p>
+    <p>
+      Three more hold exactly. <strong>Gaussian blur is the heat equation</strong>
+      (<a href="#blur">&sect;03</a>), with \(\sigma^2=2t\) &mdash; blurring an image is letting
+      it diffuse, and scale space is a time axis. <strong>A ResNet block is forward Euler</strong>
+      with step size one (<a href="#learned">&sect;05</a>). And <strong>the smooth-L1 loss is an
+      elastic&ndash;perfectly-plastic material law</strong> (<a href="#detect">&sect;07</a>):
+      Hookean below yield, constant restoring force above, which is precisely why it is robust
+      to outliers.
+    </p>
+    <p>
+      Where this chapter stops being mechanics is later than you would expect, and
+      <a href="#breaks">&sect;12</a> marks the line. The short version: everything up to the
+      point where filters stop being designed and start being fitted is yours already.
+    </p>
+  </div>
+</section>
+
+<section id="bridge">
+  <div class="col">
+    <div class="sechead"><span class="secnum">00</span><h2>The bridge</h2></div>
+    <hr class="rule-h">
+    <p>
+      This is the densest bridge table in the series so far, and almost all of it is green.
+      That is not enthusiasm; classical computer vision was built by people solving
+      partial differential equations on grids, and it shows.
+    </p>
+  </div>
+  <div class="tw">
+    <table>
+      <thead><tr><th>What you already know</th><th>What vision calls it</th><th>How good is the match?</th></tr></thead>
+      <tbody>
+        <tr><td>Stress tensor, principal stresses, Mohr's circle (Ch 01 &sect;07)</td><td>Structure tensor, Harris corners</td><td><b style="color:var(--bridge)">Identical object.</b> Same eigenvalue algebra, same invariants. See &sect;02.</td></tr>
+        <tr><td>Heat equation \(\partial u/\partial t=\nabla^2u\)</td><td>Gaussian blur, scale space</td><td><b style="color:var(--bridge)">Exact,</b> with \(\sigma^2=2t\). See &sect;03.</td></tr>
+        <tr><td>Central-difference stencil</td><td>Sobel operator</td><td><b style="color:var(--bridge)">Exact,</b> and separable: rank 1. See &sect;01.</td></tr>
+        <tr><td>Nyquist, aliasing, anti-alias filtering</td><td>Pooling, striding, downsampling</td><td><b style="color:var(--bridge)">The same failure,</b> for the same reason. See &sect;04.</td></tr>
+        <tr><td>Banded Toeplitz matrix (Ch 02 &sect;04)</td><td>Convolution layer</td><td><b style="color:var(--bridge)">Exact.</b> Convolution <i>is</i> that matrix multiply. See &sect;05.</td></tr>
+        <tr><td>Forward Euler, \(y_{k+1}=y_k+hf(y_k)\)</td><td>ResNet block, \(x+F(x)\)</td><td><b style="color:var(--bridge)">Identical,</b> with \(h=1\). See &sect;05.</td></tr>
+        <tr><td>Multigrid V-cycle, restriction and prolongation</td><td>U-Net encoder&ndash;decoder</td><td><b style="color:var(--bridge)">Same structure,</b> including the skip connections. See &sect;06.</td></tr>
+        <tr><td>Elastic&ndash;perfectly-plastic law, yield force</td><td>Smooth L1 / Huber loss</td><td><b style="color:var(--bridge)">Exact.</b> The gradient saturates at yield. See &sect;07.</td></tr>
+        <tr><td>Material derivative \(D\phi/Dt=0\), advection</td><td>Optical flow constraint</td><td><b style="color:var(--bridge)">The same equation.</b> See &sect;10.</td></tr>
+        <tr><td>Beer&ndash;Lambert attenuation \(e^{-\int\kappa\,ds}\)</td><td>NeRF volume-rendering transmittance</td><td><b style="color:var(--bridge)">Exact.</b> See &sect;11.</td></tr>
+        <tr><td>Lagrangian particle tracking, \(d\mathbf{x}/dt=\mathbf{v}\)</td><td>Flow matching, continuous normalising flow</td><td><b style="color:var(--bridge)">Exact.</b> It integrates a learned velocity field. See &sect;09.</td></tr>
+        <tr><td>Inertia tensor and its ellipsoid (Ch 02 &sect;07)</td><td>3D Gaussian splat covariance</td><td><b style="color:var(--bridge)">Same object,</b> a symmetric positive-definite \(3\times3\). See &sect;11.</td></tr>
+        <tr><td>Similar triangles</td><td>Stereo depth \(Z=fb/d\)</td><td><b style="color:var(--bridge)">Exact,</b> and derivable in one line. See &sect;11.</td></tr>
+        <tr><td>Dimensional analysis and similitude</td><td>EfficientNet compound scaling</td><td><b style="color:var(--brk)">Superficial.</b> A constrained fit, not a similarity law. See &sect;12.</td></tr>
+        <tr><td>Mesh refinement converging to a solution</td><td>Training a bigger vision model</td><td><b style="color:var(--brk)">Nothing like it.</b> See &sect;12.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="field">
+  <div class="col">
+    <div class="sechead"><span class="secnum">01</span><h2>An image is a field of numbers</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2008%20-%20computer%20vision/01.%20image%20fundamentals.md" target="_blank" rel="noopener">src 01. image fundamentals &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      A grayscale image is a scalar field \(I(x,y)\) sampled on a uniform grid. That sentence
+      is the whole of this section, and it is worth taking literally, because every instinct
+      you have about fields on grids transfers without modification. A colour image is three
+      such fields stacked; a video is a field on a space&ndash;time grid.
+    </p>
+    <p>
+      The first thing anyone does to such a field is differentiate it. Edges are where
+      \(\|\nabla I\|\) is large, and the standard estimator is the <strong>Sobel operator</strong>:
+    </p>
+    <div class="mathbox">
+      $$G_x=\begin{bmatrix}-1 & 0 & 1\\ -2 & 0 & 2\\ -1 & 0 & 1\end{bmatrix},\qquad G_y=\begin{bmatrix}-1 & -2 & -1\\ 0 & 0 & 0\\ 1 & 2 & 1\end{bmatrix}$$
+    </div>
+    <p>
+      Read \(G_x\) column by column and it is \([-1,0,1]\) &mdash; the central-difference
+      stencil for \(\partial/\partial x\), the same three numbers you write down for any
+      second-order accurate first derivative. Read it row by row and it is \([1,2,1]\), a
+      binomial smoothing stencil. Sobel is a central difference in one direction and a smooth
+      in the other, which is exactly what you would build to differentiate noisy field data.
+    </p>
+    <div class="defn">
+      <div class="defn-h">Sobel is rank one</div>
+      <p style="margin-bottom:0">
+        \(G_x\) is the outer product \([1,2,1]^{\mathsf T}[-1,0,1]\), so it is a rank-1 matrix:
+        its singular values are \((3.464,\,0,\,0)\). That is not a curiosity, it is a cost
+        argument. A separable \(k\times k\) filter can be applied as two \(1\times k\) passes,
+        costing \(2k\) multiplies per pixel instead of \(k^2\). The same factorisation appears
+        again in &sect;05 as the depthwise separable convolution that makes MobileNet cheap,
+        and again as the 2-D Gaussian, which is separable for the same reason.
+      </p>
+    </div>
+    <p>
+      From the two gradient components you get magnitude \(\sqrt{G_x^2+G_y^2}\) and direction
+      \(\arctan(G_y/G_x)\) &mdash; a vector field, resolved into components exactly as you would
+      resolve any planar vector. The <strong>Canny</strong> detector adds three refinements to
+      this: blur first to suppress noise, thin the response by keeping only local maxima along
+      the gradient direction, and threshold with hysteresis so that a weak edge survives only
+      if it connects to a strong one. The hysteresis is the interesting part, and it is the same
+      device used in a Schmitt trigger: two thresholds instead of one, so a marginal signal
+      cannot chatter across the boundary.
+    </p>
+    <figure>
+      <div class="paper"><img src="img/sobel_edges.svg" alt="Original image, Sobel horizontal gradient, Sobel vertical gradient, and combined edge magnitude" width="410"></div>
+      <figcaption><b>Fig. 8.1</b> &mdash; The two Sobel components and their magnitude. <i>Figure from the compendium.</i></figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="tensor">
+  <div class="col">
+    <div class="sechead"><span class="secnum">02</span><h2>The structure tensor is a stress tensor</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2008%20-%20computer%20vision/01.%20image%20fundamentals.md" target="_blank" rel="noopener">src 01. image fundamentals &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p class="lead">
+      This is the section to read twice. Corner detection is a principal-value calculation on a
+      symmetric second-order tensor, and you have been doing those since your second year.
+    </p>
+    <p>
+      The question is how to tell, from the gradients alone, whether a small patch of image is
+      flat, lies along an edge, or sits on a corner. The Harris detector answers it by
+      accumulating the gradient outer product over a window \(W\):
+    </p>
+    <div class="mathbox">
+      $$M=\sum_{(x,y)\in W}w(x,y)\begin{bmatrix}I_x^2 & I_xI_y\\ I_xI_y & I_y^2\end{bmatrix}$$
+    </div>
+    <p>
+      Look at what that is. It is symmetric by construction, positive semi-definite, formed as a
+      weighted sum of outer products of a vector with itself. It is the <strong>second moment</strong>
+      of the gradient distribution &mdash; the literature calls it the second-moment matrix, and
+      the name is not a coincidence. You built the same object for an area when you computed
+      \(I_{xx},I_{yy},I_{xy}\), and the same object for a body when you wrote the inertia tensor.
+    </p>
+    <p>
+      Everything you know about such a tensor now applies. Its eigenvalues are the principal
+      values, obtained from the centre and radius of Mohr's circle:
+    </p>
+    <div class="mathbox">
+      $$\lambda_{1,2}=\underbrace{\frac{M_{11}+M_{22}}{2}}_{\text{centre}}\pm\underbrace{\sqrt{\left(\frac{M_{11}-M_{22}}{2}\right)^{2}+M_{12}^{2}}}_{\text{radius}}$$
+    </div>
+    <p>
+      That is the stress-transformation formula with \(\sigma_x,\sigma_y,\tau_{xy}\) replaced by
+      \(\sum I_x^2,\ \sum I_y^2,\ \sum I_xI_y\). Nothing else changes. The eigenvectors are the
+      principal directions, and they point along and across the dominant edge.
+    </p>
+    <p>
+      The classification then reads directly off the principal values, and it maps onto stress
+      states you can name:
+    </p>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Image structure</th><th>Principal values</th><th>The stress state it resembles</th></tr></thead>
+        <tbody>
+          <tr><td>Flat region</td><td>\(\lambda_1\approx\lambda_2\approx0\)</td><td>Unloaded. Mohr's circle is a point at the origin.</td></tr>
+          <tr><td>Straight edge</td><td>\(\lambda_1\gg0,\ \lambda_2\approx0\)</td><td>Uniaxial. One principal direction carries everything.</td></tr>
+          <tr><td>Corner</td><td>\(\lambda_1,\lambda_2\) both large</td><td>Biaxial. Loaded in two directions at once.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      Harris avoids computing the eigenvalues explicitly and uses a combination of the two
+      invariants instead:
+    </p>
+    <div class="mathbox">
+      $$R=\det(M)-k\,\big(\operatorname{tr}M\big)^{2},\qquad \det M=\lambda_1\lambda_2,\quad \operatorname{tr}M=\lambda_1+\lambda_2$$
+    </div>
+    <p>
+      with \(k\approx0.04\)&ndash;\(0.06\). These are the first and second invariants of a
+      \(2\times2\) symmetric tensor &mdash; the same \(I_1\) and \(I_2\) that appear in every
+      yield criterion you have used. A corner gives large positive \(R\), an edge gives negative
+      \(R\), a flat region gives \(R\approx0\). The <strong>Shi&ndash;Tomasi</strong> variant
+      drops the invariant trick and uses \(\min(\lambda_1,\lambda_2)\) directly, which is more
+      stable &mdash; and which, in stress language, is asking for the smaller principal value to
+      clear a threshold.
+    </p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-h"><span class="lab-t">Mohr's circle for a patch of image</span><span class="lab-tag">Predict, then click</span></div>
+    <div class="lab-body">
+      <div class="predict" id="pred1">
+        <div class="predict-h">Commit before you click</div>
+        <p>
+          You compute the structure tensor over a patch that lies on a long, straight,
+          high-contrast edge. What do its two principal values look like?
+        </p>
+        <div class="opts">
+          <button class="pbtn" data-p1="a" type="button">Both large and equal</button>
+          <button class="pbtn" data-p1="b" type="button">One large, one near zero</button>
+          <button class="pbtn" data-p1="c" type="button">Both near zero</button>
+          <button class="pbtn" data-p1="d" type="button">One positive, one negative</button>
+        </div>
+        <div class="pverdict" id="pv1"></div>
+      </div>
+      <div class="stage">
+        <svg id="stSvg" viewBox="0 0 640 300" width="100%" role="img" aria-label="A five by five image patch, its gradient structure tensor, and the corresponding Mohr circle">
+          <defs>
+            <marker id="ahg" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="var(--s3)"/></marker>
+          </defs>
+          <g id="stPatch"></g>
+          <g id="stMohr"></g>
+        </svg>
+      </div>
+      <div class="ctl">
+        <button class="btn" id="stFlat" type="button">Flat</button>
+        <button class="btn" id="stEdge" type="button">Edge</button>
+        <button class="btn" id="stDiag" type="button">Diagonal edge</button>
+        <button class="btn" id="stCorner" type="button">Corner</button>
+      </div>
+      <div class="readout">
+        <div class="ro"><div class="ro-k">Principal<br>values</div><div class="ro-v" id="stL">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Trace<br>(invariant 1)</div><div class="ro-v" id="stTr">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Determinant<br>(invariant 2)</div><div class="ro-v" id="stDet">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Harris R</div><div class="ro-v" id="stR">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Verdict</div><div class="ro-v" id="stV">&mdash;</div></div>
+      </div>
+      <div class="lab-foot">
+        Click any cell to toggle it between black and white and watch the circle move. The
+        circle is Mohr's, drawn for the structure tensor: centre at
+        \(\tfrac12(M_{11}+M_{22})\), radius \(\sqrt{(\tfrac12(M_{11}-M_{22}))^{2}+M_{12}^{2}}\),
+        with the two principal values where it cuts the horizontal axis. The green arrow is the
+        major principal direction, which sits across the edge rather than along it. A flat patch
+        collapses the circle to a point at the origin; a straight edge puts one principal value
+        at zero, so the circle passes through the origin; a corner lifts both off it. The preset
+        values are checked in <code>verify_claims.py</code>: the edge preset gives principal
+        values \((0,\,96)\) and the corner preset \((36,\,68)\).
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="note">
+      <div class="note-h"><span class="ic">!</span>Where the analogy breaks</div>
+      <p>
+        The algebra is identical and the interpretation is not. A stress tensor is a physical
+        object with units of force per area, obeying equilibrium: its divergence balances the
+        body force, and that constraint links the tensor at one point to the tensor at every
+        neighbouring point. There is a field equation.
+      </p>
+      <p style="margin-bottom:0">
+        The structure tensor obeys nothing. It is a local summary statistic of gradients in a
+        window, with units of intensity squared, and the tensor at one pixel is under no
+        obligation to be compatible with the tensor next door. You cannot integrate it, you
+        cannot impose a boundary condition on it, and there is no equilibrium to check your
+        answer against. What transfers is the <em>eigenvalue analysis of a symmetric
+        second-order tensor</em>, which is a piece of linear algebra, not a piece of mechanics.
+        That is still a great deal &mdash; it is the entire content of &sect;02 &mdash; but it
+        is worth being precise about which half came along.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="blur">
+  <div class="col">
+    <div class="sechead"><span class="secnum">03</span><h2>Blur is diffusion</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2008%20-%20computer%20vision/01.%20image%20fundamentals.md" target="_blank" rel="noopener">src 01. image fundamentals &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      Smoothing an image means replacing each pixel by a weighted average of its neighbours. The
+      standard weights are Gaussian, parametrised by \(\sigma\): larger \(\sigma\), more blur.
+      That is the operational description, and it hides the fact that this is a process you have
+      already solved analytically.
+    </p>
+    <p>
+      Let the image evolve under the heat equation, treating intensity as temperature:
+    </p>
+    <div class="mathbox">
+      $$\frac{\partial I}{\partial t}=\nabla^{2}I=\frac{\partial^{2}I}{\partial x^{2}}+\frac{\partial^{2}I}{\partial y^{2}}$$
+    </div>
+    <p>
+      The solution at time \(t\), starting from \(I_0\), is \(I_0\) convolved with a Gaussian of
+      standard deviation \(\sigma=\sqrt{2t}\). Gaussian blur is not <em>like</em> diffusion; it
+      <em>is</em> diffusion, integrated in closed form. Blurring an image with \(\sigma=4\) is
+      running heat conduction for \(t=8\) in units where the diffusivity is one.
+    </p>
+    <div class="defn">
+      <div class="defn-h">What scale space is</div>
+      <p style="margin-bottom:0">
+        SIFT and every multi-scale detector build a <strong>scale space</strong>
+        \(L(x,y,\sigma)=G(x,y,\sigma)*I(x,y)\) &mdash; the family of all blurred versions of the
+        image. Under the reading above, \(\sigma\) is not a filter setting. It is
+        \(\sqrt{2t}\): <strong>scale space is a time axis</strong>, and searching across scales
+        is watching the image diffuse and noting which features survive. Fine structure
+        equilibrates away quickly; large structure persists. That is why features stable across
+        scales are the meaningful ones, and it is the same argument you would make about which
+        temperature fluctuations survive in a conducting bar.
+      </p>
+    </div>
+    <p>
+      Two consequences come free. The <strong>variance adds</strong>: blurring with \(\sigma_1\)
+      then \(\sigma_2\) gives \(\sigma^2=\sigma_1^2+\sigma_2^2\), because diffusing for \(t_1\)
+      then \(t_2\) is diffusing for \(t_1+t_2\). And a blurred <strong>step edge becomes an
+      error function</strong>, \(\tfrac12\!\left(1+\operatorname{erf}(x/\sigma\sqrt2)\right)\)
+      &mdash; the identical profile you get for a suddenly-heated half-space, which you have
+      almost certainly plotted before under that name.
+    </p>
+    <p>
+      One qualification, because it is the kind that matters. Both statements are exact for the
+      continuous field. On a pixel grid they are approached rather than met: the discrete
+      Gaussian is not the continuous one, and the gap against the error-function profile falls
+      from about \(5\times10^{-3}\) at \(\sigma=2\) to \(6\times10^{-4}\) at
+      \(\sigma=6\) as the kernel becomes well resolved by the sampling. Blur narrower than a
+      pixel or so is not really blur, for the same reason a stencil narrower than your mesh is
+      not really a derivative. The convergence is checked in <code>verify_claims.py</code>.
+    </p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-h"><span class="lab-t">Let the edge diffuse</span><span class="lab-tag">Predict, then drag</span></div>
+    <div class="lab-body">
+      <div class="predict" id="pred2">
+        <div class="predict-h">Commit before you drag</div>
+        <p>
+          You blur a perfectly sharp step edge with a Gaussian. What shape does the intensity
+          profile across the edge take?
+        </p>
+        <div class="opts">
+          <button class="pbtn" data-p2="a" type="button">A straight ramp</button>
+          <button class="pbtn" data-p2="b" type="button">An error function</button>
+          <button class="pbtn" data-p2="c" type="button">Still a step, just dimmer</button>
+          <button class="pbtn" data-p2="d" type="button">A Gaussian bump</button>
+        </div>
+        <div class="pverdict" id="pv2"></div>
+      </div>
+      <div class="stage">
+        <svg id="dfSvg" viewBox="0 0 640 280" width="100%" role="img" aria-label="A step edge profile evolving under the heat equation alongside the same profile from Gaussian convolution">
+          <g id="dfPlot"></g>
+          <g id="dfLegend"></g>
+        </svg>
+      </div>
+      <div class="ctl">
+        <label for="tSl">Diffusion time t</label><input id="tSl" type="range" min="0" max="200" step="1" value="80">
+      </div>
+      <div class="readout">
+        <div class="ro"><div class="ro-k">Time t</div><div class="ro-v" id="dfT">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Blur width<br>from sqrt(2t)</div><div class="ro-v" id="dfS">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Variance<br>vs 2t</div><div class="ro-v" id="dfV">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Max gap<br>heat vs blur</div><div class="ro-v" id="dfE">&mdash;</div></div>
+      </div>
+      <div class="lab-foot">
+        The orange curve is produced by stepping \(\partial I/\partial t=\partial^2I/\partial x^2\)
+        forward in time with an explicit scheme. The blue dashed curve is the original step
+        convolved with a Gaussian of width \(\sqrt{2t}\). They are computed by completely
+        different routes and lie on top of each other. The last readout is the largest gap
+        between them; it stays at the level of the discretisation error of the explicit scheme
+        rather than growing, which is the identity holding. Note the explicit stepper needs
+        \(\Delta t\le\tfrac12\Delta x^2\) to stay stable &mdash; the same condition you apply to
+        any explicit diffusion solver, and it is enforced here.
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <figure>
+      <div class="paper"><img src="img/image_pyramid.svg" alt="Gaussian pyramid with progressively smaller, blurrier versions of an image" width="410"></div>
+      <figcaption><b>Fig. 8.2</b> &mdash; A Gaussian pyramid: repeated blur and decimation, which is the same as sampling the diffusion at increasing times. <i>Figure from the compendium.</i></figcaption>
+    </figure>
+    <div class="note">
+      <div class="note-h"><span class="ic">!</span>Where the analogy breaks</div>
+      <p style="margin-bottom:0">
+        Heat conduction is irreversible: run it backwards and small errors blow up, which is the
+        classic ill-posed inverse problem. Deblurring an image <em>is</em> that backward heat
+        problem, and it fails for exactly the physical reason you would expect. But vision
+        routinely does something with no thermal counterpart at all: <strong>anisotropic
+        diffusion</strong> makes the conductivity depend on the local gradient, so the image
+        diffuses along edges but not across them. That is a material whose conductivity depends
+        on its own temperature gradient, which is not a material. It is a useful algorithm that
+        has quietly stopped being physics.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="sample">
+  <div class="col">
+    <div class="sechead"><span class="secnum">04</span><h2>What Nyquist warned you about</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2008%20-%20computer%20vision/02.%20convolutional%20networks.md" target="_blank" rel="noopener">src 02. convolutional networks &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      Every convolutional network reduces resolution as it goes deeper, by max pooling, average
+      pooling, or strided convolution. A \(2\times2\) pool with stride 2 halves both dimensions.
+      This is presented as a way to build translation invariance and cut computation, which it
+      is. It is also <strong>decimation</strong>, and decimation has a rule.
+    </p>
+    <p>
+      You know the rule from instrumenting a machine. Sample an accelerometer at
+      \(f_s\) and any content above \(f_s/2\) does not disappear &mdash; it folds back and
+      appears as a lower frequency that was never there. A 700 Hz vibration sampled at 1000 Hz
+      reads as 300 Hz. You cannot tell them apart after the fact, which is why the anti-alias
+      filter goes <em>before</em> the sampler, not after.
+    </p>
+    <p>
+      Downsampling an image is the same operation in two dimensions, and the same failure is
+      available. The folded frequency is
+    </p>
+    <div class="mathbox">
+      $$f_{\text{alias}}=\left|f-f_s\cdot\operatorname{round}\!\left(f/f_s\right)\right|$$
+    </div>
+    <p>
+      and the visible symptom is <strong>moir&eacute;</strong> &mdash; the coarse bands that
+      appear when you photograph a fine fabric or a brick wall at the wrong distance. The
+      texture is not in the scene; it is the sampler folding detail it could not represent.
+    </p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-h"><span class="lab-t">Fold a grating</span><span class="lab-tag">Predict, then drag</span></div>
+    <div class="lab-body">
+      <div class="predict" id="pred3">
+        <div class="predict-h">Commit before you drag</div>
+        <p>
+          You photograph a very fine stripe pattern and downsample the image by taking every
+          second pixel, with no blur first. What appears in the result?
+        </p>
+        <div class="opts">
+          <button class="pbtn" data-p3="a" type="button">The same stripes, smaller</button>
+          <button class="pbtn" data-p3="b" type="button">Coarse stripes that were never there</button>
+          <button class="pbtn" data-p3="c" type="button">A uniform grey</button>
+          <button class="pbtn" data-p3="d" type="button">Random noise</button>
+        </div>
+        <div class="pverdict" id="pv3"></div>
+      </div>
+      <div class="stage">
+        <svg id="alSvg" viewBox="0 0 640 300" width="100%" role="img" aria-label="A sinusoidal grating, the samples taken from it, and the lower-frequency pattern those samples imply">
+          <g id="alPlot"></g>
+          <g id="alLegend"></g>
+        </svg>
+      </div>
+      <div class="ctl">
+        <label for="fSl">Stripe frequency</label><input id="fSl" type="range" min="4" max="48" step="1" value="12">
+        <button class="btn" id="alBlur" type="button">Anti-alias filter: OFF</button>
+      </div>
+      <div class="readout">
+        <div class="ro"><div class="ro-k">True<br>frequency</div><div class="ro-v" id="alF">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Nyquist limit<br>after decimation</div><div class="ro-v" id="alN">0.250</div></div>
+        <div class="ro"><div class="ro-k">Apparent<br>frequency</div><div class="ro-v" id="alA">&mdash;</div></div>
+        <div class="ro"><div class="ro-k">Status</div><div class="ro-v" id="alS">&mdash;</div></div>
+      </div>
+      <div class="lab-foot">
+        Frequencies are in cycles per original pixel. Taking every second pixel puts the Nyquist
+        limit at 0.25. Below it the orange reconstruction sits on the blue original; push past it
+        and the orange curve detaches and slows down while the blue one keeps speeding up
+        &mdash; the samples are consistent with a pattern that is not there, and nothing
+        downstream can recover the difference. Switch the anti-alias filter on and the offending
+        detail is attenuated before sampling, so the output loses contrast instead of inventing
+        structure. Losing contrast is recoverable information loss; inventing structure is not.
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="note">
+      <div class="note-h"><span class="ic">!</span>Where the analogy breaks &mdash; and where it bites</div>
+      <p>
+        This is one of the few places in the series where the mechanical instinct is not just
+        transferable but <em>corrective</em>. Standard max pooling has no anti-alias filter in
+        front of it. Neither does strided convolution. For most of the history of CNNs this went
+        unexamined, and the consequence is measurable: shift an input image by one pixel and the
+        output of a strided network can change more than it should, because the sampling grid
+        lands differently on unfiltered high-frequency content.
+      </p>
+      <p style="margin-bottom:0">
+        Zhang's 2019 anti-aliased networks fixed it the way you would: put a low-pass filter
+        before every downsample. Accuracy and shift-consistency both improved. An engineer who
+        had ever mis-sampled a vibration signal would have asked the question a decade earlier,
+        which is a reasonable argument for the whole approach of this series. The break is only
+        that max pooling is nonlinear, so the clean linear sampling theory bounds the problem
+        without exactly describing it.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="learned">
+  <div class="col">
+    <div class="sechead"><span class="secnum">05</span><h2>Learned filters</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2008%20-%20computer%20vision/02.%20convolutional%20networks.md" target="_blank" rel="noopener">src 02. convolutional networks &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      Sections 01 to 04 used filters somebody designed. A convolutional network uses the same
+      operation with the weights left free and fitted by gradient descent (Chapter 06). That is
+      the entire conceptual step, and everything structural about convolution survives it.
+    </p>
+    <div class="defn">
+      <div class="defn-h">Convolution is a banded Toeplitz matrix</div>
+      <p style="margin-bottom:0">
+        A convolution is linear, so it has a matrix. That matrix is <strong>Toeplitz</strong>
+        &mdash; constant along every diagonal &mdash; and banded, with bandwidth set by the
+        kernel size. This is the matrix zoo entry from Chapter 02 &sect;04, and it explains the
+        two properties people quote about CNNs without deriving them. <em>Weight sharing</em> is
+        the constant-diagonal structure: the same coefficient appears at every row.
+        <em>Translation equivariance</em> is what a constant-diagonal operator does by
+        definition &mdash; shift the input, the output shifts with it. You have assembled
+        banded matrices with repeated stencils for every finite-difference problem you have
+        solved.
+      </p>
+    </div>
+    <p>
+      The <strong>receptive field</strong> of a deep unit &mdash; the region of input that can
+      influence it &mdash; grows by about \(k-1\) per layer. This is the domain of dependence of
+      an explicit stencil: information travels one stencil-width per step, so after \(n\) steps
+      it has reached \(n(k-1)\) away. VGG's argument follows immediately. Two stacked
+      \(3\times3\) filters reach \(3+3-1=5\), exactly as far as one \(5\times5\), using
+      \(2\times3^2=18\) weights instead of \(25\) and with an extra nonlinearity in between.
+      Deep and narrow beats shallow and wide, for the same reason a fine stencil applied twice
+      beats a coarse one applied once.
+    </p>
+    <figure>
+      <div class="paper"><img src="img/receptive_field.svg" alt="Receptive field growing across layers from 3x3 to 5x5 to 7x7" width="410"></div>
+      <figcaption><b>Fig. 8.3</b> &mdash; The receptive field after one, two and three layers. <i>Figure from the compendium.</i></figcaption>
+    </figure>
+    <div class="defn">
+      <div class="defn-h">A ResNet block is forward Euler</div>
+      <p>
+        The residual connection is written \(\text{output}=F(x)+x\). Set it beside the explicit
+        Euler step for \(\dot{y}=f(y)\):
+      </p>
+      <div class="mathbox">
+        $$x_{l+1}=x_l+F(x_l)\qquad\text{against}\qquad y_{k+1}=y_k+h\,f(y_k)$$
+      </div>
+      <p style="margin-bottom:0">
+        They are the same recurrence with \(h=1\). A residual network is an ODE integrated by
+        the crudest available scheme, with the right-hand side learned rather than given, and
+        depth playing the role of integration time. This is not a loose reading &mdash; it is
+        the basis of the neural-ODE literature, which replaces the fixed depth with an adaptive
+        solver. It also explains the degradation problem it was invented to fix: learning a
+        near-identity map is hard, but learning a <em>small increment</em> to the identity is
+        exactly what an integrator does naturally.
+      </p>
+    </div>
+    <figure>
+      <div class="paper"><img src="img/resnet_block.svg" alt="ResNet block with a skip connection adding x back to F(x)" width="410"></div>
+      <figcaption><b>Fig. 8.4</b> &mdash; One Euler step, with the right-hand side fitted. <i>Figure from the compendium.</i></figcaption>
+    </figure>
+    <p>
+      The efficiency line of architectures is a factorisation story, and it is the rank-1
+      argument of &sect;01 again. A standard \(k\times k\) convolution costs
+      \(k^2C_{\text{in}}C_{\text{out}}\) multiplies per position. A <strong>depthwise separable</strong>
+      convolution splits it into one spatial filter per channel followed by a \(1\times1\) mix,
+      costing \(k^2C_{\text{in}}+C_{\text{in}}C_{\text{out}}\). The exact ratio is
+    </p>
+    <div class="mathbox">
+      $$\frac{k^{2}C_{\text{in}}C_{\text{out}}}{k^{2}C_{\text{in}}+C_{\text{in}}C_{\text{out}}}=\frac{1}{\dfrac{1}{k^{2}}+\dfrac{1}{C_{\text{out}}}}$$
+    </div>
+    <p>
+      which approaches \(k^2\) only as \(C_{\text{out}}\) grows. For \(3\times3\) with 64 output
+      channels it is \(7.9\times\), not the \(9\times\) usually quoted; with 256 channels it is
+      \(8.7\times\). The quoted figure is the asymptote, and the difference matters when you are
+      budgeting a real layer. This is the springs-in-series form: two costs in parallel, the
+      smaller one dominating.
+    </p>
+  </div>
+</section>
+
+<section id="vcycle">
+  <div class="col">
+    <div class="sechead"><span class="secnum">06</span><h2>U-Net is a V-cycle</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2008%20-%20computer%20vision/03.%20object%20detection%20and%20segmentation.md" target="_blank" rel="noopener">src 03. detection and segmentation &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      Segmentation needs an output the same size as the input, with a label per pixel. The
+      architecture that does this is <strong>U-Net</strong>: an encoder that halves resolution
+      repeatedly while deepening channels, a decoder that upsamples back, and skip connections
+      joining each encoder level to the decoder level of matching resolution.
+    </p>
+    <p>
+      Draw it and you have drawn a <strong>multigrid V-cycle</strong>. The correspondence is
+      term for term:
+    </p>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Multigrid</th><th>U-Net</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td>Restriction to a coarser grid</td><td>Pooling / strided convolution</td><td>Both halve resolution and both must filter first, per &sect;04.</td></tr>
+          <tr><td>Prolongation back to a finer grid</td><td>Transposed convolution or bilinear upsample</td><td>Interpolation operators. Transposed convolution learns its stencil.</td></tr>
+          <tr><td>Smoothing at each level</td><td>The convolution blocks at each stage</td><td>Local operators applied a fixed number of times per level.</td></tr>
+          <tr><td>Passing the fine-grid correction across</td><td>The skip connection</td><td>The coarse solve cannot represent fine detail, so it must come from the fine level directly.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      The reason multigrid exists is the reason U-Net works. A local operator flattens
+      high-frequency error quickly and long-wavelength error hardly at all; the fix is to move
+      to a coarser grid where the long wavelengths <em>are</em> high frequency, solve there
+      cheaply, and interpolate back. U-Net's encoder does the same thing with semantics: a
+      global judgement about what an object is needs a wide receptive field, which is cheap at
+      low resolution, while a sharp boundary needs fine resolution, which is only available on
+      the finest grid. The skip connection exists because the coarse path has thrown the
+      boundary away and cannot get it back.
+    </p>
+    <figure>
+      <div class="paper"><img src="img/unet_architecture.svg" alt="U-Net with contracting encoder path, expanding decoder path, and skip connections at each level" width="410"></div>
+      <figcaption><b>Fig. 8.5</b> &mdash; Down, across, up: the V. <i>Figure from the compendium.</i></figcaption>
+    </figure>
+    <p>
+      <strong>Feature Pyramid Networks</strong> make the same move for detection, adding a
+      top-down path with lateral connections so that every resolution level carries both strong
+      semantics and usable spatial detail. Small objects are read off the fine levels, large
+      objects off the coarse ones. In multigrid terms it is a full-multigrid cycle rather than a
+      single V.
+    </p>
+    <div class="note">
+      <div class="note-h"><span class="ic">!</span>Where the analogy breaks</div>
+      <p style="margin-bottom:0">
+        A V-cycle converges to the solution of a linear system you wrote down, and its
+        convergence rate can be proved from the smoothing and approximation properties of the
+        operators. There is a residual you can measure and drive to zero. U-Net has no residual
+        and no system: it is fitted, it stops when training stops, and the only guarantee is
+        held-out performance. The architectural insight transfers completely; the convergence
+        theory does not transfer at all.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="detect">
+  <div class="col">
+    <div class="sechead"><span class="secnum">07</span><h2>Detection, and a loss that yields</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2008%20-%20computer%20vision/03.%20object%20detection%20and%20segmentation.md" target="_blank" rel="noopener">src 03. detection and segmentation &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      Detection asks for boxes rather than a label: what is in the image, and where. The
+      machinery &mdash; anchors, IoU, non-maximum suppression, mean average precision &mdash; is
+      mostly bookkeeping, and the source chapter covers it properly. One piece repays a
+      mechanical reading.
+    </p>
+    <p>
+      Box coordinates are fitted by regression, and squared error is the obvious loss and the
+      wrong one: a single badly-placed box contributes error growing as the square of its offset
+      and dominates the gradient. The fix is <strong>smooth L1</strong>, also called the Huber
+      loss:
+    </p>
+    <div class="mathbox">
+      $$\text{smooth}_{L1}(x)=\begin{cases}\tfrac12x^{2} & |x|<1\\[2pt] |x|-\tfrac12 & \text{otherwise}\end{cases}$$
+    </div>
+    <p>
+      Differentiate it. The gradient is \(x\) for \(|x|<1\) and \(\operatorname{sign}(x)\)
+      beyond. That is a <strong>restoring force proportional to displacement up to a yield
+      point, and constant thereafter</strong>. It is the elastic&ndash;perfectly-plastic law,
+      drawn exactly as you would draw it for a mild steel bar: a straight elastic segment, a
+      knee, then a plateau.
+    </p>
+    <div class="defn">
+      <div class="defn-h">Why this is the right loss, in mechanical terms</div>
+      <p style="margin-bottom:0">
+        A quadratic loss is a linear spring with no yield: pull it far enough and the force is
+        unbounded, so one outlier can drag the whole fit. Smooth L1 <em>yields</em>. Past
+        \(|x|=1\) an outlier can exert unit force and no more, whatever its offset, so its
+        influence on the fit is capped. Robustness to outliers and a yield stress are the same
+        idea: bound the force any single member can transmit and the structure stops being
+        hostage to the worst one. The loss is also \(C^1\) &mdash; value and slope both
+        continuous at the knee &mdash; which is exactly the continuity a bilinear material model
+        needs to avoid trouble in a solver.
+      </p>
+    </div>
+    <p>
+      The same instinct explains <strong>focal loss</strong>, which multiplies cross-entropy by
+      \((1-p_t)^\gamma\) to suppress the contribution of the overwhelming majority of easy
+      background anchors. Both are load-shedding: stop the many easy members, or the one extreme
+      member, from setting the design.
+    </p>
+    <figure>
+      <div class="paper"><img src="img/faster_rcnn.svg" alt="Faster R-CNN pipeline with backbone, region proposal network, RoI pooling, and heads" width="410"></div>
+      <figcaption><b>Fig. 8.6</b> &mdash; Two-stage detection: propose, then refine. <i>Figure from the compendium.</i></figcaption>
+    </figure>
+    <p>
+      One more piece of engineering sense is hiding in the anchor parametrisation. The network
+      does not predict box coordinates; it predicts <em>offsets from a reference box</em>, with
+      width and height in log space:
+    </p>
+    <div class="mathbox">
+      $$t_x=\frac{x-x_a}{w_a},\quad t_y=\frac{y-y_a}{h_a},\quad t_w=\log\frac{w}{w_a},\quad t_h=\log\frac{h}{h_a}$$
+    </div>
+    <p>
+      Predicting a small correction to a reasonable reference, rather than an absolute value,
+      is how every incremental structural solver is posed. The log on the size is the same
+      device as working in logarithmic strain: it makes the quantity additive, scale-invariant,
+      and incapable of going negative.
+    </p>
+  </div>
+</section>
+
+<section id="patch">
+  <div class="col">
+    <div class="sechead"><span class="secnum">08</span><h2>Patches instead of pixels</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2008%20-%20computer%20vision/04.%20vision%20transformers%20and%20generation.md" target="_blank" rel="noopener">src 04. ViT and generation &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      The <strong>Vision Transformer</strong> cuts the image into \(16\times16\) patches,
+      flattens each into a vector, projects it, and hands the resulting sequence to the
+      transformer encoder of Chapter 07. Attention, positional embeddings and the [CLS] token
+      all carry over unchanged; the image has been turned into a sentence.
+    </p>
+    <p>
+      The patch embedding is worth pausing on, because it is not new machinery: projecting
+      non-overlapping \(P\times P\) patches through a shared matrix is <em>exactly</em> a
+      convolution with kernel size \(P\) and stride \(P\). ViT's first layer is a convolution.
+      What ViT discards is everything after it &mdash; the locality, the weight sharing across
+      positions, the translation equivariance of &sect;05.
+    </p>
+    <p>
+      That discarding has a cost with a familiar shape. A CNN's Toeplitz structure is a
+      <strong>constraint imposed from prior knowledge</strong>: we assert that the operator is
+      shift-invariant and local, and in exchange we need far less data to determine its few
+      distinct coefficients. ViT drops the constraint and must recover the same structure from
+      examples. On ImageNet-scale data CNNs win; on 300-million-image data ViT matches and then
+      exceeds them, having learned a better operator than the one we would have imposed.
+    </p>
+    <p>
+      This is the modelling trade you make whenever you choose between a physics-based model
+      with three fitted constants and a black-box regression with three hundred. The constrained
+      model wins when data is scarce and its assumptions are right; the free model wins when
+      data is abundant and the assumptions were costing you something.
+    </p>
+    <p>
+      <strong>Swin</strong> puts part of the structure back. It computes attention only within
+      local windows, which makes cost linear rather than quadratic in image size, and shifts the
+      window partition by half a window on alternating layers so information still crosses
+      boundaries. It also merges patches between stages to build a resolution hierarchy, which
+      is what makes it usable as a detection or segmentation backbone. Local coupling plus a
+      staggered partition, assembled into a multi-resolution hierarchy, is domain decomposition
+      with overlapping subdomains.
+    </p>
+    <figure>
+      <div class="paper"><img src="img/vit_pipeline.svg" alt="ViT pipeline: image split into patches, linearly projected, CLS token prepended, position embeddings added" width="410"></div>
+      <figcaption><b>Fig. 8.7</b> &mdash; An image, tokenised. <i>Figure from the compendium.</i></figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="transport">
+  <div class="col">
+    <div class="sechead"><span class="secnum">09</span><h2>Generation as transport</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2008%20-%20computer%20vision/04.%20vision%20transformers%20and%20generation.md" target="_blank" rel="noopener">src 04. ViT and generation &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      <strong>Diffusion models</strong> generate an image by destroying one and learning to undo
+      the damage. The forward process adds Gaussian noise over \(T\) steps until nothing is
+      left; the reverse process, learned, removes it a step at a time starting from pure noise.
+    </p>
+    <div class="note">
+      <div class="note-h"><span class="ic">!</span>Two diffusions, and they are not the same one</div>
+      <p>
+        The word invites an error that is worth heading off. In &sect;03 the heat equation acted
+        <em>on the image</em>, in pixel space, and made it smoother. Here the noise acts on the
+        image and makes it <em>rougher</em>. These are opposite effects, so the same word is
+        doing two jobs.
+      </p>
+      <p style="margin-bottom:0">
+        Both are genuinely diffusion, in different spaces. What obeys a diffusion equation in
+        the generative case is the <em>probability density</em> over images: the forward process
+        is a stochastic differential equation whose density evolves by a Fokker&ndash;Planck
+        equation, which is a diffusion equation on distribution space. A single image gets
+        noisier while the distribution over images spreads and smooths. Saying "diffusion models
+        blur the image" is wrong, and it is the sort of wrong that a physical intuition
+        confidently applied in the wrong space produces.
+      </p>
+    </div>
+    <p>
+      The reverse process is where the mechanics returns. <strong>Flow matching</strong>, which
+      has largely replaced step-wise denoising in current systems, states the problem as
+      transport: learn a time-dependent velocity field \(v_\theta(x,t)\) that carries samples
+      from the noise distribution to the data distribution along smooth paths, and integrate it.
+    </p>
+    <div class="mathbox">
+      $$\frac{d\mathbf{x}}{dt}=v_\theta(\mathbf{x},t),\qquad t\in[0,1]$$
+    </div>
+    <p>
+      That is Lagrangian particle tracking. Given a velocity field, integrate to get the
+      trajectory of a particle through it &mdash; the same computation as a streamline, a
+      pathline, or any advected tracer. The <strong>optimal-transport</strong> formulation goes
+      further and asks for the straight-line path \(x_t=(1-t)x_0+tx_1\), making the target
+      velocity the constant \(x_1-x_0\); straight paths can be integrated in few steps, which is
+      why rectified flows generate in one or two evaluations where DDPM needed a thousand.
+    </p>
+    <p>
+      The density carried by that field obeys the continuity equation
+      \(\partial_t\rho+\nabla\cdot(\rho v)=0\) &mdash; conservation of probability, structurally
+      identical to conservation of mass. A generative model of this kind is a mass-conserving
+      transport problem where the target density happens to be "photographs".
+    </p>
+    <figure>
+      <div class="paper"><img src="img/diffusion_process.svg" alt="Diffusion forward process corrupting an image with noise and the learned reverse process recovering it" width="410"></div>
+      <figcaption><b>Fig. 8.8</b> &mdash; Forward corruption, learned reversal. <i>Figure from the compendium.</i></figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="motion">
+  <div class="col">
+    <div class="sechead"><span class="secnum">10</span><h2>Motion is a material derivative</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2008%20-%20computer%20vision/05.%20video%20and%203D%20vision.md" target="_blank" rel="noopener">src 05. video and 3D vision &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      <strong>Optical flow</strong> assigns a displacement \((u,v)\) to every pixel between two
+      frames. It rests on one assumption, <strong>brightness constancy</strong>: a point keeps
+      its intensity as it moves. Written out,
+      \(I(x+u\,\delta t,\;y+v\,\delta t,\;t+\delta t)=I(x,y,t)\). Expand to first order and
+      divide by \(\delta t\):
+    </p>
+    <div class="mathbox">
+      $$I_x u+I_y v+I_t=0\qquad\Longleftrightarrow\qquad \frac{DI}{Dt}=\frac{\partial I}{\partial t}+\mathbf{v}\cdot\nabla I=0$$
+    </div>
+    <p>
+      The right-hand form is the <strong>material derivative</strong>, and the statement is the
+      advection equation: intensity is conserved following the motion. This is the same equation
+      you write for a passive scalar carried by a flow &mdash; dye in water, a temperature
+      marker in a duct. Brightness constancy is "intensity is a conserved passive tracer", and
+      every limitation of optical flow follows from how badly that assumption fails when
+      lighting changes, surfaces specularly reflect, or things move out of view.
+    </p>
+    <div class="defn">
+      <div class="defn-h">The aperture problem is an underdetermined system</div>
+      <p style="margin-bottom:0">
+        One scalar equation, two unknowns per pixel. The component of motion <em>along</em> an
+        edge produces no intensity change and is therefore invisible; only the component across
+        the edge can be recovered. Watching a featureless pole move through a small window, you
+        cannot tell whether it is sliding lengthwise. This is not a defect of any algorithm, it
+        is the rank of the system.
+      </p>
+    </div>
+    <p>
+      <strong>Lucas&ndash;Kanade</strong> closes the gap by assuming the flow is constant over a
+      small window, giving many equations for the same two unknowns and solving by least squares.
+      The normal equations are:
+    </p>
+    <div class="mathbox">
+      $$\begin{bmatrix}u\\ v\end{bmatrix}=\begin{bmatrix}\sum I_x^{2} & \sum I_xI_y\\ \sum I_xI_y & \sum I_y^{2}\end{bmatrix}^{-1}\begin{bmatrix}-\sum I_xI_t\\ -\sum I_yI_t\end{bmatrix}$$
+    </div>
+    <p>
+      That matrix is <strong>the structure tensor of &sect;02</strong>, unchanged. The same
+      object that told us whether a patch was a corner now decides whether the flow is
+      recoverable, and the connection is not a coincidence: the system is solvable exactly when
+      both principal values are large, which is the definition of a corner. Flat regions give a
+      singular system, edges give a rank-one system, corners give a well-conditioned one. This
+      is why feature trackers track corners. Its condition number is
+      \(\lambda_1/\lambda_2\) &mdash; the same ratio that governs how well any least-squares
+      fit is determined.
+    </p>
+    <figure>
+      <div class="paper"><img src="img/optical_flow.svg" alt="Two consecutive frames and the optical flow field between them shown as arrows" width="410"></div>
+      <figcaption><b>Fig. 8.9</b> &mdash; A displacement field, recovered from two frames. <i>Figure from the compendium.</i></figcaption>
+    </figure>
+    <p>
+      Tracking objects across many frames then becomes state estimation. <strong>SORT</strong>
+      runs a <strong>Kalman filter</strong> per object with a constant-velocity motion model,
+      predicting where each will be in the next frame and correcting with the detection when it
+      arrives, weighted by the relative uncertainties. That is textbook sensor fusion. The
+      assignment of detections to tracks is the Hungarian algorithm on an IoU cost matrix
+      &mdash; a linear assignment problem of the kind that appears in job-shop scheduling.
+    </p>
+  </div>
+</section>
+
+<section id="depth">
+  <div class="col">
+    <div class="sechead"><span class="secnum">11</span><h2>Seeing in three dimensions</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2008%20-%20computer%20vision/05.%20video%20and%203D%20vision.md" target="_blank" rel="noopener">src 05. video and 3D vision &#8599;</a>
+    </div>
+    <hr class="rule-h">
+    <p>
+      The <strong>pinhole camera</strong> maps a world point to a pixel through the intrinsic
+      matrix \(K\) and the rigid transform \([R\mid t]\):
+      \(\mathbf{p}=K[R\mid t]\mathbf{P}\). This is a homogeneous coordinate transform with a
+      rotation and a translation &mdash; the same \(4\times4\) machinery as a
+      Denavit&ndash;Hartenberg chain, which Chapter 11 will make explicit for robot arms. The
+      only genuinely new element is the division by \(Z\), which is what makes projection
+      non-linear and is why distant things look smaller.
+    </p>
+    <p>
+      <strong>Stereo depth</strong> follows in one line of similar triangles: two cameras
+      separated by baseline \(b\), a point appearing at disparity \(d\), and
+    </p>
+    <div class="mathbox">
+      $$Z=\frac{f\,b}{d}$$
+    </div>
+    <p>
+      Depth goes as the reciprocal of disparity, so precision degrades as the square of range
+      &mdash; doubling the distance quarters the depth resolution for the same disparity
+      accuracy. Anyone who has used a fixed-baseline optical instrument knows this trade, and it
+      is why long-range stereo needs a long baseline.
+    </p>
+    <div class="defn">
+      <div class="defn-h">NeRF renders with Beer&ndash;Lambert</div>
+      <p>
+        A neural radiance field stores colour and density as a function of position and viewing
+        direction, and renders a pixel by integrating along the ray:
+      </p>
+      <div class="mathbox">
+        $$C(\mathbf{r})=\int_{t_n}^{t_f}T(t)\,\sigma(\mathbf{r}(t))\,\mathbf{c}(\mathbf{r}(t),\mathbf{d})\,dt,\qquad T(t)=\exp\!\left(-\int_{t_n}^{t}\sigma(\mathbf{r}(s))\,ds\right)$$
+      </div>
+      <p style="margin-bottom:0">
+        \(T(t)\) is the <strong>transmittance</strong>, and its form is Beer&ndash;Lambert
+        attenuation: the fraction of light surviving a path through an absorbing medium falls as
+        the exponential of the integrated absorption coefficient. It is the law you use for
+        radiation through a participating medium, for optical density, for neutron shielding.
+        The discrete version, \(\alpha_i=1-\exp(-\sigma_i\delta_i)\) composited front to back,
+        is the standard alpha-blending recurrence, and it is algebraically the same as
+        accumulating the product of survival factors.
+      </p>
+    </div>
+    <p>
+      <strong>3D Gaussian splatting</strong> replaces the implicit field with explicit
+      primitives: each is a 3D Gaussian with a mean, an opacity, a colour, and a
+      \(3\times3\) covariance matrix setting its shape and orientation. That covariance is a
+      symmetric positive-definite tensor whose eigenvectors are principal axes and whose
+      eigenvalues are the squared semi-axes &mdash; an ellipsoid, specified exactly as you
+      specify an inertia ellipsoid from the inertia tensor of Chapter 02 &sect;07. Rendering
+      projects each ellipsoid to a 2D ellipse, sorts by depth and blends. It is fast because
+      rasterising ellipses is something graphics hardware has done for thirty years.
+    </p>
+  </div>
+</section>
+
+<section id="breaks">
+  <div class="col">
+    <div class="sechead"><span class="secnum">12</span><h2>Where it breaks &mdash; the honest inventory</h2></div>
+    <hr class="rule-h">
+    <p>
+      This chapter's bridges are unusually strong, which makes it more important than usual to
+      say where they stop.
+    </p>
+    <div class="tw">
+      <table>
+        <thead><tr><th>The tempting claim</th><th>Status</th><th>What is actually true</th></tr></thead>
+        <tbody>
+          <tr><td>The structure tensor is a stress tensor</td><td><span class="flag ok">holds</span></td><td>As algebra, exactly. Not as physics: it has no equilibrium condition, no field equation and no compatibility between neighbouring points. The eigenvalue analysis transfers; the mechanics does not.</td></tr>
+          <tr><td>Gaussian blur is the heat equation</td><td><span class="flag ok">holds</span></td><td>Exactly, with \(\sigma^2=2t\). But anisotropic diffusion, which is standard in vision, makes conductivity depend on the local gradient &mdash; no material behaves that way.</td></tr>
+          <tr><td>A ResNet block is forward Euler</td><td><span class="flag ok">holds</span></td><td>The recurrence is identical with \(h=1\). What is missing is any notion of accuracy or convergence: there is no exact trajectory being approximated, so "step size 1" cannot be called too large.</td></tr>
+          <tr><td>Diffusion models blur the image</td><td><span class="flag bad">do not</span></td><td>They add noise, making each image rougher. The diffusion is of the probability density over images, in distribution space, via Fokker&ndash;Planck. Same equation, different space, opposite visible effect. See &sect;09.</td></tr>
+          <tr><td>Pooling is harmless downsampling</td><td><span class="flag bad">do not</span></td><td>It is decimation without an anti-alias filter, and it aliases. This one is the mechanical instinct being right and the field being late. See &sect;04.</td></tr>
+          <tr><td>EfficientNet scaling is dimensional analysis</td><td><span class="flag bad">do not</span></td><td>The constraint \(\alpha\beta^2\gamma^2\approx2\) is a compute budget, not a dimensionless group, and \(\alpha,\beta,\gamma\) come from a grid search, not from the Buckingham Pi theorem. It looks like similitude and shares none of its logic.</td></tr>
+          <tr><td>A bigger model converges like a finer mesh</td><td><span class="flag bad">do not</span></td><td>Mesh refinement approaches a solution that exists independently of the mesh, and you can demonstrate convergence. There is no exact image-understanding function underneath being approximated, and no mesh-independence study is available.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      The last row is the same caution as Chapter 07's, and it is the one that matters most. A
+      finite element model is an approximation to a governing equation, and refining it is
+      justified by a convergence theorem. Training a larger vision model is justified by a
+      held-out score. These feel similar from the inside and are epistemically nothing alike.
+    </p>
+  </div>
+</section>
+
+<section id="gaps">
+  <div class="col">
+    <div class="sechead"><span class="secnum">13</span><h2>What this chapter does not cover</h2></div>
+    <hr class="rule-h">
+    <p>
+      Five source files, about 1,800 lines, reduced to the correspondences that are exact.
+      What was cut, so you know to read the source for it:
+    </p>
+    <div class="gap">
+      <div class="gap-h">Compressed here, substantial in the source</div>
+      <p style="margin-bottom:0">
+        <strong>Colour science</strong> &mdash; HSV, YCbCr and LAB, chroma subsampling, and why
+        perceptual uniformity matters. <strong>Classical features</strong> &mdash; SIFT's full
+        pipeline, SURF, ORB, HOG, and the descriptor-matching machinery that carried the field
+        before 2012. <strong>Architecture history</strong> &mdash; LeNet through EfficientNet is
+        one paragraph here and a proper narrative in source file 02; Inception, DenseNet,
+        ShuffleNet and the inverted residual get a line each at most.
+        <strong>Detection mechanics</strong> &mdash; the R-CNN lineage, RoIAlign, anchor
+        assignment, NMS, mAP and the anchor-free detectors. <strong>Self-supervision</strong>
+        &mdash; SimCLR, MoCo, BYOL, DINO, MAE and BEiT, which is most of source file 04.
+      </p>
+    </div>
+    <div class="gap">
+      <div class="gap-h">Absent here</div>
+      <p style="margin-bottom:0">
+        GANs and StyleGAN in any detail, VAEs, super-resolution, style transfer, panoptic
+        segmentation and its quality metric, DeepLab and atrous spatial pyramid pooling,
+        real-time segmentation architectures, video classification (C3D, I3D, SlowFast,
+        TimeSformer, VideoMAE), action recognition, the tracking lineage beyond SORT,
+        monocular depth estimation, point clouds and PointNet, SLAM and bundle adjustment,
+        pose estimation, and the VR/AR rendering constraints that close source file 05.
+      </p>
+    </div>
+    <p>
+      The omissions are not uniform in kind. The classical material was cut because &sect;01 to
+      &sect;04 already carry its mathematics; the self-supervision and generative material was
+      cut because it belongs to Chapter 06 and Chapter 10 more than here; the 3D and video
+      material was cut for length alone, and is the part most worth reading in the source.
+    </p>
+  </div>
+</section>
+
+<section id="worked">
+  <div class="col">
+    <div class="sechead"><span class="secnum">14</span><h2>Worked example: one problem, solved twice</h2></div>
+    <hr class="rule-h">
+    <p>
+      Take a \(5\times5\) patch that is bright in its top-left \(3\times3\) corner and dark
+      elsewhere &mdash; a corner, in the ordinary sense. Apply Sobel over the nine interior
+      positions and accumulate the structure tensor. The result is
+    </p>
+    <div class="mathbox">
+      $$M=\begin{bmatrix}\sum I_x^{2} & \sum I_xI_y\\ \sum I_xI_y & \sum I_y^{2}\end{bmatrix}=\begin{bmatrix}52 & 16\\ 16 & 52\end{bmatrix}$$
+    </div>
+    <h4>Solved as mechanics</h4>
+    <p>
+      Read it as a plane stress state with \(\sigma_x=52\), \(\sigma_y=52\), \(\tau_{xy}=16\).
+      Mohr's circle has centre \(\tfrac12(\sigma_x+\sigma_y)=52\) and radius
+      \(\sqrt{\left(\tfrac{\sigma_x-\sigma_y}{2}\right)^2+\tau_{xy}^2}=\sqrt{0+16^2}=16\).
+      The principal stresses are \(52\pm16\), that is \(36\) and \(68\). Because
+      \(\sigma_x=\sigma_y\) the circle is centred on a state of pure shear superposed on
+      hydrostatic tension, so the principal angle is
+      \(\tfrac12\arctan\!\big(2\tau_{xy}/(\sigma_x-\sigma_y)\big)=45^\circ\) exactly. The
+      invariants are \(I_1=\operatorname{tr}M=104\) and \(I_2=\det M=2448\).
+    </p>
+    <h4>Solved as computer vision</h4>
+    <p>
+      Read the same matrix as a Harris structure tensor. Its eigenvalues are \(36\) and \(68\)
+      &mdash; both large, so this is a corner and not an edge. The Harris response is
+      \(R=\det M-k(\operatorname{tr}M)^2=2448-0.05\times104^2=1907.2\), large and positive,
+      confirming it. Shi&ndash;Tomasi reports \(\min(\lambda_1,\lambda_2)=36\), comfortably above
+      any sensible threshold. The major eigenvector is
+      \([0.7071,\,0.7071]\), pointing at \(45^\circ\): the direction of steepest intensity
+      variation runs diagonally, which is where the corner faces.
+    </p>
+    <p>
+      Both columns are the same arithmetic. The principal stresses and the Harris eigenvalues
+      are one calculation, the invariants \(I_1,I_2\) and the quantities in \(R\) are one pair of
+      numbers, and the principal angle and the eigenvector direction are one answer. Checked in
+      <code>verify_claims.py</code> under <code>[Ch08 s02]</code> and <code>[Ch08 s14]</code>.
+    </p>
+    <div class="note">
+      <div class="note-h"><span class="ic">i</span>Worth noticing about the presets</div>
+      <p style="margin-bottom:0">
+        The lab's straight-edge preset gives \(M=\bigl[\begin{smallmatrix}96&0\\0&0\end{smallmatrix}\bigr]\)
+        and its diagonal-edge preset gives
+        \(M=\bigl[\begin{smallmatrix}48&48\\48&48\end{smallmatrix}\bigr]\). These have the
+        <em>same</em> eigenvalues, \(0\) and \(96\) &mdash; the same uniaxial state, rotated by
+        \(45^\circ\). The matrices look completely different and describe the same physical
+        situation in two coordinate frames, which is the entire point of working with
+        invariants, and exactly the lesson Mohr's circle exists to teach.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="recall">
+  <div class="col">
+    <div class="sechead"><span class="secnum">15</span><h2>Question bank</h2></div>
+    <hr class="rule-h">
+    <p>
+      Twenty-four prompts in three tiers. Answer aloud before opening anything.
+    </p>
+    <h4>Tier 1 &mdash; recall</h4>
+    <details><summary>What are the two invariants used in the Harris response, and what are they in eigenvalue terms?</summary><p>\(\operatorname{tr}M=\lambda_1+\lambda_2\) and \(\det M=\lambda_1\lambda_2\). \(R=\det M-k(\operatorname{tr}M)^2\).</p></details>
+    <details><summary>Relate the Gaussian blur width to diffusion time.</summary><p>\(\sigma=\sqrt{2t}\), so \(\sigma^2=2t\). Variances add because diffusion times add.</p></details>
+    <details><summary>Why is the Sobel operator separable, and what does that buy?</summary><p>It is the outer product \([1,2,1]^{\mathsf T}[-1,0,1]\), so rank 1. A separable \(k\times k\) filter costs \(2k\) multiplies per pixel instead of \(k^2\).</p></details>
+    <details><summary>State the optical flow constraint equation and name it.</summary><p>\(I_xu+I_yv+I_t=0\), which is \(DI/Dt=0\) &mdash; the material derivative of intensity, i.e. advection of a conserved passive scalar.</p></details>
+    <details><summary>What matrix does Lucas-Kanade invert?</summary><p>The structure tensor from §02 &mdash; the identical matrix used for Harris corner detection.</p></details>
+    <details><summary>Write the ResNet block and the forward Euler step side by side.</summary><p>\(x_{l+1}=x_l+F(x_l)\) and \(y_{k+1}=y_k+hf(y_k)\). Identical with \(h=1\).</p></details>
+    <details><summary>What is the transmittance in NeRF volume rendering?</summary><p>\(T(t)=\exp(-\int\sigma\,ds)\) &mdash; Beer&ndash;Lambert attenuation along the ray.</p></details>
+    <details><summary>Two stacked 3x3 convolutions versus one 5x5: receptive field and parameters?</summary><p>Same receptive field (5), 18 parameters instead of 25, plus an extra nonlinearity.</p></details>
+    <h4>Tier 2 &mdash; apply</h4>
+    <details><summary>A patch gives \(M=[[96,0],[0,0]]\). Classify it and give the principal direction.</summary><p>Eigenvalues 0 and 96: a straight edge, uniaxial. The major principal direction is along \(x\), meaning intensity varies across a vertical edge.</p></details>
+    <details><summary>Another gives \(M=[[48,48],[48,48]]\). How does it differ from the previous one?</summary><p>It does not, physically. Same eigenvalues (0, 96), same uniaxial state, rotated 45°. Only the coordinate frame differs.</p></details>
+    <details><summary>You blur with \(\sigma=3\), then again with \(\sigma=4\). What is the net blur?</summary><p>\(\sigma=\sqrt{9+16}=5\). Variances add because the diffusion times add.</p></details>
+    <details><summary>A grating at 0.4 cycles/pixel is decimated by 2. What appears?</summary><p>Nyquist after decimation is 0.25, so it folds to \(|0.4-0.5|=0.1\) cycles/pixel &mdash; a much coarser pattern that is not in the scene.</p></details>
+    <details><summary>Why do feature trackers track corners rather than points on edges?</summary><p>The Lucas-Kanade system is the structure tensor. On an edge it is rank one, so the along-edge component of motion is unrecoverable &mdash; the aperture problem. Corners give both eigenvalues large and a well-conditioned solve.</p></details>
+    <details><summary>Compute the exact speed-up of a depthwise separable 3x3 with 128 output channels.</summary><p>\(1/(1/9+1/128)=8.4\times\). The commonly quoted \(9\times\) is the asymptote as channels grow.</p></details>
+    <details><summary>A box-regression residual is 6 units. What gradient does smooth L1 apply?</summary><p>Magnitude 1 &mdash; the yield value. Beyond \(|x|=1\) the gradient saturates, so the outlier cannot dominate the fit.</p></details>
+    <details><summary>Stereo range doubles. What happens to depth precision at fixed disparity accuracy?</summary><p>It falls by a factor of four. \(Z=fb/d\), so \(|dZ/dd|\propto Z^2\).</p></details>
+    <h4>Tier 3 &mdash; judge</h4>
+    <details><summary>Is the structure tensor "really" a stress tensor?</summary><p>As a symmetric second-order tensor with principal values and invariants, yes, and the whole eigenvalue analysis carries. As physics, no: no equilibrium, no compatibility, no units of stress, no field equation linking neighbouring points. The transferred part is linear algebra, and that is still most of §02.</p></details>
+    <details><summary>Diffusion models are named after diffusion. How far does that take you?</summary><p>Further than it first appears and in a different space than you would guess. The image gets noisier, not smoother, so pixel-space intuition from §03 misleads. What diffuses is the density over images, via Fokker-Planck. Getting this wrong is a good example of a physical intuition applied confidently in the wrong space.</p></details>
+    <details><summary>Max pooling aliases. Why did it take the field until 2019 to act on this?</summary><p>Because CNNs were evaluated on accuracy, and the aliasing shows up as shift-inconsistency, which nobody was measuring. A vibration engineer would have asked about the anti-alias filter immediately. It is a fair advertisement for cross-disciplinary reading &mdash; and a caution that the fix, being nonlinear, is bounded rather than described by the linear theory.</p></details>
+    <details><summary>ViT drops the CNN's inductive bias. When is that the right call?</summary><p>When you have enough data that the constraint costs more than it saves. It is the same trade as a three-constant physical model against a three-hundred-parameter regression: the constrained model wins when data is scarce and its assumptions hold.</p></details>
+    <details><summary>Is compound scaling a similitude law?</summary><p>No. \(\alpha\beta^2\gamma^2\approx2\) is a compute budget and the exponents come from grid search, not from dimensional analysis. It has the shape of a scaling law and none of the derivation, which makes it easy to over-trust.</p></details>
+    <details><summary>U-Net is a V-cycle. What does that buy you, and what does it not?</summary><p>It explains the architecture completely: why coarsen, why skip, why the decoder needs the encoder's fine detail. It buys no convergence theory, because there is no residual to drive to zero and no system being solved.</p></details>
+    <details><summary>Which bridge in this chapter is on the weakest ground?</summary><p>Probably the inertia-ellipsoid reading of a Gaussian splat. The covariance genuinely is a symmetric positive-definite \(3\times3\) with an ellipsoid, but nothing about mass distribution predicts anything about how splats are fitted or rendered. It is a shared piece of geometry, not a shared mechanism &mdash; unlike §02, §03 and §10, where the equations themselves coincide.</p></details>
+    <details><summary>What would convince you this chapter's bridges are load-bearing rather than decorative?</summary><p>That they make predictions. The aliasing reading predicts that anti-aliased pooling improves shift-consistency, which it does. The diffusion reading predicts \(\sigma^2\) adds under repeated blur, which it does. The structure-tensor reading predicts corners are exactly where flow is recoverable, which is why trackers use them. A decorative analogy predicts nothing.</p></details>
+  </div>
+</section>
+
+<section id="next">
+  <div class="col">
+    <div class="sechead"><span class="secnum">16</span><h2>What this feeds</h2></div>
+    <hr class="rule-h">
+    <div class="tw">
+      <table>
+        <thead><tr><th>From this chapter</th><th>Where it is used next</th></tr></thead>
+        <tbody>
+          <tr><td>Convolution, receptive fields, pooling</td><td>Ch 09 spectrograms, which are images; Ch 12 graph convolution on irregular meshes</td></tr>
+          <tr><td>Patch tokenisation, ViT</td><td>Ch 10 vision&ndash;language models and image tokenisation</td></tr>
+          <tr><td>Diffusion and flow matching</td><td>Ch 10 cross-modal generation; Ch 20 bleeding-edge generative models</td></tr>
+          <tr><td>Pinhole geometry, stereo, SLAM</td><td>Ch 11 autonomous systems, where these become state estimation on a moving platform</td></tr>
+          <tr><td>Structure tensor, eigenvalue classification</td><td>Ch 11 and Ch 12, wherever a local symmetric operator has to be characterised</td></tr>
+          <tr><td>Separable and depthwise convolution</td><td>Ch 16 SIMD and GPU programming; Ch 17 inference cost</td></tr>
+          <tr><td>U-Net, multigrid structure</td><td>Ch 12 graph neural networks, where coarsening a mesh is the same operation</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note">
+      <div class="note-h"><span class="ic">i</span>Before you move on</div>
+      <p style="margin-bottom:0">
+        Do one thing: take any photograph, compute its Sobel gradients, and build the structure
+        tensor over a sliding window. Plot \(\lambda_2\) as an image. The bright spots are the
+        corners, and they will be exactly where you would have put tracking targets by eye. Then
+        blur the photograph twice, with \(\sigma=3\) and \(\sigma=4\), and confirm it matches a
+        single blur at \(\sigma=5\). Ten minutes, and both headline bridges become things you
+        have checked rather than read.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="col" id="provenance" style="scroll-margin-top:calc(env(safe-area-inset-top,0px) + 62px)">
+    <div class="sechead" style="margin-top:40px"><span class="secnum">A</span><h2>Provenance and changes</h2></div>
+    <hr class="rule-h">
+    <p>
+      A derivative work under Apache-2.0, which requires a statement of changes. Source
+      references link to the original files, pinned to commit <code>9850ee5</code>. This chapter
+      is compressed heavily &mdash; five source files reduced to the correspondences that are
+      exact &mdash; and &sect;13 is an explicit inventory of what was dropped.
+    </p>
+  </div>
+  <div class="tw">
+    <table>
+      <thead><tr><th>Section</th><th>Title</th><th>Source</th><th>Verdict</th><th>What changed</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">&sect;00</td><td>The bridge</td><td class="mono">&mdash;</td><td><span class="pv add">added</span></td><td>Mapping table is mine.</td></tr>
+        <tr><td class="mono">&sect;01</td><td>An image is a field</td><td class="mono">01</td><td><span class="pv ok">expanded</span></td><td>Sobel and Canny as in source. The reading of Sobel as a central-difference stencil, the rank-1 separability with its cost argument, and the Schmitt-trigger reading of hysteresis are <b>added</b>.</td></tr>
+        <tr><td class="mono">&sect;02</td><td>The structure tensor</td><td class="mono">01</td><td><span class="pv ok">expanded</span></td><td>Harris, Shi&ndash;Tomasi and the eigenvalue classification follow the source. The identification with a plane stress state, the Mohr's-circle formula for the principal values, the reading of \(\det\) and \(\operatorname{tr}\) as \(I_1,I_2\), and the lab are <b>added</b> and verified.</td></tr>
+        <tr><td class="mono">&sect;03</td><td>Blur is diffusion</td><td class="mono">01</td><td><span class="pv ok">expanded</span></td><td>Gaussian filtering and scale space as in source. The heat-equation identification with \(\sigma^2=2t\), the variance-addition rule, the error-function edge profile and the reading of scale space as a time axis are <b>added</b> and verified.</td></tr>
+        <tr><td class="mono">&sect;04</td><td>What Nyquist warned you about</td><td class="mono">02</td><td><span class="pv add">added</span></td><td>The source describes pooling and striding without mentioning aliasing. The sampling-theory reading, the fold-frequency formula, the lab and the note on anti-aliased networks are all <b>added</b>.</td></tr>
+        <tr><td class="mono">&sect;05</td><td>Learned filters</td><td class="mono">02</td><td><span class="pv corr">corrected</span></td><td>Architectures compressed drastically. The Toeplitz reading, the domain-of-dependence reading of receptive fields and the forward-Euler identity are <b>added</b>. <b>Corrected:</b> the source gives depthwise separable convolution as "approximately 9x cheaper" for a 3&times;3. The exact ratio is \(1/(1/k^2+1/C_{\text{out}})\), which is \(7.9\times\) at 64 output channels and \(8.7\times\) at 256; \(9\times\) is the asymptote, not the value.</td></tr>
+        <tr><td class="mono">&sect;06</td><td>U-Net is a V-cycle</td><td class="mono">03</td><td><span class="pv ok">expanded</span></td><td>U-Net and FPN as in source. The multigrid correspondence, term by term, is <b>added</b>.</td></tr>
+        <tr><td class="mono">&sect;07</td><td>A loss that yields</td><td class="mono">03</td><td><span class="pv corr">compressed</span></td><td>Detection machinery cut to a paragraph. The elastic&ndash;perfectly-plastic reading of smooth L1, and the incremental-solver reading of anchor offsets, are <b>added</b> and verified.</td></tr>
+        <tr><td class="mono">&sect;08</td><td>Patches, not pixels</td><td class="mono">04</td><td><span class="pv corr">compressed</span></td><td>ViT and Swin kept; DeiT, self-supervision and masked image modelling dropped. The constrained-versus-free modelling trade is <b>added</b>.</td></tr>
+        <tr><td class="mono">&sect;09</td><td>Generation as transport</td><td class="mono">04</td><td><span class="pv ok">expanded</span></td><td>Diffusion and flow matching as in source. The Lagrangian particle-tracking reading and the continuity-equation reading are <b>added</b>; so is the warning that the diffusion here acts on the density, not on the image. GANs, VAEs and StyleGAN dropped.</td></tr>
+        <tr><td class="mono">&sect;10</td><td>Motion is a material derivative</td><td class="mono">05</td><td><span class="pv ok">faithful</span></td><td>The source derives the flow constraint and states that Lucas&ndash;Kanade uses the structure tensor. Naming it the material derivative, the passive-scalar reading, and the condition-number reading of why trackers track corners are <b>added</b>.</td></tr>
+        <tr><td class="mono">&sect;11</td><td>Seeing in three dimensions</td><td class="mono">05</td><td><span class="pv corr">compressed</span></td><td>Pinhole, stereo, NeRF and splatting kept; SLAM, point clouds, depth estimation and pose estimation dropped. The Beer&ndash;Lambert identification and the inertia-ellipsoid reading of splat covariance are <b>added</b>.</td></tr>
+        <tr><td class="mono">&sect;12</td><td>Where it breaks</td><td class="mono">&mdash;</td><td><span class="pv add">added</span></td><td>Mine.</td></tr>
+        <tr><td class="mono">&sect;13</td><td>What is missing</td><td class="mono">&mdash;</td><td><span class="pv add">added</span></td><td>Mine.</td></tr>
+        <tr><td class="mono">&sect;14</td><td>Worked example</td><td class="mono">01</td><td><span class="pv add">added</span></td><td>Mine, built on the source's Harris material. Every number is checked.</td></tr>
+        <tr><td class="mono">&sect;15</td><td>Question bank</td><td class="mono">&mdash;</td><td><span class="pv add">added</span></td><td>Mine, in the three tiers agreed at Ch 05.</td></tr>
+        <tr><td class="mono">&sect;16</td><td>What this feeds</td><td class="mono">&mdash;</td><td><span class="pv add">added</span></td><td>Mine.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p class="endnote">
+      Figures marked <i>from the compendium</i> are reproduced unmodified from the source
+      repository's <code>images/</code> directory. All numeric claims are checked independently
+      in <code>study-companion/verify_claims.py</code> under the <code>[Ch08 &hellip;]</code>
+      tags: Sobel separability, the structure tensor against the Mohr's-circle formula, the
+      invariant identities, the Harris and Shi&ndash;Tomasi responses, Gaussian blur against an
+      explicit heat-equation solver and against the error-function profile, the
+      \(\sigma^2=2t\) relation, the aliasing fold frequency, convolution against an explicit
+      Toeplitz matrix, the ResNet&ndash;Euler identity, the smooth-L1 gradient bound, the
+      Beer&ndash;Lambert transmittance recurrence, and the separable-convolution cost ratio.
+      Research findings and figures that go stale &mdash; benchmark numbers, model sizes
+      &mdash; are reported as of the source rather than asserted as current.
+    </p>
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  var root=document.documentElement;
+  function dk(){var t=root.getAttribute('data-theme');
+    return t?t==='dark':(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);}
+  try{var sv=localStorage.getItem('ch08-theme'); if(sv==='dark'||sv==='light') root.setAttribute('data-theme',sv);}catch(e){}
+  var tb=document.getElementById('themebtn');
+  if(tb) tb.addEventListener('click',function(){var n=dk()?'light':'dark';
+    root.setAttribute('data-theme',n); try{localStorage.setItem('ch08-theme',n);}catch(e){}});
+  function $(id){return document.getElementById(id);}
+  function fmt(n,d){d=d===undefined?3:d; return (Math.abs(n)<5e-7?0:n).toFixed(d);}
+
+  /* ---------- predict panels ---------- */
+  function wire(box,key,right,txt){
+    var b=$(box); if(!b) return;
+    b.querySelectorAll('.pbtn').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        b.querySelectorAll('.pbtn').forEach(function(o){o.classList.remove('picked');});
+        btn.classList.add('picked');
+        var v=btn.getAttribute('data-'+key), pv=$('pv'+key.slice(-1));
+        pv.innerHTML=(v===right?'<b>Correct.</b> ':'<b>Not quite.</b> ')+txt;
+        pv.classList.add('show');
+      });
+    });
+  }
+  wire('pred1','p1','b','One large, one near zero &mdash; a uniaxial state. All the intensity '+
+    'variation is across the edge and none along it, so Mohr’s circle passes through the '+
+    'origin. Click the Edge preset and watch the smaller principal value sit at exactly zero.');
+  wire('pred2','p2','b','An error function. Diffusing a step gives '+
+    '½(1 + erf(x/σ√2)), the same profile as a suddenly-heated half-space. '+
+    'Drag the slider and watch the two independently-computed curves stay on top of each other.');
+  wire('pred3','p3','b','Coarse stripes that were never in the scene. Detail above the Nyquist '+
+    'limit folds down to a lower frequency, and no later stage can undo it. Push the slider past '+
+    '0.25 and watch the orange reconstruction detach from the blue original.');
+
+  /* ---------- lab 1: structure tensor / Mohr's circle ---------- */
+  var P=[], N5=5;
+  function presetFlat(){P=[];for(var i=0;i<N5;i++){P.push([]);for(var j=0;j<N5;j++)P[i].push(1);}}
+  function presetEdge(){P=[];for(var i=0;i<N5;i++){P.push([]);for(var j=0;j<N5;j++)P[i].push(j>=2?1:0);}}
+  function presetDiag(){P=[];for(var i=0;i<N5;i++){P.push([]);for(var j=0;j<N5;j++)P[i].push((i+j)>=4?1:0);}}
+  function presetCorner(){P=[];for(var i=0;i<N5;i++){P.push([]);for(var j=0;j<N5;j++)P[i].push((i<3&&j<3)?1:0);}}
+  var SX=[[-1,0,1],[-2,0,2],[-1,0,1]], SY=[[-1,-2,-1],[0,0,0],[1,2,1]];
+  function tensor(){
+    var a=0,b=0,c=0;
+    for(var i=1;i<N5-1;i++) for(var j=1;j<N5-1;j++){
+      var gx=0,gy=0;
+      for(var m=-1;m<=1;m++) for(var n=-1;n<=1;n++){
+        gx+=SX[m+1][n+1]*P[i+m][j+n];
+        gy+=SY[m+1][n+1]*P[i+m][j+n];
+      }
+      a+=gx*gx; b+=gy*gy; c+=gx*gy;
+    }
+    return [a,b,c];
+  }
+  function drawST(){
+    if(!$('stSvg')) return;
+    var t=tensor(), a=t[0], b=t[1], c=t[2];
+    var centre=(a+b)/2, radius=Math.sqrt(Math.pow((a-b)/2,2)+c*c);
+    var l1=centre-radius, l2=centre+radius;
+    var tr=a+b, det=a*b-c*c, R=det-0.05*tr*tr;
+    /* patch */
+    var s='',cell=30,ox=22,oy=72;
+    for(var i=0;i<N5;i++) for(var j=0;j<N5;j++){
+      var v=P[i][j], col=v?'#FFFFFF':'#1b1b1b';
+      s+='<rect class="px" x="'+(ox+j*cell)+'" y="'+(oy+i*cell)+'" width="'+cell+'" height="'+cell+
+         '" fill="'+col+'" data-i="'+i+'" data-j="'+j+'" style="cursor:pointer"/>';
+    }
+    s+='<rect class="patchsel" x="'+(ox+cell)+'" y="'+(oy+cell)+'" width="'+(cell*3)+'" height="'+(cell*3)+'"/>';
+    s+='<text class="al" x="'+ox+'" y="'+(oy-12)+'">5x5 patch &mdash; click to toggle</text>';
+    s+='<text class="tk" x="'+ox+'" y="'+(oy+cell*5+18)+'">amber box = the 9 Sobel positions</text>';
+    /* Mohr */
+    var cx=428, cy=150, span=Math.max(centre+radius,1), sc=168/span;
+    var px=function(v){return cx+(v-centre)*sc;};
+    s+='<line class="axl" x1="'+(cx-190)+'" y1="'+cy+'" x2="'+(cx+190)+'" y2="'+cy+'"/>';
+    s+='<text class="al" x="'+(cx+150)+'" y="'+(cy+20)+'">normal</text>';
+    s+='<line class="mline" x1="'+px(0)+'" y1="'+(cy-120)+'" x2="'+px(0)+'" y2="'+(cy+120)+'"/>';
+    s+='<text class="tk" x="'+(px(0)-6)+'" y="'+(cy+134)+'">0</text>';
+    if(radius*sc>0.4){
+      s+='<circle class="mcirc" cx="'+cx+'" cy="'+cy+'" r="'+(radius*sc)+'"/>';
+      s+='<circle class="mpt" cx="'+px(a)+'" cy="'+(cy-c*sc)+'" r="4.5"/>';
+      s+='<circle class="mpt" cx="'+px(b)+'" cy="'+(cy+c*sc)+'" r="4.5"/>';
+    }
+    s+='<circle class="mprin" cx="'+px(l1)+'" cy="'+cy+'" r="5"/>';
+    s+='<circle class="mprin" cx="'+px(l2)+'" cy="'+cy+'" r="5"/>';
+    s+='<text class="al" x="'+cx+'" y="'+(cy-radius*sc-14)+'" text-anchor="middle">Mohr circle of M</text>';
+    /* principal direction arrow on the patch */
+    var ang=0.5*Math.atan2(2*c,a-b);
+    if(radius>1e-9){
+      var pcx=ox+cell*2.5, pcy=oy+cell*2.5, L=40;
+      s+='<line class="evec" x1="'+(pcx-Math.cos(ang)*L)+'" y1="'+(pcy+Math.sin(ang)*L)+
+         '" x2="'+(pcx+Math.cos(ang)*L)+'" y2="'+(pcy-Math.sin(ang)*L)+'"/>';
+    }
+    $('stPatch').innerHTML=s; $('stMohr').innerHTML='';
+    $('stL').textContent=fmt(l1,1)+' , '+fmt(l2,1);
+    $('stTr').textContent=fmt(tr,1);
+    $('stDet').textContent=fmt(det,1);
+    $('stR').textContent=fmt(R,1);
+    var big=Math.max(l1,l2), small=Math.min(l1,l2), v;
+    if(big<1e-6) v='flat';
+    else if(small<0.08*big) v='edge';
+    else v='corner';
+    $('stV').textContent=v;
+    var svg=$('stSvg');
+    svg.querySelectorAll('rect[data-i]').forEach(function(r){
+      r.addEventListener('click',function(){
+        var i=+r.getAttribute('data-i'), j=+r.getAttribute('data-j');
+        P[i][j]=P[i][j]?0:1; drawST();
+      });
+    });
+  }
+  if($('stSvg')){
+    $('stFlat').addEventListener('click',function(){presetFlat();drawST();});
+    $('stEdge').addEventListener('click',function(){presetEdge();drawST();});
+    $('stDiag').addEventListener('click',function(){presetDiag();drawST();});
+    $('stCorner').addEventListener('click',function(){presetCorner();drawST();});
+    presetCorner(); drawST();
+  }
+
+  /* ---------- lab 2: blur is diffusion ---------- */
+  var NX=161, MID=80;
+  function step0(){var a=[];for(var i=0;i<NX;i++)a.push(i>MID?1:(i<MID?0:0.5));return a;}
+  function heat(t){
+    var I=step0(), dt=0.25, ns=Math.round(t/dt), J;
+    for(var k=0;k<ns;k++){
+      J=I.slice();
+      for(var i=1;i<NX-1;i++) J[i]=I[i]+dt*(I[i+1]-2*I[i]+I[i-1]);
+      I=J;
+    }
+    return I;
+  }
+  function gauss(t){
+    var sg=Math.sqrt(2*t); if(sg<1e-6) return step0();
+    var rad=Math.max(1,Math.ceil(4*sg)), k=[],sum=0,i,j;
+    for(i=-rad;i<=rad;i++){var w=Math.exp(-i*i/(2*sg*sg));k.push(w);sum+=w;}
+    for(i=0;i<k.length;i++)k[i]/=sum;
+    var I0=step0(), out=[];
+    for(i=0;i<NX;i++){
+      var acc=0;
+      for(j=-rad;j<=rad;j++){
+        var idx=i+j; if(idx<0)idx=0; if(idx>NX-1)idx=NX-1;
+        acc+=I0[idx]*k[j+rad];
+      }
+      out.push(acc);
+    }
+    return out;
+  }
+  function drawDF(){
+    if(!$('dfSvg')) return;
+    var t=+$('tSl').value/10, H=heat(t), G=gauss(t), I0=step0();
+    var x0=40,x1=610,y0=36,y1=228;
+    function PX(i){return x0+(i/(NX-1))*(x1-x0);}
+    function PY(v){return y1-v*(y1-y0);}
+    function path(A){var d='';for(var i=0;i<NX;i++)d+=(i?'L':'M')+PX(i).toFixed(1)+' '+PY(A[i]).toFixed(1)+' ';return d;}
+    var s='<line class="axl" x1="'+x0+'" y1="'+y1+'" x2="'+x1+'" y2="'+y1+'"/>';
+    s+='<path class="pf0" d="'+path(I0)+'"/>';
+    s+='<path class="pfheat" d="'+path(H)+'"/>';
+    s+='<path class="pfgauss" d="'+path(G)+'"/>';
+    s+='<text class="tk" x="'+x0+'" y="'+(y1+18)+'">position across the edge</text>';
+    $('dfPlot').innerHTML=s;
+    $('dfLegend').innerHTML=
+      '<line class="pf0" x1="360" y1="20" x2="386" y2="20"/><text class="lgd" x="392" y="24">original step</text>'+
+      '<line class="pfheat" x1="470" y1="20" x2="496" y2="20"/><text class="lgd" x="502" y="24">heat equation</text>'+
+      '<line class="pfgauss" x1="40" y1="20" x2="66" y2="20"/><text class="lgd" x="72" y="24">Gaussian blur</text>';
+    var mx=0; for(var i=0;i<NX;i++) mx=Math.max(mx,Math.abs(H[i]-G[i]));
+    var sg=Math.sqrt(2*t);
+    $('dfT').textContent=fmt(t,2);
+    $('dfS').textContent=fmt(sg,4);
+    $('dfV').textContent=fmt(sg*sg,3)+' / '+fmt(2*t,3);
+    $('dfE').textContent=fmt(mx,5);
+  }
+  if($('tSl')){ $('tSl').addEventListener('input',drawDF); drawDF(); }
+
+  /* ---------- lab 3: aliasing ---------- */
+  var AA=false;
+  function drawAL(){
+    if(!$('alSvg')) return;
+    var f=+$('fSl').value/100, fs=0.5, nyq=0.25;
+    var amp=1.0;
+    if(AA){ var sg=0.8/ (2*Math.PI*nyq); amp=Math.exp(-2*Math.PI*Math.PI*sg*sg*f*f); }
+    var alias=Math.abs(f-fs*Math.round(f/fs));
+    var x0=40,x1=610,y0=40,y1=230,mid=(y0+y1)/2, L=64;
+    function PX(u){return x0+(u/L)*(x1-x0);}
+    function PY(v){return mid-v*((y1-y0)/2)*0.88;}
+    var s='<line class="axl" x1="'+x0+'" y1="'+mid+'" x2="'+x1+'" y2="'+mid+'"/>';
+    var d='';
+    for(var u=0;u<=L;u+=0.25) d+=(u?'L':'M')+PX(u).toFixed(1)+' '+PY(amp*Math.cos(2*Math.PI*f*u)).toFixed(1)+' ';
+    s+='<path class="truef" d="'+d+'"/>';
+    var sgn=(f-fs*Math.round(f/fs))<0?-1:1, d2='';
+    for(u=0;u<=L;u+=0.25) d2+=(u?'L':'M')+PX(u).toFixed(1)+' '+PY(amp*Math.cos(2*Math.PI*alias*u*1)).toFixed(1)+' ';
+    s+='<path class="recon" d="'+d2+'"/>';
+    for(u=0;u<=L;u+=2){
+      s+='<circle class="samp" cx="'+PX(u).toFixed(1)+'" cy="'+PY(amp*Math.cos(2*Math.PI*f*u)).toFixed(1)+'" r="3.6"/>';
+    }
+    s+='<text class="tk" x="'+x0+'" y="'+(y1+22)+'">every 2nd pixel is kept (dots)</text>';
+    $('alPlot').innerHTML=s;
+    $('alLegend').innerHTML=
+      '<line class="truef" x1="40" y1="20" x2="66" y2="20"/><text class="lgd" x="72" y="24">true pattern</text>'+
+      '<line class="recon" x1="180" y1="20" x2="206" y2="20"/><text class="lgd" x="212" y="24">what the samples imply</text>';
+    $('alF').textContent=fmt(f,3);
+    $('alA').textContent=fmt(alias,3);
+    $('alS').innerHTML = AA ? 'filtered, amp '+fmt(amp,2)
+                            : (f>nyq ? '<b style="color:var(--brk)">ALIASED</b>' : 'safe');
+  }
+  if($('fSl')){
+    $('fSl').addEventListener('input',drawAL);
+    $('alBlur').addEventListener('click',function(){
+      AA=!AA; this.textContent='Anti-alias filter: '+(AA?'ON':'OFF'); drawAL();
+    });
+    drawAL();
+  }
+
+  /* ---------- rail ---------- */
+  (function(){
+    var links=Array.prototype.slice.call(document.querySelectorAll('.rail a'));
+    if(!links.length||!window.IntersectionObserver) return;
+    var map={}; links.forEach(function(a){map[a.getAttribute('href').slice(1)]=a;});
+    var seen={};
+    var io=new IntersectionObserver(function(es){
+      es.forEach(function(e){seen[e.target.id]=e.isIntersecting;});
+      var ids=Object.keys(map),act=null;
+      for(var i=0;i<ids.length;i++) if(seen[ids[i]]){act=ids[i];break;}
+      if(!act) return;
+      links.forEach(function(a){a.classList.toggle('on',a===map[act]);});
+    },{rootMargin:'-70px 0px -65% 0px',threshold:0});
+    Object.keys(map).forEach(function(id){var el=document.getElementById(id); if(el) io.observe(el);});
+  })();
+})();
+</script>
+<script>
+/* Safety net: if the MathJax bundle cannot be reached, degrade the TeX to
+   readable Unicode instead of leaving raw backslash markup on the page. */
+(function () {
+  'use strict';
+  var GREEK = { theta:'θ', sigma:'σ', delta:'δ', mu:'μ', pi:'π',
+                infty:'∞', alpha:'α', beta:'β', lambda:'λ' };
+  var SUB = { '1':'₁','2':'₂','3':'₃','i':'ᵢ','j':'ⱼ','n':'ₙ','p':'ₚ','x':'ₓ','y':'ᵧ' };
+  var SUP = { '2':'²','3':'³','n':'ⁿ','p':'ᵖ','*':'*' };
+
+  function degrade(t) {
+    t = t.replace(/\$\$/g, '').replace(/\\[()[\]]/g, '');
+    t = t.replace(/\\(?:left|right|textstyle|displaystyle|!|,|;|:)/g, '');
+    t = t.replace(/\\q?quad/g, ' ');
+    t = t.replace(/\\mathbb\{R\}/g, 'ℝ').replace(/\\mathbb\{Z\}/g, 'ℤ')
+         .replace(/\\mathbb\{N\}/g, 'ℕ').replace(/\\mathbb\{Q\}/g, 'ℚ');
+    t = t.replace(/\\(?:mathbf|mathrm|text|textbf|operatorname)\{([^{}]*)\}/g, '$1');
+    t = t.replace(/\\hat\{([^{}]*)\}/g, '$1̂').replace(/\\bar\{([^{}]*)\}/g, '$1̄');
+    t = t.replace(/\\sqrt\{([^{}]*)\}/g, '√($1)');
+    t = t.replace(/\\t?frac\{([^{}]*)\}\{([^{}]*)\}/g, '($1)/($2)');
+    t = t.replace(/\\binom\{([^{}]*)\}\{([^{}]*)\}/g, 'C($1,$2)');
+    t = t.replace(/\\([a-zA-Z]+)/g, function (m, w) {
+      if (GREEK[w]) return GREEK[w];
+      switch (w) {
+        case 'cdot': return '·';
+        case 'times': return '×';
+        case 'le': case 'leq': return '≤';
+        case 'ge': case 'geq': return '≥';
+        case 'neq': return '≠';
+        case 'approx': return '≈';
+        case 'in': return '∈';
+        case 'pm': return '±';
+        case 'to': case 'rightarrow': return '→';
+        case 'Rightarrow': return '⇒';
+        case 'iff': return '⇔';
+        case 'parallel': return '∥';
+        case 'perp': return '⊥';
+        case 'sum': return 'Σ';
+        case 'langle': return '⟨';
+        case 'rangle': return '⟩';
+        case 'wedge': return '∧';
+        case 'ast': return '*';
+        case 'cdots': case 'ldots': case 'dots': return '…';
+        case 'max': case 'min': case 'cos': case 'sin': case 'log': case 'exp': return w;
+        default: return w;
+      }
+    });
+    t = t.replace(/\\\|/g, '‖').replace(/\|\|/g, '‖');
+    t = t.replace(/_\{?([0-9ijnpxy])\}?/g, function (m, c) { return SUB[c] || ('_' + c); });
+    t = t.replace(/\^\{?([23np*])\}?/g, function (m, c) { return SUP[c] || ('^' + c); });
+    t = t.replace(/[{}]/g, '');
+    return t.replace(/[ \t]{2,}/g, ' ');
+  }
+
+  function run() {
+    if (window.MathJax && window.MathJax.startup && window.MathJax.startup.document) return;
+    var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+      acceptNode: function (n) {
+        if (!n.nodeValue || n.nodeValue.indexOf('\\') < 0 && n.nodeValue.indexOf('$$') < 0)
+          return NodeFilter.FILTER_REJECT;
+        var p = n.parentNode;
+        while (p && p !== document.body) {
+          var tag = p.nodeName;
+          if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'CODE' || tag === 'PRE')
+            return NodeFilter.FILTER_REJECT;
+          p = p.parentNode;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    var hits = [], n;
+    while ((n = walker.nextNode())) hits.push(n);
+    hits.forEach(function (node) { node.nodeValue = degrade(node.nodeValue); });
+    document.querySelectorAll('.mathbox').forEach(function (el) {
+      el.style.fontFamily = "'IBM Plex Mono', monospace";
+      el.style.fontSize = '15px';
+      el.style.textAlign = 'center';
+      el.style.padding = '10px 0';
+    });
+  }
+  setTimeout(run, 6000);
+})();
+</script>
+
+<script>
+/* Long display equations can be wider than their container - especially inside a
+   callout box, which is narrower than the main column. After the typesetter
+   finishes, measure each one and shrink it just enough to fit. Only ever shrinks,
+   never grows, and never below a readable floor - so the worst case is the
+   scrollbar we already had. */
+(function () {
+  'use strict';
+  var MIN_SCALE = 0.70;   /* below this, scrolling beats illegible text */
+
+  function fitOne(box) {
+    try {
+      var c = box.querySelector('mjx-container[display="true"]');
+      if (!c) return;
+      var svg = c.querySelector('svg');
+      if (!svg) return;
+      c.style.fontSize = '';
+      var avail = box.clientWidth;
+      if (!avail) return;
+      var w = svg.getBoundingClientRect().width;
+      if (!w || w <= avail) return;
+      var k = Math.max(MIN_SCALE, (avail / w) * 0.98);
+      c.style.fontSize = (k * 100).toFixed(1) + '%';
+      var w2 = svg.getBoundingClientRect().width;      /* one refinement pass */
+      if (w2 > avail) {
+        k = Math.max(MIN_SCALE, k * (avail / w2) * 0.98);
+        c.style.fontSize = (k * 100).toFixed(1) + '%';
+      }
+    } catch (e) { /* leave the equation exactly as it was */ }
+  }
+
+  /* Inline math cannot wrap and is not inside a scrollable .mathbox, so a long
+     inline expression pushes the whole page sideways.  Shrink any that is wider
+     than the text column it sits in; the ex-based sizing keeps the baseline. */
+  function fitInline(c) {
+    try {
+      var svg = c.querySelector('svg'); if (!svg) return;
+      c.style.fontSize = '';
+      var host = c.parentElement; if (!host) return;
+      var avail = host.clientWidth; if (!avail) return;
+      var w = svg.getBoundingClientRect().width;
+      if (!w || w <= avail) return;
+      c.style.fontSize = (Math.max(MIN_SCALE, (avail / w) * 0.98) * 100).toFixed(1) + '%';
+    } catch (e) { /* leave the expression exactly as it was */ }
+  }
+
+  function fitAll() {
+    try { document.querySelectorAll('.mathbox').forEach(fitOne); } catch (e) {}
+    try {
+      document.querySelectorAll('mjx-container:not([display="true"])').forEach(fitInline);
+    } catch (e) {}
+  }
+
+  function start() {
+    fitAll();
+    var t;
+    window.addEventListener('resize', function () {
+      clearTimeout(t); t = setTimeout(fitAll, 160);
+    });
+  }
+
+  function waitForTypesetter(n) {
+    if (window.MathJax && window.MathJax.startup && window.MathJax.startup.promise) {
+      window.MathJax.startup.promise.then(start, start);
+      return;
+    }
+    if (n > 60) return;            /* typesetter never arrived - nothing to fit */
+    setTimeout(function () { waitForTypesetter(n + 1); }, 200);
+  }
+  waitForTypesetter(0);
+})();
+</script>
