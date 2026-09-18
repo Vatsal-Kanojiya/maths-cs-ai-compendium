@@ -5,7 +5,8 @@ minutes instead of re-deriving decisions already made.
 
 ## State
 
-Branch `claude/blissful-euler-0c6xih`, latest commit carries sheets 1–8 of 20.
+Branch `claude/blissful-euler-0c6xih`, latest commit `b15ab83` carries sheets 1–10 of 20.
+**All ten are published.** Working tree clean, local matches remote.
 
 | # | Chapter | Folder | Published |
 |---|---------|--------|-----------|
@@ -15,14 +16,31 @@ Branch `claude/blissful-euler-0c6xih`, latest commit carries sheets 1–8 of 20.
 | 04 | Statistics | `ch04-statistics/` | https://claude.ai/artifact/XWetUvsAH8Mw25LRxecCKU |
 | 05 | Probability | `ch05-probability/` | https://claude.ai/artifact/DDbGs67DwJPTwCYWFyTUMW |
 | 06 | Machine Learning | `ch06-machine-learning/` | https://claude.ai/artifact/AazU1pknayKewgpJQhzo3Z |
-| 07 | Computational Linguistics | `ch07-computational-linguistics/` | *not yet published* |
-| 08 | Computer Vision | `ch08-computer-vision/` | *not yet published* |
+| 07 | Computational Linguistics | `ch07-computational-linguistics/` | https://claude.ai/artifact/G4qe4sW6y1Av9kVibTq11R |
+| 08 | Computer Vision | `ch08-computer-vision/` | https://claude.ai/artifact/YGYUxoUzmFo2R2W5fb7PP7 |
+| 09 | Audio and Speech | `ch09-audio-speech/` | https://claude.ai/artifact/UeVoa1oWJcZJL8KMsbbLHq |
+| 10 | Multimodal Learning | `ch10-multimodal/` | https://claude.ai/artifact/VVW3i2z1z8dxCEUsvupMAW |
 
-Next up: **Chapter 09 — Audio and Speech**, which the bridge bank calls the strongest chapter
-in the series for this reader.
+`verify_claims.py` stands at **277 checks, 0 failures**, covering chapters 01–10. Run it first
+in any new session — it is the fastest way to confirm nothing has rotted.
 
-Chapters 07 and 08 are written, probed and verified but **not published** — the artifact links
-are the only thing outstanding. Publish them and fill the rows in, here and in `README.md`.
+Next up: **Chapter 11 — Autonomous Systems**. Source is `chapter 11 - autonomous systems/`.
+The bridge bank calls it mostly mechanical already, and chapters 09 and 10 both left explicit
+forward pointers to it (Kalman filtering and state estimation, which Chapter 10 §01 set up by
+spending a break box on what learned fusion *lacks* relative to a Kalman filter). Expect one
+run unless the source turns out to be over ~2,000 lines.
+
+### Session hygiene that matters
+
+- **Artifact watch limit.** A session can hold at most 10 artifact wake-subscriptions. This
+  session hit the cap, so Chapter 10 is published but unwatched. Harmless, but do not claim
+  a chapter is being watched without checking the publish result.
+- **Container restarts wipe the filesystem but not the branch.** This happened twice. Both
+  times the local clone still had the commits and the remote matched; the only casualty was
+  the remote-tracking ref, which `git fetch origin <branch>` restores. Push after every
+  chapter and nothing is ever at risk.
+- **Background http-servers do not survive a restart** and do not need to be restarted unless
+  you are mid-probe.
 
 ## The reader
 
@@ -146,14 +164,39 @@ multigrid V-cycle**, **the optical-flow constraint is the material derivative**,
 transmittance is Beer–Lambert**. Lesson for the remaining chapters: the bank is a floor, not a
 ceiling — read the source before trusting it.
 
-**09 Audio and speech.** The strongest chapter for this reader. FFT, sampling, Nyquist,
-spectrograms and windowing *are* machinery vibration analysis: order tracking, envelope
-analysis for bearing faults, accelerometer FFTs. Only the mel scale is new.
+**09 Audio and speech.** ~~FFT, sampling, Nyquist, spectrograms and windowing *are* machinery
+vibration analysis. Only the mel scale is new.~~ **Written.** The bank was right, and for once
+it was right about the *scale* of the thing: most of the bridge table reads "identical
+operation" rather than "analogous", which had not happened before. Accelerometer FFT and
+magnitude spectrum are the same transform; a Hanning window on a vibration spectrum is a Hann
+window before an FFT for the same reason; a waterfall plot **is** a spectrogram; order tracking
+and pitch detection are the same method with the same octave-error failure. Added beyond the
+bank: **streaming is causal filtering** (a unidirectional encoder is a causal filter, a
+bidirectional one is not, and `filtfilt` cannot run on a live signal for the same reason
+bidirectional models cannot stream); **RTF < 1** is the control-loop deadline; **statistics
+pooling is an overall-level reading**; **beamforming is a phased array** with the √M array gain;
+**MVDR is a Lagrange-multiplier problem** with a closed form; **the LMS filter is live gradient
+descent**. The two things that genuinely do not transfer: perceptual weighting (mel, log, phase
+discard — all facts about a listener, and a bearing has no cochlea) and the alignment problem.
 
-**10 Multimodal.** Fusion ↔ sensor fusion; Kalman filtering of accelerometer plus gyro.
+**10 Multimodal.** ~~Fusion ↔ sensor fusion; Kalman filtering of accelerometer plus gyro.~~
+**Written.** The bank's one line was correct and was not the interesting part. Early/middle/late
+fusion **are** raw-data/feature/decision-level fusion — the same taxonomy arrived at twice — but
+the chapter's spine turned out to be what is *missing*: no observation model, no noise
+covariance, no innovation to monitor, no observability test. Structures transfer completely;
+guarantees do not. Added beyond the bank: **residual quantisation is a SAR converter**
+(the headline, below); **codebook quantisation is Ch06 k-means and Ch09 amplitude quantisation
+at once**; **codebook collapse is Ch07 MoE load balancing**; **classifier-free guidance is
+successive over-relaxation** with a negative weight on the unconditional branch; **FID is a
+centroid and a second moment**; **Flamingo's zero-initialised gate is a bumpless transfer**;
+**token compression is static condensation**; **staged training is a commissioning sequence**.
 
 **11 Autonomous systems.** Mostly mechanical already: DH matrices (Ch02 §06), the
-manipulator Jacobian (Ch02 §03, Ch03 §03), control loops, state estimation.
+manipulator Jacobian (Ch02 §03, Ch03 §03), control loops, state estimation. **Chapter 10 has
+already done half the setup**: its §01 break box enumerates exactly what a Kalman filter has
+that learned fusion lacks — `H`, `R`, the innovation, observability — so Chapter 11 can pick
+those up as things the reader has now been told twice they will meet properly here. Treat that
+as a promise already made to the reader.
 
 **12 Graph neural networks.** A finite element mesh **is** a graph, and the graph
 Laplacian is assembled exactly as a stiffness matrix is. Laplacian eigenvectors ↔ mode
@@ -195,6 +238,12 @@ as genuine surveys and mark them clearly as not derived from the compendium.
   rewritten. Verified with mkdocs 1.6.1: the build went from aborting to emitting 105 pages
   with no nav warnings. Not yet contributed upstream to `HenryNdubuaku/…`, which is a
   separate PR against a different repository.
+- **Two upstream SVGs were malformed XML and rendered as nothing.** Fixed on this branch at
+  Chapter 09: `ctc_alignment.svg` used `&mdash;` (an HTML entity XML does not define) and
+  `feature_store.svg` had a bare `<` in text content. All 263 SVGs in `images/` now parse.
+  Same upstream-PR caveat as the mkdocs fix above.
+- Chapter 10 is published but **not watched** — this session hit the 10-artifact
+  wake-subscription cap. Cosmetic; it only means no notification if someone republishes it.
 
 
 ## Browser probe — set this up before touching a chapter (added at Chapter 06)
@@ -291,6 +340,36 @@ What the probe must check, at widths 1180 / 900 / 700 / 480 / 390:
   **After repairing anything in the shared head block, grep the earlier chapters for the old
   rule and backport it**, then re-probe them. A one-line diff per chapter; the alternative is
   a series that drifts apart chapter by chapter.
+- **An SVG that is not well-formed XML renders as nothing at all.** SVG is XML, which
+  predefines only five entities. `&mdash;` inside a `<text>` element is an *undefined entity*,
+  the parse fails, and the browser draws a blank box — not a partial figure, nothing. A bare
+  `<` in text content (`(<5ms)`) fails the same way. Two of the compendium's 263 SVGs had this
+  (`ctc_alignment.svg`, `feature_store.svg`); both are fixed on this branch with numeric
+  references (`&#8212;`) and `&lt;`. **Before shipping a chapter, assert every SVG it uses
+  parses:** `python3 -c "import xml.dom.minidom as m; m.parse('f.svg')"` over the set. The probe
+  catches it too — `brokenImg` counts images where `naturalWidth === 0` — but only if you look.
+- **A lab's parameter range can produce a degenerate result that looks like success.** The
+  Chapter 10 residual-quantisation lab ran k-means with a 512-entry codebook over 260 sample
+  points, so every point got its own centroid and the reconstruction error read exactly
+  `0.0000`. That is not a great result, it is the absence of a result. **Sweep each slider to
+  both ends and ask whether the extreme values are still meaningful**, and where a lab fits
+  clusters, keep the codebook well below the sample count.
+- **Any softmax in a lab needs the log-sum-exp trick.** `exp(0.9/0.01)` overflows a float64
+  and yields `NaN`. Subtract the row maximum before exponentiating — it leaves the result
+  unchanged and is exactly why every real implementation does it. This bit both the Chapter 10
+  verification script and the lab that mirrors it.
+- **Splitting a chapter silently breaks cross-references.** Every `&sect;NN` written in an
+  early part points at a number that later parts shift. Chapter 09 renumbered the mel-scale
+  correction three times (§10 → §16 → §22); Chapter 10 merged two parts and moved seven
+  sections. **After any renumber, verify that every `&sect;NN` resolves to a section that
+  exists and says what the sentence claims** — parse the `secnum` spans into a map and print
+  each reference against its resolved title. Both chapters came out clean, but only because
+  the check was run; nothing else would have caught it.
+- **The provenance appendix is end-matter and gets dropped when a chapter is split.** Rule 4
+  says every chapter ends with Appendix A. Chapter 09 part 1 shipped without it because the
+  end-of-chapter material was deferred to a later part. If you split, either write the
+  appendix in part 1 covering part 1, or put an explicit note in the endnote saying it lands
+  with the final part — and then actually land it.
 - **Probe the whole series occasionally, not just the chapter you are writing.** The clipped
   labels above were invisible for three chapters because nobody re-ran the earlier pages. A
   sweep over every `ch0*/index.html` at 1180 and 390 catches this in about a minute:
@@ -369,3 +448,87 @@ One process note: the traps recorded after Chapter 07 — the `.paper` wrapper, 
 list — all held. Chapter 08 needed no layout rework at the probe stage beyond widening one
 diagram for legibility. The notes are worth keeping current; they paid for themselves in one
 chapter.
+
+## The Chapter 09 lesson worth generalising
+
+**The source can be wrong, and its own formula will usually prove it.** File 01 states that the
+mel scale "is the reason that musical semitones are equally spaced on a log-frequency axis".
+Computing octave widths from the formula the source itself gives, `m = 2595 log₁₀(1 + f/700)`,
+returns 241.6, 367.8, 499.0 and 608.2 mel — rising steadily, with the third octave 1.36× the
+second. If the claim were true these would be equal. Two different perceptual facts had been
+merged into one sentence: musical intervals are equal on a *log-frequency* axis, which is about
+pitch **ratios**, while the mel scale measures perceived pitch **distance** and is deliberately
+near-linear below about 700 Hz. **Where a claim is arithmetic, do the arithmetic.** A sentence
+that joins two true facts can still be false, and prose review will never catch it.
+
+**The verification test is as likely to be wrong as the page.** The Chapter 09 autocorrelation
+check failed three times before it was right: too few periods, then missing unbiased
+normalisation, then taking the global maximum instead of the first peak. That third failure
+landed on **twice the period** — which is precisely the octave error the page describes two
+sections earlier. The test now asserts both the naive wrong answer and the correct one, because
+reproducing the failure mode is worth more than hiding it. When a check fails, the first
+question is whether the test or the claim is wrong, and it is roughly even odds.
+
+**Upstream bugs show up as blank figures, not as errors.** See the SVG trap above. The only
+reason it was caught is that the probe counts broken images.
+
+## The Chapter 10 lesson worth generalising
+
+**The best result in the chapter came from a test that failed.** The source calls residual
+quantisation "analogous to successive approximation" and moves on. The check written to confirm
+that showed the error was *not* monotone: with a fixed-scale codebook it stalls at 82% of the
+original and then rises, because once the residual is smaller than the codebook vectors the
+nearest entry is farther away than zero. Fit each stage to its own residual and it falls
+geometrically — per-stage ratio 0.793 to 0.799, constant to 1%, so `log(error)` is linear in
+stage count. That is exactly why a SAR converter halves its test voltage every bit rather than
+using a fixed step.
+
+The generalisable form: **when a verification test fails on an analogy the source asserts, ask
+first whether the analogy carries an unstated condition** — not whether the code is buggy. A
+bridge that predicts a failure mode is load-bearing; one that only renames things is
+decoration. That is Chapter 08's own test, and this is the clearest instance of it so far.
+
+**Two test errors in one check, and the second would have shipped a false claim.** Measuring
+FID's finite-sample bias, the first suspicion was numerical (`sqrtm` of a non-symmetric
+product). Both the naive and the stable form agreed exactly, which ruled that out. The actual
+bug was mine: samples were generated with covariance `AAᵀ` while being compared against
+`AAᵀ + I`, so the apparent bias floor of 0.9 was simply the true FID between two genuinely
+different distributions. Had the first hypothesis been accepted, the page would have asserted
+that FID never converges — confidently, with a table. **When a measurement plateaus where
+theory says it should converge, check what you actually sampled from before blaming the
+metric.**
+
+**Cross-references are the tax on splitting.** See the trap above.
+
+## On splitting a chapter into parts
+
+Chapter 09 (3,250 source lines) was built in four runs and Chapter 10 (1,900) in two, against
+single-run chapters 06, 07 and 08. The user asked directly whether splitting hurt quality. It
+did not — measured:
+
+| | Ch06 (1 run) | Ch07 (1 run) | Ch08 (1 run) | Ch09 (4 runs) | Ch10 (2 runs) |
+|---|---|---|---|---|---|
+| words | 8,025 | 8,935 | 8,463 | **13,613** | 10,361 |
+| sections | 18 | 17 | 18 | **26** | 19 |
+| labs | 3 | 3 | 3 | **4** | 3 |
+| bridge + break boxes | 19 | 10 | 7 | **41** | 35 |
+| questions | 16 | 24 | 24 | 24 | 24 |
+
+Words per source line came out at 4.19 for Ch09 and 5.45 for Ch10, against 4.22 and 4.63 for
+the single-run chapters, so splitting did not pad — Ch10 is the shortest split chapter and
+still the second-densest in bridge boxes. What splitting bought was depth in exactly the
+dimension that carries this project's value, plus one probe cycle per part — which caught
+three lab bugs in Ch09 §06 and one in Ch10 §06 that a single pass would likely have missed.
+
+The costs are real and both are avoidable: the dropped provenance appendix and the
+cross-reference renumbering, both covered in the traps above. **Rule of thumb: split above
+~2,000 source lines, and write the part boundaries at a natural seam** — Ch09 split at
+signal → features → recognition → synthesis, Ch10 at representation → generation. Commit and
+push every part; never leave a part uncommitted at the end of a run.
+
+## What is actually left
+
+Chapters 11–20, of which 19 and 20 are outline stubs in the source (six files are empty) and
+may not be worth writing as chapters at all. That makes the real remaining work chapters
+11–18, eight sheets. The bridge bank above has a pre-worked entry for each; Chapters 08, 09
+and 10 all found their headline bridge *outside* the bank, so treat it as a floor.
