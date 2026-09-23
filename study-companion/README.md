@@ -48,7 +48,9 @@ merely structural, that is said plainly.
 | 10 | Multimodal Learning | [`ch10-multimodal/`](ch10-multimodal/index.html) | [Read online](https://claude.ai/artifact/VVW3i2z1z8dxCEUsvupMAW) |
 | 11 | Autonomous Systems | [`ch11-autonomous-systems/`](ch11-autonomous-systems/index.html) | [Read online](https://claude.ai/artifact/9xX3kBS2wW6MJT8keXAvQA) |
 | 12 | Graph Neural Networks | [`ch12-graph-neural-networks/`](ch12-graph-neural-networks/index.html) | [Read online](https://claude.ai/artifact/6PoKo8b3Hq3QzVQvRDJT8u) |
-| 13 | Computing and OS *(part 1 of 3)* | [`ch13-computing-os/`](ch13-computing-os/index.html) | [Read online](https://claude.ai/artifact/Cf6EDgFhPKoQduGnLRRxdV) |
+| 13 | Computing and OS *(pt 1: maths & architecture)* | [`ch13-computing-os/`](ch13-computing-os/index.html) | [Read online](https://claude.ai/artifact/Cf6EDgFhPKoQduGnLRRxdV) |
+| 13 | Computing and OS *(pt 2: OS & concurrency)* | [`ch13-computing-os-part2/`](ch13-computing-os-part2/index.html) | [Read online](https://claude.ai/artifact/Na2XhiZWm68g7Sb8u6wbpw) |
+| 13 | Computing and OS *(pt 3: languages + end matter)* | [`ch13-computing-os-part3/`](ch13-computing-os-part3/index.html) | [Read online](https://claude.ai/artifact/HL2a7m5wT1fxBiCp5LTFQj) |
 
 ## What's in a chapter page
 
@@ -86,7 +88,7 @@ chapters rely on the linked chips instead.
 ## Verification
 
 `verify_claims.py` checks the load-bearing mathematical claims across all thirteen chapters
-(422 checks, zero failures)
+(444 checks, zero failures)
 against independent computation rather than against anybody's memory — the von Mises and
 Tresca norm identities, the unit-change nearest-neighbour flip, the worked bracket example,
 the `1/sqrt(d)` concentration of cosine similarity, the inertia tensor eigenvalues, polar
@@ -109,8 +111,11 @@ holding for Jacobi and failing for Gauss-Seidel, and the `1+3+5` irreducible
 decomposition of the velocity gradient with Mohr's circle travelling at exactly `2*theta`;
 and -- for Chapter 13 -- pipeline efficiency against line-balancing efficiency, AMAT against
 the stockout expectation, De Morgan against the series/parallel reliability duality, the
-simple-truss induction invariant `m = 2j - 3`, bisection against binary search, and Belady's
-anomaly, where FIFO page replacement faults more with four frames than with three.
+simple-truss induction invariant `m = 2j - 3`, bisection against binary search, Belady's
+anomaly (FIFO page replacement faults more with four frames than with three), Amdahl's law
+against a two-station line, SPT's optimality for mean flow time, the time quantum's EOQ form
+`q* = sqrt(A/B)`, Little's law by simulation, and a dimension checker refusing to add a force
+to a length exactly as a compiler refuses to add an i32 to an f64.
 
 Several checks exist because they caught an error. The suite has overturned claims in the
 source material (what neighbour-averaging consensus converges to; whether four legs are

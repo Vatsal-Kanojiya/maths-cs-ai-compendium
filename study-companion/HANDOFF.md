@@ -5,8 +5,8 @@ minutes instead of re-deriving decisions already made.
 
 ## State
 
-Branch `claude/blissful-euler-0c6xih`, latest commit `2de42aa` carries sheets 1–12 plus
-**Chapter 13 part 1 of 3**. All are published. Working tree clean, local matches remote.
+Branch `claude/blissful-euler-0c6xih`, latest commit `39bd305` carries sheets 1–13 of 20,
+**Chapter 13 complete in three parts**. All are published. Working tree clean.
 
 | # | Chapter | Folder | Published |
 |---|---------|--------|-----------|
@@ -22,30 +22,34 @@ Branch `claude/blissful-euler-0c6xih`, latest commit `2de42aa` carries sheets 1�
 | 10 | Multimodal Learning | `ch10-multimodal/` | https://claude.ai/artifact/VVW3i2z1z8dxCEUsvupMAW |
 | 11 | Autonomous Systems | `ch11-autonomous-systems/` | https://claude.ai/artifact/9xX3kBS2wW6MJT8keXAvQA |
 | 12 | Graph Neural Networks | `ch12-graph-neural-networks/` | https://claude.ai/artifact/6PoKo8b3Hq3QzVQvRDJT8u |
-| 13 | Computing and OS **(part 1/3)** | `ch13-computing-os/` | https://claude.ai/artifact/Cf6EDgFhPKoQduGnLRRxdV |
+| 13 | Computing and OS **pt 1/3** | `ch13-computing-os/` | https://claude.ai/artifact/Cf6EDgFhPKoQduGnLRRxdV |
+| 13 | Computing and OS **pt 2/3** | `ch13-computing-os-part2/` | https://claude.ai/artifact/Na2XhiZWm68g7Sb8u6wbpw |
+| 13 | Computing and OS **pt 3/3** | `ch13-computing-os-part3/` | https://claude.ai/artifact/HL2a7m5wT1fxBiCp5LTFQj |
 
-`verify_claims.py` stands at **422 checks, 0 failures**, covering chapters 01–13 part 1. Run it first
+`verify_claims.py` stands at **444 checks, 0 failures**, covering chapters 01–13. Run it first
 in any new session — it is the fastest way to confirm nothing has rotted. It needs numpy and
 scipy, which a fresh container will not have: `pip install numpy scipy`.
 
-Next up: **Chapter 13 part 2 of 3 — Operating Systems and Concurrency**. Source is files
-`03. operating systems.md` (258 lines) and `04. concurrency and parallelism.md` (226 lines),
-484 lines total, one run.
+Next up: **Chapter 14 — Data Structures and Algorithms**. Source is
+`chapter 14 - data structures and algorithms/`, **2,695 lines across 6 files** — above the
+~2,000-line line, so **split it**, probably in two.
 
-**Part 1 made three explicit promises to part 2, in its §18.** Deliver them rather than
-starting cold:
+**Chapter 14 inherits two explicit promises from Chapter 13**, both stated on the page:
+- Part 1 §06 built recurrences and the Master Theorem, and showed **bisection IS binary
+  search** and that merge sort and the FFT share a recurrence. Part 3 §14 says Sheet 14 "takes
+  part 1 §06's recurrences and part 1 §09's complexity classes and does them properly". The
+  source itself says the same in Ch13 file 01: *"we will go deeper into graphs in the pure
+  computer science chapters"*.
+- Part 1 §09 established that the reader's industrial-engineering heuristics are heuristics
+  **because the problems are NP-hard** — line balancing is bin packing, a CNC drill path is
+  TSP. Chapter 14 is where the algorithms behind those heuristics live, so pick that up rather
+  than re-deriving it.
 
-- §05 defined a partial order and said incomparable tasks are *concurrent*; §18 states that
-  **a race condition is two operations with no precedence arrow between them and a shared
-  resource**. Pick that up for the synchronisation material.
-- §16 gave every process an isolated address space "without saying who enforces it".
-- §13 showed a pipeline is governed entirely by its bottleneck and §17 named the PCIe bus as
-  one. §18 promises **Amdahl's law is the theory of constraints written as an equation** —
-  that is the bridge bank's headline for this chapter and it lands in part 2.
-
-Then **part 3**: `05. programming languages.md` (273 lines) plus the chapter's worked example,
-24-question bank and concept map, which part 1 explicitly deferred. Part 1 carries its own
-provenance appendix, so parts 2 and 3 must each carry theirs.
+The bridge bank's Ch14 entry (trees ↔ bill-of-materials, graphs ↔ pipe networks and precedence
+diagrams) is thin and Sheet 12 already spent the graph material. Expect to find the real
+bridges elsewhere — sorting/searching against inspection and lookup procedures, amortised
+analysis against averaged changeover cost, and hashing against bin assignment are the obvious
+places to start looking.
 
 ### Session hygiene that matters
 
@@ -246,22 +250,32 @@ transform all go at once — Chapter 07's lesson in the same shape.
 
 **13 Computing and OS.** ~~Pipelining ↔ an assembly line. **Amdahl's law ↔ theory of
 constraints** and bottleneck analysis. Caching ↔ buffer stock and material staging.~~
-**Part 1 written** (files 01–02); Amdahl lands in part 2. The bank's three entries all held and
-all three were *stronger* than stated. Pipelining is not "like" an assembly line: cycle time,
-throughput, latency, efficiency, balance delay and bottleneck are the **same expressions**, and
-`speedup = Σt/max t = n × efficiency` holds on both sides. Caching is not "like" buffer stock:
-`AMAT = h·t_fast + (1−h)·t_slow` **is** the stockout expectation, and at a 95% hit rate the
-misses own 84% of the clock. Added beyond the bank, and the headline: **the industrial
-engineering syllabus is a catalogue of NP-hard problems and nobody said so** — line balancing is
-bin packing, a CNC drill path is TSP, job-shop scheduling and cutting stock are NP-hard, and the
-largest-candidate rule loses a station on 1.2% of instances. Also: **a fault tree IS a
-propositional formula** and the series/parallel reliability duality **is** De Morgan; **simple-truss
-construction is proof by induction** with `m = 2j−3` as the invariant; **bisection IS binary
-search**; merge sort and the FFT share a recurrence; **floating point is constant *relative*
-error** where a dial gauge is constant absolute, and catastrophic cancellation is why a strain
-gauge measures change directly; **interrupts are an andon cord**; **DMA is a conveyor**. Added
-beyond the source: **Bélády's anomaly**. Three source corrections, one of which is visible by
-running the source's own code.
+**Written, three parts.** All three bank entries held and all three were *stronger* than
+stated. Pipelining is not "like" an assembly line: cycle time, throughput, latency, efficiency,
+balance delay and bottleneck are the **same expressions**, and `speedup = Σt/max t = n ×
+efficiency` holds on both sides. Caching is not "like" buffer stock: `AMAT = h·t_fast +
+(1−h)·t_slow` **is** the stockout expectation. And Amdahl **is** the two-station line where one
+station cannot be split, checked to 1e-12.
+
+The headline was outside the bank: **the industrial engineering syllabus is a catalogue of
+NP-hard problems and nobody said so** — line balancing is bin packing, a CNC drill path is TSP,
+job-shop scheduling and cutting stock are NP-hard, and the largest-candidate rule loses a
+station on 1.2% of measured instances. Also added beyond the bank: **SJF IS the SPT dispatching
+rule** (its optimality verified exhaustively, and unusable in an OS because burst times are
+unknown and by pt 1 §08 not computable); **the time quantum is an EOQ** with `q* = sqrt(A/B)`
+and the same flat bottom; **a counting semaphore IS a kanban card count / CONWIP**; **a mutex
+is where Amdahl's serial fraction comes from** (a 1% critical section caps you at 100×);
+**lock ordering IS standard work**; **a fault tree IS a propositional formula** and the
+series/parallel reliability duality **is** De Morgan; **simple-truss construction is proof by
+induction** with `m = 2j−3` as the invariant; **bisection IS binary search**; **floating point
+is constant *relative* error** where a dial gauge is constant absolute; **a type IS a unit**
+and dimensional homogeneity **is** static type checking; **a JIT is a machinist making a jig
+mid-run**, break-even `n = C/Δs`; **LLVM IR is STEP/IGES**, `m+n` against `m×n`; **tracing GC
+is a stocktake** and **reference counting is a tally that cycles defeat**; **Rust's borrow
+checker is a read-write lock moved to compile time**; **interrupts are an andon cord**; **an
+event loop is the machine-interference problem**. Added that the source omits: **Bélády's
+anomaly** and **Little's law**. Four source corrections, one visible by running the source's
+own code.
 
 **14 Data structures and algorithms.** Big-O ↔ scaling laws. Trees ↔ bill-of-materials
 hierarchies. Graphs ↔ pipe networks and assembly precedence diagrams.
@@ -764,47 +778,59 @@ shapes, the graph Fourier transform and every variational argument go at once. T
 Chapter 07's lesson for the third time: **the bridge is exact right up to the point where the
 architecture becomes good, and then it ends.** Say it in the same breath as the bridge.
 
-## The Chapter 13 part 1 lesson worth generalising
+## The Chapter 13 lesson worth generalising
 
-**The best bridge in the sheet reframes something the reader already does, rather than
-explaining something new.** Every correspondence before this one said "your mechanics explains
-their maths". This one says: *the heuristics in your industrial engineering syllabus are
-heuristics because the exact problems are NP-hard, and nobody told you.* Line balancing is bin
-packing, a CNC drill path is TSP, job-shop scheduling and cutting stock are NP-hard. That does
-not teach the reader a new technique — it explains why the technique they were handed has the
-shape it has. **When a chapter can explain the reader's own training back to them, that beats
-any number of fresh identities**, and it is worth actively hunting for.
+**The best bridge reframes what the reader already does, rather than teaching something new.**
+Every correspondence before this chapter said "your mechanics explains their maths". Chapter 13
+part 1 said: *the heuristics in your industrial engineering syllabus are heuristics because the
+exact problems are NP-hard, and nobody told you.* That teaches no new technique — it explains
+why the technique they were handed has the shape it has. **When a chapter can explain the
+reader's own training back to them, that beats any number of fresh identities**, and it is
+worth hunting for deliberately.
 
-**The source's runnable code is the highest-yield check available, and this is the second
-chapter running where it was wrong.** Chapter 12's GIN coding task demonstrated the opposite of
-its caption. Chapter 13's floating-point task claims to show non-associativity with
-`a=1e8, b=1.0, c=-1e8` and the comment "should be 1.0"; run it and both groupings give `0.0`,
-because one ulp at 1e8 in float32 is 8 and the 1.0 is absorbed either way. **Run every coding
-task in the source files. It takes a minute per chapter and has now found a real error twice in
-a row.** Note the pattern in both: the *conclusion* was correct and the *demonstration* was
-broken, which is exactly the combination that survives review forever.
+**Run the source's code. It has now been wrong three chapters running.** Ch12's GIN task
+demonstrated the opposite of its caption. Ch13 file 02's floating-point task claims to show
+non-associativity with `a=1e8, b=1.0, c=-1e8` and the comment "should be 1.0"; both groupings
+give `0.0`, because one ulp at 1e8 in float32 is 8. In every case the *conclusion* was correct
+and the *demonstration* was broken — which is exactly the combination that survives review
+forever, because a reader who agrees with the conclusion never runs the code. It takes a minute
+per chapter and has found a real error three times.
 
-**"More X cannot hurt" is worth testing whenever it appears.** Bélády's anomaly — FIFO page
-replacement faulting *more* with four frames than with three — is not in the source, and it is
-the counterexample to a belief a manufacturing reader holds firmly about buffer stock. It took
-one twelve-element reference string to demonstrate. The generalisable move: **when a sheet is
-about to assert a monotonicity ("more cache is better", "more layers is better", "more members
-is stiffer"), compute it rather than assert it.** Chapter 12 found depth inverted; this one
-found capacity inverted.
+**Write the claim, then compute it — this chapter's two best results were failed assertions.**
+Part 1 §13 originally attributed the 2–4 layer GNN rule to μ₂; computing it showed the
+mechanism permits tens of layers on sparse graphs. Part 3 §11 was drafted to prove that fixing
+a bottleneck beats buying hardware; computed, at one GPU the hardware wins 1.74× against 1.18×.
+Both replacements were better than the intended claims. The second became the chapter's best
+result: **the constraint moves**. The 38 ms loader is 15% of the step at one GPU and 59% at
+eight *without changing at all*, the crossover is at n = 212/38 = 5.58, and the value of fixing
+it peaks at four GPUs. That is Goldratt's fifth focusing step, the one everyone forgets.
+**Generalise: when a sheet is about to repeat a maxim everyone agrees with, compute it. The
+interesting result is usually the condition under which it fails.**
 
-**Screenshots found four defects that five widths of structural checking did not.** The probe
-reported zero page scroll, zero wide equations, zero clipped labels, zero broken images and
-zero JS errors — while the page was rendering "50 µs" as "50 MS", overlaying a chart title on a
-bar label, and printing `(p₁∨p₂)` next to labels named `v₁` and `v₂` so the operator read as a
-letter. **The structural probe proves nothing is broken; only a screenshot shows whether
-anything is legible.** Budget one screenshot per lab, every time.
+**"More X cannot hurt" is worth testing whenever it appears.** Bélády's anomaly — FIFO faulting
+*more* with four frames than three — is not in the source and took one twelve-element reference
+string. Ch12 found depth inverted; Ch13 found capacity inverted. Same move, two chapters.
+
+**Screenshots found defects that five widths of structural checking reported as clean.** In
+part 1 the probe passed everything while the page rendered "50 µs" as "50 MS" (the micro sign
+is Greek and uppercases to Mu), overlaid a chart title on a bar label, and printed `(p₁∨p₂)`
+beside labels named `v₁`, `v₂` so the operator read as a letter. **The structural probe proves
+nothing is broken; only a screenshot shows whether anything is legible.** One screenshot per
+lab, every time.
+
+**Check the verifier's return code, not just its stdout.** A loop counter named `_it` clobbered
+the `itertools` alias and killed the script part-way through; counting `PASS` in stdout showed
+a plausible number with no failures, because the failing checks never ran. Invisible for three
+edits. `verify_claims.py` is now one long shared namespace across thirteen chapters, so short
+underscore names collide freely — prefix distinctly, and always print `returncode` and `stderr`.
 
 **A three-way split wants its seams at file boundaries and its promises written down.** Part 1
-is files 01–02, part 2 is 03–04, part 3 is 05 plus all end matter. Part 1's §18 states exactly
-what parts 2 and 3 owe the reader, and part 1 carries its own provenance appendix rather than
-deferring it — which is the Chapter 09 mistake these notes already record. **Write the
-forward-promise section as the last content section of every part**, so the next run has an
-explicit contract instead of a guess.
+was files 01–02, part 2 files 03–04, part 3 file 05 plus all end matter. Each part's last
+content section states exactly what the next one owes the reader, and each carries its own
+provenance appendix rather than deferring it — which is the Ch09 mistake these notes already
+record. **Write the forward-promise section as the last content section of every part**, so the
+next run has a contract instead of a guess. It worked: part 2 opened by paying three named
+debts, and part 3 closed the chapter with end matter that draws on all three.
 
 ## On splitting a chapter into parts
 
@@ -834,26 +860,12 @@ push every part; never leave a part uncommitted at the end of a run.
 
 ## What is actually left
 
-Chapters 13–20, of which 19 and 20 are outline stubs (20 and 21 lines respectively — five
-near-empty files each) and may not be worth writing as chapters at all. That makes the real
-remaining work chapters 13–18, six sheets. The bridge bank above has a pre-worked entry for
-each; Chapters 08, 09, 10, 11 **and 12** all found their headline bridge *outside* the bank, so
-treat it as a floor, not a plan. Chapter 12 went further and found the bank's single line for
-it was *wrong* (Gauss–Seidel), which became the chapter's best result.
-
-Source sizes, measured, so the split decision is already made:
-
-| # | Chapter | Source lines | Expect |
-|---|---------|--------------|--------|
-| ~~12~~ | ~~Graph neural networks~~ | ~~1,209~~ | **written, one run** |
-| ~~13~~ | ~~Computing and OS~~ | ~~1,243~~ | **part 1/3 written**; 2 and 3 remain |
-| 14 | Data structures and algorithms | 2,695 | **split** — above the ~2,000 line |
-| 15 | Production software engineering | 1,474 | one run |
-| 16 | SIMD and GPU programming | 3,722 | **split**, probably three parts |
-| 17 | AI inference | 1,276 | one run |
-| 18 | ML systems design | 1,278 | one run |
-| 19 | Applied AI | 20 | stub — five near-empty files |
-| 20 | Bleeding edge AI | 21 | stub — five near-empty files |
+Chapters 14–20, of which 19 and 20 are outline stubs (20 and 21 lines respectively) and may
+not be worth writing as chapters at all. That makes the real remaining work **chapters 14–18,
+five sheets**, of which two need splitting. The bridge bank has a pre-worked entry for each;
+Chapters 08 through 13 have all found their headline bridge *outside* the bank, and Ch12 and
+Ch13 both found bank entries that were plainly *wrong* (Gauss–Seidel; "pipelining is like an
+assembly line" undersold as a simile). Treat it as a floor, and check it.
 
 All of 13–20 are now measured, so every split decision is already made. Chapter 16 is the
 largest source in the series after Chapter 09 and will want three parts; Chapter 14 wants two.
