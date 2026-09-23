@@ -1,0 +1,1891 @@
+<title>Programming Languages</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(', '\\)']], displayMath: [['$$', '$$']], processEscapes: true },
+  svg: { fontCache: 'global', scale: 1.0 },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-svg.js" id="MathJax-script" async></script>
+
+<style>
+/* ============ TOKENS: light is complete and authoritative ============ */
+:root{
+  --ground:#F0F2F1;
+  --sheet:#FBFCFB;
+  --sheet-2:#F4F6F5;
+  --ink:#14181A;
+  --ink-2:#4E575B;
+  --ink-3:#77838A;
+  --rule:#D3DAD7;
+  --rule-strong:#A8B4B0;
+  --accent:#12507E;
+  --accent-ink:#0E4267;
+  --accent-soft:#E4EEF6;
+  --bridge:#1F8A4C;
+  --bridge-soft:#E4F2EA;
+  --brk:#A8500F;
+  --brk-soft:#FAEBDF;
+  --s1:#BF5B00;
+  --s2:#0F74C7;
+  --s3:#1F8A4C;
+  --paper:#FFFFFF;            /* pasted-drawing ground, both themes */
+  --paper-ink:#1b1b1b;
+  --shadow:0 1px 2px rgba(20,24,26,.06), 0 6px 18px rgba(20,24,26,.05);
+  --f-disp:'Archivo Narrow', 'Arial Narrow', Helvetica, sans-serif;
+  --f-body:'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --f-mono:'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+    --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+    --rule:#293134; --rule-strong:#3F494C;
+    --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+    --bridge:#35AC63; --bridge-soft:#11281B;
+    --brk:#E0913F; --brk-soft:#2E2012;
+    --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+  --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+  --rule:#293134; --rule-strong:#3F494C;
+  --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+  --bridge:#35AC63; --bridge-soft:#11281B;
+  --brk:#E0913F; --brk-soft:#2E2012;
+  --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:var(--f-body); font-size:17px; line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ============ TITLE BLOCK (engineering drawing header) ============ */
+.titleblock{
+  position:sticky; top:env(safe-area-inset-top,0px); z-index:40;
+  background:var(--sheet); border-bottom:1px solid var(--rule-strong);
+}
+.tb-in{
+  max-width:1240px; margin:0 auto; padding:0 16px;
+  display:flex; align-items:stretch; gap:0; min-height:46px;
+}
+.tb-cell{
+  display:flex; flex-direction:column; justify-content:center;
+  padding:5px 14px; border-right:1px solid var(--rule);
+  font-family:var(--f-disp);
+}
+.tb-cell:first-child{padding-left:0}
+.tb-cell:last-child{border-right:0; margin-left:auto; padding-right:0}
+.tb-k{
+  font-size:8.5px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); line-height:1.4;
+}
+.tb-v{font-size:13px; font-weight:700; letter-spacing:.02em; color:var(--ink); line-height:1.3}
+.tb-v.accent{color:var(--accent)}
+.tb-hide{display:none}
+@media (min-width:680px){ .tb-hide{display:flex} }
+
+.themebtn{
+  appearance:none; background:transparent; border:1px solid var(--rule-strong);
+  color:var(--ink-2); font-family:var(--f-disp); font-size:10px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:6px 10px; border-radius:2px;
+  cursor:pointer; align-self:center; white-space:nowrap;
+}
+.themebtn:hover{border-color:var(--accent); color:var(--accent)}
+.themebtn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+/* ============ SHELL ============ */
+.shell{max-width:1240px; margin:0 auto; padding:0 16px; padding-block:0 64px}
+@media (min-width:1080px){
+  .shell{display:grid; grid-template-columns:212px minmax(0,1fr); gap:44px; align-items:start}
+}
+.rail{display:none}
+@media (min-width:1080px){
+  .rail{
+    display:block; position:sticky; top:calc(env(safe-area-inset-top,0px) + 70px);
+    padding-block:28px; font-family:var(--f-disp); font-size:12.5px;
+  }
+}
+.rail-h{
+  font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-3);
+  padding-bottom:8px; border-bottom:1px solid var(--rule); margin-bottom:10px;
+}
+.rail a{
+  display:flex; gap:9px; padding:4px 0; color:var(--ink-2); text-decoration:none;
+  border-left:2px solid transparent; padding-left:9px; margin-left:-11px; line-height:1.35;
+}
+.rail a:hover{color:var(--accent)}
+.rail a.on{color:var(--accent); border-left-color:var(--accent); font-weight:700}
+.rail a .n{font-family:var(--f-mono); font-size:10.5px; color:var(--ink-3); flex:none; padding-top:1px}
+.rail a.on .n{color:var(--accent)}
+
+main{min-width:0; padding-block:0 0}
+.col{max-width:70ch}
+
+/* ============ TYPE ============ */
+h1,h2,h3,h4{font-family:var(--f-disp); text-wrap:balance; margin:0; line-height:1.14}
+h1{font-size:clamp(34px,7vw,58px); font-weight:700; letter-spacing:-.015em}
+h2{font-size:clamp(25px,4.2vw,34px); font-weight:700; letter-spacing:-.01em}
+h3{font-size:19px; font-weight:700; letter-spacing:.005em; margin-top:2px}
+h4{font-size:14px; font-weight:700; letter-spacing:.06em; text-transform:uppercase}
+p{margin:0 0 1.05em}
+a{color:var(--accent-ink)}
+strong{font-weight:600}
+em{font-style:italic}
+code{font-family:var(--f-mono); font-size:.87em; background:var(--sheet-2); padding:1px 5px; border-radius:2px; border:1px solid var(--rule)}
+.lead{font-size:19.5px; line-height:1.56; color:var(--ink-2)}
+.eyebrow{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--ink-3); margin:0 0 10px;
+}
+.srcref{
+  font-family:var(--f-mono); font-size:11px; color:var(--ink-3);
+  border:1px solid var(--rule); border-radius:2px; padding:2px 7px; display:inline-block;
+  background:var(--sheet-2); white-space:nowrap;
+}
+
+/* ============ SECTION ============ */
+section{padding-block:38px 0; scroll-margin-top:calc(env(safe-area-inset-top,0px) + 62px)}
+.sechead{display:flex; align-items:baseline; gap:13px; margin-bottom:6px; flex-wrap:wrap}
+.secnum{
+  font-family:var(--f-mono); font-size:12px; font-weight:600; color:var(--accent);
+  border:1px solid var(--accent); border-radius:2px; padding:2px 7px; flex:none;
+  background:var(--accent-soft);
+}
+.rule-h{border:0; border-top:1px solid var(--rule); margin:0 0 22px}
+.rule-d{border:0; border-top:1px dashed var(--rule-strong); margin:34px 0}
+
+/* ============ CALLOUTS ============ */
+.note{
+  border:1px solid var(--rule); border-left:3px solid var(--accent);
+  background:var(--sheet); border-radius:2px; padding:16px 18px; margin:22px 0;
+}
+/* Greek letters must never be uppercased: text-transform turns beta into
+   a capital Beta, which is the Latin letter B on screen -- likewise eta->H,
+   kappa->K, lambda->A-shape.  Any Greek inside an uppercased label wears .gk. */
+.gk{text-transform:none}
+.note.bridge{border-left-color:var(--bridge); background:var(--bridge-soft)}
+.note.brk{border-left-color:var(--brk); background:var(--brk-soft)}
+.note-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; margin-bottom:7px; display:flex; align-items:center; gap:8px;
+}
+.note.bridge .note-h{color:var(--bridge)}
+.note.brk .note-h{color:var(--brk)}
+.note .note-h{color:var(--accent)}
+.note p:last-child, .note ul:last-child{margin-bottom:0}
+.note-h .ic{
+  width:15px; height:15px; border-radius:50%; border:1.5px solid currentColor; flex:none;
+  display:grid; place-items:center; font-size:9.5px; font-weight:700; font-family:var(--f-mono);
+}
+ul,ol{margin:0 0 1.05em; padding-left:1.25em}
+li{margin-bottom:.4em}
+li::marker{color:var(--ink-3)}
+
+/* ============ DEFINITION BLOCK ============ */
+.defn{
+  background:var(--sheet); border:1px solid var(--rule); border-radius:3px;
+  padding:18px 20px; margin:22px 0; box-shadow:var(--shadow);
+}
+.defn-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:10px;
+  padding-bottom:8px; border-bottom:1px solid var(--rule);
+}
+.defn p:last-child{margin-bottom:0}
+
+/* ============ TABLES ============ */
+.tw{overflow-x:auto; margin:22px 0; border:1px solid var(--rule); border-radius:3px; background:var(--sheet)}
+table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:480px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule); vertical-align:top}
+thead th{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); background:var(--sheet-2); font-weight:700; white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:0}
+td.mono,th.mono{font-family:var(--f-mono); font-size:13px; font-variant-numeric:tabular-nums}
+.tw caption{
+  caption-side:bottom; text-align:left; padding:9px 14px; font-size:12.5px;
+  color:var(--ink-3); border-top:1px solid var(--rule); font-family:var(--f-disp);
+}
+
+/* ============ FIGURES ============ */
+figure{margin:24px 0}
+.paper{
+  background:var(--paper); border:1px solid var(--rule-strong); border-radius:3px;
+  padding:16px; display:flex; justify-content:center; box-shadow:var(--shadow);
+}
+.paper img{max-width:100%; height:auto; display:block}
+figcaption{
+  font-family:var(--f-disp); font-size:12.5px; color:var(--ink-3); margin-top:9px;
+  line-height:1.45; padding-left:2px;
+}
+figcaption b{color:var(--ink-2); font-weight:700; letter-spacing:.04em}
+
+/* ============ INTERACTIVE PANELS ============ */
+.lab{
+  background:var(--sheet); border:1px solid var(--rule-strong); border-radius:3px;
+  margin:26px 0; overflow:hidden; box-shadow:var(--shadow);
+}
+.lab-h{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:11px 16px; border-bottom:1px solid var(--rule); background:var(--sheet-2);
+}
+.lab-t{font-family:var(--f-disp); font-size:13px; font-weight:700; letter-spacing:.05em; text-transform:uppercase}
+.lab-tag{
+  font-family:var(--f-mono); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--accent); border:1px solid var(--accent); border-radius:2px; padding:2px 6px;
+  margin-left:auto; white-space:nowrap;
+}
+.lab-body{padding:16px}
+.lab-foot{
+  padding:11px 16px; border-top:1px solid var(--rule); background:var(--sheet-2);
+  font-size:13.5px; color:var(--ink-2); line-height:1.5;
+}
+.lab-foot b{color:var(--ink)}
+.stage{width:100%; max-width:560px; height:auto; display:block; margin-inline:auto; touch-action:none; cursor:grab}
+.stage.drag{cursor:grabbing}
+
+/* Dividers are drawn as cell borders rather than as 1px grid gaps over a grey
+   backdrop: when the item count does not fill the last row, a gap-based grid
+   leaves the backdrop showing as an empty grey block. */
+.readout{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr)); gap:0;
+  background:var(--sheet); border:1px solid var(--rule); border-radius:2px;
+  margin-top:14px; overflow:hidden;
+}
+.ro{background:var(--sheet); padding:8px 11px;
+  border-right:1px solid var(--rule); border-bottom:1px solid var(--rule)}
+.ro-k{
+  font-family:var(--f-disp); font-size:9px; letter-spacing:.13em; text-transform:uppercase;
+  color:var(--ink-3); margin-bottom:2px;
+  /* was white-space:nowrap, which clipped the longer keys instead of wrapping */
+  white-space:normal; overflow-wrap:break-word; line-height:1.3; min-height:2.6em;
+}
+.ro-v{
+  font-family:var(--f-mono); font-size:15px; font-weight:500; font-variant-numeric:tabular-nums;
+  color:var(--ink); line-height:1.25;
+}
+.ro-v.a{color:var(--s2)} .ro-v.b{color:var(--s1)} .ro-v.c{color:var(--s3)}
+
+.ctl{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:14px}
+.ctl label{
+  font-family:var(--f-disp); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-2); white-space:nowrap;
+}
+input[type=range]{
+  -webkit-appearance:none; appearance:none; height:22px; background:transparent;
+  flex:1 1 160px; min-width:130px; cursor:pointer;
+}
+input[type=range]:focus-visible{outline:2px solid var(--accent); outline-offset:3px}
+input[type=range]::-webkit-slider-runnable-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-moz-range-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:16px; height:16px; border-radius:50%;
+  background:var(--accent); border:2px solid var(--sheet); margin-top:-6.5px;
+}
+input[type=range]::-moz-range-thumb{
+  width:16px; height:16px; border-radius:50%; background:var(--accent);
+  border:2px solid var(--sheet);
+}
+.btn{
+  appearance:none; font-family:var(--f-disp); font-size:11px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:7px 13px; border-radius:2px;
+  border:1px solid var(--rule-strong); background:var(--sheet); color:var(--ink-2); cursor:pointer;
+}
+.btn:hover{border-color:var(--accent); color:var(--accent)}
+.btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.btn.on{background:var(--accent); border-color:var(--accent); color:var(--sheet)}
+
+.legend{display:flex; gap:16px; flex-wrap:wrap; margin-top:12px}
+.lg{display:flex; align-items:center; gap:7px; font-family:var(--f-disp); font-size:12px; color:var(--ink-2)}
+.lg i{width:15px; height:3px; border-radius:2px; flex:none; display:block}
+
+/* ============ MISC ============ */
+.mathbox{overflow-x:auto; overflow-y:hidden; margin:18px 0}
+mjx-container[display="true"]{margin:0 !important}
+.kv{display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:15px; margin:16px 0}
+.kv dt{font-family:var(--f-mono); font-size:13px; color:var(--accent); white-space:nowrap}
+.kv dd{margin:0; color:var(--ink-2)}
+
+details.q{
+  border:1px solid var(--rule); border-radius:3px; background:var(--sheet);
+  margin-bottom:9px; overflow:hidden;
+}
+details.q summary{
+  cursor:pointer; padding:12px 15px; font-weight:600; list-style:none;
+  display:flex; gap:11px; align-items:flex-start; font-size:15.5px;
+}
+details.q summary::-webkit-details-marker{display:none}
+details.q summary::after{
+  content:'+'; margin-left:auto; font-family:var(--f-mono); color:var(--accent);
+  font-size:17px; line-height:1; flex:none; padding-top:2px;
+}
+details.q[open] summary::after{content:'\2212'}
+details.q summary:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
+details.q summary .qn{
+  font-family:var(--f-mono); font-size:12px; color:var(--ink-3); flex:none; padding-top:3px;
+}
+details.q .ans{padding:0 15px 14px 41px; font-size:15.5px; color:var(--ink-2); border-top:1px solid var(--rule); padding-top:13px}
+details.q .ans p:last-child{margin-bottom:0}
+
+.endnote{
+  margin-top:44px; padding-top:20px; border-top:1px solid var(--rule-strong);
+  font-size:13.5px; color:var(--ink-3); font-family:var(--f-disp); line-height:1.55;
+}
+.endnote a{color:var(--accent)}
+
+.srcref{text-decoration:none}
+a.srcref{color:var(--ink-2); transition:none}
+
+</style>
+<style>
+.srcref{text-decoration:none}
+a.srcref{color:var(--ink-2)}
+a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(--accent-soft)}
+.srcref.nolink{opacity:.75; font-style:italic}
+.pv{font-family:var(--f-disp); font-size:9.5px; font-weight:700; letter-spacing:.1em;
+    text-transform:uppercase; padding:2px 7px; border-radius:2px; white-space:nowrap}
+.pv.ok{background:var(--bridge-soft); color:var(--bridge)}
+.pv.add{background:var(--accent-soft); color:var(--accent)}
+.pv.corr{background:var(--brk-soft); color:var(--brk)}
+.flag{display:inline-block; padding:1px 7px; border-radius:2px; font-family:var(--f-disp);
+      font-size:10px; letter-spacing:.1em; text-transform:uppercase; font-weight:700}
+.flag.ok{background:var(--bridge-soft); color:var(--bridge)}
+.flag.bad{background:var(--brk-soft); color:var(--brk)}
+.predict{border:1px solid var(--rule-strong); border-left:3px solid var(--brk);
+  background:var(--brk-soft); border-radius:2px; padding:13px 15px; margin:0 0 14px}
+.predict-h{font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--brk); margin-bottom:6px}
+.predict p{margin:0 0 10px; font-size:15px}
+.predict .opts{display:flex; gap:8px; flex-wrap:wrap}
+.pbtn{appearance:none; font-family:var(--f-disp); font-size:12px; font-weight:600;
+  padding:6px 12px; border-radius:2px; border:1px solid var(--rule-strong);
+  background:var(--sheet); color:var(--ink-2); cursor:pointer}
+.pbtn:hover{border-color:var(--brk); color:var(--brk)}
+.pbtn.picked{background:var(--brk); border-color:var(--brk); color:var(--sheet)}
+.pverdict{margin-top:10px; font-size:14.5px; color:var(--ink-2); display:none}
+.pverdict.show{display:block}
+.pverdict b{color:var(--ink)}
+.gap{border:1px solid var(--rule); border-left:3px solid var(--ink-3); background:var(--sheet-2);
+  border-radius:2px; padding:14px 16px; margin:18px 0}
+.gap-h{font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:7px}
+</style>
+
+<div class="sheet">
+
+<header class="titleblock">
+  <div class="tb-main">
+    <div class="tb-k">Sheet 13 of 20, part 3 of 3 &mdash; Programming Languages</div>
+    <h1>From Source to Silicon</h1>
+    <p class="tb-sub">
+      A type system is dimensional analysis run one step earlier. A JIT compiler is a
+      machinist stopping mid-run to make a jig. And the chapter&rsquo;s worked example
+      overturned the claim it was written to support: the bottleneck does not stay put.
+    </p>
+  </div>
+  <div class="tb-meta">
+    <div class="tb-cell"><div class="tb-k">Reader</div><div class="tb-v">B.E. Mechanical</div></div>
+    <div class="tb-cell"><div class="tb-k">Prerequisite</div><div class="tb-v">Sheets 1&ndash;13 pt 2</div></div>
+    <button class="btn" id="themebtn" type="button">Theme</button>
+  </div>
+</header>
+
+<nav class="toc">
+  <a href="#bridge"><span class="n">00</span><span>The bridge</span></a>
+  <a href="#paradigms"><span class="n">01</span><span>Paradigms and purity</span></a>
+  <a href="#types"><span class="n">02</span><span>Types are units</span></a>
+  <a href="#stackheap"><span class="n">03</span><span>Bench and stores</span></a>
+  <a href="#memory"><span class="n">04</span><span>Tally, stocktake, ownership</span></a>
+  <a href="#pipeline"><span class="n">05</span><span>Compilation is planning</span></a>
+  <a href="#optimise"><span class="n">06</span><span>Optimisation passes</span></a>
+  <a href="#jit"><span class="n">07</span><span>The JIT break-even</span></a>
+  <a href="#features"><span class="n">08</span><span>Closures and matching</span></a>
+  <a href="#dsl"><span class="n">09</span><span>G-code is a DSL</span></a>
+  <a href="#tradeoffs"><span class="n">10</span><span>No best language</span></a>
+  <a href="#worked"><span class="n">11</span><span>Worked example</span></a>
+  <a href="#breaks"><span class="n">12</span><span>Where it breaks</span></a>
+  <a href="#recall"><span class="n">13</span><span>Question bank</span></a>
+  <a href="#next"><span class="n">14</span><span>Map, and what is left out</span></a>
+  <a href="#provenance"><span class="n">A</span><span>Provenance</span></a>
+</nav>
+
+<main>
+
+<section id="top" style="padding-top:44px">
+  <div class="col">
+    <p class="lede">
+      Part 1 built the machine and part 2 shared it out. This part closes the chapter with
+      the layer you actually touch &mdash; the language &mdash; and then, in &sect;&sect;11&ndash;14,
+      pulls all three parts together with a worked example, a question bank and a map.
+    </p>
+    <p>
+      The bridge that matters most here is the simplest. <b>A type is a unit.</b> When a
+      compiler refuses to add an integer to a float, it is doing exactly what you do when you
+      refuse to add a length to a time &mdash; and the discipline of dimensional homogeneity
+      that you apply without thinking is, formally, static type checking. That single
+      correspondence makes the whole of &sect;02 free, and it explains why weak typing feels
+      so wrong to an engineer: a language that silently turns <code>"3" + 5</code> into
+      <code>"35"</code> has done the thing you were taught never to do.
+    </p>
+    <p>
+      The second is &sect;07. A <b>just-in-time compiler</b> notices that a piece of code keeps
+      running, stops, and builds a fast version of it. That is a machinist realising on the
+      fortieth part that a jig would pay, and the break-even arithmetic is identical
+      &mdash; \(n = C/(s_{\text{slow}} - s_{\text{fast}})\), which comes out at 421 iterations
+      on the figures in &sect;07. A JIT compiles only hot code for exactly the reason you do
+      not make a fixture for a one-off.
+    </p>
+    <div class="note brk" style="margin-top:22px">
+      <div class="note-h"><span class="ic">&#33;</span>The worked example broke the claim it was written for</div>
+      <p style="margin-bottom:0">
+        &sect;11 was drafted to show that fixing a bottleneck beats buying hardware. Computed,
+        it says the opposite at the scale it starts from: at one GPU, fixing the data loader
+        buys 1.18&times; while a second GPU buys 1.74&times;. The true result is more useful
+        than the one intended &mdash; <b>the bottleneck moves</b>, the loader goes from 15% of
+        the step at one GPU to 59% at eight, and the value of fixing it peaks at four. That is
+        Goldratt&rsquo;s fifth focusing step, which is the one nobody remembers. The superseded
+        claim is named in the provenance appendix rather than deleted.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="bridge">
+  <div class="col">
+    <div class="sechead"><span class="secnum">00</span><h2>The bridge</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/05.%20programming%20languages.md" target="_blank" rel="noopener">src 05. programming languages &#8599;</a>
+    </div>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>What a GATE-prepared mechanical engineer already owns, and what a language calls it.</caption>
+      <thead><tr><th>What you already know</th><th>What this part calls it</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td>Dimensional homogeneity; checking units before computing</td><td>Static type checking</td><td><b style="color:var(--bridge)">The same discipline,</b> formalised. See &sect;02.</td></tr>
+        <tr><td>Adding pounds-force to newtons without noticing</td><td>Weak typing and implicit coercion</td><td><b style="color:var(--bridge)">The same failure,</b> off by 4.448. See &sect;02.</td></tr>
+        <tr><td>Make a jig once it pays over the run length</td><td>JIT compilation of hot code</td><td><b style="color:var(--bridge)">The same break-even,</b> \(n = C/\Delta s\). See &sect;07.</td></tr>
+        <tr><td>Process planning: drawing &rarr; feature tree &rarr; sequence &rarr; G-code</td><td>The compilation pipeline</td><td><b style="color:var(--bridge)">The same pipeline,</b> stage for stage. See &sect;05.</td></tr>
+        <tr><td>STEP / IGES as a neutral exchange format</td><td>LLVM intermediate representation</td><td><b style="color:var(--bridge)">The same architecture,</b> for the same reason. See &sect;05.</td></tr>
+        <tr><td>Periodic stocktake to recover unused tooling</td><td>Tracing garbage collection</td><td><b style="color:var(--bridge)">The same operation,</b> pause and all. See &sect;04.</td></tr>
+        <tr><td>A sign-out tally that never clears</td><td>Reference counting and the cycle problem</td><td><b style="color:var(--bridge)">The same blind spot.</b> See &sect;04.</td></tr>
+        <tr><td>One person may revise the drawing; many may read it</td><td>Rust&rsquo;s borrow checker</td><td><b style="color:var(--bridge)">The read-write lock of part 2 &sect;13,</b> enforced at compile time. See &sect;04.</td></tr>
+        <tr><td>Removing non-value-adding operations; combining setups</td><td>Dead code elimination; inlining</td><td><b style="color:var(--bridge)">The same moves,</b> same justification. See &sect;06.</td></tr>
+        <tr><td>Running n parts per cycle to amortise the setup</td><td>Loop unrolling</td><td><b style="color:var(--bridge)">Batching,</b> under another name. See &sect;06.</td></tr>
+        <tr><td>G-code; GD&amp;T</td><td>A domain-specific language</td><td><b style="color:var(--bridge)">They are DSLs.</b> You have written one. See &sect;09.</td></tr>
+        <tr><td>A capable process: same inputs, same output, every time</td><td>A pure function</td><td><b style="color:var(--bridge)">The same property,</b> and it is why both parallelise. See &sect;01.</td></tr>
+        <tr><td>An interface spec: any part with this mounting pattern fits</td><td>Traits and interfaces</td><td><b style="color:var(--bridge)">The same contract.</b> See &sect;08.</td></tr>
+        <tr><td>Material selection: no material is best at everything</td><td>Language design tradeoffs</td><td><b style="color:var(--bridge)">The same kind of choice.</b> See &sect;10.</td></tr>
+        <tr><td>&ldquo;Fix the bottleneck rather than buy capacity&rdquo;</td><td>Optimising a training loop</td><td><b style="color:var(--brk)">Not unconditionally.</b> Measured, hardware wins first. See &sect;11.</td></tr>
+        <tr><td>&ldquo;Once I have balanced the line, it is balanced&rdquo;</td><td>Scaling a pipeline</td><td><b style="color:var(--brk)">The bottleneck moves.</b> 15% at one GPU, 59% at eight. See &sect;11.</td></tr>
+        <tr><td>A tally is enough to control tooling</td><td>Reference counting alone</td><td><b style="color:var(--brk)">Cycles defeat it,</b> silently and permanently. See &sect;04.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="paradigms">
+  <div class="col">
+    <div class="sechead"><span class="secnum">01</span><h2>Paradigms, and what purity buys</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/05.%20programming%20languages.md" target="_blank" rel="noopener">src 05. programming languages &#8599;</a>
+    </div>
+    <p>
+      A <b>paradigm</b> is a style of organising code. <b>Imperative</b> describes a sequence
+      of commands that change state &mdash; a process sheet. <b>Object-oriented</b> bundles
+      data with the operations on it and hides the internals &mdash; a subassembly with a
+      defined interface and no access to its internals. <b>Functional</b> treats computation as
+      evaluating mathematical functions, with immutable data and no side effects.
+      <b>Logic</b> programming states what must be true and lets the runtime find it.
+    </p>
+    <div class="defn">
+      <div class="defn-h">A pure function is a capable process</div>
+      <p style="margin-bottom:0">
+        A <b>pure function</b> returns the same output for the same input, always, and changes
+        nothing else. That is the definition of a repeatable process: no hidden state, no
+        dependence on what ran before, no effect on anything downstream except its own output.
+        And the payoff is the same in both fields &mdash; a process with no shared state can be
+        run on two lines at once without interference, which is exactly why the source says
+        pure functions "parallelise safely". Part 2 &sect;12 showed what happens when that
+        condition fails: shared mutable state is precisely what produces a race condition.
+      </p>
+    </div>
+    <p>
+      Most modern languages are multi-paradigm, and the source&rsquo;s closing line on this is
+      worth keeping: <i>the paradigm is a tool, not a religion</i>. The same is true of
+      manufacturing philosophies, and for the same reason &mdash; each one optimises something
+      real, and none of them optimises everything.
+    </p>
+  </div>
+</section>
+
+<section id="types">
+  <div class="col">
+    <div class="sechead"><span class="secnum">02</span><h2>A type is a unit</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/05.%20programming%20languages.md" target="_blank" rel="noopener">src 05. programming languages &#8599;</a>
+    </div>
+    <p>
+      A <b>type</b> classifies values and says which operations are legal on them. That is the
+      whole idea, and you have been applying it since your first year.
+    </p>
+    <p>
+      When you check that an equation is <b>dimensionally homogeneous</b> &mdash; that you are
+      not adding a length to a time, that both sides of an energy balance carry
+      \(\mathrm{M\,L^2\,T^{-2}}\) &mdash; you are running a type checker. A dimension is a
+      type. Multiplication combines them (force times length is work); addition demands they
+      match. Implemented as a few lines of code and run under <code>[Ch13 s02]</code>, a
+      dimension checker accepts \(\text{force} \times \text{length} \to (1,2,-2)\) and refuses
+      \(\text{force} + \text{length}\) with the message <i>cannot add (1,1,&minus;2) to
+      (0,1,0)</i>.
+    </p>
+    <p>
+      Set that beside a compiler refusing <code>x + y</code> because <code>x</code> is an
+      <code>i32</code> and <code>y</code> is an <code>f64</code>. Same refusal, same
+      justification, one step earlier in the process.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>The four type-system axes, and what each corresponds to.</caption>
+      <thead><tr><th>Axis</th><th>Computing</th><th>What you already do</th></tr></thead>
+      <tbody>
+        <tr><td><b>Static</b> vs dynamic</td><td>Types checked before running vs while running</td><td>Checking units on the drawing vs discovering the mismatch on the machine</td></tr>
+        <tr><td><b>Strong</b> vs weak</td><td>Refuses implicit conversion vs silently converts</td><td>Refusing to add lbf to N vs quietly treating the number as whatever suits</td></tr>
+        <tr><td><b>Inference</b></td><td>The compiler deduces the type you did not write</td><td>Reading the dimension of a quantity off the equation it appears in</td></tr>
+        <tr><td><b>Generics</b></td><td>Code that works for any type meeting a constraint</td><td>A fixture that takes any part with the right mounting pattern</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks &mdash; weak typing is silent unit coercion</div>
+      <p>
+        JavaScript evaluates <code>"3" + 5</code> to <code>"35"</code>: it reinterpreted the
+        number as text rather than refusing. That is the software version of reading a number
+        off a gauge and using it without checking what the gauge was calibrated in. One
+        pound-force-second is <b>4.448</b> newton-seconds (<code>[Ch13 s02]</code>), so a
+        mislabelled impulse is not slightly wrong, it is wrong by a factor of four and a half
+        &mdash; and nothing in the arithmetic complains.
+      </p>
+      <p style="margin-bottom:0">
+        The honest limit of the bridge: a type system checks the <em>kind</em> of a quantity,
+        not its <em>unit</em>. Most languages will happily let you add a value in millimetres
+        to a value in inches, because both are floats. Getting real unit safety requires
+        deliberately encoding units <em>in</em> the type &mdash; which some libraries do, and
+        which is exactly the discipline of carrying units through a calculation rather than
+        stripping them at the start.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Check it before you compute it</div><div class="lab-tag">Predict, then combine</div></div>
+
+    <div class="predict">
+      <p style="margin-top:0">
+        A type checker rejects <code>i32 + f64</code>. What is the closest thing you already
+        do?
+      </p>
+      <button class="pbtn" data-p1="a" type="button">Rounding to significant figures</button>
+      <button class="pbtn" data-p1="b" type="button">Checking dimensional homogeneity</button>
+      <button class="pbtn" data-p1="c" type="button">A tolerance stack-up</button>
+      <button class="pbtn" data-p1="d" type="button">Nothing &mdash; it has no analogue</button>
+      <div class="pverdict" id="pv1"></div>
+    </div>
+
+    <svg class="stage" id="sT" viewBox="0 0 480 300" role="img"
+         aria-label="Two quantities with dimension vectors combined by a chosen operator, showing whether the operation is accepted or rejected and what dimension results">
+      <g id="tBox"></g>
+      <g id="tLab"></g>
+    </svg>
+
+    <div class="ctl">
+      <label for="tA">Left</label>
+      <select id="tA" class="ro-v" style="min-width:104px"></select>
+      <label for="tOp">Op</label>
+      <select id="tOp" class="ro-v" style="min-width:60px"></select>
+      <label for="tB">Right</label>
+      <select id="tB" class="ro-v" style="min-width:104px"></select>
+    </div>
+
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Left<br>dimension</div><div class="ro-v a" id="tDA">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Right<br>dimension</div><div class="ro-v b" id="tDB">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Checker<br>says</div><div class="ro-v c" id="tR">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Result<br>dimension</div><div class="ro-v" id="tD">&mdash;</div></div>
+    </div>
+  </div>
+
+  <div class="lab-foot col">
+    Pick two quantities and an operator. <b>Multiply</b> and <b>divide</b> always succeed and
+    add or subtract the exponent vectors &mdash; force times length gives
+    \(\mathrm{M\,L^{2}\,T^{-2}}\), which the readout names as energy. <b>Add</b> and
+    <b>subtract</b> succeed only when the two dimension vectors are identical, and otherwise
+    the checker refuses with the offending pair. That is precisely a compiler&rsquo;s
+    behaviour, and it answers the prediction: this is <b>dimensional homogeneity</b>, not
+    rounding and not a tolerance stack. Try <b>pressure + stress</b>: both are
+    \(\mathrm{M\,L^{-1}\,T^{-2}}\), so the checker accepts &mdash; which is the useful part.
+    A type system does not know that one is a fluid pressure and the other a solid stress; it
+    knows only the dimension, and it will let you add them. <b>Checking dimensions catches
+    the gross errors and none of the subtle ones</b>, in both fields.
+  </div>
+</section>
+
+<section id="stackheap">
+  <div class="col">
+    <div class="sechead"><span class="secnum">03</span><h2>The bench and the stores</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/05.%20programming%20languages.md" target="_blank" rel="noopener">src 05. programming languages &#8599;</a>
+    </div>
+    <p>
+      Every program keeps data in two places, and the difference is one of discipline rather
+      than of hardware.
+    </p>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/stack_vs_heap.svg" alt="Memory layout with the stack growing down from high addresses and the heap growing up" width="420"></div>
+    <figcaption><b>Fig. 13.11</b> &mdash; Two regions growing toward each other. The discipline differs; the silicon does not. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+
+  <div class="col">
+    <p>
+      The <b>stack</b> holds local variables and call frames. Allocation is moving a pointer;
+      release is automatic when the function returns. It is strictly last-in-first-out and
+      fixed in size &mdash; typically a few megabytes. That is your <b>bench</b>: what you put
+      down last you pick up first, it is instantly to hand because it is always in cache, and
+      it is small.
+    </p>
+    <p>
+      The <b>heap</b> holds anything whose size or lifetime is not known in advance. Allocation
+      means finding a free block; release must be arranged somehow. That is the <b>stores</b>:
+      much larger, addressable in any order, slower to reach, and it requires bookkeeping.
+    </p>
+    <p>
+      The consequence worth keeping is that <b>the stack cannot leak</b>. Its discipline makes
+      the error impossible: the frame goes when the function returns, whatever the programmer
+      intended. Every memory bug in &sect;04 is a heap bug. That is the same argument as
+      point-of-use storage against a central store &mdash; the tool you never booked out is
+      the tool you cannot fail to return.
+    </p>
+  </div>
+</section>
+
+<section id="memory">
+  <div class="col">
+    <div class="sechead"><span class="secnum">04</span><h2>Tally, stocktake, ownership</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/05.%20programming%20languages.md" target="_blank" rel="noopener">src 05. programming languages &#8599;</a>
+    </div>
+    <p>
+      Three strategies for getting heap memory back, and all three are tool-control policies
+      you have seen work and fail.
+    </p>
+    <h3>Manual: book it out, book it back</h3>
+    <p>
+      In C you call <code>malloc</code> and you call <code>free</code>. Maximum control, and
+      three failure modes with exact shop-floor twins: <b>use-after-free</b> is picking up a
+      tool someone has already returned to stores; <b>double free</b> is booking the same tool
+      back twice and corrupting the register; a <b>memory leak</b> is never returning it at
+      all, so the stores slowly empties and one day there is nothing left to issue.
+    </p>
+    <h3>Tracing collection: the stocktake</h3>
+    <p>
+      A <b>tracing garbage collector</b> periodically walks everything reachable from the live
+      roots and frees the rest. That is a stocktake, and it has the property a stocktake has:
+      <b>the shop stops while it runs</b>. The pause scales with how much is <em>live</em>,
+      not with how much is garbage &mdash; at roughly 40&nbsp;ns per object,
+      \(10^5\) live objects is a 4&nbsp;ms pause and \(10^7\) is 400&nbsp;ms
+      (<code>[Ch13 s04]</code>). Counting takes as long as you have stock, however little of
+      it is obsolete.
+    </p>
+    <p>
+      <b>Generational</b> collectors exploit the observation that most objects die young, so
+      they scan the young region often and the old region rarely. That is cycle-counting the
+      fast-moving lines weekly and the slow-moving ones annually, for exactly the same reason.
+    </p>
+    <h3>Reference counting: the tally, and its blind spot</h3>
+    <p>
+      Count the references to each object; free it the moment the count hits zero. No pauses,
+      immediate release. And one failure that no amount of care prevents:
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks &mdash; a tally cannot see a cycle</div>
+      <p>
+        Let A hold a reference to B and B hold one to A, with the program holding A. Drop the
+        program&rsquo;s reference and the counts become \(A = 1\), \(B = 1\)
+        (<code>[Ch13 s04]</code>). Neither reaches zero, so neither is freed &mdash; yet
+        nothing reachable points at either. They are unreachable and immortal.
+      </p>
+      <p style="margin-bottom:0">
+        The shop version: two jobs each sign out a tool "for" the other. Both tallies read one,
+        both jobs are long finished, and the tools never come back. <b>No tally can detect
+        this, because locally everything is correct.</b> Only a stocktake can &mdash; which is
+        why Python, whose primary mechanism is reference counting, also ships a cycle detector
+        that is, precisely, a small tracing collector.
+      </p>
+    </div>
+    <h3>Ownership: enforce it at planning time</h3>
+    <p>
+      Rust takes a third route. Each value has exactly one <b>owner</b>, and when the owner
+      goes out of scope the value is released. Values may be <b>borrowed</b>, under one rule:
+    </p>
+    <div class="defn">
+      <div class="defn-h">That rule is part 2&rsquo;s read-write lock, moved to compile time</div>
+      <p style="margin-bottom:0">
+        <i>Either one mutable reference, or any number of immutable references, never both.</i>
+        Part 2 &sect;13 described exactly this as a read-write lock: many people may consult
+        the drawing, one may revise it, and nobody consults it while it is being revised. The
+        difference is <b>when</b> the rule is enforced. A lock checks at runtime and costs time;
+        Rust&rsquo;s <b>borrow checker</b> proves it at compile time and costs nothing at all
+        &mdash; the program either satisfies the rule or does not build. That is inspection
+        moved upstream into design, which is the oldest quality argument there is.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Three ways to get the tools back</div><div class="lab-tag">Predict, then cut the link</div></div>
+
+    <div class="predict">
+      <p style="margin-top:0">
+        Object A references B, B references A, and the program drops its own reference to A.
+        Under pure reference counting, what happens to A and B?
+      </p>
+      <button class="pbtn" data-p2="a" type="button">Both freed &mdash; nothing reaches them</button>
+      <button class="pbtn" data-p2="b" type="button">Neither freed &mdash; leaked forever</button>
+      <button class="pbtn" data-p2="c" type="button">A freed, B freed next round</button>
+      <button class="pbtn" data-p2="d" type="button">The program crashes</button>
+      <div class="pverdict" id="pv2"></div>
+    </div>
+
+    <svg class="stage" id="sG" viewBox="0 0 480 300" role="img"
+         aria-label="Objects with reference counts and arrows between them, showing which are freed under reference counting and which under tracing collection">
+      <g id="gGraph"></g>
+      <g id="gLab"></g>
+    </svg>
+
+    <div class="ctl">
+      <button class="btn" data-gp="cycle" type="button">A and B reference each other</button>
+      <button class="btn" data-gp="chain" type="button">A references B only</button>
+      <button class="btn" data-gp="drop" type="button">Drop the root reference</button>
+      <button class="btn" data-gp="trace" type="button">Run a stocktake</button>
+    </div>
+
+    <div class="readout">
+      <div class="ro"><div class="ro-k">A&rsquo;s reference<br>count</div><div class="ro-v a" id="gA">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">B&rsquo;s reference<br>count</div><div class="ro-v b" id="gB">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Freed by<br>counting</div><div class="ro-v c" id="gF">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Reachable<br>from root</div><div class="ro-v" id="gR">&mdash;</div></div>
+    </div>
+  </div>
+
+  <div class="lab-foot col">
+    Filled arrows are live references and the number in each object is its count. Start on
+    <b>A references B only</b> and press <b>Drop the root reference</b>: A&rsquo;s count hits
+    zero, A is freed, which drops B&rsquo;s count to zero and frees B too &mdash; the tally
+    works perfectly. Now press <b>A and B reference each other</b> and drop the root again.
+    Both counts sit at <b>1</b>, neither is freed, and the "reachable from root" readout says
+    <b>no</b> &mdash; which is the answer to the prediction, <b>leaked forever</b>. The two
+    readouts disagreeing is the whole bug: local bookkeeping says the tools are in use, global
+    reachability says nobody wants them. Press <b>Run a stocktake</b> and the tracing collector
+    resolves it immediately, because it asks the global question instead of the local one.
+  </div>
+</section>
+
+<section id="pipeline">
+  <div class="col">
+    <div class="sechead"><span class="secnum">05</span><h2>Compilation is process planning</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/05.%20programming%20languages.md" target="_blank" rel="noopener">src 05. programming languages &#8599;</a>
+    </div>
+    <p>
+      A compiler turns source text into machine code in stages. Set them beside the stages of
+      turning a drawing into a machined part and they line up one for one.
+    </p>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/compilation_pipeline.svg" alt="The compilation pipeline from source through lexing, parsing, semantic analysis, optimisation and code generation" width="450"></div>
+    <figcaption><b>Fig. 13.12</b> &mdash; Five stages, each consuming a more structured representation than the last. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+
+  <div class="tw col">
+    <table>
+      <caption>Two pipelines that are the same pipeline.</caption>
+      <thead><tr><th>Compiler stage</th><th>What it produces</th><th>Process planning</th></tr></thead>
+      <tbody>
+        <tr><td><b>Lexing</b></td><td>A stream of tokens</td><td>Reading the drawing: identifying every feature and dimension as a discrete item</td></tr>
+        <tr><td><b>Parsing</b></td><td>An abstract syntax tree</td><td>Building the feature tree: which features belong to which, and in what hierarchy</td></tr>
+        <tr><td><b>Semantic analysis</b></td><td>A typed, checked tree</td><td>Manufacturability review: are the tolerances achievable, do the datums resolve, are the units right</td></tr>
+        <tr><td><b>Optimisation</b></td><td>A faster equivalent program</td><td>Sequencing: combine setups, eliminate non-value-adding moves, choose the order</td></tr>
+        <tr><td><b>Code generation</b></td><td>Machine instructions</td><td>Post-processing to G-code for one specific machine and controller</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="col">
+    <div class="defn">
+      <div class="defn-h">LLVM is STEP</div>
+      <p style="margin-bottom:0">
+        <b>LLVM</b> defines one intermediate representation that many languages compile
+        <em>to</em>, and many processors generate machine code <em>from</em>. Write a new
+        language and you get every processor free; write a new processor backend and you get
+        every language free. Without it, \(m\) languages and \(n\) targets would need
+        \(m \times n\) compilers; with it, \(m + n\) pieces.
+      </p>
+      <p style="margin-bottom:0; margin-top:8px">
+        That is exactly why <b>STEP</b> and <b>IGES</b> exist. Every CAD package exports to the
+        neutral format and every CAM package imports from it, so the industry maintains
+        \(m + n\) translators rather than \(m \times n\). Same architecture, same arithmetic,
+        same motivation &mdash; and the same weakness, which is that the neutral format has to
+        be expressive enough for everyone and inevitably loses something at each boundary.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="optimise">
+  <div class="col">
+    <div class="sechead"><span class="secnum">06</span><h2>Optimisation passes are process improvement</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/05.%20programming%20languages.md" target="_blank" rel="noopener">src 05. programming languages &#8599;</a>
+    </div>
+    <p>
+      The optimiser rewrites the program to run faster without changing what it does. The four
+      the source names are four moves you would make on a route sheet.
+    </p>
+    <ul>
+      <li><b>Constant folding</b> &mdash; compute \(3+5\) at compile time and write \(8\).
+        That is pre-calculating a dimension on the drawing rather than leaving the operator to
+        work it out at the machine.</li>
+      <li><b>Dead code elimination</b> &mdash; remove what can never run. That is deleting a
+        non-value-adding operation from the route.</li>
+      <li><b>Inlining</b> &mdash; replace a call with the body of the function, removing the
+        call overhead. That is combining two operations into one setup to avoid a changeover,
+        and it carries the same cost: the route sheet gets longer, and if you inline
+        everything the program no longer fits in cache &mdash; the exact analogue of a setup so
+        large it will not fit on the machine.</li>
+      <li><b>Loop unrolling</b> &mdash; do several iterations per pass to amortise the
+        per-iteration overhead. <b>That is batching</b>, and it has the batching trade-off from
+        part 2 &sect;05: bigger batches amortise the fixed cost and cost you elsewhere.</li>
+    </ul>
+    <p>
+      The pattern across all four is the one you know: <b>move work earlier, remove work that
+      adds nothing, and amortise fixed costs over more units.</b> A compiler engineer and an
+      industrial engineer have the same toolbox.
+    </p>
+  </div>
+</section>
+
+<section id="jit">
+  <div class="col">
+    <div class="sechead"><span class="secnum">07</span><h2>The JIT break-even</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/05.%20programming%20languages.md" target="_blank" rel="noopener">src 05. programming languages &#8599;</a>
+    </div>
+    <p>
+      There is a spectrum from executing source directly to compiling it fully in advance, and
+      the choice is a familiar economic one.
+    </p>
+    <p>
+      An <b>interpreter</b> reads and executes as it goes: instant to start, slow to run,
+      because every line is re-analysed every time. That is making a part by working straight
+      from the drawing, re-reading it at each step. <b>Ahead-of-time compilation</b> analyses
+      everything first and emits machine code: slow to start, fast to run. That is tooling up
+      completely before cutting anything.
+    </p>
+    <div class="defn">
+      <div class="defn-h">A JIT is a machinist deciding, mid-run, that a jig would pay</div>
+      <p style="margin-bottom:0">
+        A <b>just-in-time</b> compiler starts by interpreting, watches which code runs
+        repeatedly, and compiles only those "hot" paths to machine code. That is exactly the
+        decision you make on the fortieth part: this is going to keep happening, stop, make a
+        fixture, and run the rest quickly. Crucially, <b>neither of you knows the quantity in
+        advance</b> &mdash; that is why the decision is deferred until the evidence arrives,
+        and it is precisely the information a compiler running before the program starts does
+        not have.
+      </p>
+    </div>
+    <p>
+      And the arithmetic is the jig break-even. With compilation cost \(C\) and per-iteration
+      times \(s_{\text{slow}}\) and \(s_{\text{fast}}\):
+    </p>
+  </div>
+  <div class="mathbox col">$$n^{\ast} = \frac{C}{s_{\text{slow}} - s_{\text{fast}}}$$</div>
+  <div class="col">
+    <p>
+      On the figures in <code>[Ch13 s07]</code> &mdash; 1.00&nbsp;ms interpreted,
+      0.05&nbsp;ms compiled, 400&nbsp;ms to compile &mdash; the break-even is
+      <b>421 iterations</b>. Below it the interpreter wins; above it the JIT does, and by
+      10,000 iterations it is eleven times faster.
+    </p>
+    <p>
+      That also explains JAX&rsquo;s <code>jax.jit</code>, which compiles a function on its
+      first call and caches the result: it is making the fixture on the first part and
+      amortising it over the run. And it explains the standard complaint about it &mdash; that
+      the first call is slow &mdash; which is the same complaint as "we lost the morning
+      setting up".
+    </p>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Make the jig, or work from the drawing?</div><div class="lab-tag">Predict, then run the batch</div></div>
+
+    <div class="predict">
+      <p style="margin-top:0">
+        Compiling costs 400&nbsp;ms once. Interpreted, each iteration takes 1&nbsp;ms;
+        compiled, 0.05&nbsp;ms. Above how many iterations does compiling pay?
+      </p>
+      <button class="pbtn" data-p3="a" type="button">About 400</button>
+      <button class="pbtn" data-p3="b" type="button">About 421</button>
+      <button class="pbtn" data-p3="c" type="button">About 8,000</button>
+      <button class="pbtn" data-p3="d" type="button">It always pays</button>
+      <div class="pverdict" id="pv3"></div>
+    </div>
+
+    <svg class="stage" id="sJ" viewBox="0 0 480 300" role="img"
+         aria-label="Total time against iteration count for an interpreter and for a JIT, crossing at the break-even quantity">
+      <g id="jGrid"></g>
+      <g id="jCurve"></g>
+      <g id="jAx"></g>
+      <g id="jLab"></g>
+    </svg>
+
+    <div class="ctl">
+      <label for="jSl">Iterations</label>
+      <input type="range" id="jSl" min="10" max="2000" value="421" step="10">
+      <span class="ro-v" id="jVal" style="min-width:58px">421</span>
+      <button class="btn" data-jp="400" type="button">Compile 400 ms</button>
+      <button class="btn" data-jp="100" type="button">Compile 100 ms</button>
+      <button class="btn" data-jp="2000" type="button">Compile 2 s</button>
+    </div>
+
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Interpreted<br>total</div><div class="ro-v a" id="jI">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">JIT total<br>(incl. compile)</div><div class="ro-v b" id="jJ">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Which<br>wins</div><div class="ro-v c" id="jWn">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Break-even<br>n = C/&Delta;s</div><div class="ro-v" id="jB">&mdash;</div></div>
+    </div>
+  </div>
+
+  <div class="lab-foot col">
+    The steeper line is the interpreter (no setup, 1&nbsp;ms per part); the shallower one starts
+    at the compilation cost and then barely rises. They cross at <b>421</b>, which answers the
+    prediction &mdash; and note it is not 400, because the compiled version still costs
+    0.05&nbsp;ms per iteration, so the saving per iteration is 0.95&nbsp;ms rather than
+    1&nbsp;ms. That is the same correction as remembering that a jig does not make the
+    operation free, only faster. Drop the compile cost to 100&nbsp;ms and the break-even falls
+    to 105; raise it to 2&nbsp;s and it climbs to 2,105. <b>A cheaper setup is worth making
+    for a shorter run</b>, which is the whole argument of SMED, and it is why a JIT&rsquo;s
+    engineers work so hard on compilation speed.
+  </div>
+</section>
+
+<section id="features">
+  <div class="col">
+    <div class="sechead"><span class="secnum">08</span><h2>Closures, matching, and contracts</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/05.%20programming%20languages.md" target="_blank" rel="noopener">src 05. programming languages &#8599;</a>
+    </div>
+    <p>
+      Four features the source highlights, briefly, because the bridges are thinner here and
+      it is better to say so.
+    </p>
+    <p>
+      A <b>closure</b> is a function that captures variables from where it was defined. Build a
+      "make an adder for \(n\)" factory and you get back a function that remembers its \(n\).
+      The closest honest analogue is a <b>pre-set tool</b>: the same drill, issued already set
+      to a particular depth, carrying that setting with it wherever it goes.
+    </p>
+    <p>
+      <b>Pattern matching</b> branches on the <em>shape</em> of data rather than on equality.
+      <b>Algebraic data types</b> let a value be one of several clearly enumerated variants
+      &mdash; a result is either a success carrying a value or an error carrying a reason,
+      never both and never neither. Together they let the compiler check that you have handled
+      every case, which eliminates an entire family of bugs by construction. The nearest thing
+      you have is a <b>decision table</b> whose completeness has been audited &mdash; every
+      combination of conditions has a defined action, and the absence of one is caught at
+      review rather than in service.
+    </p>
+    <p>
+      <b>Traits</b> and <b>interfaces</b> specify what a type must be able to do without
+      specifying how. That is an <b>interface specification</b>: any part with this mounting
+      pattern and this load rating will fit, and the supplier's internal design is theirs. The
+      value is the same in both &mdash; you can substitute the implementation without touching
+      anything that uses it.
+    </p>
+  </div>
+</section>
+
+<section id="dsl">
+  <div class="col">
+    <div class="sechead"><span class="secnum">09</span><h2>You have already written a DSL</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/05.%20programming%20languages.md" target="_blank" rel="noopener">src 05. programming languages &#8599;</a>
+    </div>
+    <p>
+      A <b>domain-specific language</b> trades generality for expressiveness inside one domain.
+      The source lists SQL, regular expressions and shader languages. It misses the two you
+      know.
+    </p>
+    <div class="defn">
+      <div class="defn-h">G-code and GD&amp;T are domain-specific languages</div>
+      <p style="margin-bottom:0">
+        <b>G-code</b> is a language for machine motion. It cannot do general computation and it
+        is not trying to; what it can express &mdash; a helical interpolation, a canned drilling
+        cycle, a tool change &mdash; it expresses in a line, where a general-purpose language
+        would need a page. That is exactly the SQL argument. <b>GD&amp;T</b> is a language for
+        tolerance specification, with a grammar, a symbol set and a formal semantics, and it
+        exists because writing the same constraints in prose is ambiguous and unverifiable.
+        Both are DSLs by any definition the source offers.
+      </p>
+    </div>
+    <p>
+      That makes the trade-off concrete rather than abstract. G-code&rsquo;s narrowness is why
+      a post-processor can verify a program and a controller can execute it deterministically;
+      it is also why you reach for a macro language the moment you want a conditional. The
+      source notes that PyTorch and JAX are "essentially DSLs for tensor computation embedded
+      within Python", which is the same compromise &mdash; domain expressiveness where it
+      matters, a general-purpose language underneath for everything else.
+    </p>
+  </div>
+</section>
+
+<section id="tradeoffs">
+  <div class="col">
+    <div class="sechead"><span class="secnum">10</span><h2>There is no best language</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/05.%20programming%20languages.md" target="_blank" rel="noopener">src 05. programming languages &#8599;</a>
+    </div>
+    <p>
+      The source closes on trade-offs, and the framing that makes them obvious is
+      <b>material selection</b>. There is no best material; there is a best material for a
+      duty, given a budget. Language choice works the same way and along four axes:
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Four trade-offs, and the material-selection question each resembles.</caption>
+      <thead><tr><th>Trade-off</th><th>The two ends</th><th>The analogous question</th></tr></thead>
+      <tbody>
+        <tr><td>Performance against safety</td><td>C lets you corrupt memory; Python will not let you near it</td><td>Strength against toughness &mdash; you rarely get both at the top</td></tr>
+        <tr><td>Expressiveness against simplicity</td><td>Haskell can state very precise constraints; Go deliberately cannot</td><td>A specialised alloy against mild steel everyone can weld</td></tr>
+        <tr><td>Control against abstraction</td><td>C++ exposes memory layout; Python hides it</td><td>Machining from solid against a near-net-shape casting</td></tr>
+        <tr><td>Compile speed against run speed</td><td>Go builds in seconds; Rust takes minutes and runs faster</td><td>Setup time against cycle time &mdash; part 2 &sect;05 again</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      The source&rsquo;s own summary of the ML ecosystem is the clearest example: Python for
+      experimentation because expressiveness wins when the GPU dominates the clock, C++ and
+      CUDA for kernels because performance wins when it does not, Rust for infrastructure
+      because safety wins when a failure is expensive. <b>Three different duties, three
+      different materials, one assembly.</b>
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks &mdash; &ldquo;100&times; slower&rdquo; is a claim with conditions</div>
+      <p>
+        The source says Python is "~100x slower than C for compute-heavy code", and repeats
+        similar figures for PyPy and the JVM. Treat all of these as reported rather than
+        derived. They depend entirely on what is being measured: for a tight numeric loop in
+        pure Python the figure is roughly right; for code that spends its time inside NumPy or
+        PyTorch the Python overhead is close to irrelevant, because the work is happening in
+        compiled kernels. <b>The honest version is that interpreted overhead is per-operation,
+        so it matters exactly in proportion to how many operations you execute in the
+        interpreter</b> &mdash; which is why the answer to "is Python fast enough?" is always
+        "for which part of the program?", and why part 3&rsquo;s worked example starts by
+        measuring rather than assuming.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="worked">
+  <div class="col">
+    <div class="sechead"><span class="secnum">11</span><h2>Worked example: why is the training step slow?</h2>
+      <span class="srcref nolink" title="Added material spanning all three parts">all three parts</span>
+    </div>
+    <p>
+      One problem, solved twice, drawing on all three parts. A training step takes
+      250&nbsp;ms and you want it faster. The measured breakdown:
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Measured per-step timings. Measure first &mdash; &sect;10 explains why assuming is worse than useless.</caption>
+      <thead><tr><th>Stage</th><th>Time</th><th>Share</th><th>Nature</th></tr></thead>
+      <tbody>
+        <tr><td>Data loading (Python)</td><td>38 ms</td><td>15.2%</td><td>Serial &mdash; one interpreter thread</td></tr>
+        <tr><td>Host-to-device copy</td><td>9 ms</td><td>3.6%</td><td>Bus-bound (part 1 &sect;17)</td></tr>
+        <tr><td>Forward pass</td><td>64 ms</td><td>25.6%</td><td>GPU, parallelisable</td></tr>
+        <tr><td>Backward pass</td><td>121 ms</td><td>48.4%</td><td>GPU, parallelisable</td></tr>
+        <tr><td>Optimiser step</td><td>18 ms</td><td>7.2%</td><td>GPU, parallelisable</td></tr>
+        <tr><td><b>Total</b></td><td><b>250 ms</b></td><td>100%</td><td>4.00 steps/s</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="col">
+    <h3>Solved as a line-balancing problem</h3>
+    <p>
+      One station (the loader) cannot be subdivided: it is a single Python thread, and part 2
+      &sect;11 says the GIL prevents that work being shared. The other 212&nbsp;ms is GPU work
+      that more GPUs can share. That is exactly part 2 &sect;16&rsquo;s two-station line, so
+      \(p = 212/250 = 0.848\) and the ceiling is
+    </p>
+  </div>
+  <div class="mathbox col">$$\frac{1}{1-p} = \frac{250}{38} = 6.58\times$$</div>
+  <div class="col">
+    <p>
+      No number of GPUs will ever make this step faster than 38&nbsp;ms. That is the first
+      useful fact, and you get it before spending anything.
+    </p>
+    <h3>Solved as a scaling question, which is where it gets interesting</h3>
+    <p>
+      The obvious move is to fix the loader &mdash; overlap it with compute by prefetching the
+      next batch while the current one trains, so the step becomes
+      \(\max(\text{loader}, \text{rest})\) instead of their sum. At one GPU that takes
+      250&nbsp;ms to 212&nbsp;ms: a gain of <b>1.18&times;</b>. Meanwhile simply buying a
+      second GPU gives <b>1.74&times;</b>.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>This section was drafted to prove the opposite</div>
+      <p style="margin-bottom:0">
+        The intended conclusion was the standard one: fix the bottleneck rather than buy
+        capacity. Computed, it is <b>false at one GPU</b> &mdash; the hardware wins,
+        1.74&times; against 1.18&times; (<code>[Ch13 s11]</code>). The loader is only 15% of
+        the step, and Amdahl cuts both ways: a stage that is a small share of the time cannot
+        be worth much to fix, however serial it is.
+      </p>
+    </div>
+    <p>
+      But now scale up, and watch what happens to the same 38&nbsp;ms:
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>The loader never changes. Its <em>share</em> does &mdash; and with it, which stage is the constraint.</caption>
+      <thead><tr><th>GPUs</th><th>Step time</th><th>Speedup</th><th>Loader share</th><th>Bottleneck</th><th>Gain if loader fixed</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>250.0 ms</td><td>1.00&times;</td><td>15.2%</td><td>GPU work</td><td>1.18&times;</td></tr>
+        <tr><td>2</td><td>144.0 ms</td><td>1.74&times;</td><td>26.4%</td><td>GPU work</td><td>1.36&times;</td></tr>
+        <tr><td>4</td><td>91.0 ms</td><td>2.75&times;</td><td>41.8%</td><td>GPU work</td><td><b>1.72&times;</b></td></tr>
+        <tr><td>8</td><td>64.5 ms</td><td>3.88&times;</td><td>58.9%</td><td><b style="color:var(--brk)">Loader</b></td><td>1.70&times;</td></tr>
+        <tr><td>16</td><td>51.2 ms</td><td>4.88&times;</td><td>74.1%</td><td><b style="color:var(--brk)">Loader</b></td><td>1.35&times;</td></tr>
+        <tr><td>64</td><td>41.3 ms</td><td>6.05&times;</td><td>92.0%</td><td><b style="color:var(--brk)">Loader</b></td><td>1.09&times;</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="col">
+    <div class="defn">
+      <div class="defn-h">The answer: the bottleneck moves, and it crosses at 5.58 GPUs</div>
+      <p>
+        The loader overtakes the GPU work at \(n = 212/38 = 5.58\) (<code>[Ch13 s11]</code>).
+        Before that it is a minor stage and fixing it is poor value; after that it is the
+        constraint and everything else is wasted. And the gain from fixing it <b>peaks at four
+        GPUs</b> (1.72&times;), then falls away again &mdash; because past the crossover the
+        loader is most of a step that is already short.
+      </p>
+      <p style="margin-bottom:0">
+        So the correct plan is neither "fix the bottleneck" nor "buy hardware". It is:
+        <b>scale while the GPU work dominates, and fix the loader as you approach the
+        crossover</b> &mdash; around four GPUs, which is where the fix is worth most anyway.
+      </p>
+    </div>
+    <p>
+      This is <b>Goldratt&rsquo;s fifth focusing step</b>, and it is the one everybody forgets.
+      Identify the constraint, exploit it, subordinate to it, elevate it &mdash; and then,
+      <em>if the constraint has been broken, go back to step one</em>. Optimising today&rsquo;s
+      bottleneck forever is how you end up with a perfectly balanced line that cannot go any
+      faster, because every station is now the constraint at once.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What the three parts each contributed</div>
+      <p>
+        <b>Part 1</b> supplied the measurement discipline and the bus-bound copy stage, and its
+        &sect;13 supplied the line-balancing frame. <b>Part 2</b> supplied Amdahl&rsquo;s law
+        for the ceiling, the GIL for why the loader is serial in the first place, and
+        Goldratt&rsquo;s steps. <b>Part 3</b> supplied the reason the loader is slow at all
+        &mdash; it is interpreted Python doing per-item work, which &sect;10 says is exactly
+        where the interpreter overhead lands. Three parts, one answer, and none of them
+        sufficient alone.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Watch the constraint move</div><div class="lab-tag">Predict, then scale</div></div>
+
+    <div class="predict">
+      <p style="margin-top:0">
+        The data loader takes 38&nbsp;ms of a 250&nbsp;ms step &mdash; 15%. At how many GPUs
+        does it become the majority of the step?
+      </p>
+      <button class="pbtn" data-p4="a" type="button">It never does &mdash; it is only 15%</button>
+      <button class="pbtn" data-p4="b" type="button">At about 6 GPUs</button>
+      <button class="pbtn" data-p4="c" type="button">At about 32 GPUs</button>
+      <button class="pbtn" data-p4="d" type="button">At about 2 GPUs</button>
+      <div class="pverdict" id="pv4"></div>
+    </div>
+
+    <svg class="stage" id="sW" viewBox="0 0 480 310" role="img"
+         aria-label="A stacked bar of the training step at the chosen GPU count, showing the serial loader against the shrinking parallel work, with the speedup and ceiling"
+         >
+      <g id="wBars"></g>
+      <g id="wLab"></g>
+    </svg>
+
+    <div class="ctl">
+      <label for="wSl">GPUs</label>
+      <input type="range" id="wSl" min="0" max="6" value="0" step="1">
+      <span class="ro-v" id="wVal" style="min-width:40px">1</span>
+      <button class="btn" data-wp="raw" type="button">As measured</button>
+      <button class="btn" data-wp="fixed" type="button">Loader overlapped</button>
+    </div>
+
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Step<br>time</div><div class="ro-v a" id="wT">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Speedup<br>vs 1 GPU</div><div class="ro-v b" id="wS">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Loader<br>share</div><div class="ro-v c" id="wL">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Gain if the<br>loader is fixed</div><div class="ro-v" id="wG">&mdash;</div></div>
+    </div>
+  </div>
+
+  <div class="lab-foot col">
+    The bar is one training step: the orange block is the serial loader, which never shrinks,
+    and the blue block is the GPU work, which is divided by the core count. The dashed line is
+    the 38&nbsp;ms floor that no amount of hardware can cross. Drag the slider and watch the
+    orange block take over: at 1 GPU it is a sliver, at 8 GPUs it is most of the bar, and the
+    bottleneck label flips between 4 and 8 &mdash; the exact crossover is
+    \(212/38 = 5.58\), which answers the prediction, <b>about 6 GPUs</b>. The readout to watch
+    is the last one: the value of fixing the loader rises to <b>1.72&times;</b> at four GPUs
+    and then falls away again. <b>There is a right moment to do this work, and it is neither
+    first nor last.</b>
+  </div>
+</section>
+
+<section id="breaks">
+  <div class="col">
+    <div class="sechead"><span class="secnum">12</span><h2>Where it breaks &mdash; all three parts</h2>
+      <span class="srcref nolink" title="Added material spanning all three parts">all three parts</span>
+    </div>
+    <p>
+      Every amber item from the chapter, in one place. Each is a case where a correct
+      mechanical intuition gives the wrong answer.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Thirteen places the transfer fails, across parts 1, 2 and 3.</caption>
+      <thead><tr><th>The intuition</th><th>Why it fails</th><th>Where</th></tr></thead>
+      <tbody>
+        <tr><td>&ldquo;A 95% success rate is a 5% problem&rdquo;</td><td>Rate times severity governs. At a 95% cache hit rate the misses own 84% of the clock; 95% branch accuracy costs 75% more cycles.</td><td>pt 1 &sect;&sect;14&ndash;15</td></tr>
+        <tr><td>&ldquo;More buffer cannot reduce throughput&rdquo;</td><td>B&eacute;l&aacute;dy&rsquo;s anomaly: FIFO faults <em>more</em> with 4 frames than 3. Only stack algorithms are monotone.</td><td>pt 1 &sect;16</td></tr>
+        <tr><td>Summing a column in any order gives the same total</td><td>Floating-point addition is not associative. Same three numbers, two brackets, two answers.</td><td>pt 1 &sect;11</td></tr>
+        <tr><td>&ldquo;No closed-form solution&rdquo; and &ldquo;undecidable&rdquo; are similar</td><td>They are different in kind. No closed form still yields to numerical methods; undecidable yields to nothing, ever.</td><td>pt 1 &sect;08</td></tr>
+        <tr><td>The Laplacian-style identity extends to any structure</td><td>The stiffness identity needs one scalar DOF per node; a 2-D truss has three rigid-body modes, not one.</td><td>Sheet 12 &sect;05</td></tr>
+        <tr><td>&ldquo;More capacity at the busy station always helps&rdquo;</td><td>A 1% critical section caps a machine at 100&times; however many cores it has.</td><td>pt 2 &sect;16</td></tr>
+        <tr><td>&ldquo;Capping WIP is nearly free&rdquo;</td><td>Only above the working queue length. Ten cards cost 2.4% of throughput; one card costs 44%.</td><td>pt 2 &sect;13</td></tr>
+        <tr><td>Interleaving two jobs on one machine is parallel work</td><td>It is concurrency, not parallelism, and an event loop collapses the moment the operator is the busy resource.</td><td>pt 2 &sect;11</td></tr>
+        <tr><td>&ldquo;Run the shortest job first&rdquo; is practical advice</td><td>SPT is provably optimal and an OS cannot use it: burst times are unknown and, by part 1 &sect;08, not computable.</td><td>pt 2 &sect;04</td></tr>
+        <tr><td>Running a resource near capacity is efficient</td><td>\(L = \rho/(1-\rho)\). One more point of utilisation costs 0.11 jobs at 0.70 and 5 at 0.95.</td><td>pt 2 &sect;06</td></tr>
+        <tr><td>A tally is enough to control tooling</td><td>Reference cycles defeat it silently and permanently. You need a stocktake.</td><td>pt 3 &sect;04</td></tr>
+        <tr><td>&ldquo;Fix the bottleneck rather than buy capacity&rdquo;</td><td>Not unconditionally. At one GPU the hardware wins 1.74&times; against 1.18&times;.</td><td>pt 3 &sect;11</td></tr>
+        <tr><td>&ldquo;Once the line is balanced, it is balanced&rdquo;</td><td>The constraint moves as you scale. The loader goes from 15% of the step to 59% without changing at all.</td><td>pt 3 &sect;11</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="recall">
+  <div class="col">
+    <div class="sechead"><span class="secnum">13</span><h2>Question bank</h2>
+      <span class="srcref nolink" title="Covers all three parts">all three parts</span>
+    </div>
+    <p>
+      Twenty-four prompts across the whole chapter, in three tiers. Answer before opening.
+    </p>
+
+    <div class="gap">
+      <div class="gap-h">Tier 1 &mdash; recall</div>
+      <details><summary>Write down the pipeline efficiency formula and say what it is called on a shop floor.</summary>
+        <p>\(\sum t_i / (n \max t_i)\) &mdash; line-balancing efficiency. Identical expression, and speedup equals \(n\) times it in both fields.</p></details>
+      <details><summary>What is AMAT, and why is a 95% hit rate not a 95% result?</summary>
+        <p>\(\text{AMAT} = h\,t_{\text{fast}} + (1-h)\,t_{\text{slow}}\). With L1 at 1 ns and RAM at 100 ns, 95% hits gives 5.95 ns &mdash; six times slower than L1, because the misses are 100&times; dearer. Rate times severity, not rate.</p></details>
+      <details><summary>State Amdahl&rsquo;s law and its asymptote.</summary>
+        <p>\(S(n) = 1/((1-p) + p/n)\), tending to \(1/(1-p)\). Ninety-five percent parallel caps you at 20&times;, whatever you spend.</p></details>
+      <details><summary>What are the four necessary conditions for deadlock?</summary>
+        <p>Mutual exclusion, hold-and-wait, no pre-emption, circular wait. All four must hold at once, so breaking any one is sufficient prevention.</p></details>
+      <details><summary>What does the cyclomatic number \(m - n + c\) count, mechanically?</summary>
+        <p>The degree of static indeterminacy of the corresponding 1-DOF spring network &mdash; the number of redundant members. A tree is determinate.</p></details>
+      <details><summary>Why does floating point have constant relative rather than constant absolute precision?</summary>
+        <p>The exponent sets the magnitude and the mantissa carries a fixed number of figures within it. So the ulp grows with magnitude while ulp/x stays fixed &mdash; significant figures, in hardware.</p></details>
+      <details><summary>What is a context switch, and what is it in manufacturing terms?</summary>
+        <p>Saving one process&rsquo;s state and loading another&rsquo;s. It is a changeover: the work of switching produces nothing, so either make it cheaper or do it less often.</p></details>
+      <details><summary>Give the compilation pipeline&rsquo;s five stages and their process-planning equivalents.</summary>
+        <p>Lexing (read the drawing), parsing (build the feature tree), semantic analysis (manufacturability review), optimisation (sequencing), code generation (post-process to G-code).</p></details>
+    </div>
+
+    <div class="gap">
+      <div class="gap-h">Tier 2 &mdash; apply</div>
+      <details><summary>A 5-stage pipeline has stage times \(\{1,1,1,1,6\}\). What is the speedup, and what should you do?</summary>
+        <p>Cycle time 6, total 10, so speedup \(10/6 = 1.67\) against an ideal of 5. Split the 6, not the 1s &mdash; splitting a non-bottleneck stage changes throughput not at all. Efficiency is \(10/30 = 0.33\).</p></details>
+      <details><summary>You measure \(|\mu_2| = 0.80\) for a cache-like decay and a diameter of 12. Is a 12-layer design viable?</summary>
+        <p>\(\ln(0.1)/\ln(0.8) = 10.3\) layers to lose 90%. Twelve layers are needed and about ten are affordable, so the window is closed &mdash; you need residual connections, a wider stencil, or a different topology.</p></details>
+      <details><summary>Five jobs of 10, 4, 6, 2, 8 arrive together. Compute the mean flow time under FCFS and under SPT.</summary>
+        <p>FCFS: completions 10, 14, 20, 22, 30 &rarr; mean 19.20. SPT (2,4,6,8,10): completions 2, 6, 12, 20, 30 &rarr; mean 14.00. A 27% cut, and SPT is provably optimal.</p></details>
+      <details><summary>A critical section occupies 2% of each thread&rsquo;s time. What is the maximum speedup on 128 cores?</summary>
+        <p>\(p = 0.98\), so the ceiling is 50&times; and at 128 cores \(1/(0.02 + 0.98/128) = 36.2\times\). The lock, not the core count, is what you are buying.</p></details>
+      <details><summary>Compilation costs 250 ms; interpreted 0.8 ms/iter, compiled 0.04 ms/iter. Where is the break-even?</summary>
+        <p>\(250/(0.8-0.04) = 329\) iterations. Note the denominator is the <em>saving</em>, not the interpreted time &mdash; the jig does not make the operation free.</p></details>
+      <details><summary>A server runs at 90% utilisation. Your manager wants 95%. What are you buying and paying?</summary>
+        <p>\(L\) goes from 9 to 19 and \(W\) from 10 to 20 service times. You buy 5.6% more throughput and pay with a doubling of queue time. On a latency-sensitive service that is a bad trade, and it is the same trade as loading a plant to 95%.</p></details>
+      <details><summary>Why does \(\text{force} + \text{length}\) fail while \(\text{force} \times \text{length}\) succeeds?</summary>
+        <p>Addition requires identical dimension vectors; multiplication adds the exponents. \((1,1,-2) + (0,1,0)\) is refused; \((1,1,-2)\times(0,1,0) = (1,2,-2)\), which is energy. A type checker does exactly this.</p></details>
+      <details><summary>A training step is 30 ms serial and 270 ms parallel. What is the ceiling, and where does the bottleneck flip?</summary>
+        <p>\(p = 0.9\), ceiling 10&times;. The serial part overtakes at \(270/30 = 9\) workers. Below nine, scale; approaching nine, fix the serial stage.</p></details>
+    </div>
+
+    <div class="gap">
+      <div class="gap-h">Tier 3 &mdash; judge</div>
+      <details><summary>Part 3 &sect;11 was drafted to prove that fixing a bottleneck beats buying hardware, and the arithmetic said otherwise. What should you conclude?</summary>
+        <p>Not that the maxim is wrong, but that it is conditional on the bottleneck being a large share of the time &mdash; Amdahl cuts both ways. The valuable finding was the one nobody was looking for: the constraint <em>moves</em> as you scale, so the right question is not "what is the bottleneck" but "what will the bottleneck be at the scale I am heading for". A claim that survives being computed is worth more than one that was never tested, and a claim that fails usefully is worth more than either.</p></details>
+      <details><summary>Both the source&rsquo;s float demonstration and its GIN demonstration in Sheet 12 print the opposite of their captions. What does that tell you?</summary>
+        <p>That conclusions get reviewed and examples do not. In both cases the stated conclusion was correct and the demonstration was broken, which is exactly the combination that survives indefinitely &mdash; a reader who agrees with the conclusion has no reason to run the code. The practical rule: run every example, and be more suspicious of demonstrations than of theorems.</p></details>
+      <details><summary>SPT is provably optimal and unusable in an OS. Is the theorem worth teaching?</summary>
+        <p>Argue both. Against: an unusable optimum can mislead, and multilevel feedback queues &mdash; which are what real schedulers use &mdash; have no optimality guarantee at all. For: knowing the optimum tells you what you are giving up, and the reason it is unusable (you cannot know the future) is itself the useful lesson, connecting directly to undecidability. The strongest position is that the theorem is worth teaching <em>with</em> its impossibility, and that teaching it alone is what produces engineers who look for a rule that cannot exist.</p></details>
+      <details><summary>Part 2 &sect;13 measured that capping WIP costs 2.4% of throughput at ten cards and 44% at one. How should that change how you read lean advice?</summary>
+        <p>It converts a slogan into a sizing problem. "Reduce WIP" is right in the region where the cap sits above the working queue length and actively harmful below it, and nothing in the slogan tells you which side you are on. The honest reading is that the advice encodes an assumption about where you are starting &mdash; usually far above the cliff &mdash; and that the assumption should be checked rather than inherited.</p></details>
+      <details><summary>This chapter claims a very high transfer rate between manufacturing and computing. Is that evidence, or eagerness?</summary>
+        <p>Be sceptical. The defence is that the identities are numerically checked and scope-bounded, and that both fields are solving genuinely the same problem &mdash; allocating scarce resources among competing demands &mdash; so convergence is expected rather than surprising. The concern is real: a frame that explains everything explains nothing. The test is whether the bridge ever <em>predicted</em> something, and here it did twice: the EOQ form of the quantum optimum and the moving constraint in &sect;11 were both found by taking the correspondence seriously, not by reading the source.</p></details>
+      <details><summary>Undecidability has no mechanical counterpart. Was it worth a full section?</summary>
+        <p>Yes, and precisely because it has none. A series built on correspondences has a standing bias toward finding them, and the discipline that keeps it honest is naming the places where there is nothing to find. It also has a practical payoff: an engineer who confuses "no closed form" with "undecidable" will keep looking for a perfect deadlock detector or a perfect optimiser, and the distinction is what stops that search.</p></details>
+      <details><summary>Part 1 &sect;09 argues your heuristics are heuristics because the problems are NP-hard. Does knowing that change anything you do?</summary>
+        <p>Three things, concretely. You stop looking for the exact method. You start asking what guarantee your heuristic carries &mdash; "within 11/9 of optimal" and "works well in practice" are very different claims to defend. And you look for special structure, because NP-hardness is a worst-case statement and your instance may not be the worst case. What it should <em>not</em> change is your confidence in the heuristic: it was optimal on 98.8% of measured instances.</p></details>
+      <details><summary>Which of the three parts would you drop if the chapter had to be shorter, and what would be lost?</summary>
+        <p>A defensible answer is part 3, since languages are the most replaceable knowledge and the compilation pipeline is the least load-bearing bridge. What would be lost is the chapter&rsquo;s only end-to-end example, the types-as-units correspondence &mdash; which is the single cheapest thing here for an engineer to adopt &mdash; and the worked example whose failure produced the moving-constraint result. Arguing for a different part is equally legitimate; the useful move is to notice that the three parts are not equally about computing. Part 1 is mathematics, part 2 is operations research, and only part 3 is really about software.</p></details>
+    </div>
+  </div>
+</section>
+
+<section id="next">
+  <div class="col">
+    <div class="sechead"><span class="secnum">14</span><h2>The map, and what the chapter leaves out</h2>
+      <span class="srcref nolink" title="Added material, not in the source chapter">beyond the chapter</span>
+    </div>
+    <p>
+      Three parts in one picture. Read it as a stack: the mathematics under the machine, the
+      machine, the sharing of it, and the language you write it in &mdash; with one law running
+      vertically through all of them.
+    </p>
+  </div>
+
+  <figure class="col">
+    <svg class="stage" id="sCmap" viewBox="0 0 480 330" role="img"
+         aria-label="Concept map of chapter 13: three parts stacked from discrete mathematics through architecture, operating systems and languages, with the bottleneck law running through all of them">
+      <defs>
+        <marker id="cmA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M0,1 L9,5 L0,9 z" fill="var(--ink-3)"></path>
+        </marker>
+      </defs>
+      <g id="cmLink"></g>
+      <g id="cmNode"></g>
+    </svg>
+    <figcaption><b>Fig. 13.13</b> &mdash; The vertical spine is the bottleneck law: it appears as line balancing in part 1 &sect;13, as Amdahl in part 2 &sect;16, and as a moving constraint in part 3 &sect;11. Everything else hangs off one of the three layers.</figcaption>
+  </figure>
+
+  <div class="col">
+    <h3>What this chapter feeds</h3>
+    <p>
+      <b>Sheet 14 (data structures and algorithms)</b> takes part 1 &sect;06&rsquo;s recurrences
+      and part 1 &sect;09&rsquo;s complexity classes and does them properly &mdash; the source
+      says so itself. <b>Sheet 16 (SIMD and GPU)</b> inherits part 2 &sect;11&rsquo;s SIMT model
+      and part 1 &sect;15&rsquo;s memory hierarchy, and it is where the bus bottleneck of part 1
+      &sect;17 becomes the whole subject. <b>Sheet 17 (AI inference)</b> is part 1 &sect;10&rsquo;s
+      number formats applied in anger &mdash; quantisation is choosing how many significant
+      figures you can afford. <b>Sheet 18 (ML systems design)</b> takes part 2&rsquo;s
+      Little&rsquo;s law, its scaling laws and its container material and makes them the
+      architecture.
+    </p>
+
+    <h3>What this chapter does not cover</h3>
+    <p>
+      Naming it honestly, so the three parts do not imply completeness:
+    </p>
+    <ul>
+      <li><b>Proofs.</b> The halting problem argument is sketched, not rigorous. NP-completeness
+        is stated without a reduction. SPT&rsquo;s optimality is verified exhaustively on small
+        instances rather than proved by exchange argument.</li>
+      <li><b>Real assembly language and real ISAs.</b> Part 1 &sect;12 describes what an
+        instruction set is and shows none. You could not read a disassembly after this chapter.</li>
+      <li><b>Caches in any depth</b> &mdash; no cache-oblivious algorithms, no false sharing, no
+        prefetching, no NUMA, and no actual measurement on real hardware.</li>
+      <li><b>Distributed systems.</b> Part 2 stops at one machine. Consensus, replication,
+        partial failure, and the CAP trade-off are absent, and they are most of what makes
+        distributed computing hard.</li>
+      <li><b>Security beyond a paragraph.</b> Part 2 &sect;08 names the mechanism and stops.
+        No threat modelling, no cryptography, no side channels.</li>
+      <li><b>Writing a compiler.</b> Part 3 &sect;05 describes the stages; it would not let you
+        build one, and parsing alone is a term&rsquo;s work.</li>
+      <li><b>Any hands-on work at all.</b> No profiler output, no <code>perf</code>, no
+        <code>strace</code>, no container built, no code written. Every number here is either
+        the source&rsquo;s or computed in a verification script.</li>
+    </ul>
+    <p>
+      What the three parts do claim is that the correspondences are <em>correct</em> and
+      scope-bounded, and that every numerical statement across all three can be reproduced by
+      running one script.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>If you take three things from the whole chapter</div>
+      <p>
+        <b>The bottleneck law is one law.</b> Line balancing, Amdahl and the theory of
+        constraints are the same statement, and the fifth focusing step &mdash; go back to step
+        one &mdash; is the part that keeps being forgotten in both fields.
+        <b>Rate times severity, not rate.</b> A 95% hit rate, 95% branch accuracy and 95%
+        first-pass yield are all worse than they sound, by the same arithmetic.
+        <b>Your heuristics are heuristics for a reason,</b> and the reason is NP-hardness,
+        which is worth knowing because it tells you to stop looking for the exact rule and
+        start asking what guarantee you have instead.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="provenance">
+  <div class="col">
+    <div class="sechead"><span class="secnum">A</span><h2>Provenance and changes</h2>
+      <span class="srcref nolink" title="Required by Apache-2.0 section 4(b)">licence notice</span>
+    </div>
+    <p>
+      This sheet is a derivative work of <b>chapter 13 &mdash; computing and OS</b> of the
+      <i>Mathematics, Computer Science and AI Compendium</i>, licensed under Apache&nbsp;2.0.
+      Section&nbsp;4(b) requires prominent notice of changes. The source is pinned at commit
+      <code>9850ee5</code>. <b>This appendix covers part 3</b>, plus the chapter-level material
+      (&sect;&sect;11&ndash;14); parts 1 and 2 carry their own.
+    </p>
+    <h3>Source material used in part 3</h3>
+    <ul>
+      <li><code>05. programming languages.md</code> (273 lines) &mdash; &sect;&sect;01&ndash;10</li>
+      <li>Two figures reproduced unmodified from <code>images/</code>:
+        <code>stack_vs_heap</code>, <code>compilation_pipeline</code>.</li>
+      <li>&sect;&sect;11&ndash;14 are chapter-level additions with no single source file.</li>
+    </ul>
+    <h3>Changes made</h3>
+    <ul>
+      <li><b>Re-narrated for one reader</b> &mdash; a GATE-prepared mechanical engineering
+        graduate, against dimensional analysis, process planning, tool control and
+        manufacturing economics.</li>
+      <li><b>Correspondences added that are not in the source:</b> a type system as dimensional
+        analysis, with weak typing as silent unit coercion; the stack and heap as the bench and
+        the stores; tracing collection as a stocktake and reference counting as a sign-out
+        tally, with the cycle failure demonstrated; Rust&rsquo;s borrow checker as part 2
+        &sect;13&rsquo;s read-write lock moved to compile time; the compilation pipeline as
+        process planning stage for stage; LLVM IR as STEP/IGES with the same \(m+n\) against
+        \(m \times n\) argument; the optimiser passes as process improvement, with loop
+        unrolling as batching; JIT compilation as making a jig mid-run, with the break-even
+        \(n = C/\Delta s\) computed; G-code and GD&amp;T as domain-specific languages; language
+        selection as material selection.</li>
+      <li><b>A worked example (&sect;11) that overturned the claim it was drafted for.</b> The
+        intended conclusion was that fixing a bottleneck beats buying hardware; computed, at
+        one GPU the hardware wins 1.74&times; against 1.18&times;. The superseded claim is
+        recorded here rather than removed. The result that replaced it &mdash; that the
+        constraint moves, crossing at 5.58 GPUs, with the value of the fix peaking at four
+        &mdash; is stronger and is Goldratt&rsquo;s fifth focusing step.</li>
+      <li><b>One caveat added to a source figure:</b> &sect;10 bounds the source&rsquo;s
+        "Python is ~100x slower than C" &mdash; interpreted overhead is per-operation, so it
+        matters in proportion to how many operations run in the interpreter, which is why the
+        worked example measures rather than assumes.</li>
+      <li><b>Chapter-level end matter</b> (&sect;&sect;12&ndash;14): a consolidated
+        thirteen-row break table across all three parts, a 24-question bank in three tiers, a
+        concept map, and an explicit statement of what the chapter omits.</li>
+      <li><b>Four interactive labs</b> in plain SVG and vanilla JavaScript.</li>
+      <li><b>Nine new numerical checks</b> added to
+        <code>study-companion/verify_claims.py</code>, bringing it to 444 checks with no
+        failures across all thirteen chapters.</li>
+    </ul>
+    <h3>What is claimed, and what is reported</h3>
+    <p>
+      Statements tagged <code>[Ch13 sNN]</code> are computed. Language performance figures,
+      named implementations (CPython, PyPy, LLVM, the JVM) and the "~100x" comparison are the
+      source&rsquo;s and are reported rather than derived; &sect;10 states the conditions under
+      which the last of these holds. The training-step timings in &sect;11 are a stated
+      scenario, not a measurement of any real system, and every conclusion drawn from them is
+      arithmetic on those stated numbers. No internet research was used.
+    </p>
+    <p class="endnote">
+      Sheet 13 of 20, part 3 of 3 &mdash; chapter complete. Source compendium &copy; its
+      authors, Apache&nbsp;2.0. This derivative sheet is offered under the same licence. Next:
+      <b>Sheet 14 &mdash; data structures and algorithms</b>, which takes part 1&rsquo;s
+      recurrences and complexity classes and does them properly.
+    </p>
+  </div>
+</section>
+
+</main>
+</div>
+
+<style>
+:root{--c1:#BF5B00; --c2:#0F74C7; --c3:#1F8A4C; --c4:#7A4FBF; --c5:#C2185B}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --c1:#D9782B; --c2:#4A97D6; --c3:#35AC63; --c4:#9575D0; --c5:#D65A82}
+}
+:root[data-theme="dark"]{
+  --c1:#D9782B; --c2:#4A97D6; --c3:#35AC63; --c4:#9575D0; --c5:#D65A82}
+#jGrid line{stroke:var(--rule)}
+#jAx line{stroke:var(--rule-strong); stroke-width:1.25}
+#jCurve path{fill:none; stroke-width:2}
+#wBars rect, #tBox rect{stroke:var(--sheet); stroke-width:1}
+#gGraph line{stroke:var(--rule-strong); stroke-width:2}
+#cmLink path{fill:none; stroke:var(--ink-3); stroke-width:1.2}
+#cmNode rect{stroke-width:1.4}
+.tk{fill:var(--ink-3); font-family:'IBM Plex Mono',monospace; font-size:10px}
+.tkb{fill:var(--ink-2); font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600}
+.tkn{fill:var(--sheet); font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:600}
+.cmt{fill:var(--ink); font-family:var(--f-disp); font-size:10.5px; font-weight:600}
+</style>
+
+<script>
+(function(){
+  'use strict';
+  var root=document.documentElement;
+  function dk(){var t=root.getAttribute('data-theme');
+    return t?t==='dark':(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);}
+  try{var sv=localStorage.getItem('ch13c-theme'); if(sv==='dark'||sv==='light') root.setAttribute('data-theme',sv);}catch(e){}
+  var tb=document.getElementById('themebtn');
+  if(tb) tb.addEventListener('click',function(){var n=dk()?'light':'dark';
+    root.setAttribute('data-theme',n); try{localStorage.setItem('ch13c-theme',n);}catch(e){}});
+  function $(id){return document.getElementById(id);}
+  function predict(attr,vid,ans){
+    document.querySelectorAll('['+attr+']').forEach(function(b){
+      b.addEventListener('click',function(){
+        document.querySelectorAll('['+attr+']').forEach(function(o){o.classList.remove('picked');});
+        b.classList.add('picked');
+        var v=$(vid); v.innerHTML=ans[b.getAttribute(attr)]; v.classList.add('show');
+      });
+    });
+  }
+  window.__c13c={$:$,predict:predict};
+})();
+</script>
+
+<script>
+/* ===== LAB 1 -- dimensional type checker ===== */
+(function(){
+  'use strict';
+  var H=window.__c13c, $=H.$;
+  var Q={
+    'force':[1,1,-2],'length':[0,1,0],'time':[0,0,1],'mass':[1,0,0],
+    'velocity':[0,1,-1],'acceleration':[0,1,-2],'energy':[1,2,-2],
+    'power':[1,2,-3],'pressure':[1,-1,-2],'stress':[1,-1,-2],
+    'density':[1,-3,0],'momentum':[1,1,-1]
+  };
+  var NAMES={'1,1,-2':'force','0,1,0':'length','0,0,1':'time','1,0,0':'mass',
+    '0,1,-1':'velocity','0,1,-2':'acceleration','1,2,-2':'energy or work',
+    '1,2,-3':'power','1,-1,-2':'pressure or stress','1,-3,0':'density',
+    '1,1,-1':'momentum','0,0,0':'dimensionless'};
+  var OPS={'+':'add','-':'subtract','×':'multiply','÷':'divide'};
+  var a='force', b='length', op='×';
+  (function init(){
+    var sa=$('tA'), sb=$('tB'), so=$('tOp');
+    Object.keys(Q).forEach(function(k){
+      sa.insertAdjacentHTML('beforeend','<option'+(k===a?' selected':'')+'>'+k+'</option>');
+      sb.insertAdjacentHTML('beforeend','<option'+(k===b?' selected':'')+'>'+k+'</option>');
+    });
+    Object.keys(OPS).forEach(function(k){
+      so.insertAdjacentHTML('beforeend','<option'+(k===op?' selected':'')+'>'+k+'</option>');
+    });
+    sa.addEventListener('change',function(){a=this.value; draw();});
+    sb.addEventListener('change',function(){b=this.value; draw();});
+    so.addEventListener('change',function(){op=this.value; draw();});
+  })();
+  function fmtd(d){
+    var s=['M','L','T'].map(function(sym,i){
+      if(d[i]===0) return ''; return sym+(d[i]===1?'':'^'+d[i]);
+    }).filter(Boolean).join(' ');
+    return s||'(dimensionless)';
+  }
+  function draw(){
+    var da=Q[a], db=Q[b], ok, res;
+    if(op==='+'||op==='-'){ ok = da.join()===db.join(); res = ok?da:null; }
+    else { ok=true; res = da.map(function(v,i){return op==='×'? v+db[i] : v-db[i];}); }
+    var o='';
+    function box(x,label,dims,col){
+      return '<rect x="'+x+'" y="92" width="128" height="58" rx="5" fill="'+col+
+             '" stroke="var(--rule-strong)"/>'+
+             '<text class="tkn" x="'+(x+64)+'" y="114" text-anchor="middle">'+label+'</text>'+
+             '<text class="tk" x="'+(x+64)+'" y="132" text-anchor="middle" fill="var(--sheet)" fill-opacity="0.95">'+
+             fmtd(dims)+'</text>';
+    }
+    o+=box(30,a,da,'var(--c2)')+box(300,b,db,'var(--c1)');
+    o+='<text class="cmt" x="240" y="128" text-anchor="middle" font-size="22">'+op+'</text>';
+    if(ok){
+      o+='<rect x="140" y="196" width="200" height="56" rx="5" fill="var(--c3)" stroke="var(--rule-strong)"/>'+
+         '<text class="tkn" x="240" y="218" text-anchor="middle">accepted</text>'+
+         '<text class="tk" x="240" y="236" text-anchor="middle" fill="var(--sheet)">'+
+         fmtd(res)+' — '+(NAMES[res.join()]||'a derived quantity')+'</text>';
+    } else {
+      o+='<rect x="120" y="196" width="240" height="56" rx="5" fill="var(--c5)" stroke="var(--rule-strong)"/>'+
+         '<text class="tkn" x="240" y="218" text-anchor="middle">REJECTED</text>'+
+         '<text class="tk" x="240" y="236" text-anchor="middle" fill="var(--sheet)">cannot '+
+         OPS[op]+' '+fmtd(da)+' and '+fmtd(db)+'</text>';
+    }
+    $('tBox').innerHTML=o;
+    $('tLab').innerHTML=
+      '<text class="tkb" x="240" y="38" text-anchor="middle">a dimension checker, which is a type checker</text>'+
+      '<text class="tk" x="240" y="54" text-anchor="middle">add and subtract demand identical dimensions; multiply and divide combine them</text>'+
+      '<text class="tk" x="240" y="282" text-anchor="middle">'+
+      (ok?'a compiler says exactly this, one stage earlier in the process'
+         :'“cannot add i32 and f64” is the same refusal in another vocabulary')+'</text>';
+    $('tDA').textContent=fmtd(da);
+    $('tDB').textContent=fmtd(db);
+    $('tR').textContent=(ok?'accepted':'rejected');
+    $('tD').textContent=(ok?fmtd(res):'—');
+  }
+  H.predict('data-p1','pv1',{
+    a:'<b>Rounding is about precision, not legality.</b> A type checker is not asking how many figures you kept; it is asking whether the operation means anything at all.',
+    b:'<b>Correct.</b> Refusing to add a length to a time and refusing to add an i32 to an f64 are the same refusal for the same reason. A dimension is a type, and homogeneity is type checking.',
+    c:'<b>A stack-up is arithmetic on quantities of the SAME kind.</b> It assumes the dimensional check has already passed — you cannot stack a length against a temperature.',
+    d:'<b>It has a very close one.</b> Try force + length in the lab and read the rejection message; then read a compiler’s. They differ only in vocabulary.'
+  });
+  draw();
+})();
+
+/* ===== LAB 2 -- reference counting vs tracing ===== */
+(function(){
+  'use strict';
+  var H=window.__c13c, $=H.$;
+  var cyc=true, rootRef=true, traced=false;
+  function state(){
+    var A={rc:0}, B={rc:0};
+    if(rootRef) A.rc+=1;
+    A.rc += cyc?1:0;            /* B -> A when cyclic */
+    B.rc += 1;                  /* A -> B always */
+    var reach = rootRef;        /* anything reachable only if the root still points in */
+    return {A:A,B:B,reach:reach};
+  }
+  function draw(){
+    var s=state(), o='';
+    var rx=70, ax=220, bx=370, y=150;
+    function node(x,lab,rc,freed,live){
+      var col = freed? 'var(--rule)' : (live? 'var(--c3)' : 'var(--c1)');
+      return '<circle cx="'+x+'" cy="'+y+'" r="30" fill="'+col+'"/>'+
+             '<text class="tkn" x="'+x+'" y="'+(y-2)+'" text-anchor="middle">'+lab+'</text>'+
+             '<text class="tk" x="'+x+'" y="'+(y+13)+'" text-anchor="middle" fill="var(--sheet)">rc='+rc+'</text>';
+    }
+    var freedByRC = (s.A.rc===0);
+    var freedByTrace = traced && !s.reach;
+    if(rootRef) o+='<line x1="'+(rx+22)+'" y1="'+y+'" x2="'+(ax-32)+'" y2="'+y+'" marker-end="url(#cmA)"/>';
+    o+='<line x1="'+(ax+32)+'" y1="'+(y-8)+'" x2="'+(bx-32)+'" y2="'+(y-8)+'"/>';
+    if(cyc) o+='<line x1="'+(bx-32)+'" y1="'+(y+10)+'" x2="'+(ax+32)+'" y2="'+(y+10)+'"/>';
+    o+='<circle cx="'+rx+'" cy="'+y+'" r="22" fill="var(--ink-2)"'+(rootRef?'':' fill-opacity="0.3"')+'/>'+
+       '<text class="tkn" x="'+rx+'" y="'+(y+3.5)+'" text-anchor="middle">root</text>';
+    o+=node(ax,'A',s.A.rc, freedByRC||freedByTrace, s.reach);
+    o+=node(bx,'B',s.B.rc, freedByTrace && !s.reach, s.reach);
+    $('gGraph').innerHTML=o;
+    var verdict;
+    if(s.reach) verdict='both objects are reachable and in use';
+    else if(freedByRC) verdict='counts reached zero — the tally freed both correctly';
+    else if(freedByTrace) verdict='the stocktake found them unreachable and freed them';
+    else verdict='LEAKED — counts non-zero, yet nothing reachable points at either';
+    $('gLab').innerHTML=
+      '<text class="tkb" x="240" y="38" text-anchor="middle">'+
+      (cyc?'A and B reference each other':'A references B; nothing references A but the root')+'</text>'+
+      '<text class="tk" x="240" y="54" text-anchor="middle">'+
+      'each number is that object’s reference count</text>'+
+      '<text class="tkb" x="240" y="232" text-anchor="middle" fill="'+
+      (verdict.indexOf('LEAKED')===0?'var(--brk)':'var(--bridge)')+'">'+verdict+'</text>'+
+      '<text class="tk" x="240" y="262" text-anchor="middle">'+
+      (cyc&&!s.reach&&!traced
+        ? 'local bookkeeping says in use; global reachability says nobody wants them'
+        : 'press the buttons to change the reference graph')+'</text>';
+    $('gA').textContent=s.A.rc;
+    $('gB').textContent=s.B.rc;
+    $('gF').textContent=(freedByRC?'both':(s.reach?'neither (in use)':'neither — leaked'));
+    $('gR').textContent=(s.reach?'yes':'no');
+  }
+  document.querySelectorAll('[data-gp]').forEach(function(b){
+    b.addEventListener('click',function(){
+      var v=b.getAttribute('data-gp');
+      if(v==='cycle'){cyc=true; traced=false;}
+      else if(v==='chain'){cyc=false; traced=false;}
+      else if(v==='drop'){rootRef=!rootRef; traced=false;}
+      else traced=true;
+      draw();
+    });
+  });
+  H.predict('data-p2','pv2',{
+    a:'<b>That is what a tracing collector would do, not what counting does.</b> Counting only asks “does anyone point at me?”, and A and B still point at each other.',
+    b:'<b>Correct.</b> A.rc = 1 and B.rc = 1, neither reaches zero, and neither is ever freed — yet nothing reachable points at either. Local bookkeeping is correct and the global answer is wrong.',
+    c:'<b>There is no next round.</b> Reference counting is not periodic; it acts the instant a count hits zero. Neither count ever will, so nothing happens ever again.',
+    d:'<b>Nothing crashes.</b> That is what makes it dangerous — the program runs correctly and slowly consumes memory, which is the hardest class of fault to find.'
+  });
+  draw();
+})();
+</script>
+
+<script>
+/* ===== LAB 3 -- the JIT break-even ===== */
+(function(){
+  'use strict';
+  var H=window.__c13c, $=H.$, n=421, C=400;
+  var si=1.0, sj=0.05;           /* ms per iteration */
+  function draw(){
+    var X0=58,X1=452,Y0=48,Y1=232, nmax=2000;
+    var tmax=Math.max(nmax*si, C+nmax*sj)*1.05;
+    function px(k){return X0+(X1-X0)*k/nmax;}
+    function py(t){return Y1-(Y1-Y0)*Math.min(t,tmax)/tmax;}
+    var o='';
+    for(var g=500;g<=2000;g+=500) o+='<line x1="'+px(g).toFixed(1)+'" y1="'+Y0+'" x2="'+px(g).toFixed(1)+'" y2="'+Y1+'"/>';
+    $('jGrid').innerHTML=o;
+    var be=C/(si-sj);
+    $('jCurve').innerHTML=
+      '<path d="M'+px(0)+','+py(0).toFixed(1)+' L'+px(nmax)+','+py(nmax*si).toFixed(1)+
+      '" stroke="var(--c1)"/>'+
+      '<path d="M'+px(0)+','+py(C).toFixed(1)+' L'+px(nmax)+','+py(C+nmax*sj).toFixed(1)+
+      '" stroke="var(--c2)"/>'+
+      (be<=nmax?'<circle cx="'+px(be).toFixed(1)+'" cy="'+py(be*si).toFixed(1)+
+        '" r="6" fill="var(--c3)"/>':'')+
+      '<line x1="'+px(n).toFixed(1)+'" y1="'+Y0+'" x2="'+px(n).toFixed(1)+'" y2="'+Y1+
+      '" stroke="var(--ink-3)" stroke-width="1" stroke-dasharray="3 3"/>';
+    $('jAx').innerHTML='<line x1="'+X0+'" y1="'+Y1+'" x2="'+X1+'" y2="'+Y1+'"/>'+
+      '<line x1="'+X0+'" y1="'+Y0+'" x2="'+X0+'" y2="'+Y1+'"/>';
+    var lab='';
+    for(var t=0;t<=2000;t+=500)
+      lab+='<text class="tk" x="'+px(t).toFixed(1)+'" y="'+(Y1+15)+'" text-anchor="middle">'+t+'</text>';
+    var ti=n*si, tj=C+n*sj;
+    $('jLab').innerHTML=lab+
+      '<text class="tkb" x="240" y="28" text-anchor="middle">total time against iterations — compile cost '+
+      C+' ms</text>'+
+      '<text class="tk" x="240" y="'+(Y1+32)+'" text-anchor="middle">iterations</text>'+
+      '<text class="tk" x="'+(X1-4)+'" y="'+(py(nmax*si)+14).toFixed(1)+'" text-anchor="end" fill="var(--c1)">interpreter</text>'+
+      '<text class="tk" x="'+(X0+8)+'" y="'+(py(C)-6).toFixed(1)+'" fill="var(--c2)">JIT: pay '+C+' ms up front</text>'+
+      '<text class="tk" x="240" y="'+(Y1+52)+'" text-anchor="middle">break-even n = C/(s_slow − s_fast) = '+
+      be.toFixed(0)+' iterations</text>';
+    $('jI').textContent=(ti/1000).toFixed(3)+' s';
+    $('jJ').textContent=(tj/1000).toFixed(3)+' s';
+    $('jWn').textContent=(tj<ti?'JIT':'interp');
+    $('jB').textContent=be.toFixed(0);
+    $('jVal').textContent=n;
+  }
+  $('jSl').addEventListener('input',function(){n=+this.value; draw();});
+  document.querySelectorAll('[data-jp]').forEach(function(b){
+    b.addEventListener('click',function(){C=+b.getAttribute('data-jp'); draw();});
+  });
+  H.predict('data-p3','pv3',{
+    a:'<b>Close, and the gap is the interesting part.</b> 400 would be right if the compiled version were free. It costs 0.05 ms per iteration, so the saving is 0.95 ms and the break-even is 400/0.95 = 421.',
+    b:'<b>Correct.</b> n = C/(s_slow − s_fast) = 400/(1 − 0.05) = 421. The denominator is the SAVING, not the interpreted time — the same correction as remembering that a jig makes an operation faster, not free.',
+    c:'<b>Out by a factor of twenty.</b> Read the break-even readout: 421. By 8,000 iterations the JIT is winning by more than ten times.',
+    d:'<b>It does not.</b> Below 421 iterations you would have been faster never compiling at all — which is exactly why a JIT interprets first and compiles only what proves hot.'
+  });
+  draw();
+})();
+
+/* ===== LAB 4 -- the moving constraint ===== */
+(function(){
+  'use strict';
+  var H=window.__c13c, $=H.$, logn=0, fixed=false;
+  var SER=38.0, PAR=212.0;
+  function draw(){
+    var n=Math.pow(2,logn);
+    var raw=SER+PAR/n, fix=Math.max(SER,PAR/n);
+    var step=fixed?fix:raw, base=SER+PAR;
+    var X0=64,X1=440,Y=110,h=46, scale=(X1-X0)/base;
+    var o='';
+    if(fixed){
+      var par=PAR/n;
+      o+='<rect x="'+X0+'" y="'+Y+'" width="'+Math.max(SER*scale,2).toFixed(1)+'" height="'+h+
+         '" fill="var(--c1)"/>'+
+         '<rect x="'+X0+'" y="'+(Y+h+6)+'" width="'+Math.max(par*scale,2).toFixed(1)+'" height="'+h+
+         '" fill="var(--c2)"/>'+
+         '<text class="tk" x="'+(X0+4)+'" y="'+(Y-6)+'">loader, overlapped — runs beside the GPU work</text>';
+    } else {
+      o+='<rect x="'+X0+'" y="'+Y+'" width="'+Math.max(SER*scale,2).toFixed(1)+'" height="'+h+
+         '" fill="var(--c1)"/>'+
+         '<rect x="'+(X0+SER*scale).toFixed(1)+'" y="'+Y+'" width="'+Math.max(PAR/n*scale,2).toFixed(1)+
+         '" height="'+h+'" fill="var(--c2)"/>'+
+         '<text class="tk" x="'+(X0+4)+'" y="'+(Y-6)+'">serial loader, then GPU work</text>';
+    }
+    o+='<line x1="'+(X0+SER*scale).toFixed(1)+'" y1="'+(Y-16)+'" x2="'+(X0+SER*scale).toFixed(1)+
+       '" y2="'+(Y+2*h+16)+'" stroke="var(--brk)" stroke-width="1.4" stroke-dasharray="5 4"/>'+
+       '<text class="tk" x="'+(X0+SER*scale+5).toFixed(1)+'" y="'+(Y+2*h+26)+'">38 ms floor — no hardware crosses this</text>';
+    $('wBars').innerHTML=o;
+    var share=SER/raw, bott=(SER>PAR/n)?'the loader':'the GPU work';
+    $('wLab').innerHTML=
+      '<text class="tkb" x="240" y="42" text-anchor="middle">one training step at '+n+' GPU'+(n===1?'':'s')+
+      ' — '+step.toFixed(1)+' ms</text>'+
+      '<text class="tk" x="240" y="58" text-anchor="middle">orange = the serial data loader (never shrinks); blue = GPU work (divided by n)</text>'+
+      '<text class="tkb" x="240" y="252" text-anchor="middle">the bottleneck is '+bott+
+      ' — loader share '+(100*share).toFixed(1)+'%</text>'+
+      '<text class="tk" x="240" y="276" text-anchor="middle">'+
+      'Amdahl ceiling 1/(1−p) = '+(base/SER).toFixed(2)+'×; crossover at n = '+
+      (PAR/SER).toFixed(2)+' GPUs</text>'+
+      '<text class="tk" x="240" y="296" text-anchor="middle">'+
+      (SER>PAR/n?'past the crossover: fixing the loader is now the only thing that helps'
+                :'before the crossover: more GPUs still help')+'</text>';
+    $('wT').textContent=step.toFixed(1)+' ms';
+    $('wS').textContent=(base/step).toFixed(2)+'×';
+    $('wL').textContent=(100*SER/step).toFixed(1)+'%';
+    $('wG').textContent=(raw/fix).toFixed(2)+'×';
+    $('wVal').textContent=n;
+  }
+  $('wSl').addEventListener('input',function(){logn=+this.value; draw();});
+  document.querySelectorAll('[data-wp]').forEach(function(b){
+    b.addEventListener('click',function(){fixed=(b.getAttribute('data-wp')==='fixed'); draw();});
+  });
+  H.predict('data-p4','pv4',{
+    a:'<b>It does, and quickly.</b> The loader never shrinks while the GPU work is divided by n, so its SHARE must rise. Drag the slider to 8 and read 58.9%.',
+    b:'<b>Correct.</b> The crossover is at n = 212/38 = 5.58, so from six GPUs onward the loader is the majority of the step — and the thing you scaled has stopped being the constraint.',
+    c:'<b>Far too late.</b> By 32 GPUs the loader is already 85% of the step. The crossover happened at 5.58, long before.',
+    d:'<b>Too early.</b> At 2 GPUs the loader is 26.4% — still a minority. Drag the slider and watch the share readout climb past 50% between 4 and 8.'
+  });
+  draw();
+})();
+
+/* ===== concept map ===== */
+(function(){
+  'use strict';
+  var H=window.__c13c, $=H.$;
+  var N=[
+    {x:22,y:24,w:150,h:46,t:'discrete maths',s:'pt 1 §§01–09',c:'var(--c4)',fg:'var(--sheet)'},
+    {x:22,y:96,w:150,h:46,t:'the machine',s:'pt 1 §§10–17',c:'var(--c2)',fg:'var(--sheet)'},
+    {x:22,y:168,w:150,h:46,t:'sharing it',s:'pt 2 — OS, concurrency',c:'var(--c3)',fg:'var(--sheet)'},
+    {x:22,y:240,w:150,h:46,t:'the language',s:'pt 3 — types, compilers',c:'var(--c1)',fg:'var(--sheet)'},
+    {x:250,y:24,w:210,h:46,t:'NP-hardness',s:'why your rules are heuristics',c:'var(--sheet)',fg:'var(--ink)'},
+    {x:250,y:96,w:210,h:46,t:'rate × severity',s:'AMAT, branch miss, yield',c:'var(--sheet)',fg:'var(--ink)'},
+    {x:250,y:168,w:210,h:46,t:'Little’s law',s:'the utilisation cliff',c:'var(--sheet)',fg:'var(--ink)'},
+    {x:250,y:240,w:210,h:46,t:'types are units',s:'dimensional homogeneity',c:'var(--sheet)',fg:'var(--ink)'}
+  ];
+  var o='';
+  [47,119,191,263].forEach(function(y){
+    o+='<path d="M172,'+y+' L250,'+y+'" marker-end="url(#cmA)"/>';
+  });
+  o+='<path d="M97,70 L97,96" marker-end="url(#cmA)"/>'+
+     '<path d="M97,142 L97,168" marker-end="url(#cmA)"/>'+
+     '<path d="M97,214 L97,240" marker-end="url(#cmA)"/>';
+  o+='<path d="M466,47 C476,47 476,263 466,263" stroke="var(--brk)" stroke-dasharray="5 4"/>';
+  $('cmLink').innerHTML=o;
+  o='';
+  N.forEach(function(d){
+    o+='<rect x="'+d.x+'" y="'+d.y+'" width="'+d.w+'" height="'+d.h+'" rx="6" fill="'+d.c+
+       '" stroke="var(--rule-strong)"/>'+
+       '<text class="cmt" x="'+(d.x+d.w/2)+'" y="'+(d.y+20)+'" text-anchor="middle" fill="'+d.fg+'">'+d.t+'</text>'+
+       '<text class="tk" x="'+(d.x+d.w/2)+'" y="'+(d.y+35)+'" text-anchor="middle" fill="'+d.fg+
+       '" fill-opacity="0.95">'+d.s+'</text>';
+  });
+  o+='<rect x="96" y="300" width="290" height="24" rx="5" fill="var(--sheet)" stroke="var(--brk)" stroke-width="1.6"/>'+
+     '<text class="cmt" x="241" y="316" text-anchor="middle" fill="var(--brk)">'+
+     'the bottleneck law runs through all four</text>';
+  $('cmNode').innerHTML=o;
+})();
+</script>
+
+</body>
+</html>

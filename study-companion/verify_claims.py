@@ -2791,3 +2791,95 @@ print(f"[Ch13 s10]   a van of disks has colossal bandwidth and dreadful latency:
 print(f"[Ch13 s10]   batch transfer, and the trade is the weekly lorry against the milk-run.")
 
 print("\n" + "="*66)
+
+# =========================== CHAPTER 13 (part 3) =========================
+print("\n" + "="*66)
+print("CHAPTER 13 PART 3 -- PROGRAMMING LANGUAGES, AND THE CHAPTER'S EXAMPLE")
+print("="*66)
+
+# --- s02: a type system is dimensional analysis -------------------------
+class _Qty:
+    def __init__(s,v,d): s.v=v; s.d=tuple(d)
+    def __add__(s,o):
+        if s.d!=o.d: raise TypeError(f"cannot add {s.d} to {o.d}")
+        return _Qty(s.v+o.v,s.d)
+    def __mul__(s,o): return _Qty(s.v*o.v, tuple(a+b for a,b in zip(s.d,o.d)))
+_F=_Qty(100,(1,1,-2)); _Ln=_Qty(2,(0,1,0))
+_work=_F*_Ln
+_rejected=False
+try: _F+_Ln
+except TypeError: _rejected=True
+print(f"\n[Ch13 s02] force(M L T^-2) * length(L) = {_work.d}, which is work M L^2 T^-2   "
+      f"{P(_work.d==(1,2,-2))}")
+print(f"[Ch13 s02] force + length is REFUSED by the dimension checker                {P(_rejected)}")
+print(f"[Ch13 s02]   'cannot add i32 and f64' and 'cannot add newtons to metres' are")
+print(f"[Ch13 s02]   the same refusal. Dimensional homogeneity IS static type checking.")
+_lbf=4.4482216152605
+print(f"[Ch13 s02] weak typing is silent unit coercion: 1 lbf.s = {_lbf:.6f} N.s, so a")
+print(f"[Ch13 s02]   mislabelled impulse is wrong by a factor of {_lbf:.3f}              "
+      f"{P(abs(_lbf-4.448)<0.001)}")
+
+# --- s07: the JIT break-even is the jig break-even -----------------------
+_ti,_tc,_tj=1.0e-3,0.40,0.05e-3
+_brk=_tc/(_ti-_tj)
+print(f"\n[Ch13 s07] interpreted {_ti*1e3:.2f} ms/iter, compiled {_tj*1e3:.2f} ms/iter,")
+print(f"[Ch13 s07]   compilation costs {_tc*1e3:.0f} ms once")
+print(f"[Ch13 s07]   break-even n = C/(s_slow - s_fast) = {_brk:.0f} iterations")
+for _n in (100,1000,10000):
+    _a=_n*_ti; _b=_tc+_n*_tj
+    print(f"[Ch13 s07]     n={_n:6d}: interpret {_a:7.3f}s, JIT {_b:7.3f}s -> "
+          f"{'JIT' if _b<_a else 'interpreter'}")
+print(f"[Ch13 s07]   the crossover sits exactly at C/(s_slow-s_fast)                  "
+      f"{P(abs(_brk*_ti-(_tc+_brk*_tj))<1e-9)}")
+print(f"[Ch13 s07]   identical to the jig calculation: a fixture costs hours and saves")
+print(f"[Ch13 s07]   minutes per part, so it pays above a break-even quantity. A JIT")
+print(f"[Ch13 s07]   compiles only HOT code because it waits to learn the quantity.")
+
+# --- s04: reference counting cannot see a cycle -------------------------
+class _O:
+    def __init__(s): s.rc=0; s.refs=[]
+_A3,_B3,_root=_O(),_O(),_O()
+def _pt(a,b): a.refs.append(b); b.rc+=1
+_pt(_root,_A3); _pt(_A3,_B3); _pt(_B3,_A3)
+_root.refs.remove(_A3); _A3.rc-=1
+print(f"\n[Ch13 s04] root->A, A->B, B->A. Drop the root reference:")
+print(f"[Ch13 s04]   A.rc = {_A3.rc}, B.rc = {_B3.rc} -- neither reaches zero, so neither is")
+print(f"[Ch13 s04]   freed, though nothing reachable points at either. Leaked.        "
+      f"{P(_A3.rc>0 and _B3.rc>0)}")
+print(f"[Ch13 s04]   two jobs each signed a tool out 'for' the other: the tally never")
+print(f"[Ch13 s04]   clears and the tools never return. A tally cannot see this; only a")
+print(f"[Ch13 s04]   stocktake can, which is what a tracing collector is.")
+for _h in (1e5,1e6,1e7):
+    print(f"[Ch13 s04]   heap of {_h:8.0e} live objects at 40 ns each -> {_h*40e-9*1e3:6.1f} ms pause")
+print(f"[Ch13 s04]   pause scales with LIVE data, not with garbage -- as a stocktake")
+print(f"[Ch13 s04]   takes as long as you have stock, however little is obsolete.")
+
+# --- s11: the chapter's worked example -- the bottleneck MOVES ----------
+_ser,_par=38.0,212.0; _tot=_ser+_par; _pp=_par/_tot
+print(f"\n[Ch13 s11] training step: serial loader {_ser} ms, parallel GPU work {_par} ms")
+print(f"[Ch13 s11]   p = {_pp:.4f}, Amdahl ceiling 1/(1-p) = {1/(1-_pp):.2f}x            "
+      f"{P(abs(1/(1-_pp)-6.58)<0.02)}")
+print(f"[Ch13 s11]   {'GPUs':>5s} {'step ms':>9s} {'speedup':>8s} {'loader share':>13s} {'bottleneck':>10s}")
+for _n in (1,2,4,8,16,64):
+    _st=_ser+_par/_n
+    print(f"[Ch13 s11]   {_n:5d} {_st:9.1f} {_tot/_st:7.2f}x {100*_ser/_st:12.1f}% "
+          f"{('LOADER' if _ser>_par/_n else 'GPU'):>10s}")
+_flip=_par/_ser
+print(f"[Ch13 s11]   the loader overtakes the GPU work at n = {_flip:.2f} GPUs            "
+      f"{P(abs(_flip-5.58)<0.02)}")
+print(f"[Ch13 s11]   value of FIXING the loader (overlapping it), at each scale:")
+_gains=[]
+for _n in (1,2,4,8,16):
+    _b4=_ser+_par/_n; _af=max(_ser,_par/_n); _gains.append((_n,_b4/_af))
+    print(f"[Ch13 s11]     {_n:3d} GPUs: {_b4:6.1f} ms -> {_af:6.1f} ms, gain {_b4/_af:.2f}x")
+print(f"[Ch13 s11]   MY FIRST DRAFT CLAIMED fixing the loader beats buying 8 GPUs.")
+print(f"[Ch13 s11]   It does not: at 1 GPU the fix gives {_gains[0][1]:.2f}x while 8 GPUs give "
+      f"{_tot/(_ser+_par/8):.2f}x   {P(_gains[0][1] < _tot/(_ser+_par/8))}")
+print(f"[Ch13 s11]   the true result is better: the bottleneck MOVES. The loader is 15%")
+print(f"[Ch13 s11]   of the step at 1 GPU and {100*_ser/(_ser+_par/8):.0f}% at 8, and the gain from fixing it")
+print(f"[Ch13 s11]   peaks at 4 GPUs ({max(_gains,key=lambda g:g[1])[1]:.2f}x), not at 1.                     "
+      f"{P(max(_gains,key=lambda g:g[1])[0]==4)}")
+print(f"[Ch13 s11]   that is Goldratt's FIFTH focusing step, the one everyone forgets:")
+print(f"[Ch13 s11]   when a constraint is broken, go back to step one.")
+
+print("\n" + "="*66)
