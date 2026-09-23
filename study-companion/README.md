@@ -47,6 +47,7 @@ merely structural, that is said plainly.
 | 09 | Audio and Speech | [`ch09-audio-speech/`](ch09-audio-speech/index.html) | [Read online](https://claude.ai/artifact/UeVoa1oWJcZJL8KMsbbLHq) |
 | 10 | Multimodal Learning | [`ch10-multimodal/`](ch10-multimodal/index.html) | [Read online](https://claude.ai/artifact/VVW3i2z1z8dxCEUsvupMAW) |
 | 11 | Autonomous Systems | [`ch11-autonomous-systems/`](ch11-autonomous-systems/index.html) | [Read online](https://claude.ai/artifact/9xX3kBS2wW6MJT8keXAvQA) |
+| 12 | Graph Neural Networks | [`ch12-graph-neural-networks/`](ch12-graph-neural-networks/index.html) | [Read online](https://claude.ai/artifact/6PoKo8b3Hq3QzVQvRDJT8u) |
 
 ## What's in a chapter page
 
@@ -83,8 +84,8 @@ chapters rely on the linked chips instead.
 
 ## Verification
 
-`verify_claims.py` checks the load-bearing mathematical claims across all eleven chapters
-(349 checks, zero failures)
+`verify_claims.py` checks the load-bearing mathematical claims across all twelve chapters
+(398 checks, zero failures)
 against independent computation rather than against anybody's memory — the von Mises and
 Tresca norm identities, the unit-change nearest-neighbour flip, the worked bracket example,
 the `1/sqrt(d)` concentration of cosine similarity, the inertia tensor eigenvalues, polar
@@ -98,14 +99,24 @@ heat-equation solver, the aliasing fold frequency, the Beer-Lambert form of NeRF
 transmittance, and — for Chapter 11 — the closed-form Riccati solution showing a steady-state
 Kalman filter has a damping ratio of exactly `1/sqrt(2)` whatever the noise, `det J = l1 l2
 sin(q2)` with the lost direction at a singularity proved to be the radial one, the
-skew-symmetry of `Mdot - 2C`, and the degree-weighted limit of swarm consensus.
+skew-symmetry of `Mdot - 2C`, and the degree-weighted limit of swarm consensus; and — for
+Chapter 12 — the identity between the graph Laplacian and a directly-assembled stiffness
+matrix, `x'Lx` as twice the strain energy, a path graph's eigenvectors against the
+free-free bar's `cos(pi k (j+1/2)/n)` modes, the DFT diagonalising a ring's Laplacian, the
+cyclomatic number against the degree of static indeterminacy, permutation equivariance
+holding for Jacobi and failing for Gauss-Seidel, and the `1+3+5` irreducible
+decomposition of the velocity gradient with Mohr's circle travelling at exactly `2*theta`.
 
 Several checks exist because they caught an error. The suite has overturned claims in the
 source material (what neighbour-averaging consensus converges to; whether four legs are
-statically stable; the size of a VLA action vocabulary) and claims written for these pages
-before they were tested (whether a Kalman filter's damping ratio varies with noise; what
-actually compounds in behavioural cloning; what damped least squares does near a
-singularity). A test that passes is worth less than one that has failed at least once.
+statically stable; the size of a VLA action vocabulary; whether sum or mean aggregation
+separates a pair of multisets — the compendium's own coding task demonstrates the
+opposite of its caption) and claims written for these pages before they were tested
+(whether a Kalman filter's damping ratio varies with noise; what actually compounds in
+behavioural cloning; what damped least squares does near a singularity; whether the
+two-to-four-layer limit on GNN depth follows from the over-smoothing rate — on a sparse
+graph it does not). A test that passes is worth less than one that has failed at least
+once.
 
 ```
 pip install numpy scipy

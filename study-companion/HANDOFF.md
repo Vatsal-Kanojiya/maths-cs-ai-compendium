@@ -5,8 +5,8 @@ minutes instead of re-deriving decisions already made.
 
 ## State
 
-Branch `claude/blissful-euler-0c6xih`, latest commit `57a1cf5` carries sheets 1–11 of 20.
-**All eleven are published.** Working tree clean, local matches remote.
+Branch `claude/blissful-euler-0c6xih`, latest commit `ccdbfbc` carries sheets 1–12 of 20.
+**All twelve are published.** Working tree clean, local matches remote.
 
 | # | Chapter | Folder | Published |
 |---|---------|--------|-----------|
@@ -21,22 +21,21 @@ Branch `claude/blissful-euler-0c6xih`, latest commit `57a1cf5` carries sheets 1�
 | 09 | Audio and Speech | `ch09-audio-speech/` | https://claude.ai/artifact/UeVoa1oWJcZJL8KMsbbLHq |
 | 10 | Multimodal Learning | `ch10-multimodal/` | https://claude.ai/artifact/VVW3i2z1z8dxCEUsvupMAW |
 | 11 | Autonomous Systems | `ch11-autonomous-systems/` | https://claude.ai/artifact/9xX3kBS2wW6MJT8keXAvQA |
+| 12 | Graph Neural Networks | `ch12-graph-neural-networks/` | https://claude.ai/artifact/6PoKo8b3Hq3QzVQvRDJT8u |
 
-`verify_claims.py` stands at **349 checks, 0 failures**, covering chapters 01–11. Run it first
-in any new session — it is the fastest way to confirm nothing has rotted.
+`verify_claims.py` stands at **398 checks, 0 failures**, covering chapters 01–12. Run it first
+in any new session — it is the fastest way to confirm nothing has rotted. It needs numpy and
+scipy, which a fresh container will not have: `pip install numpy scipy`.
 
-Next up: **Chapter 12 — Graph Neural Networks**. Source is `chapter 12 - graph neural networks/`,
-1,209 lines across 5 files — comfortably one run, no split needed.
+Next up: **Chapter 13 — Computing and Operating Systems**. Source is
+`chapter 13 - computing and OS/`, 1,243 lines across 5 files — one run, no split.
 
-**Chapter 12 inherits a promise, exactly as Chapter 11 inherited one from Chapter 10.**
-Chapter 11 §19 already built the graph Laplacian as a stiffness matrix: it showed
-`L @ 1 = 0` is the rigid-body mode of a free–free structure, that degree plays the role of
-mass (which is why swarm consensus lands on a *degree-weighted* mean), and that λ₂ — the
-Fiedler value — sets the convergence rate for the same reason the first elastic mode is the
-second eigenvalue. Chapter 12 should pick that up as something the reader has now been shown
-working, and extend it: Laplacian eigenvectors ↔ mode shapes, message passing ↔ Gauss–Seidel,
-a finite element mesh ↔ a graph. Do not re-derive it from scratch; reference §19 and go
-further.
+**Chapter 13 inherits a promise, the way 12 inherited one from 11.** Chapter 12 §03 argued that
+a CNN is to a GNN what a finite-difference stencil on a structured grid is to finite element
+assembly on an unstructured mesh, and §27 says explicitly that Chapter 13 "inherits the
+sparse-matrix problem" — indirect indexing, cache misses, irregular access. Chapter 12 also
+promised Sheet 13 would be "where the sparse-matrix bill for everything above comes due", in
+its closing endnote. Pick that up rather than starting cold.
 
 ### Session hygiene that matters
 
@@ -81,20 +80,27 @@ cd "chapter 04 - statistics" && wc -l *.md && cat *.md
 # 2. list the figures it uses, copy them to the workspace
 grep -rho "images/[a-z0-9_]*\.svg" *.md | sed 's|images/||' | sort -u
 
-# 3. reuse the design system verbatim: lines 1-339 of any existing chapter are the
-#    complete head + token block. Change only the <title>.
-sed -n '1,339p' study-companion/ch01-vectors/index.html | sed 's|<title>.*</title>|<title>NEW NAME</title>|' > "$W/index.html"
+# 3. reuse the design system verbatim: lines 1-385 of any existing chapter are the
+#    complete head + BOTH token blocks. 339 is wrong - it ends inside the first
+#    <style>. Change only the <title>. Assert count('<style>')==count('</style>').
+sed -n '1,385p' study-companion/ch11-autonomous-systems/index.html | sed 's|<title>.*</title>|<title>NEW NAME</title>|' > "$W/index.html"
 
-# 4. write the body in 5-6 appended heredoc chunks (quoted delimiter - the content
-#    contains backslashes and dollar signs)
+# 4. write the body in 5-6 appended heredoc chunks. USE A QUOTED DELIMITER (<<'EOF').
+#    An unquoted one turns every $$ into the shell's PID and every \\ into \, which
+#    silently destroys all display maths. See the trap of that name below. If you
+#    need a variable in the body, substitute it afterwards in Python.
 
-# 5. screenshot ONCE with playwright, make one pass of edits, publish
+# 5. probe in a real browser (recipe below), screenshot EACH LAB individually,
+#    fix, re-probe, publish
 ```
 
 Load these skills before writing: `artifact-design`, `artifact-diagramming`, and
-`dataviz` if the chapter has any chart. Validate any categorical palette with
-`dataviz/scripts/validate_palette.js` for **both** `--mode light` and `--mode dark`
-(bands differ: light 0.43–0.77, dark 0.48–0.67).
+`dataviz` if the chapter has any chart **or any lab that colours more than two things**.
+Validate any categorical palette with `dataviz/scripts/validate_palette.js` for **both**
+`--mode light --surface "#FBFCFB"` and `--mode dark --surface "#161A1C"` (bands differ:
+light 0.43–0.77, dark 0.48–0.67). Chapter 12 carries a validated `--c1…--c5` block that
+passes both — copy it rather than re-deriving one, and read the trap about the stock
+`--s1`/`--brk`/`--s3` tokens before using them.
 
 ## Format changes agreed at Chapter 05
 
@@ -206,9 +212,27 @@ that learned fusion lacks — `H`, `R`, the innovation, observability — so Cha
 those up as things the reader has now been told twice they will meet properly here. Treat that
 as a promise already made to the reader.
 
-**12 Graph neural networks.** A finite element mesh **is** a graph, and the graph
+**12 Graph neural networks.** ~~A finite element mesh **is** a graph, and the graph
 Laplacian is assembled exactly as a stiffness matrix is. Laplacian eigenvectors ↔ mode
-shapes. Message passing ↔ Gauss–Seidel and other iterative solvers. Very strong.
+shapes. Message passing ↔ Gauss–Seidel and other iterative solvers. Very strong.~~
+**Written.** The bank was right about the strength and **wrong about the solver**, which turned
+out to be the chapter's best result — see below. The Laplacian identity held completely: `L =
+D - A` *is* the direct-stiffness assembly with element matrix `[[1,-1],[-1,1]]`, to zero error,
+for one scalar DOF per node. From it: `x'Lx = 2U` (strain energy), path-graph eigenvectors ==
+free–free bar modes `cos(πk(j+½)/n)`, and the ring's graph Fourier transform **is** the DFT
+(same matrix — and the same objects a bladed disc's nodal-diameter modes). Added beyond the
+bank: **message passing must be Jacobi, not Gauss–Seidel** (the headline — Gauss–Seidel is
+order-dependent, so permutation equivariance forbids it; the symmetry requirement picks the
+solver); **equivariance IS material frame indifference** and an invariant architecture is an
+isotropic constitutive law written in the invariants; **the ℓ=0/1/2 irrep hierarchy is the
+velocity-gradient split** into dilatation ⊕ vorticity ⊕ deviatoric strain rate, `9 = 1+3+5`,
+and **Mohr's circle's factor of 2 IS the ℓ=2 label**; **cyclomatic number == degree of static
+indeterminacy**; **normalisation is mass-normalisation** and lumped mass really is proportional
+to degree on a uniform mesh; **DiffPool is the Galerkin coarse-grid operator** `R'KR`, inheriting
+multigrid's rigid-body-mode rule; **self-loops are a stability condition**; **a CNN is to a GNN
+what a finite-difference stencil is to FE assembly**. The bridge ends at **attention**: GAT is
+not symmetric, so Maxwell–Betti fails and strain energy, real modes and the graph Fourier
+transform all go at once — Chapter 07's lesson in the same shape.
 
 **13 Computing and OS.** Pipelining ↔ an assembly line. **Amdahl's law ↔ theory of
 constraints** and bottleneck analysis. Caching ↔ buffer stock and material staging.
@@ -250,8 +274,15 @@ as genuine surveys and mark them clearly as not derived from the compendium.
   Chapter 09: `ctc_alignment.svg` used `&mdash;` (an HTML entity XML does not define) and
   `feature_store.svg` had a bare `<` in text content. All 263 SVGs in `images/` now parse.
   Same upstream-PR caveat as the mkdocs fix above.
-- Chapter 10 is published but **not watched** — this session hit the 10-artifact
+- Chapter 10 is published but **not watched** — that session hit the 10-artifact
   wake-subscription cap. Cosmetic; it only means no notification if someone republishes it.
+  Chapter 12's publish reported its subscription as "arming in the background, not registered
+  yet", which is not a confirmed watch either. Do not state that a chapter is being watched
+  unless the publish result says so.
+- **Nine of the twelve published sheets have display equations that overflow their `.mathbox`
+  at 390px, and Chapter 10 has one clipped `.ro-k` label.** Measured at Chapter 12; details in
+  the series-sweep note under the browser-probe section. Pre-existing, not regressions, and
+  not fixed — they need eight artifacts re-probed and republished.
 
 
 ## Browser probe — set this up before touching a chapter (added at Chapter 06)
@@ -284,7 +315,16 @@ Environment specifics that cost time at Chapter 07:
   fallbacks and degrades cleanly.
 - `curl` to the probe server needs `--noproxy '*'`, and `http-server` needs a moment before
   its first request succeeds — a readiness loop with no delay will report connection refused
-  against a server that is starting fine.
+  against a server that is starting fine. At Chapter 12 `npx --offline http-server` took long
+  enough that the readiness loop gave up and a `python3 -m http.server` fallback was started on
+  the same port, which then failed with `Address already in use` — because http-server had in
+  fact come up. **If the fallback reports the port is taken, the first server is running; just
+  curl it.** Also note `npm pack mathjax@3.2.2` works but is slow; budget for it.
+- **Anatomy of the probe.** Two scripts are worth keeping separate: one that walks the five
+  widths asserting the structural invariants, and one that scrolls to each lab and screenshots
+  it. The first proves nothing is broken; only the second shows whether anything is
+  *legible*. At Chapter 12 the first passed clean while the second revealed a colour collision,
+  two label overlaps, an invisible arc, and a wrong readout.
 
 What the probe must check, at widths 1180 / 900 / 700 / 480 / 390:
 
@@ -294,6 +334,10 @@ What the probe must check, at widths 1180 / 900 / 700 / 480 / 390:
 4. No `.ro-k` / `.lg` label with `scrollWidth > clientWidth` (clipped label).
 5. Every slider swept end to end, every preset clicked, every predict button clicked,
    with `pageerror` collected throughout.
+6. Every readout id still holding its placeholder `—` after that sweep — a readout that never
+   got written is a lab that never ran, and it looks identical to one that ran fine.
+7. Any pair of readouts that should agree (a measured value and its closed form) actually
+   agreeing. Chapter 12 shipped a draft where they differed by 12% and nothing else noticed.
 
 ## Traps that have now bitten more than once
 
@@ -378,11 +422,59 @@ What the probe must check, at widths 1180 / 900 / 700 / 480 / 390:
   end-of-chapter material was deferred to a later part. If you split, either write the
   appendix in part 1 covering part 1, or put an explicit note in the endnote saying it lands
   with the final part — and then actually land it.
+- **A `<<HEREDOC` without quotes destroys LaTeX. This cost a whole repair pass at Chapter 12.**
+  The build procedure already said "quoted delimiter"; here is *why*, so the next run does not
+  rationalise its way past it. In an **unquoted** heredoc the shell expands `$$` to its own
+  **process ID** — so all 23 `<div class="mathbox">$$…$$</div>` blocks came out as
+  `<div class="mathbox">940…940</div>` — and it collapses `\\` to `\`, so every
+  `\begin{bmatrix}a&b\\c&d\end{bmatrix}` row separator vanished. Neither breaks the HTML, so
+  tag-balance checks pass and the damage is silent until MathJax renders nonsense. If you need
+  a variable (the source-URL prefix), use a **quoted** delimiter and substitute afterwards with
+  Python, or write a placeholder and `sed` it. Detection, if it has already happened:
+  `grep -c '<div class="mathbox col">\$\$'` must equal `grep -c '<div class="mathbox col">'`.
+- **The design system has only three series colours, and two pairs of them are duplicates.**
+  `--s1` is `#BF5B00` and `--brk` is `#A8500F` — both orange, indistinguishable on screen.
+  `--s3` and `--bridge` are the *same hex*. There is no `--s4`, so any `var(--s4)` silently
+  renders as an invalid paint. Chapter 12 shipped a lab colouring positive and negative mode
+  amplitudes `--s1` against `--brk`, which made a sign change invisible — in a lab whose entire
+  subject is where the sign changes. Chapter 12 now defines validated `--c1…--c5` in its own
+  style block (light and dark, both passing the `dataviz` validator on lightness band, chroma
+  floor, adjacent-pair CVD separation, normal-vision floor and contrast). **Copy that token
+  block forward; never pair `--s1` with `--brk`, and never use more than three of the stock
+  series tokens at once.**
+- **A readout can be numerically wrong in a way no structural check sees.** Chapter 12's
+  over-smoothing lab printed a measured decay ratio of 0.914 beside a predicted `|μ₂|` of 0.811.
+  Both numbers rendered, nothing overflowed, no error was thrown — but the lab measured spread
+  about the plain *mean* while the verified claim projects out the rigid-body direction
+  `√deg/‖√deg‖`, which is not the same subtraction on a graph with unequal degrees. **Put the
+  measured value and the predicted value next to each other in the readout row**, and then a
+  screenshot shows the disagreement immediately. That is worth doing deliberately in every lab
+  that has a closed form to compare against.
+- **Draw disconnected components separately.** Laying every node of a 6-node graph on one
+  circle made "two triangles" look like a tangle of crossed chords, in the one lab whose point
+  is that it is *two loose pieces*. Detect components and give each its own circle.
+- **Screenshots catch what the probe cannot.** The probe's numeric checks passed on all of the
+  above. Colour collisions, label overlaps, arcs drawn in the same hue as the circle under
+  them, and a legend sitting on top of an axis title are all invisible to `scrollWidth`
+  comparisons. **Screenshot each lab individually, not just the page**, and select with
+  `#section .lab` before `#section figure` — a section that opens with a compendium figure will
+  otherwise hand you the figure.
 - **Probe the whole series occasionally, not just the chapter you are writing.** The clipped
   labels above were invisible for three chapters because nobody re-ran the earlier pages. A
-  sweep over every `ch0*/index.html` at 1180 and 390 catches this in about a minute:
+  sweep over every `ch*/index.html` at 1180 and 390 catches this in about a minute:
   horizontal scroll, `scrollWidth > clientWidth` on `.ro-k`/`.ro-v`/`.lab-t`, display
   equations wider than their `.mathbox`, broken images, and page errors.
+  **Result of that sweep at Chapter 12, recorded so nobody has to re-run it to know:** no page
+  ever scrolls horizontally, no broken images, no JS errors, in any of the twelve. But **nine
+  of twelve have display equations wider than their `.mathbox` at 390px** — ch01 (5), ch02 (3),
+  ch03 (1), ch04 (2), ch05 (2), ch07 (4), ch08 (1), ch11 (1). Those scroll inside the box
+  (`.mathbox{overflow-x:auto}`) so they are readable with a sideways swipe rather than broken,
+  which is why they have survived; ch06, ch09 and ch12 are the only clean ones. **ch10 has one
+  genuinely clipped label at 390px** ("extrapolating"), which is the `.ro-k` bug class the
+  notes above say was fixed everywhere — it was not, or it regressed. Both are pre-existing and
+  outside Chapter 12's scope; neither was touched. Fixing them means re-probing and
+  republishing eight artifacts, so it is a deliberate piece of work for a session that chooses
+  it, not something to fold into the next chapter.
 
 ## The Chapter 06 lesson worth generalising
 
@@ -569,6 +661,65 @@ Verified across eight gain pairs. This is the kind of one-line consequence that 
 than a page of qualitative tuning advice, and it was found by multiplying two definitions
 together and noticing a cancellation.
 
+## The Chapter 12 lesson worth generalising
+
+**The bank was not merely incomplete this time — it was wrong, and the error was the
+chapter.** Every previous entry undersold its chapter; this one contained a false claim.
+It said "message passing ↔ Gauss–Seidel and other iterative solvers". Message passing cannot
+be Gauss–Seidel: Gauss–Seidel uses values already updated within the sweep, so its answer
+depends on the node ordering, and permutation equivariance — the defining property of a graph
+network, set up in the chapter's own file 01 — forbids exactly that. Measured, the mismatch
+under relabelling is `1.1e-16` for Jacobi and `1.9e-1` for Gauss–Seidel. **The symmetry
+requirement picks the solver, and the slower solver is the only admissible one.** That became
+the best thing in the sheet, and it was found by asking "which relaxation scheme is this,
+exactly?" rather than accepting the family name. **When a bank entry names a category
+("an iterative solver", "an optimiser", "a transform"), ask which member of the category and
+why that one — the constraint that selects it is usually the content.**
+
+**Five corrections in one chapter, and one of them is visible by running the source's own
+code.** File 03 claims mean cannot distinguish `{1,1}` from `{2,2}` — the means are 1 and 2.
+Worse, its coding task builds `{1,1,1,1}` and `{2,2}`, prints both aggregations, and captions
+the output "Sum distinguishes these multisets; mean does not!" — while the printed means are
+1.0 and 2.0 (separated) and the printed sums are 4.0 and 4.0 (collided). It demonstrates the
+exact opposite of its caption. The conclusion it is attached to is nonetheless correct, which
+is the interesting part: **a sound conclusion can carry a broken argument for years, because
+readers check the conclusion against what they already believe and never run the example.**
+The real argument needs no example at all — mean and max are killed by *duplication*, for any
+feature map, and that is a proof. **Run the source's code. It takes a minute and it is the
+highest-yield check available.**
+
+**The same degree-normalisation trap has now appeared three times.** Ch11 §19: swarm consensus
+reaches the degree-weighted mean, not the global average. Ch12 §13: over-smoothing converges to
+`√(1+dᵢ)`, not to a uniform value. Both are the same mistake — assuming a degree-normalised
+iteration has a flat fixed point, which is true only on a regular graph, which is exactly what
+every textbook figure draws. **Whenever an iteration is normalised by degree, compute its fixed
+point; never assume it is flat.** What makes the Ch12 instance worth more than a correction is
+that the mechanical reading *predicts* it: `L̂` is the mass-normalised stiffness matrix, so it
+acts on `q = M^(1/2)x`, and the rigid-body mode `x = 1` written in those coordinates simply *is*
+`√degree`. A bridge that predicts the correction has earned more trust than one that survives it.
+
+**My own claim broke, and the break became the worked example.** §13 originally said `μ₂` is why
+GNNs stop at 2–4 layers. Computing the depth budget for an actual sparse molecular graph gives
+`|μ₂| = 0.967`, hence *68* layers to lose 90% of the distinguishing signal, against a diameter
+of 8 — the window is wide open, and the rule of thumb is nowhere near either bound. Isolating
+the pieces showed the learned `W` barely matters (0.736 → 0.722 at four layers) while the
+**ReLU** roughly doubles the collapse rate, and even with both, four layers leave 38% of the
+spread intact. So the standard explanation does not hold at the scale it is usually asserted;
+the window closes only for *dense* graphs (it is shut for `G(24, p=0.8)` and `K₂₄`). §13 was
+corrected, §24 is the calculation, and the superseded claim is named in the provenance
+appendix rather than quietly deleted. **Distinguish "this explanation fails" from "there is no
+problem" — the calculation rules out one mechanism at one scale and does not establish what
+the operating mechanism is.** Saying so is the honest stopping point.
+
+**When almost everything transfers, put the effort into bounding it.** Sixteen of twenty bridge
+rows are identities. The risk of a hit rate that high is that the exceptions get less attention
+exactly when they need more, so the sheet states the scope condition on the front page — *one
+scalar degree of freedom per node* — and repeats it wherever it bites. The single most valuable
+paragraph is the amber box in §17: attention breaks the symmetry, and strain energy, real mode
+shapes, the graph Fourier transform and every variational argument go at once. That is
+Chapter 07's lesson for the third time: **the bridge is exact right up to the point where the
+architecture becomes good, and then it ends.** Say it in the same breath as the bridge.
+
 ## On splitting a chapter into parts
 
 Chapter 09 (3,250 source lines) was built in four runs and Chapter 10 (1,900) in two, against
@@ -597,23 +748,27 @@ push every part; never leave a part uncommitted at the end of a run.
 
 ## What is actually left
 
-Chapters 12–20, of which 19 and 20 are outline stubs in the source (six files are empty) and
-may not be worth writing as chapters at all. That makes the real remaining work chapters
-12–18, seven sheets. The bridge bank above has a pre-worked entry for each; Chapters 08, 09,
-10 and 11 all found their headline bridge *outside* the bank, so treat it as a floor, not a
-plan.
+Chapters 13–20, of which 19 and 20 are outline stubs (20 and 21 lines respectively — five
+near-empty files each) and may not be worth writing as chapters at all. That makes the real
+remaining work chapters 13–18, six sheets. The bridge bank above has a pre-worked entry for
+each; Chapters 08, 09, 10, 11 **and 12** all found their headline bridge *outside* the bank, so
+treat it as a floor, not a plan. Chapter 12 went further and found the bank's single line for
+it was *wrong* (Gauss–Seidel), which became the chapter's best result.
 
 Source sizes, measured, so the split decision is already made:
 
 | # | Chapter | Source lines | Expect |
 |---|---------|--------------|--------|
-| 12 | Graph neural networks | 1,209 | one run |
-| 13 | Computing and OS | — measure it | — |
-| 14 | Data structures and algorithms | — measure it | — |
-| 15 | Production software engineering | — measure it | — |
-| 16 | SIMD and GPU programming | — measure it | — |
-| 17 | AI inference | — measure it | — |
-| 18 | ML systems design | — measure it | — |
+| ~~12~~ | ~~Graph neural networks~~ | ~~1,209~~ | **written, one run** |
+| 13 | Computing and OS | 1,243 | one run |
+| 14 | Data structures and algorithms | 2,695 | **split** — above the ~2,000 line |
+| 15 | Production software engineering | 1,474 | one run |
+| 16 | SIMD and GPU programming | 3,722 | **split**, probably three parts |
+| 17 | AI inference | 1,276 | one run |
+| 18 | ML systems design | 1,278 | one run |
+| 19 | Applied AI | 20 | stub — five near-empty files |
+| 20 | Bleeding edge AI | 21 | stub — five near-empty files |
 
-Chapters 13–18 have not been measured. First command in the session that starts one:
-`wc -l "chapter NN - name"/*.md`.
+All of 13–20 are now measured, so every split decision is already made. Chapter 16 is the
+largest source in the series after Chapter 09 and will want three parts; Chapter 14 wants two.
+Everything else is a single run.
