@@ -423,6 +423,15 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
   <a href="#learning"><span class="n">15</span><span>Learning, and the gap</span></a>
   <a href="#locomotion"><span class="n">16</span><span>Standing up and walking</span></a>
   <a href="#vla"><span class="n">17</span><span>Language in, torque out</span></a>
+  <a href="#stack"><span class="n">18</span><span>The driving stack</span></a>
+  <a href="#swarm"><span class="n">19</span><span>Swarms and consensus</span></a>
+  <a href="#distance"><span class="n">20</span><span>The cost of distance</span></a>
+  <a href="#shared"><span class="n">21</span><span>Shared control, levels</span></a>
+  <a href="#worked"><span class="n">22</span><span>Worked example</span></a>
+  <a href="#breaks"><span class="n">23</span><span>Where it breaks</span></a>
+  <a href="#recall"><span class="n">24</span><span>Question bank</span></a>
+  <a href="#next"><span class="n">25</span><span>What this feeds</span></a>
+  <a href="#provenance"><span class="n">A</span><span>Provenance</span></a>
 </nav>
 
 <main>
@@ -2135,6 +2144,11 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     <figcaption><b>Fig. 11.9</b> &mdash; Sheet 10's architecture with the output head changed. <i>Figure from the compendium.</i></figcaption>
   </figure>
 
+  <figure class="col">
+    <div class="paper"><img src="img/action_tokenisation.svg" alt="Continuous action values binned into discrete indices that the language model emits as tokens" width="440"></div>
+    <figcaption><b>Fig. 11.10</b> &mdash; An ADC, with a language model on the other side of it. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+
   <div class="col">
     <h3>How coarse is the quantisation, really?</h3>
     <p>
@@ -2226,7 +2240,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
 
   <figure class="col">
     <div class="paper"><img src="img/multimodal_action_distribution.svg" alt="Two valid paths around an obstacle, with a regression policy averaging them into an invalid path through it" width="440"></div>
-    <figcaption><b>Fig. 11.10</b> &mdash; Both modes are right. Their average is not. <i>Figure from the compendium.</i></figcaption>
+    <figcaption><b>Fig. 11.11</b> &mdash; Both modes are right. Their average is not. <i>Figure from the compendium.</i></figcaption>
   </figure>
 
   <div class="col">
@@ -2256,20 +2270,832 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
   </div>
 </section>
 
-<section id="partial">
+<section id="stack">
   <div class="col">
-    <div class="note">
-      <div class="note-h">Where this sheet stands</div>
+    <div class="sechead"><span class="secnum">18</span><h2>The driving stack</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2011%20-%20autonomous%20systems/04.%20self-driving.md" target="_blank" rel="noopener">src 04. self-driving &#8599;</a>
+    </div>
+    <p>
+      The classical architecture is four modules in series:
+    </p>
+  </div>
+  <div class="mathbox col">$$\text{Perception} \to \text{Prediction} \to \text{Planning} \to \text{Control}$$</div>
+  <div class="col">
+    <p>
+      Perception is &sect;01&ndash;&sect;10. Control is &sect;14. The two middle boxes are new,
+      and both are optimisation problems you can read straight off.
+    </p>
+
+    <h3>Prediction is a forecast with error bars, scored honestly</h3>
+    <p>
+      Prediction outputs where every other agent will be over the next 3&ndash;8 seconds.
+      Because the future is genuinely uncertain, good models emit \(K\) candidate trajectories
+      with probabilities rather than one. The standard metric is best-of-\(K\):
+    </p>
+  </div>
+  <div class="mathbox col">$$\text{minADE}_K = \min_{k} \frac{1}{T}\sum_{t=1}^{T}\left\| \hat{\mathbf{p}}_t^{(k)} - \mathbf{p}_t \right\|_2$$</div>
+  <div class="col">
+    <p>
+      Note what that metric rewards and what it does not. It rewards having <em>one</em> good
+      guess among \(K\); it says nothing about whether the probabilities attached to the other
+      \(K-1\) were sensible. A model that emits six wild trajectories and one good one scores
+      identically to a well-calibrated one. When you read a minADE table, you are reading
+      coverage, not calibration &mdash; and it is calibration a planner needs, because the
+      planner has to act on the probabilities.
+    </p>
+
+    <h3>Planning is constrained optimisation</h3>
+    <p>
+      The planner minimises a weighted cost subject to constraints:
+    </p>
+  </div>
+  <div class="mathbox col">$$\min_{\boldsymbol{\xi}} \; w_1 J_{\text{progress}} + w_2 J_{\text{comfort}} + w_3 J_{\text{safety}} \quad \text{s.t. kinematics, speed limits, lane bounds}$$</div>
+  <div class="col">
+    <p>
+      \(J_{\text{comfort}}\) penalises lateral acceleration and <b>jerk</b> &mdash; the
+      derivative of acceleration &mdash; because that is what passengers feel. You have met
+      jerk before in cam design, and for the same reason: a cam profile with discontinuous
+      acceleration produces a shock load and an audible knock, so you design a cycloidal or
+      polynomial profile with continuous jerk. A vehicle trajectory is a cam profile with the
+      passenger as the follower.
+    </p>
+    <p>
+      The weights \(w_i\) are where the engineering actually lives, and they are not
+      derivable from anything. They encode how much comfort a company will trade for progress.
+      That is a policy decision wearing an equation.
+    </p>
+
+    <h3>End-to-end, and what it costs</h3>
+    <p>
+      <b>End-to-end</b> driving replaces all four modules with one differentiable network, so
+      perception learns features the planner actually needs instead of generic detections.
+      <b>UniAD</b> keeps internal modules but trains them jointly, with the planning loss
+      backpropagating to the image encoder. Gradients flowing from a downstream objective back
+      through every upstream stage is the multivariate chain rule from Sheet 03, applied to a
+      whole vehicle.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks &mdash; you lose the ability to say why</div>
       <p>
-        Sheet 11 is being built in three passes. The first two are here: perception and state
-        estimation (&sect;01&ndash;&sect;10), then kinematics, dynamics, control, learned
-        policies and vision-language-action models (&sect;11&ndash;&sect;17). The third pass
-        adds the driving stack, swarm consensus &mdash; where the source&rsquo;s claim about
-        converging to the average turns out to be wrong &mdash; space and extreme robotics,
-        the worked example, the 24-question bank and the provenance appendix. Section numbers
-        in the bridge table at &sect;00 point to their final positions.
+        A modular stack can report &ldquo;I detected a pedestrian at (12.4, 3.1) moving left at
+        1.5&nbsp;m/s and predicted a crossing&rdquo;. When it fails you can point at the module
+        that failed, fix it, and write the fix into a test. An end-to-end system reports a
+        steering angle. This is not a philosophical objection &mdash; it is a
+        <em>certification</em> objection. &sect;21's ISO&nbsp;26262 process is built on
+        decomposing a hazard into contributing component failures and assigning each a
+        verifiable requirement. A monolith has no components to decompose into, so the
+        existing safety-case machinery has nothing to grip. That is a real and unsolved
+        problem, not a transitional inconvenience.
       </p>
     </div>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/autonomous_driving_stack.svg" alt="Sensors feeding perception, then prediction, planning and control in series" width="460"></div>
+    <figcaption><b>Fig. 11.12</b> &mdash; Four boxes in series. Every interface is a place information is thrown away. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+
+  <div class="col">
+    <h3>Open loop versus closed loop</h3>
+    <p>
+      One evaluation distinction is worth more than the rest of the section. <b>Open-loop</b>
+      evaluation replays a recorded drive and scores how closely the planner's output matches
+      what the human did. <b>Closed-loop</b> evaluation lets the planner's decisions change
+      the simulation.
+    </p>
+    <p>
+      Open-loop numbers are almost worthless and the reason is &sect;15. A planner evaluated
+      open-loop never visits its own mistakes, so it is being scored entirely on the expert's
+      state distribution &mdash; the exact condition under which behavioural cloning looks
+      excellent and then fails on the road. The 37&times; gap in &sect;15's table is the
+      difference between an open-loop and a closed-loop score, expressed as a number. A
+      constant &ldquo;go straight&rdquo; policy has low open-loop error on a motorway.
+    </p>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/open_vs_closed_loop.svg" alt="Open-loop replay against closed-loop simulation where the model's actions change the world state" width="440"></div>
+    <figcaption><b>Fig. 11.13</b> &mdash; The only difference is whether the arrow goes back. It is the whole difference. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="swarm">
+  <div class="col">
+    <div class="sechead"><span class="secnum">19</span><h2>Swarms, and what consensus converges to</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2011%20-%20autonomous%20systems/05.%20space%20and%20extreme%20robotics.md" target="_blank" rel="noopener">src 05. space and extreme &#8599;</a>
+    </div>
+    <p>
+      Many simple robots, local rules, no commander. The standard consensus protocol has each
+      robot average its value with its neighbours':
+    </p>
+  </div>
+  <div class="mathbox col">$$x_i(t+1) = \frac{1}{|N_i| + 1}\left(x_i(t) + \sum_{j \in N_i} x_j(t)\right)$$</div>
+  <div class="col">
+    <p>
+      The source says this is &ldquo;iterated until all robots converge to the same value
+      (<b>the global average</b>)&rdquo;. The first half is right. The second half is wrong,
+      and the gap is not small.
+    </p>
+
+    <h3>What it actually converges to</h3>
+    <p>
+      In matrix form the update is \(\mathbf{x}^{+} = W\mathbf{x}\) with
+      \(W = \tilde{D}^{-1}(I + A)\), where \(\tilde{D} = \operatorname{diag}(d_i+1)\). \(W\) is
+      row-stochastic, so it converges to \(\mathbf{1}\boldsymbol{\pi}^T\mathbf{x}(0)\) where
+      \(\boldsymbol\pi\) is the <em>left</em> Perron vector &mdash; and for a symmetric graph
+      that vector is proportional to \(d_i + 1\). The limit is the
+      <b>degree-weighted mean</b>:
+    </p>
+  </div>
+  <div class="mathbox col">$$x_\infty = \frac{\sum_i (d_i+1)\,x_i(0)}{\sum_i (d_i+1)}$$</div>
+  <div class="col">
+    <p>
+      Computed on a seven-node graph with degrees (6, 2, 2, 2, 2, 1, 1):
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Where a neighbour-averaging swarm actually ends up.</caption>
+      <thead><tr><th>Quantity</th><th>Value</th><th></th></tr></thead>
+      <tbody>
+        <tr><td>Converged value (all seven nodes agree to 1.8&times;10<sup>&minus;15</sup>)</td><td class="mono">5.60065279</td><td></td></tr>
+        <tr><td>Plain average</td><td class="mono">6.23357874</td><td><b style="color:var(--brk)">the source's claim</b></td></tr>
+        <tr><td>Degree-weighted mean</td><td class="mono">5.60065279</td><td><b style="color:var(--bridge)">exact match</b></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      Off by 0.63 on a spread of 7.85 &mdash; <b>8.1%</b>. Across 300 random connected graphs
+      the gap reaches 0.96. And the computed left Perron vector is
+      \((0.304, 0.130, 0.130, 0.130, 0.130, 0.087, 0.087)\), which is
+      \((d_i+1)/\sum(d_j+1)\) to nine decimals.
+    </p>
+    <p>
+      Worse, the source's own lab code builds the neighbourhood by <b>3 nearest
+      neighbours</b>, and that relation is not symmetric &mdash; robot \(i\) can be \(j\)'s
+      nearest neighbour without \(j\) being \(i\)'s. On a random ten-robot layout, ten of the
+      edges came out one-way. With a directed graph even the degree-weighted formula fails,
+      and the limit is whatever the left Perron vector happens to be. Measured: 6.031 against
+      a plain mean of 6.144.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; it is a mass-weighted centroid</div>
+      <p>
+        You have seen this exact structure. Write the continuous version,
+        \(\dot{\mathbf{x}} = -L\mathbf{x}\), where \(L = D - A\) is the <b>graph Laplacian</b>,
+        and \(L\) behaves precisely like the stiffness matrix of a network of springs. Then:
+      </p>
+      <ul>
+        <li>\(L\mathbf{1} = \mathbf{0}\) exactly &mdash; verified &mdash; so there is a
+          <b>zero eigenvalue with a uniform eigenvector</b>. That is the rigid-body mode of a
+          free&ndash;free structure: translate every node equally and nothing resists.</li>
+        <li>The quantity conserved along that mode is a <em>weighted</em> centroid, with
+          degree playing the role of mass. Which is why the answer is degree-weighted and not
+          plain: a well-connected robot is a heavy node.</li>
+        <li>The convergence rate is \(\lambda_2\), the first non-zero eigenvalue &mdash; the
+          <b>algebraic connectivity</b> or Fiedler value. It is the second one for the same
+          reason the first elastic mode of a free&ndash;free beam is the second eigenvalue of
+          its stiffness matrix.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Connectivity sets the rate, exactly as stiffness sets a natural frequency.</caption>
+      <thead><tr><th>Topology (8 robots)</th><th>\(\lambda_2(L)\)</th><th>\(|\lambda_2(W)|\)</th><th>Steps to settle to 10<sup>&minus;3</sup></th></tr></thead>
+      <tbody>
+        <tr><td>Path (a line)</td><td>0.152</td><td>0.940</td><td>112</td></tr>
+        <tr><td>Ring</td><td>0.586</td><td>0.805</td><td>32</td></tr>
+        <tr><td>Complete (all-to-all)</td><td>8.000</td><td>0.000</td><td>1</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Where a swarm actually lands</div><div class="lab-tag">Predict, then switch</div></div>
+
+    <div class="predict">
+      <p style="margin-top:0">
+        Seven robots average with their neighbours until they agree. One is a hub connected to
+        all six others; the rest have one or two links. What value do they agree on?
+      </p>
+      <button class="pbtn" data-p6="a" type="button">The plain average of the seven</button>
+      <button class="pbtn" data-p6="b" type="button">The hub&rsquo;s starting value</button>
+      <button class="pbtn" data-p6="c" type="button">A degree-weighted mean</button>
+      <button class="pbtn" data-p6="d" type="button">It depends on the order of updates</button>
+      <div class="pverdict" id="pv6"></div>
+    </div>
+
+    <svg class="stage" id="sC" viewBox="0 0 480 300" role="img"
+         aria-label="Left, a seven-node robot graph; right, the seven values converging, with the plain mean and the degree-weighted mean marked">
+      <g id="cEdge"></g>
+      <g id="cNode"></g>
+      <g id="cTrace"></g>
+      <g id="cLab"></g>
+    </svg>
+
+    <div class="ctl">
+      <label for="itSl">Rounds</label>
+      <input type="range" id="itSl" min="0" max="60" value="60" step="1">
+      <span class="ro-v" id="itVal" style="min-width:34px">60</span>
+      <button class="btn on" data-top="hub" type="button">Hub</button>
+      <button class="btn" data-top="star" type="button">Star</button>
+      <button class="btn" data-top="path" type="button">Path</button>
+      <button class="btn" data-top="cycle" type="button">Ring</button>
+      <button class="btn" data-frz="1" type="button">Freeze one</button>
+    </div>
+
+    <div class="readout">
+      <div class="ro"><div class="ro-k">They converge<br>to</div><div class="ro-v a" id="oCv">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Plain average<br>(source&rsquo;s claim)</div><div class="ro-v b" id="oPl">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Degree-weighted<br>mean</div><div class="ro-v c" id="oWt">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Error in the<br>source&rsquo;s claim</div><div class="ro-v" id="oEr">&mdash;</div></div>
+    </div>
+  </div>
+
+  <div class="lab-foot col">
+    On the right, the seven values converging; the two dashed lines are the plain average and
+    the degree-weighted mean. On <b>Hub</b> and <b>Star</b> the traces sail past the plain
+    average and settle on the weighted one &mdash; so the answer to the prediction is
+    <b>a degree-weighted mean</b>, and the error is 0.71 and 0.88 respectively on a spread of
+    7.5. Now press <b>Ring</b>. Every node has degree 2, the graph is <em>regular</em>, the two
+    dashed lines coincide and the error is exactly zero. That is the honest account of the
+    source's mistake: it is not arbitrary, it is a true statement about regular graphs
+    generalised to graphs that are not. Most real swarms &mdash; anything built on radio range
+    or nearest neighbours &mdash; are not.
+    <br><br>
+    Then press <b>Freeze one</b>, which stops one robot updating, as a stuck sensor would. Every
+    other robot abandons its own value and converges on that one node's, exactly. The swarm has
+    no defence, because averaging has no way to disagree. &ldquo;No single point of failure&rdquo;
+    describes what happens when a robot <em>stops</em>; it says nothing about what happens when
+    one keeps talking and is wrong.
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/swarm_consensus.svg" alt="Scattered robots iteratively averaging with their neighbours until they converge to a shared value" width="440"></div>
+    <figcaption><b>Fig. 11.14</b> &mdash; They do converge. Just not to the number you expected. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+
+  <div class="col">
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks &mdash; &ldquo;no single point of failure&rdquo; is half true</div>
+      <p>
+        The source says a swarm is robust because if one robot fails the rest continue. For a
+        <em>crash</em> that is right. For <em>value</em> consensus it is badly wrong. Freeze
+        one node so it never updates &mdash; a stuck sensor, or a liar &mdash; and the entire
+        swarm converges to that node's value, exactly. Not approximately: all seven nodes end
+        at 9.50857, which was node 3's starting value.
+      </p>
+      <p>
+        And a single wrong reading moves the answer in proportion to the node's weight. A
+        +100 error at the hub (degree 6) shifts the consensus by <b>30.4</b>; the same error
+        at a leaf (degree 1) shifts it by <b>8.7</b> &mdash; which are
+        \(100\pi_0\) and \(100\pi_5\) exactly. The best-connected robot is the most dangerous
+        one to be wrong, and a plain averaging protocol has no defence at all. Byzantine-robust
+        consensus exists and uses medians or trimmed means instead of averages; the naive
+        protocol in the source does not.
+      </p>
+    </div>
+    <p>
+      <b>Reynolds' flocking rules</b> &mdash; separation, alignment, cohesion &mdash; are a
+      weighted sum of three vectors per robot, which is a linear combination from Sheet 01.
+      They produce convincing collective motion. The honest caveat is that &ldquo;convincing&rdquo;
+      is the standard being met: there is no guarantee of collision avoidance and no guarantee
+      the flock stays together, and weight choices exist that fragment it. It is a model of
+      how flocking <em>looks</em>, not a controller with a proof.
+    </p>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/reynolds_flocking.svg" alt="Separation, alignment and cohesion as three steering contributions per agent" width="440"></div>
+    <figcaption><b>Fig. 11.15</b> &mdash; Three vectors, summed with weights. Sheet 01, in a flock. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="distance">
+  <div class="col">
+    <div class="sechead"><span class="secnum">20</span><h2>The cost of distance</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2011%20-%20autonomous%20systems/05.%20space%20and%20extreme%20robotics.md" target="_blank" rel="noopener">src 05. space and extreme &#8599;</a>
+    </div>
+    <p>
+      Extreme-environment robotics is autonomy forced on you by physics. Three constraints do
+      all the work, and each is a one-line calculation.
+    </p>
+
+    <h3>Light is slow when the distance is planetary</h3>
+    <p>
+      The source gives the Earth&ndash;Mars delay as 4&ndash;24 minutes. Derive it instead.
+      With Earth's orbit at 149.6&nbsp;Gm (\(e=0.017\)) and Mars' at 227.9&nbsp;Gm
+      (\(e=0.093\)):
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>One-way light time to Mars, from orbital radii.</caption>
+      <thead><tr><th>Configuration</th><th>Separation</th><th>One way</th><th>Round trip</th></tr></thead>
+      <tbody>
+        <tr><td>Closest possible (perihelion opposition)</td><td>54.6 Gm</td><td>3.03 min</td><td>6.07 min</td></tr>
+        <tr><td>Typical opposition</td><td>78.3 Gm</td><td>4.36 min</td><td>8.71 min</td></tr>
+        <tr><td>Typical conjunction</td><td>377.5 Gm</td><td>20.99 min</td><td>41.98 min</td></tr>
+        <tr><td>Farthest possible (aphelion conjunction)</td><td>401.3 Gm</td><td>22.31 min</td><td>44.62 min</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      So the true range is <b>3.03 to 22.31 minutes</b>. The source's lower figure matches a
+      typical closest approach; its upper figure of 24 is about 7% high. Either way the
+      conclusion stands and it is absolute: there is no control loop. A rover that needs a
+      decision cannot ask for one, because by the time the answer arrives it has been sitting
+      still for anywhere between six and forty-five minutes.
+    </p>
+
+    <h3>Radiation hardening costs three orders of magnitude</h3>
+    <p>
+      A rad-hard processor uses larger transistors and triple-redundant logic that votes, so
+      an upset in one copy is outvoted. It works, and the price is throughput: a
+      200&nbsp;MHz part of this class delivers of order 200&nbsp;MFLOP/s. Put a modern network
+      on it:
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Time per frame at 200 MFLOP/s. Real-time is 33 ms.</caption>
+      <thead><tr><th>Workload</th><th>Cost</th><th>Time per frame</th></tr></thead>
+      <tbody>
+        <tr><td>ResNet-50 forward pass</td><td>8.2 GFLOP</td><td><b style="color:var(--brk)">41 s</b></td></tr>
+        <tr><td>Classical 640&times;480 block-matching stereo</td><td>0.30 GFLOP</td><td>1.5 s</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      Short by a factor of <b>1231</b>. That is why Mars rovers run classical stereo matching
+      and grid-based cost-map planners rather than learned perception &mdash; not institutional
+      caution, arithmetic. It also explains why quantisation, pruning and distillation from
+      Sheet 06 are not an optimisation nicety in this field but the entire enabling technology.
+    </p>
+
+    <h3>Underwater is worse than Mars, per metre</h3>
+    <p>
+      Radio does not propagate in seawater, so untethered vehicles communicate acoustically at
+      about 1500&nbsp;m/s &mdash; <b>200,000 times</b> slower than light:
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Acoustic round-trip delay, and how far a 2 m/s AUV travels inside it.</caption>
+      <thead><tr><th>Range</th><th>1 km</th><th>3 km</th><th>10 km</th></tr></thead>
+      <tbody>
+        <tr><td>Round trip</td><td>1.33 s</td><td>4.00 s</td><td>13.33 s</td></tr>
+        <tr><td>Distance travelled meanwhile</td><td>2.7 m</td><td>8.0 m</td><td>26.7 m</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      An AUV three kilometres from its ship has a four-second control delay and will have moved
+      eight metres before any instruction lands. Add a data rate of 1&ndash;10&nbsp;kbit/s
+      &mdash; one photograph is a multi-minute transmission &mdash; and the design conclusion is
+      the same as for Mars, reached by a completely different route: everything of consequence
+      must be decided on board.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; it is a transport-delay problem</div>
+      <p>
+        A pure delay \(e^{-s\tau}\) in a feedback loop contributes phase lag
+        \(-\omega\tau\) without attenuating anything, so it eats phase margin directly and the
+        loop goes unstable above roughly \(\omega \approx \phi_m/\tau\). You know this from
+        any process-control loop with a long pipe run or a slow thermocouple, and the standard
+        answers are the same ones here: lower the bandwidth until the delay stops mattering, or
+        move the controller to where the plant is. Space and underwater robotics chose the
+        second, and &ldquo;autonomy&rdquo; is what moving the controller to the plant is called
+        when the controller is a computer.
+      </p>
+    </div>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/earth_mars_delay.svg" alt="Earth to Mars communication delay, showing one-way and round-trip times that make real-time control impossible" width="440"></div>
+    <figcaption><b>Fig. 11.16</b> &mdash; Six to forty-five minutes, round trip. There is no loop to close. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="shared">
+  <div class="col">
+    <div class="sechead"><span class="secnum">21</span><h2>Shared control, and the levels</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2011%20-%20autonomous%20systems/05.%20space%20and%20extreme%20robotics.md" target="_blank" rel="noopener">src 05. space and extreme &#8599;</a>
+    </div>
+    <p>
+      Most autonomous systems work alongside people. <b>Shared autonomy</b> blends a human
+      command and a machine command:
+    </p>
+  </div>
+  <div class="mathbox col">$$\mathbf{u} = \alpha\mathbf{u}_h + (1-\alpha)\mathbf{u}_r$$</div>
+  <div class="col">
+    <p>
+      \(\alpha=1\) is teleoperation, \(\alpha=0\) is full autonomy, and adaptive schemes move
+      \(\alpha\) according to how confident the robot is. It is a clean idea and it has a
+      defect the source does not mention, which &sect;17 has already proved.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks &mdash; blending is not arbitration</div>
+      <p>
+        That equation is a <b>convex combination</b> of two actions. &sect;17 established that
+        the set of valid actions is not convex: going left around an obstacle is valid, going
+        right is valid, and the average drives straight into it. If the human steers left and
+        the robot steers right, \(\alpha = 0.5\) is the one command that is certainly wrong
+        &mdash; and it is exactly the command a blending scheme produces when human and machine
+        disagree most, which is precisely when you need it to be right.
+      </p>
+      <p>
+        This is the same theorem as the multimodal-regression failure, and the chapter source
+        treats them as unrelated topics in separate files. What is needed is
+        <em>arbitration</em> &mdash; pick one and commit, as &sect;17's chunking does &mdash;
+        not interpolation. A dual-control aircraft with mechanically linked yokes arbitrates
+        by force; two independent sidesticks that sum their inputs have the blending problem,
+        and it has killed people.
+      </p>
+    </div>
+
+    <h3>The SAE levels are a liability boundary</h3>
+    <p>
+      SAE J3016 defines six levels of driving automation. It is worth being blunt: as
+      engineering content this is thin &mdash; there is no equation and no test in it. What it
+      actually defines is who is responsible when something goes wrong, and that is where all
+      the weight sits.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>SAE J3016, read as a responsibility table.</caption>
+      <thead><tr><th>Level</th><th>What the system does</th><th>Who is responsible</th></tr></thead>
+      <tbody>
+        <tr><td>0</td><td>Warnings only</td><td>Human</td></tr>
+        <tr><td>1</td><td>Steering <em>or</em> speed</td><td>Human</td></tr>
+        <tr><td>2</td><td>Steering <em>and</em> speed; human monitors continuously</td><td><b>Human</b></td></tr>
+        <tr><td>3</td><td>Drives and monitors within its ODD; human is the fallback</td><td><b>System</b>, within the ODD</td></tr>
+        <tr><td>4</td><td>Drives and handles everything within its ODD, including stopping safely</td><td>System</td></tr>
+        <tr><td>5</td><td>Everywhere a human can drive</td><td>System &mdash; does not exist</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      The interesting boundary is between 2 and 3, and it is a legal one, not a technical one.
+      Two systems can be nearly identical in capability and sit on opposite sides of it,
+      because the manufacturer chose to accept liability or chose not to. That is why so much
+      deployed technology is described as Level&nbsp;2 &ldquo;driver assistance&rdquo; while
+      behaving like something more.
+    </p>
+    <p>
+      And Level 2 has a known human-factors failure that the level definition itself creates:
+      it asks a person to monitor an automated system attentively for hours without acting, and
+      people are measurably bad at exactly that task. Telling the human they are responsible
+      does not make them capable of the job the design assigns them. That is a design defect
+      in the allocation of function, and it is the reason <b>trust calibration</b> gets a
+      section in the source at all &mdash; over-trust is not a user error, it is the
+      predictable response to a system that is reliable enough to be boring.
+    </p>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/sae_autonomy_levels.svg" alt="SAE levels 0 to 5 showing where responsibility transfers from the human to the system" width="450"></div>
+    <figcaption><b>Fig. 11.17</b> &mdash; The only line that matters is between 2 and 3, and it is drawn by lawyers. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+
+  <figure class="col">
+    <div class="paper"><img src="img/shared_autonomy_spectrum.svg" alt="A spectrum from full teleoperation through blended control to full autonomy" width="440"></div>
+    <figcaption><b>Fig. 11.18</b> &mdash; A clean spectrum, with a non-convex set hiding in the middle of it. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="worked">
+  <div class="col">
+    <div class="sechead"><span class="secnum">22</span><h2>Worked example: sizing a highway follower</h2>
+      <span class="srcref nolink" title="Added material, not in the source chapter">beyond the chapter</span>
+    </div>
+    <p>
+      One specification, worked end to end with the sheet's own results. A vehicle is to follow
+      the car in front at 120&nbsp;km/h on a motorway. What does that demand of the sensors,
+      the estimator and the controller &mdash; and which one is the bottleneck?
+    </p>
+
+    <h3>1. How far must it see?</h3>
+    <p>
+      120&nbsp;km/h is 33.33&nbsp;m/s. Braking distance is \(v^2/2a\), plus whatever the
+      vehicle covers during processing latency:
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Detection range required, with 0.3 s of end-to-end latency.</caption>
+      <thead><tr><th>Deceleration</th><th>Braking distance</th><th>Latency distance</th><th>Total</th></tr></thead>
+      <tbody>
+        <tr><td>3 m/s&sup2; (comfortable)</td><td>185.2 m</td><td>10.0 m</td><td><b>195.2 m</b></td></tr>
+        <tr><td>5 m/s&sup2; (firm)</td><td>111.1 m</td><td>10.0 m</td><td>121.1 m</td></tr>
+        <tr><td>8 m/s&sup2; (emergency)</td><td>69.4 m</td><td>10.0 m</td><td>79.4 m</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      Design for the comfortable case, because a system that only ever brakes at 8&nbsp;m/s&sup2;
+      is unusable. Target: <b>reliable detection at 195&nbsp;m</b>.
+    </p>
+
+    <h3>2. Can stereo deliver it?</h3>
+    <p>
+      From &sect;05, \(Z = fb/d\) and the error goes as \(Z^2\). Take a 1920-wide sensor with a
+      50&deg; horizontal field of view, so \(f \approx 1400\) px:
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Disparity and resulting range interval at 195 m.</caption>
+      <thead><tr><th>Baseline</th><th>Match precision</th><th>Disparity at 195 m</th><th>Range interval</th><th>Relative</th></tr></thead>
+      <tbody>
+        <tr><td>0.12 m</td><td>&plusmn;0.5 px</td><td>0.86 px</td><td>123&ndash;466 m</td><td><b style="color:var(--brk)">&plusmn;88%</b></td></tr>
+        <tr><td>0.12 m</td><td>&plusmn;0.1 px</td><td>0.86 px</td><td>175&ndash;221 m</td><td>&plusmn;12%</td></tr>
+        <tr><td>1.20 m</td><td>&plusmn;0.5 px</td><td>8.61 px</td><td>185&ndash;207 m</td><td>&plusmn;5.8%</td></tr>
+        <tr><td>1.20 m</td><td>&plusmn;0.1 px</td><td>8.61 px</td><td>193&ndash;198 m</td><td><b style="color:var(--bridge)">&plusmn;1.2%</b></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      This is the useful result, and it corrects a claim you will hear stated too broadly.
+      &ldquo;Stereo cannot do long range&rdquo; is really <em>short-baseline</em> stereo cannot.
+      A 12&nbsp;cm rig is hopeless at half-pixel matching and marginal even with sub-pixel
+      refinement. But \(b\) enters linearly, and a car is 1.8&nbsp;m wide &mdash; mount the
+      cameras at the A-pillars, take \(b = 1.2\) m, and the same sensors give &plusmn;1.2% at
+      195&nbsp;m. The geometry was never the obstacle; the packaging was.
+    </p>
+    <p>
+      What the wide baseline costs you is the near field: at 2&nbsp;m the disparity is 840&nbsp;px,
+      so the two views barely overlap. Which is the ordinary instrument-selection answer
+      &mdash; you fit two, a wide pair for range and a narrow pair or a surround camera for
+      close work &mdash; and it is &sect;01's argument arriving from a different direction.
+    </p>
+
+    <h3>3. Estimating the gap</h3>
+    <p>
+      The raw range is noisy, and the controller needs closing <em>velocity</em>, which nothing
+      measures directly. That is &sect;09's first observability row: state
+      \([\text{gap}, \text{closing rate}]\), measurement gap only, rank
+      \(\mathcal{O} = 2/2\) &mdash; observable. The filter recovers the rate from the model.
+    </p>
+    <p>
+      From &sect;10 the steady-state filter has \(\zeta = 1/\sqrt2\) whatever you choose, and
+      \(\omega_n = (q/\rho)^{1/4}\). So the only decision is bandwidth, and the tradeoff is
+      concrete: too low and the gap estimate lags a braking lead vehicle; too high and camera
+      noise is passed to the throttle. Choose \(\omega_n\) an order of magnitude above the
+      disturbance you must track and an order below the noise you must reject, exactly as for
+      any filter.
+    </p>
+    <p>
+      Then monitor it. &sect;09's NIS test gives a runtime check with a known null
+      distribution: if mean NIS drifts above 1, the filter's \(R\) no longer matches the
+      sensor &mdash; a dirty lens, rain, low sun. That is a <em>self-diagnosing</em> range
+      estimate, and it is the specific thing a learned depth network cannot give you.
+    </p>
+
+    <h3>4. The steering loop</h3>
+    <p>
+      Lane keeping needs a 0.5&nbsp;m lateral correction in about 1.5&nbsp;s. That is
+      \(2(0.5)/1.5^2 = 0.444\) m/s&sup2;, or <b>4.5% g</b> &mdash; imperceptible. At
+      \(\zeta = 1/\sqrt2\) a 1.5&nbsp;s settling time wants
+      \(\omega_n \approx 4/(\zeta t_s) = 3.77\) rad/s, about 0.6&nbsp;Hz.
+    </p>
+    <p>
+      A steering actuator runs at 100&nbsp;Hz. The control loop has more than two decades of
+      margin over what the task requires.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>The conclusion, and it has been the same since &sect;02</div>
+      <p>
+        Control is not the bottleneck and never was. The loop is slow, well-damped and
+        enormously over-provisioned. Every hard number in this example came from the
+        <em>perception</em> side: a quadratic range error, a baseline you have to package, a
+        latency budget that costs ten metres, a covariance you have to keep honest. That is
+        why this sheet spent ten sections on sensing before it wrote down a single controller,
+        and it is why a self-driving programme is a perception programme with a control system
+        attached &mdash; which is the opposite of how a mechanical engineer expects a vehicle
+        problem to decompose.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="breaks">
+  <div class="col">
+    <div class="sechead"><span class="secnum">23</span><h2>Where it breaks &mdash; the short list</h2>
+      <span class="srcref nolink" title="Added material, not in the source chapter">beyond the chapter</span>
+    </div>
+    <p>
+      The amber items from twenty-two sections, in one place. If you retain nothing else from
+      this sheet, retain these, because each one is a case where a correct mechanical intuition
+      gives the wrong answer.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Seven places the transfer fails, and what to think instead.</caption>
+      <thead><tr><th>The intuition</th><th>Why it fails here</th><th>&sect;</th></tr></thead>
+      <tbody>
+        <tr><td>A better camera will recover depth</td><td>Projection divides by \(Z\); an entire ray collapses to one pixel. No hardware undoes a non-injective map. What a monocular network outputs is a prior, not a measurement.</td><td>02</td></tr>
+        <tr><td>Tolerances stack additively</td><td>Angular error projects as \(f\tan\theta\) and does not shrink with range; 1&deg; is 8.7 px at 10 m and at 200 m alike. Translation error dies as \(1/Z\). Get the angles right.</td><td>03</td></tr>
+        <tr><td>Triangulation degrades gracefully</td><td>It degrades as \(Z^2\). At \(b=12\) cm a half-pixel error puts a 100 m target between 55 and 600 m. That is not a degraded measurement, it is none.</td><td>05</td></tr>
+        <tr><td>More measurements mean more confidence</td><td>Only if independent. A parked robot re-reading one ray overstates its odds without limit; the log-odds recursion cannot tell a fresh look from an echo.</td><td>08</td></tr>
+        <tr><td>Poor estimates mean poor tuning</td><td>Sometimes the state is <em>unobservable</em>, and then no \(Q\) and no \(R\) will ever help. Run the rank test before tuning. IMU drift is this, not noise.</td><td>09</td></tr>
+        <tr><td>A small error stays small</td><td>True for a constraint, false for a policy. A four-bar with 0.1 mm of clearance has 0.1 mm of error forever; a cloned policy choosing its own next state loses contraction and pays quadratically in the horizon.</td><td>15</td></tr>
+        <tr><td>The average of two good answers is good</td><td>The valid set is not convex. Left of the obstacle is fine, right is fine, the mean collides. This kills regression policies <em>and</em> blended shared control &mdash; the same theorem, twice.</td><td>17, 21</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>And the one that underlies the rest</div>
+      <p>
+        A designed controller comes with a margin. &sect;14's PD loop has a phase margin of
+        77.9&deg; at 9.82&nbsp;rad/s, computable, quotable, defensible in a design review.
+        &sect;13's passivity argument proves a whole class of manipulator controllers stable
+        from an energy function. &sect;09's filter carries its own covariance and a consistency
+        test with a known null distribution.
+      </p>
+      <p>
+        A learned policy has none of these. Not &ldquo;has weaker versions&rdquo; &mdash; has
+        none. There is no loop transfer function, no energy function, no passivity property, no
+        innovation to monitor and no observability test. What it has is a success rate over a
+        finite number of trials, and &sect;17 showed that 75% and 85% over twenty trials are
+        statistically indistinguishable (Fisher exact \(p = 0.695\)). That is the honest
+        summary of the whole field: the learned systems work better and can be verified less.
+        Both halves are true, and pretending either one away is how people get hurt.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="recall">
+  <div class="col">
+    <div class="sechead"><span class="secnum">24</span><h2>Question bank</h2>
+      <span class="srcref nolink" title="Added material, not in the source chapter">beyond the chapter</span>
+    </div>
+    <p>Twenty-four prompts across all three parts, in three tiers. Answer before opening anything.</p>
+
+    <h3>Tier 1 &mdash; recall</h3>
+    <details class="q"><summary><span class="qn">R1</span><span>Why can a single photograph not give absolute depth?</span></summary>
+      <div class="ans">The pinhole map divides by \(Z\), so \((\lambda X, \lambda Y, \lambda Z)\) projects to the same pixel for every \(\lambda>0\). An entire ray collapses to one point &mdash; the map is not injective, and no algorithm inverts a non-injective map without adding a prior.</div></details>
+    <details class="q"><summary><span class="qn">R2</span><span>How much timing resolution does 1 cm of LiDAR range cost, and why?</span></summary>
+      <div class="ans">66.7 ps. From \(d=c\Delta t/2\), \(\Delta t = 2(0.01)/c\). In that time light travels 2 cm. The optics are ordinary; the timing electronics are what you pay for.</div></details>
+    <details class="q"><summary><span class="qn">R3</span><span>Write the stereo depth relation and its sensitivity.</span></summary>
+      <div class="ans">\(Z = fb/d\), and \(\partial Z/\partial d = -Z^2/(fb)\). Range error is quadratic in range and only linear in baseline &mdash; which is why doubling \(b\) halves the error but halving \(Z\) quarters it.</div></details>
+    <details class="q"><summary><span class="qn">R4</span><span>Name \(H\), \(R\) and the innovation in a Kalman filter.</span></summary>
+      <div class="ans">\(H\) is the observation matrix &mdash; what the sensor sees of the state. \(R\) is the measurement covariance &mdash; how much you trust it. The innovation \(\boldsymbol\nu = \mathbf{z} - H\hat{\mathbf{x}}^-\) is the part of the measurement you did not already know, with covariance \(S = HPH^T + R\).</div></details>
+    <details class="q"><summary><span class="qn">R5</span><span>What is the Kalman gain, in one sentence a metrologist would accept?</span></summary>
+      <div class="ans">Inverse-variance weighting. In the scalar case \(K = P/(P+R)\) and \(1/P^+ = 1/P + 1/R\) &mdash; precisions add, exactly as when combining two instruments measuring one quantity.</div></details>
+    <details class="q"><summary><span class="qn">R6</span><span>State \(\det J\) for a two-link planar arm and say what its zeros mean.</span></summary>
+      <div class="ans">\(\det J = l_1 l_2 \sin q_2\), zero at \(q_2 = 0\) and \(\pi\). Those are the singularities, and they are the dead-centre positions of a linkage: at \(q_2=0\) the lost direction is exactly radial, so the hand can swing but cannot reach further out.</div></details>
+    <details class="q"><summary><span class="qn">R7</span><span>Give \(\omega_n\) and \(\zeta\) for a PD-controlled joint, and what each gain physically is.</span></summary>
+      <div class="ans">\(\omega_n=\sqrt{K_p/m}\), \(\zeta=(b+K_d)/(2\sqrt{K_p m})\). \(K_p\) is a stiffness in N&middot;m/rad; \(K_d\) is a damping coefficient in N&middot;m&middot;s/rad, and the plant's own damping simply adds to it.</div></details>
+    <details class="q"><summary><span class="qn">R8</span><span>What does a swarm running neighbour-averaging consensus converge to?</span></summary>
+      <div class="ans">The <em>degree-weighted</em> mean \(\sum(d_i+1)x_i(0)/\sum(d_j+1)\) &mdash; not the plain average. The weights are the left Perron vector of \(W=\tilde D^{-1}(I+A)\). On a directed graph, such as a \(k\)-nearest-neighbour one, even that formula fails.</div></details>
+
+    <h3>Tier 2 &mdash; apply</h3>
+    <details class="q"><summary><span class="qn">A1</span><span>A LiDAR-camera rig is mounted with 1&deg; of angular error and 5 cm of translation error. Which do you fix first, and why?</span></summary>
+      <div class="ans">The angle, without hesitation. Translation projects as \(ft/Z\) and dies away &mdash; 2.5 px at 10 m, 0.13 px at 200 m. Rotation projects as \(f\tan\theta\) and is 8.7 px at <em>every</em> range. At 200 m, where the fusion matters most, the angular error is 67&times; larger.</div></details>
+    <details class="q"><summary><span class="qn">A2</span><span>Your robot has been parked for a minute taking range readings. Its map now says \(P(\text{occupied})=0.999998\). What do you believe?</span></summary>
+      <div class="ans">About one measurement's worth. The log-odds recursion \(l_t = l_{t-1}+\text{const}\) has no idea whether a reading is a fresh look or the twelfth echo of the same one down the same ray. This is why real implementations clamp \(l\) &mdash; not to avoid overflow, but to keep cells falsifiable.</div></details>
+    <details class="q"><summary><span class="qn">A3</span><span>An IMU-only navigation solution drifts. Your colleague proposes better tuning. Respond.</span></summary>
+      <div class="ans">Tuning cannot help. Build \(\mathcal{O}\) for \([\text{pos},\text{vel},\text{accel bias}]\) with no position fix and the rank is 0/3 &mdash; a constant bias and a genuine acceleration enter the state equation identically. The state is unobservable. A 0.01 m/s&sup2; bias gives 18 m of error in a minute and 1800 m in ten, as \(\tfrac12 bt^2\). What is needed is a measurement, not a gain.</div></details>
+    <details class="q"><summary><span class="qn">A4</span><span>You raise \(q\) by 100&times; to make a tracking filter more responsive. What changes?</span></summary>
+      <div class="ans">Only the bandwidth, by \(100^{1/4}=3.16\times\). The damping ratio does not move: solving the Riccati equation gives \(2\zeta\omega_n = \sqrt2\,\omega_n\) identically, so \(\zeta=1/\sqrt2\) for every \(q\), \(\rho\) and \(\Delta t\). The step response compresses in time and keeps its shape.</div></details>
+    <details class="q"><summary><span class="qn">A5</span><span>A joint settles too slowly. You double \(K_p\). Predict the outcome.</span></summary>
+      <div class="ans">It will not settle faster and it will ring more. \(\zeta\omega_n = (b+K_d)/2m\) has no \(K_p\) in it at all, so the envelope decay is unchanged; doubling \(K_p\) only raises \(\omega_d\) and divides \(\zeta\) by \(\sqrt2\). Raise \(K_d\) instead.</div></details>
+    <details class="q"><summary><span class="qn">A6</span><span>Iterative IK demands 5.66 rad of joint motion for a 1 cm hand move. Diagnose and fix.</span></summary>
+      <div class="ans">The arm is near a singularity and the pseudo-inverse is dividing by a vanishing singular value. Use damped least squares, \(J^T(JJ^T+\lambda^2I)^{-1}\), which minimises \(\|J\Delta q-\Delta x\|^2+\lambda^2\|\Delta q\|^2\) &mdash; ridge regression with \(\lambda\) as a compliance. Demand drops to 0.0063 rad, at the cost of not reaching the target this step.</div></details>
+    <details class="q"><summary><span class="qn">A7</span><span>A policy cloned from 200 demonstrations works in replay and fails on hardware. Explain, quantitatively.</span></summary>
+      <div class="ans">Replay is open-loop: the policy is scored on the expert's states and never visits its own mistakes. On hardware, the first disagreement puts it off-distribution for the rest of the episode, so cost is quadratic in the horizon. At \(\epsilon=0.01\), \(T=100\): expected cost 37.2 against 1.0 if recovery were possible &mdash; a 37&times; gap, and doubling the horizon costs 3.4&times;, not 2&times;.</div></details>
+    <details class="q"><summary><span class="qn">A8</span><span>Size the detection range for 120 km/h following, and say whether a 12 cm stereo rig will do.</span></summary>
+      <div class="ans">\(v^2/2a + v t_{\text{lat}} = 185.2 + 10.0 = 195\) m at 3 m/s&sup2;. At \(f=1400\) px, a 12 cm baseline gives 0.86 px of disparity there &mdash; &plusmn;88% at half-pixel matching, &plusmn;12% even sub-pixel. A 1.2 m baseline across the windscreen gives 8.61 px and &plusmn;1.2%. The limit was the packaging, not the principle.</div></details>
+
+    <h3>Tier 3 &mdash; judge</h3>
+    <details class="q"><summary><span class="qn">J1</span><span>Is &ldquo;a robot singularity is a linkage dead centre&rdquo; an analogy or an identity?</span></summary>
+      <div class="ans">An identity. Same configuration, same vanishing determinant, same physical consequence &mdash; and it is checkable: at \(q_2=0\) the left singular vector of the vanishing singular value is \([0.9211, 0.3894]\), which is the radial unit vector there to ten decimals. The arm cannot extend, only swing. That is what a toggle is.</div></details>
+    <details class="q"><summary><span class="qn">J2</span><span>The source says a quadruped is inherently stable because three legs form a tripod. Assess.</span></summary>
+      <div class="ans">False as stated. Lifting a corner foot leaves a triangle whose hypotenuse is the body's own diagonal, and a rectangle's centre lies on its diagonal &mdash; so the static margin is <em>exactly</em> zero, at every aspect ratio. A quadruped must shift its weight before lifting a foot; the lateral sway you see is that geometry being obeyed, not a stylistic choice.</div></details>
+    <details class="q"><summary><span class="qn">J3</span><span>Is domain randomisation a new idea?</span></summary>
+      <div class="ans">No &mdash; it is robust design by sampling rather than by synthesis, and it prices identically. Against an uncertain mass over [0.4, 4.0], a nominal LQR wins at its design point (38.0 vs 39.1) and loses on the mean (48.3 vs 47.2) and the worst case (83.2 vs 74.7). What is genuinely different is that robust synthesis gives a <em>guarantee</em> over the whole uncertainty set and sampling gives an average over what was drawn &mdash; and the real robot's friction and backlash are usually outside the sampling distribution, which is what &ldquo;the simulator is wrong&rdquo; means.</div></details>
+    <details class="q"><summary><span class="qn">J4</span><span>&ldquo;A swarm has no single point of failure.&rdquo; True?</span></summary>
+      <div class="ans">For crashes, yes. For value consensus, badly false. Freeze one node and the entire swarm converges to <em>its</em> value exactly. A +100 error at a degree-6 hub shifts the answer by 30.4 and the same error at a degree-1 leaf by 8.7 &mdash; precisely \(100\pi_i\). The best-connected robot is the most dangerous one to be wrong, and plain averaging has no defence. Byzantine-robust protocols use medians; the naive one does not.</div></details>
+    <details class="q"><summary><span class="qn">J5</span><span>Two VLA papers report 75% and 85% success over 20 trials. Which is better?</span></summary>
+      <div class="ans">Unknown. Clopper&ndash;Pearson intervals are [50.9, 91.3]% and [62.1, 96.8]% &mdash; overlapping heavily &mdash; and Fisher's exact test gives \(p=0.695\). This is Sheet 04's binomial interval applied honestly. Compare an acceptance test for a machine, where you fix the number of cycles in advance to hit a stated confidence; that discipline is what is missing from the table, not from the field's knowledge.</div></details>
+    <details class="q"><summary><span class="qn">J6</span><span>Why is the Coriolis skew-symmetry property worth a whole paragraph?</span></summary>
+      <div class="ans">Because \(\dot M - 2C\) skew-symmetric means \(\dot{\mathbf q}^T(\dot M-2C)\dot{\mathbf q}=0\) &mdash; the Coriolis and centrifugal terms do no net work. That is the same statement as a Coriolis force acting perpendicular to velocity, and it is what lets total energy serve as a Lyapunov function, which is what makes PD-plus-gravity-compensation <em>provably</em> stable on any arm. It is one line, and every stability proof in manipulator control rests on it.</div></details>
+    <details class="q"><summary><span class="qn">J7</span><span>Is end-to-end driving simply better, given it optimises the real objective?</span></summary>
+      <div class="ans">It removes information loss at module boundaries, which is real. It also removes the decomposition that the entire safety-case apparatus depends on: ISO 26262 works by splitting a hazard into component failures and giving each a verifiable requirement, and a monolith has no components. That is not a transitional inconvenience, it is an unsolved problem &mdash; and it is separate from whether the driving is good.</div></details>
+    <details class="q"><summary><span class="qn">J8</span><span>What is the single most important thing this sheet says about learned control?</span></summary>
+      <div class="ans">That it works better and can be verified less, and both halves are true. &sect;14's loop has a phase margin of 77.9&deg;. &sect;13's passivity argument proves stability from an energy function. &sect;09's filter carries a covariance and a consistency test with a known null distribution. A learned policy has none of these &mdash; not weaker versions, none &mdash; and what it offers instead is a success rate on a finite sample. For a robot dog that is an acceptable trade. Deciding where it stops being acceptable is engineering judgement, and it is the actual job.</div></details>
+  </div>
+</section>
+
+<section id="next">
+  <div class="col">
+    <div class="sechead"><span class="secnum">25</span><h2>What this feeds</h2>
+      <span class="srcref nolink" title="Added material, not in the source chapter">beyond the chapter</span>
+    </div>
+    <p>
+      This sheet was the one where your background paid out most directly, and it is worth
+      naming what actually transferred, because it was not what the chapter titles suggested.
+      Almost none of it was robotics knowledge. It was <b>Theory of Machines</b> (loop closure,
+      velocity analysis, dead centres), <b>Vibrations</b> (\(\zeta\), \(\omega_n\), overshoot),
+      <b>Control Systems</b> (observability, margins, second-order response),
+      <b>Engineering Mechanics</b> (support polygons, centres of pressure) and
+      <b>Engineering Mathematics</b> (eigenvalues, least squares, Bayes). Five courses you
+      have already sat, supplying almost the whole chapter.
+    </p>
+    <p>
+      Three threads run forward from here:
+    </p>
+    <ul>
+      <li><b>The estimation thread.</b> \(H\), \(R\), the innovation and the observability
+        test are the vocabulary for asking <em>what a measurement contains</em>, and that
+        question outlives any particular filter. Every time a later sheet offers a learned
+        estimator, ask what plays the role of each of those four.</li>
+      <li><b>The non-convexity thread.</b> &ldquo;The mean of two valid things need not be
+        valid&rdquo; explained multimodal action heads, action chunking and shared autonomy in
+        this sheet, and it will explain mode collapse, ensembling and preference aggregation
+        later. It is a shape fact about the feasible set, not a fact about robots.</li>
+      <li><b>The verification thread.</b> The gap between &ldquo;works&rdquo; and
+        &ldquo;can be shown to work&rdquo; is the recurring theme, and it gets wider as the
+        systems get more capable. Sheets 12 onwards apply this machinery in domains where the
+        consequences of that gap are the whole story.</li>
+    </ul>
+    <p>
+      One habit to carry: every substantive number on this sheet was checked before it was
+      written, and doing so overturned eight &mdash; five in the source (the consensus limit,
+      the quadruped tripod, the action vocabulary, the Mars delay, and &ldquo;no single point
+      of failure&rdquo;) and three of my own (the filter's damping ratio, what compounds in
+      behavioural cloning, and what damped least squares does near a singularity).
+      A plausible sentence about a dynamical system is worth very little until something has
+      run it.
+    </p>
+  </div>
+</section>
+
+<section id="provenance">
+  <div class="col">
+    <div class="sechead"><span class="secnum">A</span><h2>Provenance and changes</h2></div>
+    <p>
+      A derivative work under Apache-2.0, which requires a statement of changes. Source links
+      are pinned at commit <code>9850ee5</code>. This sheet covers source files 01, 02, 03, 04
+      and 05 in that order &mdash; sense, then act, then the applications &mdash; with state
+      estimation promoted out of file 05 into &sect;09&ndash;&sect;10 to pay a debt Sheet 10
+      incurred.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>What each section takes, and what was changed or added.</caption>
+      <thead><tr><th>&sect;</th><th>Source</th><th>What changed</th></tr></thead>
+      <tbody>
+        <tr><td>00</td><td>&mdash;</td><td><b>Added.</b> Bridge table with an honest verdict per row. Twelve rows read <i>identical</i> rather than <i>analogous</i>, which is a literal claim about the mathematics, not encouragement.</td></tr>
+        <tr><td>01</td><td>01</td><td>Sensor modalities as in source. <b>Added:</b> the 66.7 ps timing budget per centimetre of range, ultrasonic ringdown as the physical origin of the 0.2 m minimum range, the 77 GHz Doppler shift computed, and the sampling-density comparison showing a camera collects 54&times; more samples than a 64-channel LiDAR. <b>Caution added:</b> rain degrades camera and LiDAR by the same mechanism, so their errors are correlated exactly when you need them not to be.</td></tr>
+        <tr><td>02</td><td>01</td><td>The pinhole model as in source. <b>Added:</b> the explicit non-injectivity argument with a worked pair of points projecting identically, and the distinction between a measurement and a learned prior.</td></tr>
+        <tr><td>03</td><td>01</td><td>Intrinsic, extrinsic and temporal calibration as in source. <b>Added:</b> the computed table showing angular error is range-independent (8.73 px at every range) while translation error dies as \(1/Z\) &mdash; which reverses the instinct a machining background builds.</td></tr>
+        <tr><td>04</td><td>01</td><td>Fusion levels deliberately compressed, since Sheet 10 &sect;01 already established the correspondence. <b>Added:</b> BEV as a plan view, and the note that a camera-only BEV grid is bounded by the quality of its depth prior.</td></tr>
+        <tr><td>05</td><td>01</td><td>Stereo as in source. <b>Added:</b> the derivative \(\partial Z/\partial d = -Z^2/(fb)\), the range-interval table, and an interactive band whose ratio readout stays pinned at 100&times; under every setting &mdash; the exponent is not movable.</td></tr>
+        <tr><td>06, 07</td><td>01</td><td>3D detection and lane models as in source. <b>Added:</b> the physical reading of the cubic's coefficients (offset, heading, curvature, clothoid rate) and a fit-error table showing a cubic is off by 0.6&ndash;20 mm against a true arc, on a 3500 mm lane.</td></tr>
+        <tr><td>08</td><td>01</td><td>Occupancy grids and log-odds as in source. <b>Added:</b> the verification that log-odds addition matches sequential Bayes to machine precision, and a lab showing a parked robot overstating its odds without limit because the recursion cannot tell a fresh look from an echo.</td></tr>
+        <tr><td>09, 10</td><td>05</td><td><b>Substantially added.</b> The source mentions the EKF in one passing paragraph. These sections build the full treatment Sheet 10 promised: \(H\), \(R\), the innovation, the NIS consistency test against \(\chi^2\) with measured figures, and the observability rank test on three state/sensor pairs including the IMU-alone case at rank 0/3. &sect;10 derives the steady-state result in closed form &mdash; \(\zeta = 1/\sqrt2\) exactly, \(\omega_n = (q/\rho)^{1/4}\) &mdash; and is not in the source at all.</td></tr>
+        <tr><td>11, 12</td><td>02</td><td>DH kinematics, the Jacobian, IK and damped least squares as in source. <b>Added:</b> \(\det J = l_1l_2\sin q_2\) verified, and the demonstration that the lost direction at \(q_2=0\) <i>is</i> the radial direction to ten decimals &mdash; making the dead-centre correspondence an identity rather than an analogy. <b>Corrects a claim of my own:</b> damped least squares does not plateau, it peaks where \(\sigma_{\min}=\lambda\) and then withdraws towards zero.</td></tr>
+        <tr><td>13</td><td>02</td><td>The manipulator equation as in source. <b>Added:</b> verification that \(\tfrac12\dot{\mathbf q}^TM\dot{\mathbf q}\) equals the kinetic energy computed from link velocities, the condition-number spread of \(M\) across the workspace (53.7 at \(q_2=0\)), and the skew-symmetry of \(\dot M - 2C\) with its reading as &ldquo;Coriolis terms do no net work&rdquo;.</td></tr>
+        <tr><td>14</td><td>02</td><td>PID as in source. <b>Added:</b> the closed-loop reduction to a spring&ndash;mass&ndash;damper with simulated overshoot matched against \(e^{-\pi\zeta/\sqrt{1-\zeta^2}}\); the result that \(\zeta\omega_n=(b+K_d)/2m\) so \(K_p\) cancels from the decay rate entirely; a computed phase margin; and the anti-windup comparison (86.6% to 11.8%).</td></tr>
+        <tr><td>15</td><td>02</td><td>Behavioural cloning, DAgger and sim-to-real as in source. <b>Corrects the usual explanation:</b> injected noise does not compound &mdash; a contracting loop absorbs it indefinitely. What compounds is losing the contraction. Quantified with a Monte Carlo of the actual argument. <b>Added:</b> the LQR experiment showing domain randomisation is robust design priced the same way, and the linkage contrast (a constraint does not integrate its own error).</td></tr>
+        <tr><td>16</td><td>02</td><td><b>Corrects the source.</b> It says a quadruped is inherently stable because three legs form a tripod; the static margin with a corner foot lifted is <i>exactly</i> zero at every aspect ratio, because a rectangle's centre lies on its diagonal. <b>Added:</b> ZMP as the dynamic generalisation with the \(hv^2/gR\) lean table, and the identification of gaits with engine firing orders, with the coupling-physics caveat.</td></tr>
+        <tr><td>17</td><td>03</td><td>VLA architecture, tokenisation and key models as in source. <b>Corrects the source:</b> it states the action vocabulary is \(7\times256=1792\), but its own RT-2 example emits seven tokens all below 256 &mdash; so the design is 256 shared bins. <b>Added:</b> the non-convexity argument as the single justification for diffusion action heads, the chunking dither table, and the binomial-interval caution on success rates.</td></tr>
+        <tr><td>18</td><td>04</td><td>The stack, prediction, planning and end-to-end as in source. <b>Added:</b> the observation that minADE\(_K\) measures coverage and not calibration; jerk as a cam-profile argument; and the link from open-loop evaluation to &sect;15's compounding-error result.</td></tr>
+        <tr><td>19</td><td>05</td><td><b>Corrects the source's central claim.</b> It says consensus converges to &ldquo;the global average&rdquo;. It converges to the degree-weighted mean &mdash; 8.1% of the range away on the worked graph &mdash; and on the \(k\)-nearest-neighbour graph the source's own lab builds, the relation is not even symmetric. <b>Also corrects</b> &ldquo;no single point of failure&rdquo;: one frozen node captures the entire swarm exactly. <b>Added:</b> the graph Laplacian as a stiffness matrix, \(L\mathbf 1=0\) as the rigid-body mode, and \(\lambda_2\) as the convergence rate.</td></tr>
+        <tr><td>20</td><td>05</td><td><b>Corrects the source's figures.</b> Earth&ndash;Mars one-way light time derived from orbital radii is 3.03&ndash;22.31 min, not 4&ndash;24. <b>Added:</b> the rad-hard throughput calculation (a ResNet-50 forward pass is 41 s at 200 MFLOP/s, short of real time by 1231&times;), and the acoustic delay table.</td></tr>
+        <tr><td>21</td><td>05</td><td>Shared autonomy and the SAE levels as in source. <b>Added:</b> the proof that blending is not arbitration &mdash; it is the same non-convexity theorem as &sect;17, which the source treats as an unrelated topic in a different file &mdash; and the reading of J3016 as a liability table rather than a technical one.</td></tr>
+        <tr><td>22&ndash;25</td><td>&mdash;</td><td><b>Added.</b> Worked example sizing a highway follower end to end; the consolidated break list; 24 questions in three tiers; forward pointers.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p style="margin-bottom:0">
+      Figures are the compendium&rsquo;s own SVGs, unmodified. Every numeric claim is checked in
+      <code>verify_claims.py</code> under <code>[Ch11 &hellip;]</code> &mdash; 349 checks across
+      the suite, zero failures &mdash; including the timing and Doppler budgets, the calibration
+      projection law, the stereo sensitivity, the log-odds identity, the Kalman gain and NIS
+      consistency, the observability ranks, the closed-form Riccati solution, \(\det J\) and the
+      radial singular vector, the damped-least-squares identities, the kinetic-energy form and
+      skew-symmetry, the PID overshoot and decay rate, the compounding-error Monte Carlo, the
+      LQR robustness comparison, the quadruped margin, the CPG gait lock, the consensus limit
+      and Perron weights, the orbital light times, and the worked example. Model names, parameter
+      counts and benchmark figures are reported as of the source rather than asserted as current.
+    </p>
   </div>
 </section>
 
@@ -2649,6 +3475,107 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     b:'<b>Correct.</b> ζ carries √Kₚ in its denominator, so doubling Kₚ divides ζ by √2 ≈ 1.41. The poles swing towards the imaginary axis and the overshoot grows. To go faster and keep the shape you must raise Kₔ as √Kₚ as well.',
     c:'<b>Too pessimistic.</b> It would halve if ζ went as 1/Kₚ, but it goes as 1/√Kₚ. Watch the ζ readout: 0.200 at Kₚ=25 becomes 0.141 at Kₚ=50, not 0.100.',
     d:'<b>The wrong direction.</b> More stiffness for the same damping coefficient is always LESS damped &mdash; the same reason a stiffer spring on an unchanged dashpot rings more.'
+  });
+
+  /* ============ LAB 6 : what consensus converges to ==================== */
+  /* Mirrors verify_claims.py [Ch11 s19]. W = D~^-1 (I+A) is row-stochastic,
+     so the limit is the left Perron vector's weighting -- (d_i + 1) for a
+     symmetric graph, NOT the uniform average. */
+  var CN=7, GX=[0,0,0,0,0,0,0], GY=[0,0,0,0,0,0,0];
+  (function(){ GX[0]=112; GY[0]=152;
+    for(var i=1;i<CN;i++){var t=(i-1)/(CN-1)*2*Math.PI-Math.PI/2;
+      GX[i]=112+78*Math.cos(t); GY[i]=152+78*Math.sin(t);} })();
+  var CVAL=[2.0,9.0,4.0,7.5,1.5,8.5,5.0];
+  function adj(kind){
+    var A=[],i,j; for(i=0;i<CN;i++){A.push([]); for(j=0;j<CN;j++) A[i].push(0);}
+    function e(a,b){A[a][b]=1;A[b][a]=1;}
+    if(kind==='hub'){ for(i=1;i<CN;i++) e(0,i); e(1,2); e(3,4); }
+    else if(kind==='star'){ for(i=1;i<CN;i++) e(0,i); }
+    else if(kind==='cycle'){ for(i=0;i<CN;i++) e(i,(i+1)%CN); }
+    else { for(i=0;i<CN-1;i++) e(i,i+1); }
+    return A;
+  }
+  function step(A,x,frozen){
+    var y=[],i,j;
+    for(i=0;i<CN;i++){
+      if(frozen===i){ y.push(x[i]); continue; }
+      var s=x[i], k=1;
+      for(j=0;j<CN;j++) if(A[i][j]){ s+=x[j]; k++; }
+      y.push(s/k);
+    }
+    return y;
+  }
+  function drawC(){
+    var kind=document.querySelector('[data-top].on').getAttribute('data-top');
+    var frz=document.querySelector('[data-frz].on')?3:-1;
+    var iters=+$('itSl').value; $('itVal').textContent=iters;
+    var A=adj(kind), deg=[], i, j;
+    for(i=0;i<CN;i++){var d=0; for(j=0;j<CN;j++) d+=A[i][j]; deg.push(d);}
+    /* run the trace */
+    var hist=[CVAL.slice()], x=CVAL.slice();
+    for(i=0;i<60;i++){ x=step(A,x,frz); hist.push(x.slice()); }
+    var cur=hist[iters];
+    var plain=0, wsum=0, wtot=0;
+    for(i=0;i<CN;i++){ plain+=CVAL[i]/CN; wsum+=(deg[i]+1)*CVAL[i]; wtot+=deg[i]+1; }
+    var wtd=wsum/wtot;
+    /* graph */
+    var ed='';
+    for(i=0;i<CN;i++) for(j=i+1;j<CN;j++) if(A[i][j])
+      ed+='<line x1="'+GX[i]+'" y1="'+GY[i]+'" x2="'+GX[j]+'" y2="'+GY[j]
+        +'" stroke="var(--rule-strong)" stroke-width="1.2"/>';
+    $('cEdge').innerHTML=ed;
+    var lo=Math.min.apply(null,CVAL), hi=Math.max.apply(null,CVAL), nd='';
+    for(i=0;i<CN;i++){
+      var t=(cur[i]-lo)/(hi-lo);
+      nd+='<circle cx="'+GX[i]+'" cy="'+GY[i]+'" r="'+(i===frz?15:13)+'" fill="var(--s1)" '
+        +'fill-opacity="'+(0.15+0.75*t).toFixed(3)+'" stroke="'+(i===frz?'var(--s3)':'var(--rule-strong)')
+        +'" stroke-width="'+(i===frz?2.5:1)+'"/>'
+        +'<text class="cellv" x="'+GX[i]+'" y="'+(GY[i]+3.5)+'" text-anchor="middle" '
+        +'fill="var(--ink)">'+cur[i].toFixed(1)+'</text>';
+    }
+    $('cNode').innerHTML=nd;
+    /* trace */
+    var X0=254, Y0=40, W=208, H=206;
+    function ty(v){return Y0+H-(v-lo)/(hi-lo)*H;}
+    function tx(k){return X0+k/60*W;}
+    var tr='';
+    for(i=0;i<CN;i++){
+      var p='';
+      for(j=0;j<=iters;j++) p+=(j===0?'M':'L')+tx(j).toFixed(1)+' '+ty(hist[j][i]).toFixed(1);
+      tr+='<path d="'+p+'" fill="none" stroke="var(--s1)" stroke-width="1.4" stroke-opacity=".75"/>';
+    }
+    tr+='<line x1="'+X0+'" y1="'+ty(plain)+'" x2="'+(X0+W)+'" y2="'+ty(plain)
+      +'" stroke="var(--s3)" stroke-width="1.3" stroke-dasharray="5 4"/>';
+    tr+='<line x1="'+X0+'" y1="'+ty(wtd)+'" x2="'+(X0+W)+'" y2="'+ty(wtd)
+      +'" stroke="var(--ink-2)" stroke-width="1.3" stroke-dasharray="2 3"/>';
+    tr+='<line x1="'+X0+'" y1="'+(Y0+H)+'" x2="'+(X0+W)+'" y2="'+(Y0+H)+'" stroke="var(--rule-strong)"/>';
+    $('cTrace').innerHTML=tr;
+    $('cLab').innerHTML='<text class="tkb" x="112" y="20" text-anchor="middle">'
+      +'seven robots, degrees '+deg.join('')+'</text>'
+      +'<text class="tkb" x="'+(X0+W/2)+'" y="20" text-anchor="middle">values over '+iters+' rounds</text>'
+      +'<text class="tk" x="'+(X0+W-2)+'" y="'+(ty(plain)-4)+'" text-anchor="end" fill="var(--s3)">plain average</text>'
+      +'<text class="tk" x="'+(X0+W-2)+'" y="'+(ty(wtd)+11)+'" text-anchor="end">degree-weighted</text>'
+      + (frz>=0 ? '<text class="tk" x="112" y="286" text-anchor="middle" fill="var(--s3)">node 3 frozen &mdash; it never updates</text>' : '');
+    $('oCv').textContent=fmt(cur[0],4);
+    $('oPl').textContent=fmt(plain,4);
+    $('oWt').textContent=fmt(wtd,4);
+    $('oEr').textContent=fmt(Math.abs(hist[60][0]-plain),4);
+  }
+  $('itSl').addEventListener('input',drawC);
+  document.querySelectorAll('[data-top]').forEach(function(b){
+    b.addEventListener('click',function(){
+      document.querySelectorAll('[data-top]').forEach(function(o){o.classList.remove('on');});
+      b.classList.add('on'); drawC();});
+  });
+  document.querySelectorAll('[data-frz]').forEach(function(b){
+    b.addEventListener('click',function(){ b.classList.toggle('on'); drawC();});
+  });
+  drawC();
+  predict('data-p6','pv6',{
+    a:'<b>That is the source’s claim, and it is wrong here.</b> It is exactly right for a REGULAR graph — press <b>Ring</b> and the two dashed lines coincide. On the hub graph the traces sail past it and settle 0.71 lower, on a spread of 7.5.',
+    b:'<b>Not unless it refuses to update.</b> The hub is weighted most heavily, but it still moves. Press <b>Freeze one</b> and you get exactly this behaviour — which is the point of that button.',
+    c:'<b>Correct.</b> W = D̃⁻¹(I+A) is row-stochastic, so the limit is the left Perron vector’s weighting, and for a symmetric graph that is proportional to (degree + 1). A well-connected robot is a heavy node — the same way a mass-weighted centroid works.',
+    d:'<b>No — it is a fixed point of a linear map.</b> Synchronous updating converges to one value determined entirely by the graph and the initial values, with no path dependence. Drag the rounds slider: the destination never changes.'
   });
 })();
 </script>

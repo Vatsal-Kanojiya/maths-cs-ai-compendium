@@ -1761,4 +1761,136 @@ print(f"[Ch11 s14] zeta*wn = (b+Kd)/(2m): Kp cancels completely   "
 print(f"[Ch11 s14]   -> Kd alone sets the decay envelope (settling time 8m/(b+Kd));")
 print(f"[Ch11 s14]   Kp alone sets the ringing frequency. Raising Kp cannot speed up settling")
 
+
+# =========================== CHAPTER 11 (part 3) =========================
+def _Wof(A):
+    return np.linalg.inv(np.diag(A.sum(1)+1.0)) @ (np.eye(len(A)) + A)
+def _run(A, x0, n=5000):
+    W=_Wof(A); x=x0.copy()
+    for _ in range(n): x = W@x
+    return x
+print()
+_n=7; _A=np.zeros((_n,_n))
+for _j in range(1,_n): _A[0,_j]=_A[_j,0]=1
+_A[1,2]=_A[2,1]=1; _A[3,4]=_A[4,3]=1
+_x0=rng.uniform(0,10,_n); _xf=_run(_A,_x0); _dg=_A.sum(1)
+_plain=_x0.mean(); _wtd=(_dg+1)@_x0/(_dg+1).sum()
+print(f"[Ch11 s19] neighbour-averaging consensus on a symmetric graph, degrees "
+      f"{_dg.astype(int)}")
+print(f"[Ch11 s19] all nodes agree: spread {_xf.max()-_xf.min():.1e}   "
+      f"{P(_xf.max()-_xf.min() < 1e-9)}")
+print(f"[Ch11 s19]   they converge to        {_xf[0]:.8f}")
+print(f"[Ch11 s19]   the plain average is    {_plain:.8f}  <- the source says this   "
+      f"{P(abs(_xf[0]-_plain) > 1e-3)} (it is WRONG)")
+print(f"[Ch11 s19]   the degree-weighted mean{_wtd:.8f}  <- correct   "
+      f"{P(abs(_xf[0]-_wtd) < 1e-9)}")
+print(f"[Ch11 s19]   the error is {abs(_xf[0]-_plain):.4f} on a spread of "
+      f"{_x0.max()-_x0.min():.2f} -- {100*abs(_xf[0]-_plain)/(_x0.max()-_x0.min()):.1f}%")
+_ev,_evec = np.linalg.eig(_Wof(_A).T)
+_pi = np.real(_evec[:, np.argmin(np.abs(_ev-1))]); _pi=_pi/_pi.sum()
+print(f"[Ch11 s19] the weights are the left Perron vector of W, and it IS (d+1)/sum(d+1)   "
+      f"{P(np.allclose(_pi,(_dg+1)/(_dg+1).sum(),atol=1e-9))}")
+print(f"[Ch11 s19]   pi        = {np.round(_pi,5)}")
+print(f"[Ch11 s19]   (d+1)/sum = {np.round((_dg+1)/(_dg+1).sum(),5)}")
+_worst=0.0
+for _ in range(300):
+    _m=rng.integers(5,12); _B=np.triu((rng.random((_m,_m))<0.35).astype(float),1); _B=_B+_B.T
+    if (_B.sum(1)==0).any(): continue
+    if np.sort(np.linalg.eigvalsh(np.diag(_B.sum(1))-_B))[1] < 1e-8: continue
+    _y=rng.uniform(0,10,_m); _worst=max(_worst, abs(_run(_B,_y,3000)[0]-_y.mean()))
+print(f"[Ch11 s19] over 300 random connected graphs the gap reaches {_worst:.3f}   "
+      f"{P(_worst > 0.4)}")
+_pos=rng.uniform(-5,5,(10,2)); _Dm=np.linalg.norm(_pos[:,None]-_pos[None,:],axis=-1)
+_Ak=np.zeros((10,10))
+for _i in range(10):
+    for _j in np.argsort(_Dm[_i])[1:4]: _Ak[_i,_j]=1
+_asym=int(np.abs(_Ak-_Ak.T).sum()/2)
+print(f"[Ch11 s19] the source's own lab uses 3-nearest-neighbours: {_asym} edges are one-way, "
+      f"so the graph is DIRECTED   {P(_asym>0)}")
+_z=rng.uniform(0,10,10)
+print(f"[Ch11 s19]   it converges to {_run(_Ak,_z,6000)[0]:.5f}, plain mean {_z.mean():.5f}   "
+      f"{P(abs(_run(_Ak,_z,6000)[0]-_z.mean())>1e-3)}")
+print()
+for _nm,_Am in (("ring    ", np.eye(8,k=1)+np.eye(8,k=-1)+np.eye(8,k=7)+np.eye(8,k=-7)),
+                ("path    ", np.eye(8,k=1)+np.eye(8,k=-1)),
+                ("complete", np.ones((8,8))-np.eye(8))):
+    _L=np.diag(_Am.sum(1))-_Am; _l2=np.sort(np.linalg.eigvalsh(_L))[1]
+    _r=np.sort(np.abs(np.linalg.eigvals(_Wof(_Am))))[::-1][1]
+    print(f"[Ch11 s19] {_nm}: lambda_2(L) = {_l2:6.4f}, |lambda_2(W)| = {_r:.4f}, "
+          f"{'inf' if _r>=1 else int(np.ceil(np.log(1e-3)/np.log(max(_r,1e-16))))} steps to 1e-3")
+_Lc=np.diag((np.ones((8,8))-np.eye(8)).sum(1))-(np.ones((8,8))-np.eye(8))
+print(f"[Ch11 s19] L @ ones = 0 exactly   {P(np.allclose(_Lc@np.ones(8),0))} -- the zero")
+print(f"[Ch11 s19]   eigenvalue is the rigid-body mode, so connectivity lives in lambda_2,")
+print(f"[Ch11 s19]   the Fiedler value, exactly as the first elastic mode of a free-free beam")
+_Ws=_Wof(_A).copy(); _Ws[3,:]=0; _Ws[3,3]=1.0
+_xs=_x0.copy()
+for _ in range(9000): _xs=_Ws@_xs
+print()
+print(f"[Ch11 s19] one agent stops updating (stuck sensor, or a liar). Its value is "
+      f"{_x0[3]:.5f};")
+print(f"[Ch11 s19]   the whole swarm ends at {_xs.min():.5f}..{_xs.max():.5f}   "
+      f"{P(abs(_xs.mean()-_x0[3])<1e-6)}")
+print(f"[Ch11 s19]   'no single point of failure' holds for crashes, NOT for value consensus")
+for _who in (0,5):
+    _xb=_x0.copy(); _xb[_who]+=100.0
+    print(f"[Ch11 s19]   a +100 error at node {_who} (degree {int(_dg[_who])}) moves the "
+          f"consensus by {abs(_run(_A,_xb)[0]-_xf[0]):7.3f} = 100*pi_{_who}")
+_e0=abs(_run(_A,np.where(np.arange(_n)==0,_x0+100,_x0))[0]-_xf[0])
+_e5=abs(_run(_A,np.where(np.arange(_n)==5,_x0+100,_x0))[0]-_xf[0])
+print(f"[Ch11 s19]   a better-connected liar does more damage, in exact proportion to its "
+      f"weight   {P(_e0 > _e5 and abs(_e0-100*_pi[0])<1e-6)}")
+
+# --- the cost of distance -------------------------------------------------
+print()
+_aE,_eE,_aM,_eM = 149.598e9,0.0167,227.939e9,0.0934
+for _nm,_d in (("closest possible  (both perihelion, opposition)", _aM*(1-_eM)-_aE*(1+_eE)),
+               ("typical opposition (circular)",                   _aM-_aE),
+               ("typical conjunction (circular)",                  _aM+_aE),
+               ("farthest possible (both aphelion, conjunction)",  _aM*(1+_eM)+_aE*(1+_eE))):
+    print(f"[Ch11 s20] {_nm:46s} {_d/1e9:6.1f} Gm -> {_d/c_light/60:5.2f} min one way")
+_lo=(_aM*(1-_eM)-_aE*(1+_eE))/c_light/60; _hi=(_aM*(1+_eM)+_aE*(1+_eE))/c_light/60
+print(f"[Ch11 s20] true range {_lo:.2f}-{_hi:.2f} min; the source says 4-24, so the upper "
+      f"end is ~7% high   {P(3.0<_lo<3.1 and 22.0<_hi<22.6)}")
+print()
+_RAD=200e6
+for _nm,_fl in (("ResNet-50 forward pass",8.2e9),("classical 640x480 block stereo",3.0e8)):
+    print(f"[Ch11 s20] {_nm:32s} {_fl/1e9:5.2f} GFLOP -> {_fl/_RAD:7.2f} s at 200 MFLOP/s")
+print(f"[Ch11 s20] 30 fps needs 33 ms, so a ResNet is short by {8.2e9/_RAD/0.0333:.0f}x   "
+      f"{P(8.2e9/_RAD > 40)}")
+print(f"[Ch11 s20]   Mars rovers run classical stereo for an arithmetic reason, not a")
+print(f"[Ch11 s20]   cultural one: the flops are simply not there")
+print()
+print(f"[Ch11 s20] light in vacuum / sound in water = {c_light/1500.:,.0f}x")
+for _R in (1000,3000,10000):
+    print(f"[Ch11 s20]   AUV {_R/1000:4.1f} km out: acoustic round trip {2*_R/1500.:5.2f} s, "
+          f"in which it swims {2*_R/1500.*2:5.1f} m at 2 m/s")
+print(f"[Ch11 s20] a 3 km AUV has a 4.00 s control delay   {P(abs(2*3000/1500.-4.0)<1e-9)}")
+
+# --- worked example: sizing a highway follower ---------------------------
+print()
+_v=120/3.6
+print(f"[Ch11 s22] WORKED EXAMPLE, 120 km/h = {_v:.2f} m/s")
+for _a,_nm in ((3.0,"comfortable"),(5.0,"firm"),(8.0,"emergency")):
+    print(f"[Ch11 s22]   {_nm:11s} at {_a:.0f} m/s^2: {_v*_v/(2*_a):6.1f} m + {_v*0.3:4.1f} m "
+          f"of 0.3 s latency = {_v*_v/(2*_a)+_v*0.3:6.1f} m")
+_need=_v*_v/6+_v*0.3
+_fpx=1400.0
+print(f"[Ch11 s22] target: reliable detection at {_need:.0f} m. With f = {_fpx:.0f} px:")
+for _b,_sub in ((0.12,0.5),(0.12,0.1),(1.20,0.5),(1.20,0.1)):
+    _d=_fpx*_b/_need; _l=_fpx*_b/(_d+_sub); _h=_fpx*_b/(_d-_sub) if _d>_sub else np.inf
+    _f=(_h-_l)/2/_need if np.isfinite(_h) else np.inf
+    print(f"[Ch11 s22]   b={_b:4.2f} m, +-{_sub:.1f} px: disparity {_d:5.2f} px -> "
+          + (f"Z in [{_l:6.1f}, {_h:6.1f}] m, +-{100*_f:5.1f}%" if np.isfinite(_h)
+             else "UNBOUNDED above"))
+print(f"[Ch11 s22] 12 cm is hopeless at 0.5 px (+-88%) and marginal at 0.1 px (+-12%);")
+print(f"[Ch11 s22]   1.2 m across the windscreen gives +-1.2%   "
+      f"{P(_fpx*1.2/_need > 8 and _fpx*0.12/_need < 1)}")
+print(f"[Ch11 s22]   so 'stereo cannot do long range' is really 'SHORT-BASELINE stereo")
+print(f"[Ch11 s22]   cannot' -- b enters linearly, and a car is 1.8 m wide")
+print(f"[Ch11 s22] control side: a 0.5 m lane correction in 1.5 s needs "
+      f"{2*0.5/1.5**2:.3f} m/s^2 = {100*(2*0.5/1.5**2)/9.81:.1f}% g, and wn = "
+      f"{4/(0.707*1.5):.2f} rad/s at zeta = 1/sqrt2")
+print(f"[Ch11 s22]   that is trivial for a 100 Hz steering loop: perception is the binding")
+print(f"[Ch11 s22]   constraint, not control   {P(2*0.5/1.5**2 < 0.5)}")
+
 print("\n" + "="*66)

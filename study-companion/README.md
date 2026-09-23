@@ -46,6 +46,7 @@ merely structural, that is said plainly.
 | 08 | Computer Vision | [`ch08-computer-vision/`](ch08-computer-vision/index.html) | [Read online](https://claude.ai/artifact/YGYUxoUzmFo2R2W5fb7PP7) |
 | 09 | Audio and Speech | [`ch09-audio-speech/`](ch09-audio-speech/index.html) | [Read online](https://claude.ai/artifact/UeVoa1oWJcZJL8KMsbbLHq) |
 | 10 | Multimodal Learning | [`ch10-multimodal/`](ch10-multimodal/index.html) | [Read online](https://claude.ai/artifact/VVW3i2z1z8dxCEUsvupMAW) |
+| 11 | Autonomous Systems | [`ch11-autonomous-systems/`](ch11-autonomous-systems/index.html) | [Read online](https://claude.ai/artifact/9xX3kBS2wW6MJT8keXAvQA) |
 
 ## What's in a chapter page
 
@@ -82,7 +83,8 @@ chapters rely on the linked chips instead.
 
 ## Verification
 
-`verify_claims.py` checks the load-bearing mathematical claims across all eight chapters
+`verify_claims.py` checks the load-bearing mathematical claims across all eleven chapters
+(349 checks, zero failures)
 against independent computation rather than against anybody's memory — the von Mises and
 Tresca norm identities, the unit-change nearest-neighbour flip, the worked bracket example,
 the `1/sqrt(d)` concentration of cosine similarity, the inertia tensor eigenvalues, polar
@@ -92,8 +94,18 @@ beam's Fundamental Theorem check, the BPE merge invariant, the RoPE relative-pos
 identity, the equivalence of the state-space recurrence and its convolution kernel, and the
 proof that speculative decoding leaves the output distribution exactly unchanged, the
 structure tensor against the Mohr's-circle principal values, Gaussian blur against an explicit
-heat-equation solver, the aliasing fold frequency, and the Beer-Lambert form of NeRF
-transmittance.
+heat-equation solver, the aliasing fold frequency, the Beer-Lambert form of NeRF
+transmittance, and — for Chapter 11 — the closed-form Riccati solution showing a steady-state
+Kalman filter has a damping ratio of exactly `1/sqrt(2)` whatever the noise, `det J = l1 l2
+sin(q2)` with the lost direction at a singularity proved to be the radial one, the
+skew-symmetry of `Mdot - 2C`, and the degree-weighted limit of swarm consensus.
+
+Several checks exist because they caught an error. The suite has overturned claims in the
+source material (what neighbour-averaging consensus converges to; whether four legs are
+statically stable; the size of a VLA action vocabulary) and claims written for these pages
+before they were tested (whether a Kalman filter's damping ratio varies with noise; what
+actually compounds in behavioural cloning; what damped least squares does near a
+singularity). A test that passes is worth less than one that has failed at least once.
 
 ```
 pip install numpy scipy
