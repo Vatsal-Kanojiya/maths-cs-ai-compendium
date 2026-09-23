@@ -1259,4 +1259,167 @@ print(f"[Ch10 s11] alpha=0: x + alpha*CrossAttn = {xg + 0*cag} == x exactly     
 print(f"[Ch10 s11] so training starts as the untouched frozen language model, and")
 print(f"[Ch10 s11] the visual path is ramped in -- a soft start, not a step change")
 
+
+# =========================== CHAPTER 11 (part 1) =========================
+c_light = 299792458.0
+
+# --- projection is not injective in depth --------------------------------
+print()
+Kc = np.array([[500.,0,320],[0,500.,240],[0,0,1]])
+prj = lambda X: (Kc @ X)[:2] / (Kc @ X)[2]
+near = np.array([0.5, 0.3, 5.0])
+print(f"[Ch11 s02] a thing at Z=5 m and a 6x bigger thing at Z=30 m both land on "
+      f"{prj(near)}  {P(np.allclose(prj(near), prj(near*6)))}")
+print(f"[Ch11 s02]   dividing by Z is what destroys the depth; nothing downstream restores it")
+
+# --- time of flight: the timing budget -----------------------------------
+print()
+print(f"[Ch11 s02] d = c*dt/2 -> 1 cm of range costs {2*0.01/c_light*1e12:.1f} ps of timing   "
+      f"{P(abs(2*0.01/c_light*1e12 - 66.7) < 0.5)}")
+print(f"[Ch11 s02] a 200 m return takes {2*200/c_light*1e6:.2f} us -- the whole measurement")
+pts = 64 * int(360/0.2) * 10
+print(f"[Ch11 s02] 64 channels x 0.2 deg x 10 Hz = {pts:,} points/s          {P(pts==1152000)}")
+print(f"[Ch11 s02]   one 1080p camera at 30 Hz samples {1920*1080*30/pts:.0f}x more often")
+tmin = 2*0.2/343.0
+print(f"[Ch11 s02] ultrasonic at 0.2 m: {tmin*1e3:.2f} ms = {tmin*40e3:.0f} cycles of 40 kHz "
+      f"ringdown  {P(45 < tmin*40e3 < 50)}")
+df = 2*30.0*77e9/c_light
+print(f"[Ch11 s02] 77 GHz radar, 30 m/s target -> Doppler shift {df/1e3:.2f} kHz, a fractional "
+      f"{df/77e9:.1e}  {P(abs(df-15.4e3) < 100)}")
+
+# --- calibration: rotation error is range-independent, translation is not -
+print()
+for Zr in (10., 50., 100., 200.):
+    rot_px = 500.0*np.tan(np.radians(1.0))
+    tr_px  = 500.0*0.05/Zr
+    print(f"[Ch11 s03]   Z={Zr:6.1f} m: 1 deg of extrinsic rotation = {rot_px:5.2f} px; "
+          f"5 cm of translation = {tr_px:5.2f} px")
+print(f"[Ch11 s03] rotation error does NOT shrink with range, translation error does "
+      f"(f*t/Z)  {P(500.0*0.05/200. < 500.0*np.tan(np.radians(1.0))/20)}")
+print(f"[Ch11 s03] 30 m/s x 10 ms of clock skew = {30*0.010*100:.0f} cm    {P(abs(30*.01-.3)<1e-12)}")
+
+# --- stereo: the error is quadratic in range -----------------------------
+print()
+f_px, b_m = 500.0, 0.12
+for Zs in (5., 10., 20., 50., 100.):
+    ds = f_px*b_m/Zs
+    lo, hi = f_px*b_m/(ds+0.5), f_px*b_m/(ds-0.5) if ds > 0.5 else np.inf
+    print(f"[Ch11 s06]   Z={Zs:6.1f} m -> disparity {ds:5.2f} px; a +-0.5 px match error puts "
+          f"it in [{lo:6.2f}, {hi:7.2f}] m")
+print(f"[Ch11 s06] dZ/dd = Z^2/(f b), so 100 m is {(100/10)**2:.0f}x worse than 10 m   "
+      f"{P(abs((100.**2)/(10.**2) - 100) < 1e-9)}")
+
+# --- occupancy: adding log-odds IS multiplying probabilities -------------
+print()
+ph, pm = 0.75, 0.35
+lh, lm = np.log(ph/(1-ph)), np.log(pm/(1-pm))
+l, pr = 0.0, 0.5
+for z in (1,1,0,1,1,1,0,1):
+    l += lh if z else lm
+    lik = ph if z else pm
+    pr = lik*pr/(lik*pr + (1-lik)*(1-pr))
+print(f"[Ch11 s09] log-odds sum -> P={1/(1+np.exp(-l)):.10f}; sequential Bayes -> P={pr:.10f}  "
+      f"{P(abs(1/(1+np.exp(-l)) - pr) < 1e-12)}")
+print(f"[Ch11 s09] BREAK: 12 hits on one cell -> P={1/(1+np.exp(-12*lh)):.6f}, but only if the "
+      f"12 looks were INDEPENDENT")
+
+# --- a cubic really is enough for a lane ---------------------------------
+print()
+for Rr, look in ((500., 80.), (250., 80.), (100., 50.)):
+    yv = np.linspace(0, look, 400)
+    xe = Rr - np.sqrt(np.maximum(Rr**2 - yv**2, 0))
+    Av = np.vstack([yv**0, yv, yv**2, yv**3]).T
+    cf = np.linalg.lstsq(Av, xe, rcond=None)[0]
+    print(f"[Ch11 s08] R={Rr:5.0f} m arc over {look:2.0f} m: cubic fit is off by "
+          f"{np.abs(Av@cf - xe).max()*1000:5.2f} mm, y^2/2R alone by "
+          f"{np.abs(yv**2/(2*Rr) - xe).max()*100:5.2f} cm")
+print(f"[Ch11 s08] a lane is 3500 mm wide, so the cubic's error is invisible  {P(True)}")
+
+# --- Kalman: the gain is inverse-variance weighting ----------------------
+print()
+print(f"[Ch11 s10] K = P/(P+R); at P=R it is exactly {4.0/(4.0+4.0):.2f} -- a plain average  "
+      f"{P(abs(4/(4+4) - .5) < 1e-15)}")
+print(f"[Ch11 s10] posterior variance (1-K)P = {(1-4/(4+4))*4:.3f} = 1/(1/P+1/R) = "
+      f"{1/(1/4+1/4):.3f}   {P(abs((1-4/8)*4 - 1/(1/4+1/4)) < 1e-12)}")
+for Pv, Rv in ((9.,1.),(1.,9.),(100.,1.)):
+    print(f"[Ch11 s10]   P={Pv:5.0f} R={Rv:4.0f} -> K={Pv/(Pv+Rv):.3f}  "
+          f"(lean on the {'sensor' if Pv>Rv else 'model'})")
+
+dtk = 0.1
+Fk = np.array([[1,dtk],[0,1.]]); Hk = np.array([[1.,0.]])
+qk, rk = 0.5, 2.0
+Qk = qk*np.array([[dtk**3/3, dtk**2/2],[dtk**2/2, dtk]])
+
+def _nis(Rassumed, n=400, trials=250):
+    out = []
+    Lc = np.linalg.cholesky(Qk)
+    for _ in range(trials):
+        x = np.array([0.,1.]); xh = np.zeros(2); Pc = np.eye(2)*10.
+        for k in range(n):
+            x = Fk@x + Lc@rng.normal(size=2)
+            z = Hk@x + rng.normal(0, np.sqrt(rk), 1)
+            xh = Fk@xh; Pc = Fk@Pc@Fk.T + Qk
+            S = Hk@Pc@Hk.T + Rassumed
+            nu = z - Hk@xh
+            if k > 50: out.append(float(nu@np.linalg.inv(S)@nu))
+            Kk = Pc@Hk.T@np.linalg.inv(S)
+            xh = xh + Kk@nu; Pc = (np.eye(2) - Kk@Hk)@Pc
+    return np.array(out)
+
+nis_ok, nis_bad = _nis(np.array([[rk]])), _nis(np.array([[rk/9]]))
+print()
+print(f"[Ch11 s10] innovation nu = z - H x_hat with covariance S = H P H' + R")
+print(f"[Ch11 s10] honest R:   mean nu'S^-1nu = {nis_ok.mean():.3f}, should equal m = 1   "
+      f"{P(abs(nis_ok.mean()-1) < 0.07)}")
+print(f"[Ch11 s10] R 9x too small: mean = {nis_bad.mean():.2f} -- the filter believes its own "
+      f"press release  {P(nis_bad.mean() > 3)}")
+lag1 = np.corrcoef(nis_ok[:-1], nis_ok[1:])[0,1]
+print(f"[Ch11 s10] a consistent filter leaves WHITE innovations: lag-1 corr {lag1:+.4f}   "
+      f"{P(abs(lag1) < 0.07)}")
+
+# --- observability decides whether a sensor suite can work at all --------
+_obsv = lambda A, C: np.vstack([C@np.linalg.matrix_power(A,i) for i in range(A.shape[0])])
+Fb = np.array([[1,dtk,-0.5*dtk**2],[0,1,-dtk],[0,0,1.]])
+print()
+print(f"[Ch11 s10] [pos,vel] + a position sensor: rank O = "
+      f"{np.linalg.matrix_rank(_obsv(Fk,Hk))}/2   {P(np.linalg.matrix_rank(_obsv(Fk,Hk))==2)}")
+print(f"[Ch11 s10] [pos,vel,accel bias] + a position sensor: rank O = "
+      f"{np.linalg.matrix_rank(_obsv(Fb, np.array([[1.,0,0]]))) }/3   "
+      f"{P(np.linalg.matrix_rank(_obsv(Fb, np.array([[1.,0,0]])))==3)}")
+print(f"[Ch11 s10] the same state, IMU alone, nothing measured: rank O = "
+      f"{np.linalg.matrix_rank(_obsv(Fb, np.array([[0.,0,0]])))}/3   "
+      f"{P(np.linalg.matrix_rank(_obsv(Fb, np.array([[0.,0,0]])))==0)}")
+print(f"[Ch11 s10]   an unobservable state is not a tuning problem -- no filter can fix it")
+for tt in (1., 10., 60., 600.):
+    print(f"[Ch11 s10]   a 0.01 m/s^2 bias for {tt:5.0f} s -> {0.5*0.01*tt**2:8.2f} m of drift "
+          f"(it grows as t^2)")
+
+# --- the steady-state Kalman filter IS a second-order servo ---------------
+def _ss(dts, qs, rs, n=20000):
+    Fs = np.array([[1,dts],[0,1.]]); Hs = np.array([[1.,0.]])
+    Qs = qs*np.array([[dts**3/3, dts**2/2],[dts**2/2, dts]]); Pc = np.eye(2)*10.
+    for _ in range(n):
+        Pc = Fs@Pc@Fs.T + Qs
+        S = Hs@Pc@Hs.T + rs
+        Kk = Pc@Hs.T@np.linalg.inv(S)
+        Pc = (np.eye(2) - Kk@Hs)@Pc
+    ev = np.linalg.eigvals((np.eye(2) - Kk@Hs)@Fs).astype(complex)
+    s = np.log(ev)/dts
+    return Kk.ravel(), abs(s[0]), -s[0].real/abs(s[0])
+print()
+zs = []
+for dts in (0.1, 0.01):
+    for qrr in (0.01, 1.0, 100.0):
+        Kk, wn, z = _ss(dts, qrr, 1.0)
+        zs.append(z)
+        print(f"[Ch11 s11] dt={dts:5.2f} q/r={qrr:7.2f}: K=[{Kk[0]:.3f},{Kk[1]:7.3f}]  "
+              f"wn={wn:7.4f} rad/s  zeta={z:.6f}  (q/(r dt))^(1/4)={(qrr/dts)**0.25:7.4f}")
+print(f"[Ch11 s11] zeta is 1/sqrt2 = {1/np.sqrt(2):.6f} for EVERY q, r and dt   "
+      f"{P(max(abs(z - 1/np.sqrt(2)) for z in zs) < 2e-5)}")
+print(f"[Ch11 s11] and wn = (q/(r dt))^(1/4) to 4 figures                    "
+      f"{P(abs(_ss(0.01, 1.0, 1.0)[1] - (1.0/0.01)**0.25) < 1e-3)}")
+print(f"[Ch11 s11] closed form: p12=sqrt(q rho), p11=sqrt(2) rho^(3/4) q^(1/4),")
+print(f"[Ch11 s11]   wn^2 = p12/rho = sqrt(q/rho) and 2 zeta wn = p11/rho = sqrt2 wn -> "
+      f"zeta = 1/sqrt2 exactly")
+
 print("\n" + "="*66)

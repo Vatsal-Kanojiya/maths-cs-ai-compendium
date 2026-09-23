@@ -1,0 +1,1760 @@
+<title>Sensing, Estimating, Acting</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(', '\\)']], displayMath: [['$$', '$$']], processEscapes: true },
+  svg: { fontCache: 'global', scale: 1.0 },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-svg.js" id="MathJax-script" async></script>
+
+<style>
+/* ============ TOKENS: light is complete and authoritative ============ */
+:root{
+  --ground:#F0F2F1;
+  --sheet:#FBFCFB;
+  --sheet-2:#F4F6F5;
+  --ink:#14181A;
+  --ink-2:#4E575B;
+  --ink-3:#77838A;
+  --rule:#D3DAD7;
+  --rule-strong:#A8B4B0;
+  --accent:#12507E;
+  --accent-ink:#0E4267;
+  --accent-soft:#E4EEF6;
+  --bridge:#1F8A4C;
+  --bridge-soft:#E4F2EA;
+  --brk:#A8500F;
+  --brk-soft:#FAEBDF;
+  --s1:#BF5B00;
+  --s2:#0F74C7;
+  --s3:#1F8A4C;
+  --paper:#FFFFFF;            /* pasted-drawing ground, both themes */
+  --paper-ink:#1b1b1b;
+  --shadow:0 1px 2px rgba(20,24,26,.06), 0 6px 18px rgba(20,24,26,.05);
+  --f-disp:'Archivo Narrow', 'Arial Narrow', Helvetica, sans-serif;
+  --f-body:'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --f-mono:'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+    --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+    --rule:#293134; --rule-strong:#3F494C;
+    --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+    --bridge:#35AC63; --bridge-soft:#11281B;
+    --brk:#E0913F; --brk-soft:#2E2012;
+    --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+  --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+  --rule:#293134; --rule-strong:#3F494C;
+  --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+  --bridge:#35AC63; --bridge-soft:#11281B;
+  --brk:#E0913F; --brk-soft:#2E2012;
+  --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:var(--f-body); font-size:17px; line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ============ TITLE BLOCK (engineering drawing header) ============ */
+.titleblock{
+  position:sticky; top:env(safe-area-inset-top,0px); z-index:40;
+  background:var(--sheet); border-bottom:1px solid var(--rule-strong);
+}
+.tb-in{
+  max-width:1240px; margin:0 auto; padding:0 16px;
+  display:flex; align-items:stretch; gap:0; min-height:46px;
+}
+.tb-cell{
+  display:flex; flex-direction:column; justify-content:center;
+  padding:5px 14px; border-right:1px solid var(--rule);
+  font-family:var(--f-disp);
+}
+.tb-cell:first-child{padding-left:0}
+.tb-cell:last-child{border-right:0; margin-left:auto; padding-right:0}
+.tb-k{
+  font-size:8.5px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); line-height:1.4;
+}
+.tb-v{font-size:13px; font-weight:700; letter-spacing:.02em; color:var(--ink); line-height:1.3}
+.tb-v.accent{color:var(--accent)}
+.tb-hide{display:none}
+@media (min-width:680px){ .tb-hide{display:flex} }
+
+.themebtn{
+  appearance:none; background:transparent; border:1px solid var(--rule-strong);
+  color:var(--ink-2); font-family:var(--f-disp); font-size:10px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:6px 10px; border-radius:2px;
+  cursor:pointer; align-self:center; white-space:nowrap;
+}
+.themebtn:hover{border-color:var(--accent); color:var(--accent)}
+.themebtn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+/* ============ SHELL ============ */
+.shell{max-width:1240px; margin:0 auto; padding:0 16px; padding-block:0 64px}
+@media (min-width:1080px){
+  .shell{display:grid; grid-template-columns:212px minmax(0,1fr); gap:44px; align-items:start}
+}
+.rail{display:none}
+@media (min-width:1080px){
+  .rail{
+    display:block; position:sticky; top:calc(env(safe-area-inset-top,0px) + 70px);
+    padding-block:28px; font-family:var(--f-disp); font-size:12.5px;
+  }
+}
+.rail-h{
+  font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-3);
+  padding-bottom:8px; border-bottom:1px solid var(--rule); margin-bottom:10px;
+}
+.rail a{
+  display:flex; gap:9px; padding:4px 0; color:var(--ink-2); text-decoration:none;
+  border-left:2px solid transparent; padding-left:9px; margin-left:-11px; line-height:1.35;
+}
+.rail a:hover{color:var(--accent)}
+.rail a.on{color:var(--accent); border-left-color:var(--accent); font-weight:700}
+.rail a .n{font-family:var(--f-mono); font-size:10.5px; color:var(--ink-3); flex:none; padding-top:1px}
+.rail a.on .n{color:var(--accent)}
+
+main{min-width:0; padding-block:0 0}
+.col{max-width:70ch}
+
+/* ============ TYPE ============ */
+h1,h2,h3,h4{font-family:var(--f-disp); text-wrap:balance; margin:0; line-height:1.14}
+h1{font-size:clamp(34px,7vw,58px); font-weight:700; letter-spacing:-.015em}
+h2{font-size:clamp(25px,4.2vw,34px); font-weight:700; letter-spacing:-.01em}
+h3{font-size:19px; font-weight:700; letter-spacing:.005em; margin-top:2px}
+h4{font-size:14px; font-weight:700; letter-spacing:.06em; text-transform:uppercase}
+p{margin:0 0 1.05em}
+a{color:var(--accent-ink)}
+strong{font-weight:600}
+em{font-style:italic}
+code{font-family:var(--f-mono); font-size:.87em; background:var(--sheet-2); padding:1px 5px; border-radius:2px; border:1px solid var(--rule)}
+.lead{font-size:19.5px; line-height:1.56; color:var(--ink-2)}
+.eyebrow{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--ink-3); margin:0 0 10px;
+}
+.srcref{
+  font-family:var(--f-mono); font-size:11px; color:var(--ink-3);
+  border:1px solid var(--rule); border-radius:2px; padding:2px 7px; display:inline-block;
+  background:var(--sheet-2); white-space:nowrap;
+}
+
+/* ============ SECTION ============ */
+section{padding-block:38px 0; scroll-margin-top:calc(env(safe-area-inset-top,0px) + 62px)}
+.sechead{display:flex; align-items:baseline; gap:13px; margin-bottom:6px; flex-wrap:wrap}
+.secnum{
+  font-family:var(--f-mono); font-size:12px; font-weight:600; color:var(--accent);
+  border:1px solid var(--accent); border-radius:2px; padding:2px 7px; flex:none;
+  background:var(--accent-soft);
+}
+.rule-h{border:0; border-top:1px solid var(--rule); margin:0 0 22px}
+.rule-d{border:0; border-top:1px dashed var(--rule-strong); margin:34px 0}
+
+/* ============ CALLOUTS ============ */
+.note{
+  border:1px solid var(--rule); border-left:3px solid var(--accent);
+  background:var(--sheet); border-radius:2px; padding:16px 18px; margin:22px 0;
+}
+/* Greek letters must never be uppercased: text-transform turns beta into
+   a capital Beta, which is the Latin letter B on screen -- likewise eta->H,
+   kappa->K, lambda->A-shape.  Any Greek inside an uppercased label wears .gk. */
+.gk{text-transform:none}
+.note.bridge{border-left-color:var(--bridge); background:var(--bridge-soft)}
+.note.brk{border-left-color:var(--brk); background:var(--brk-soft)}
+.note-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; margin-bottom:7px; display:flex; align-items:center; gap:8px;
+}
+.note.bridge .note-h{color:var(--bridge)}
+.note.brk .note-h{color:var(--brk)}
+.note .note-h{color:var(--accent)}
+.note p:last-child, .note ul:last-child{margin-bottom:0}
+.note-h .ic{
+  width:15px; height:15px; border-radius:50%; border:1.5px solid currentColor; flex:none;
+  display:grid; place-items:center; font-size:9.5px; font-weight:700; font-family:var(--f-mono);
+}
+ul,ol{margin:0 0 1.05em; padding-left:1.25em}
+li{margin-bottom:.4em}
+li::marker{color:var(--ink-3)}
+
+/* ============ DEFINITION BLOCK ============ */
+.defn{
+  background:var(--sheet); border:1px solid var(--rule); border-radius:3px;
+  padding:18px 20px; margin:22px 0; box-shadow:var(--shadow);
+}
+.defn-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:10px;
+  padding-bottom:8px; border-bottom:1px solid var(--rule);
+}
+.defn p:last-child{margin-bottom:0}
+
+/* ============ TABLES ============ */
+.tw{overflow-x:auto; margin:22px 0; border:1px solid var(--rule); border-radius:3px; background:var(--sheet)}
+table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:480px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule); vertical-align:top}
+thead th{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); background:var(--sheet-2); font-weight:700; white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:0}
+td.mono,th.mono{font-family:var(--f-mono); font-size:13px; font-variant-numeric:tabular-nums}
+.tw caption{
+  caption-side:bottom; text-align:left; padding:9px 14px; font-size:12.5px;
+  color:var(--ink-3); border-top:1px solid var(--rule); font-family:var(--f-disp);
+}
+
+/* ============ FIGURES ============ */
+figure{margin:24px 0}
+.paper{
+  background:var(--paper); border:1px solid var(--rule-strong); border-radius:3px;
+  padding:16px; display:flex; justify-content:center; box-shadow:var(--shadow);
+}
+.paper img{max-width:100%; height:auto; display:block}
+figcaption{
+  font-family:var(--f-disp); font-size:12.5px; color:var(--ink-3); margin-top:9px;
+  line-height:1.45; padding-left:2px;
+}
+figcaption b{color:var(--ink-2); font-weight:700; letter-spacing:.04em}
+
+/* ============ INTERACTIVE PANELS ============ */
+.lab{
+  background:var(--sheet); border:1px solid var(--rule-strong); border-radius:3px;
+  margin:26px 0; overflow:hidden; box-shadow:var(--shadow);
+}
+.lab-h{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:11px 16px; border-bottom:1px solid var(--rule); background:var(--sheet-2);
+}
+.lab-t{font-family:var(--f-disp); font-size:13px; font-weight:700; letter-spacing:.05em; text-transform:uppercase}
+.lab-tag{
+  font-family:var(--f-mono); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--accent); border:1px solid var(--accent); border-radius:2px; padding:2px 6px;
+  margin-left:auto; white-space:nowrap;
+}
+.lab-body{padding:16px}
+.lab-foot{
+  padding:11px 16px; border-top:1px solid var(--rule); background:var(--sheet-2);
+  font-size:13.5px; color:var(--ink-2); line-height:1.5;
+}
+.lab-foot b{color:var(--ink)}
+.stage{width:100%; max-width:560px; height:auto; display:block; margin-inline:auto; touch-action:none; cursor:grab}
+.stage.drag{cursor:grabbing}
+
+/* Dividers are drawn as cell borders rather than as 1px grid gaps over a grey
+   backdrop: when the item count does not fill the last row, a gap-based grid
+   leaves the backdrop showing as an empty grey block. */
+.readout{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr)); gap:0;
+  background:var(--sheet); border:1px solid var(--rule); border-radius:2px;
+  margin-top:14px; overflow:hidden;
+}
+.ro{background:var(--sheet); padding:8px 11px;
+  border-right:1px solid var(--rule); border-bottom:1px solid var(--rule)}
+.ro-k{
+  font-family:var(--f-disp); font-size:9px; letter-spacing:.13em; text-transform:uppercase;
+  color:var(--ink-3); margin-bottom:2px;
+  /* was white-space:nowrap, which clipped the longer keys instead of wrapping */
+  white-space:normal; overflow-wrap:break-word; line-height:1.3; min-height:2.6em;
+}
+.ro-v{
+  font-family:var(--f-mono); font-size:15px; font-weight:500; font-variant-numeric:tabular-nums;
+  color:var(--ink); line-height:1.25;
+}
+.ro-v.a{color:var(--s2)} .ro-v.b{color:var(--s1)} .ro-v.c{color:var(--s3)}
+
+.ctl{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:14px}
+.ctl label{
+  font-family:var(--f-disp); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-2); white-space:nowrap;
+}
+input[type=range]{
+  -webkit-appearance:none; appearance:none; height:22px; background:transparent;
+  flex:1 1 160px; min-width:130px; cursor:pointer;
+}
+input[type=range]:focus-visible{outline:2px solid var(--accent); outline-offset:3px}
+input[type=range]::-webkit-slider-runnable-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-moz-range-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:16px; height:16px; border-radius:50%;
+  background:var(--accent); border:2px solid var(--sheet); margin-top:-6.5px;
+}
+input[type=range]::-moz-range-thumb{
+  width:16px; height:16px; border-radius:50%; background:var(--accent);
+  border:2px solid var(--sheet);
+}
+.btn{
+  appearance:none; font-family:var(--f-disp); font-size:11px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:7px 13px; border-radius:2px;
+  border:1px solid var(--rule-strong); background:var(--sheet); color:var(--ink-2); cursor:pointer;
+}
+.btn:hover{border-color:var(--accent); color:var(--accent)}
+.btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.btn.on{background:var(--accent); border-color:var(--accent); color:var(--sheet)}
+
+.legend{display:flex; gap:16px; flex-wrap:wrap; margin-top:12px}
+.lg{display:flex; align-items:center; gap:7px; font-family:var(--f-disp); font-size:12px; color:var(--ink-2)}
+.lg i{width:15px; height:3px; border-radius:2px; flex:none; display:block}
+
+/* ============ MISC ============ */
+.mathbox{overflow-x:auto; overflow-y:hidden; margin:18px 0}
+mjx-container[display="true"]{margin:0 !important}
+.kv{display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:15px; margin:16px 0}
+.kv dt{font-family:var(--f-mono); font-size:13px; color:var(--accent); white-space:nowrap}
+.kv dd{margin:0; color:var(--ink-2)}
+
+details.q{
+  border:1px solid var(--rule); border-radius:3px; background:var(--sheet);
+  margin-bottom:9px; overflow:hidden;
+}
+details.q summary{
+  cursor:pointer; padding:12px 15px; font-weight:600; list-style:none;
+  display:flex; gap:11px; align-items:flex-start; font-size:15.5px;
+}
+details.q summary::-webkit-details-marker{display:none}
+details.q summary::after{
+  content:'+'; margin-left:auto; font-family:var(--f-mono); color:var(--accent);
+  font-size:17px; line-height:1; flex:none; padding-top:2px;
+}
+details.q[open] summary::after{content:'\2212'}
+details.q summary:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
+details.q summary .qn{
+  font-family:var(--f-mono); font-size:12px; color:var(--ink-3); flex:none; padding-top:3px;
+}
+details.q .ans{padding:0 15px 14px 41px; font-size:15.5px; color:var(--ink-2); border-top:1px solid var(--rule); padding-top:13px}
+details.q .ans p:last-child{margin-bottom:0}
+
+.endnote{
+  margin-top:44px; padding-top:20px; border-top:1px solid var(--rule-strong);
+  font-size:13.5px; color:var(--ink-3); font-family:var(--f-disp); line-height:1.55;
+}
+.endnote a{color:var(--accent)}
+
+.srcref{text-decoration:none}
+a.srcref{color:var(--ink-2); transition:none}
+
+</style>
+<style>
+.srcref{text-decoration:none}
+a.srcref{color:var(--ink-2)}
+a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(--accent-soft)}
+.srcref.nolink{opacity:.75; font-style:italic}
+.pv{font-family:var(--f-disp); font-size:9.5px; font-weight:700; letter-spacing:.1em;
+    text-transform:uppercase; padding:2px 7px; border-radius:2px; white-space:nowrap}
+.pv.ok{background:var(--bridge-soft); color:var(--bridge)}
+.pv.add{background:var(--accent-soft); color:var(--accent)}
+.pv.corr{background:var(--brk-soft); color:var(--brk)}
+.flag{display:inline-block; padding:1px 7px; border-radius:2px; font-family:var(--f-disp);
+      font-size:10px; letter-spacing:.1em; text-transform:uppercase; font-weight:700}
+.flag.ok{background:var(--bridge-soft); color:var(--bridge)}
+.flag.bad{background:var(--brk-soft); color:var(--brk)}
+.predict{border:1px solid var(--rule-strong); border-left:3px solid var(--brk);
+  background:var(--brk-soft); border-radius:2px; padding:13px 15px; margin:0 0 14px}
+.predict-h{font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--brk); margin-bottom:6px}
+.predict p{margin:0 0 10px; font-size:15px}
+.predict .opts{display:flex; gap:8px; flex-wrap:wrap}
+.pbtn{appearance:none; font-family:var(--f-disp); font-size:12px; font-weight:600;
+  padding:6px 12px; border-radius:2px; border:1px solid var(--rule-strong);
+  background:var(--sheet); color:var(--ink-2); cursor:pointer}
+.pbtn:hover{border-color:var(--brk); color:var(--brk)}
+.pbtn.picked{background:var(--brk); border-color:var(--brk); color:var(--sheet)}
+.pverdict{margin-top:10px; font-size:14.5px; color:var(--ink-2); display:none}
+.pverdict.show{display:block}
+.pverdict b{color:var(--ink)}
+.gap{border:1px solid var(--rule); border-left:3px solid var(--ink-3); background:var(--sheet-2);
+  border-radius:2px; padding:14px 16px; margin:18px 0}
+.gap-h{font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:7px}
+</style>
+
+<div class="sheet">
+
+<header class="titleblock">
+  <div class="tb-main">
+    <div class="tb-k">Sheet 11 of 20 &mdash; Autonomous Systems</div>
+    <h1>Sensing, Estimating, Acting</h1>
+    <p class="tb-sub">
+      This is your chapter. A robot arm is a kinematic chain, a singularity is a dead centre,
+      a PID loop is a spring and a dashpot, and the Kalman filter lands on
+      <span class="gk">&zeta;</span>&nbsp;=&nbsp;0.707 without being asked. The work here is
+      separating what genuinely transfers from what only sounds familiar.
+    </p>
+  </div>
+  <div class="tb-meta">
+    <div class="tb-cell"><div class="tb-k">Reader</div><div class="tb-v">B.E. Mechanical</div></div>
+    <div class="tb-cell"><div class="tb-k">Prerequisite</div><div class="tb-v">Sheets 1&ndash;10</div></div>
+    <button class="btn" id="themebtn" type="button">Theme</button>
+  </div>
+</header>
+
+<nav class="toc">
+  <a href="#bridge"><span class="n">00</span><span>The bridge</span></a>
+  <a href="#sensors"><span class="n">01</span><span>What sensors measure</span></a>
+  <a href="#depth"><span class="n">02</span><span>Why a camera loses depth</span></a>
+  <a href="#calib"><span class="n">03</span><span>Calibration is a tolerance stack</span></a>
+  <a href="#fusion"><span class="n">04</span><span>Fusion, and the BEV grid</span></a>
+  <a href="#stereo"><span class="n">05</span><span>Stereo&rsquo;s quadratic error</span></a>
+  <a href="#det3d"><span class="n">06</span><span>Detection in three dimensions</span></a>
+  <a href="#lanes"><span class="n">07</span><span>Lanes are a curve fit</span></a>
+  <a href="#occ"><span class="n">08</span><span>The evidence accumulator</span></a>
+  <a href="#kalman"><span class="n">09</span><span>The Kalman filter, at last</span></a>
+  <a href="#servo"><span class="n">10</span><span>A 0.707 servo</span></a>
+</nav>
+
+<main>
+
+<section id="top" style="padding-top:44px">
+  <div class="col">
+    <p class="lede">
+      Ten sheets in, you have been reading about a field that borrowed your mathematics and
+      renamed it. This sheet is different. Autonomous systems did not borrow mechanical
+      engineering &mdash; it <em>is</em> mechanical engineering, with a perception front end
+      bolted on. The Jacobian in a robotics paper is the Jacobian from your velocity analysis.
+      The singularity is the toggle position of a four-bar. The manipulator equation is
+      Euler&ndash;Lagrange. You are not learning a new subject here; you are learning a second
+      vocabulary for one you already have.
+    </p>
+    <p>
+      Which creates the opposite hazard from every previous sheet. When almost everything
+      transfers, the few things that do not become very easy to miss, and they are the
+      dangerous ones. So this sheet spends its energy unevenly: it moves fast through the
+      identities, and slows down hard at the three places where your intuition will quietly
+      mislead you &mdash; what a projection destroys, what an unobservable state means, and what
+      happens to a learned policy when it drifts off the trajectory it was taught on.
+    </p>
+    <p>
+      There is also a debt to pay. Sheet 10 twice told you that learned fusion has no
+      \(H\), no \(R\), no innovation to monitor and no observability test &mdash; and twice
+      said you would meet those properly here. &sect;09 and &sect;10 are that promise, and they
+      end somewhere worth arriving at: the steady-state Kalman filter on a
+      constant-velocity model has a damping ratio of exactly \(1/\sqrt{2}\), for every
+      choice of noise, every sample rate, and every discretisation. It <em>derives</em> the
+      number you were taught to choose by hand.
+    </p>
+  </div>
+</section>
+
+<section id="bridge">
+  <div class="col">
+    <div class="sechead"><span class="secnum">00</span><h2>The bridge</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2011%20-%20autonomous%20systems/01.%20perception.md" target="_blank" rel="noopener">src 01. perception &#8599;</a>
+    </div>
+    <p>
+      Read the verdict column carefully. In earlier sheets it mostly said <i>analogy</i>. Here
+      it mostly says <i>identical</i> &mdash; and that is a literal claim, not encouragement.
+      Where it says identical, the two things are the same mathematical object under two
+      names, and anything you can prove about one holds for the other. The four rows at the
+      bottom are the ones to dwell on.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>What a GATE-prepared mechanical engineer already owns, and what robotics calls it.</caption>
+      <thead><tr><th>What you already know</th><th>What this chapter calls it</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td>Four-bar loop closure; chaining link transforms</td><td>Forward kinematics, the Denavit&ndash;Hartenberg product</td><td><b style="color:var(--bridge)">Identical.</b> 4&times;4 homogeneous matrices instead of vector polygons. See &sect;11.</td></tr>
+        <tr><td>Velocity polygon, instantaneous centres</td><td>The manipulator Jacobian \(J(\mathbf{q})\)</td><td><b style="color:var(--bridge)">Identical.</b> The same linear map \(\dot{\mathbf{x}}=J\dot{\mathbf{q}}\), written as a matrix. See &sect;12.</td></tr>
+        <tr><td>Dead centre / toggle position of a linkage</td><td>Kinematic singularity</td><td><b style="color:var(--bridge)">Identical.</b> \(\det J=0\); a direction of motion becomes unreachable. See &sect;12.</td></tr>
+        <tr><td>Euler&ndash;Lagrange for a mechanism; Coriolis terms in a rotating frame</td><td>The manipulator equation \(M\ddot{\mathbf{q}}+C\dot{\mathbf{q}}+\mathbf{g}=\boldsymbol\tau\)</td><td><b style="color:var(--bridge)">Identical,</b> same derivation. \(M\) is the kinetic-energy form, so it is symmetric positive definite. See &sect;13.</td></tr>
+        <tr><td>Spring&ndash;dashpot; \(\omega_n\), \(\zeta\), percentage overshoot</td><td>PID gains \(K_p\), \(K_d\)</td><td><b style="color:var(--bridge)">Identical.</b> \(K_p\) is a stiffness, \(K_d\) a damping coefficient. See &sect;14.</td></tr>
+        <tr><td>Variance-weighted least squares on two instruments</td><td>The Kalman gain \(K=PH^{T}S^{-1}\)</td><td><b style="color:var(--bridge)">Identical.</b> Weight each source by inverse variance. See &sect;09.</td></tr>
+        <tr><td>Observability rank test (control systems)</td><td>Whether a sensor suite can recover a state at all</td><td><b style="color:var(--bridge)">Identical test,</b> and it is the reason IMUs drift. See &sect;09.</td></tr>
+        <tr><td>\(\zeta=0.707\): the maximally flat second-order response</td><td>Steady-state Kalman filter on a constant-velocity model</td><td><b style="color:var(--bridge)">Derived, not chosen.</b> The filter lands on \(1/\sqrt2\) by itself. See &sect;10.</td></tr>
+        <tr><td>Centre of pressure inside the base &mdash; the tipping condition</td><td>Zero Moment Point inside the support polygon</td><td><b style="color:var(--bridge)">Identical.</b> And the <i>centre of mass</i> version is the static special case only. See &sect;16.</td></tr>
+        <tr><td>Tolerance stack-up on an assembly</td><td>Extrinsic calibration error budget</td><td><b style="color:var(--bridge)">Identical,</b> with one twist: angular error does not shrink with distance. See &sect;03.</td></tr>
+        <tr><td>Rigid-body mode of a free&ndash;free structure; mass-weighted centroid</td><td>Graph Laplacian consensus in a swarm</td><td><b style="color:var(--bridge)">The same eigenstructure.</b> Node degree plays the role of mass &mdash; which is why the source&rsquo;s claim about the average is wrong. See &sect;19.</td></tr>
+        <tr><td>Firing order and crank phasing in a multi-cylinder engine</td><td>Central pattern generator phase offsets; gaits</td><td><b style="color:var(--bridge)">The same bookkeeping,</b> different physics. Trot and bound are firing orders. See &sect;16.</td></tr>
+        <tr><td>Contact and friction wrecking an FEA convergence run</td><td>The sim-to-real gap</td><td><b style="color:var(--bridge)">The same root cause.</b> Contact is non-smooth and its constitutive model is genuinely unknown. See &sect;15.</td></tr>
+        <tr><td>A stereo pair, or any triangulation</td><td>Depth from disparity</td><td><b style="color:var(--brk)">Transfers, but the error does not.</b> Range error grows as \(Z^2\), so 100&nbsp;m is 100&times; worse than 10&nbsp;m. See &sect;05.</td></tr>
+        <tr><td>Reading a dimension off a drawing</td><td>Reading depth off a single photograph</td><td><b style="color:var(--brk)">Impossible in principle.</b> Projection divides by \(Z\); no algorithm undoes that without a prior. See &sect;02.</td></tr>
+        <tr><td>A linkage that keeps working when it is off its nominal path</td><td>A behaviour-cloned policy off its training distribution</td><td><b style="color:var(--brk)">No counterpart whatsoever.</b> Small errors compound into states the policy has never seen. See &sect;15.</td></tr>
+        <tr><td>Gain margin, phase margin, Routh&ndash;Hurwitz</td><td>Stability of a learned control policy</td><td><b style="color:var(--brk)">Nothing transfers.</b> There is no margin to compute and no proof to run. See &sect;14.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>How to use this sheet</div>
+      <p>
+        If a row says <b>identical</b>, do not re-learn it &mdash; just learn the new name and
+        move on. Your time is better spent on the four amber rows, none of which has anything
+        to do with robotics hardware. Three are about what information a measurement contains,
+        and one is about what a learned function does outside the data it was fitted on. Those
+        are the genuinely new ideas in this chapter.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="sensors">
+  <div class="col">
+    <div class="sechead"><span class="secnum">01</span><h2>What sensors measure</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2011%20-%20autonomous%20systems/01.%20perception.md" target="_blank" rel="noopener">src 01. perception &#8599;</a>
+    </div>
+    <p>
+      Every sensor on an autonomous vehicle measures one of three things: <b>time</b>,
+      <b>frequency</b>, or <b>irradiance</b>. Everything else is inference. It is worth being
+      concrete about the physics, because the physics sets limits that no amount of neural
+      network fixes, and because two of the three are instruments you have already used.
+    </p>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/sensor_comparison.svg" alt="Cameras, LiDAR, radar and IMU rated on resolution, depth, weather robustness, velocity and cost" width="460"></div>
+    <figcaption><b>Fig. 11.1</b> &mdash; No row wins. That is the entire argument for fusion. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+
+  <div class="col">
+    <h3>Time of flight, and how brutal the timing is</h3>
+    <p>
+      LiDAR fires a pulse and times the return. Range follows from the one equation everyone
+      writes down:
+    </p>
+  </div>
+  <div class="mathbox col">$$d = \frac{c\,\Delta t}{2}$$</div>
+  <div class="col">
+    <p>
+      The factor of two is the round trip. What nobody writes down is what that equation
+      <em>costs</em>. Invert it: \(\Delta t = 2d/c\), so one centimetre of range resolution
+      requires
+    </p>
+  </div>
+  <div class="mathbox col">$$\Delta t = \frac{2 \times 0.01\ \text{m}}{3\times 10^{8}\ \text{m/s}} = 66.7\ \text{ps}$$</div>
+  <div class="col">
+    <p>
+      Sixty-seven picoseconds. In that time light travels 2&nbsp;cm and an electrical signal
+      crosses about 1&nbsp;cm of PCB trace. This is why LiDAR is expensive: the optics are
+      ordinary, the <em>timing electronics</em> are not. The whole measurement to a
+      200&nbsp;m target takes 1.33&nbsp;&micro;s, and the sensor must resolve a
+      5&times;10<sup>&minus;5</sup> fraction of it.
+    </p>
+    <p>
+      An ultrasonic parking sensor runs the identical equation with
+      \(v_{\text{sound}}\approx343\) m/s instead of \(c\), which makes the timing
+      874,000 times easier and the sensor cost trivial. It also explains the specification
+      that looks arbitrary: why does a parking sensor have a <em>minimum</em> range of about
+      0.2&nbsp;m? Because the same piezo transducer transmits and receives. A 0.2&nbsp;m round
+      trip is 1.17&nbsp;ms, which at 40&nbsp;kHz is about 47 cycles &mdash; roughly how long
+      the transducer takes to stop ringing after it is driven. Closer than that and the echo
+      arrives while the element is still shouting. The blind zone is mechanical ringdown, not
+      a software limit.
+    </p>
+
+    <h3>Frequency: radar measures velocity directly</h3>
+    <p>
+      Automotive radar at 77&nbsp;GHz does time of flight too, but its real advantage is the
+      Doppler shift, which gives radial velocity in a single look:
+    </p>
+  </div>
+  <div class="mathbox col">$$v = \frac{\Delta f \cdot c}{2 f_0}$$</div>
+  <div class="col">
+    <p>
+      For a target closing at 30&nbsp;m/s, \(\Delta f = 2(30)(77\times10^9)/c = 15.4\) kHz.
+      That is a fractional shift of \(2\times10^{-7}\) &mdash; and it is measured
+      <em>directly</em>, by beating the return against the transmitted signal. No tracking, no
+      frame-to-frame association, no differentiation of a noisy position estimate.
+    </p>
+    <p>
+      That last point is the one to hold on to. Getting velocity from a camera or a LiDAR
+      means differencing two position estimates, and differentiation amplifies noise &mdash;
+      the same reason you do not build a tachometer by differentiating an encoder count if you
+      can help it. Radar sidesteps it entirely. A camera-and-LiDAR stack has to
+      <em>infer</em> that the car ahead is braking; radar measures it.
+    </p>
+
+    <h3>The sampling-rate table nobody shows you</h3>
+    <p>
+      A 64-channel spinning LiDAR at 10&nbsp;Hz with 0.2&deg; azimuth steps produces
+      \(64\times1800\times10 = 1{,}152{,}000\) points per second. That sounds enormous until
+      you put it beside one 1080p camera at 30&nbsp;Hz, which produces 62.2 million samples per
+      second &mdash; <b>54 times denser</b>.
+    </p>
+    <p>
+      So the usual framing is misleading. LiDAR is not the high-information sensor and the
+      camera the cheap one; the camera collects vastly more data, and the LiDAR collects data
+      of a kind the camera cannot produce at all. They are not competitors on a quality
+      scale. They are different instruments, in the way a dial gauge and a thermocouple are
+      different instruments.
+    </p>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/lidar_time_of_flight.svg" alt="A laser pulse leaving the sensor, reflecting off an object and returning, with range computed from round-trip time" width="420"></div>
+    <figcaption><b>Fig. 11.2</b> &mdash; One pulse, one number. Everything else in the point cloud is this, repeated a million times a second. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+
+  <div class="col">
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; this is instrumentation, and you have done it</div>
+      <p>
+        You have specified sensors before: a thermocouple versus an RTD, a strain gauge versus
+        an LVDT. The reasoning is identical &mdash; range, resolution, bandwidth, environmental
+        robustness, cost &mdash; and so is the conclusion, which is that you fit more than one
+        and cross-check. The IMU's role here is exactly the role of a tachometer on a machine
+        you are already monitoring with a displacement probe: high bandwidth, no absolute
+        reference, useful only in combination.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks &mdash; &ldquo;more sensors means more accuracy&rdquo; is not automatic</div>
+      <p>
+        On a test rig, adding a second instrument to the same quantity reduces variance,
+        because the two readings are independent. That assumption is what fails here. Rain
+        degrades the camera <em>and</em> the LiDAR, by the same physical mechanism &mdash;
+        scattering of light by water droplets. Their errors are correlated exactly when you
+        need them not to be. Radar survives because it is at a wavelength where water is
+        nearly transparent, which is a statement about physics, not about redundancy. Counting
+        sensors tells you nothing; you have to ask what each one fails to.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="depth">
+  <div class="col">
+    <div class="sechead"><span class="secnum">02</span><h2>Why a camera loses depth</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2011%20-%20autonomous%20systems/01.%20perception.md" target="_blank" rel="noopener">src 01. perception &#8599;</a>
+    </div>
+    <p>
+      This is the first of the four amber rows, and it is worth being precise, because
+      &ldquo;cameras don't see depth&rdquo; is usually said as though it were an engineering
+      shortcoming that better hardware might fix. It is not. It is a property of the map.
+    </p>
+    <p>
+      The pinhole model from Sheet 08:
+    </p>
+  </div>
+  <div class="mathbox col">$$\begin{bmatrix} u \\ v \\ 1 \end{bmatrix} = \frac{1}{Z} K \begin{bmatrix} X \\ Y \\ Z \end{bmatrix}$$</div>
+  <div class="col">
+    <p>
+      Look at what that division does. Scale the world point by any \(\lambda &gt; 0\) and
+      \((\lambda X, \lambda Y, \lambda Z)\) produces exactly the same \((u,v)\) &mdash; the
+      \(\lambda\) cancels. Every point on a ray through the optical centre lands on one pixel.
+      The map from \(\mathbb{R}^3\) to the image plane is not injective, and it is not
+      <em>nearly</em> not injective; an entire one-dimensional family collapses to each point.
+    </p>
+    <p>
+      Numerically, with \(f=500\) px: an object at \((0.5, 0.3, 5)\) metres and an object six
+      times larger at \((3.0, 1.8, 30)\) metres both project to pixel
+      \((370, 270)\) &mdash; identical to the last bit.
+    </p>
+    <p>
+      So when a monocular depth network outputs a depth map, it is not measuring. It is
+      applying a learned prior: floors are flat, cars are about this big, texture density falls
+      off with distance. That works impressively well and it is genuinely useful. But it has
+      the failure mode of every prior &mdash; it is confidently wrong on the case the prior
+      does not cover, and it gives no warning. A scale model of a street, photographed
+      correctly, reads as a street.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks &mdash; there is no instrument here</div>
+      <p>
+        You would never accept a length measurement from an instrument that had no reference
+        standard and no traceability. A monocular depth network is exactly that. Its numbers
+        are in metres and they are usually about right, but they come from a fitted prior, not
+        from a physical measurement, and there is nothing in the output that distinguishes a
+        well-supported estimate from an extrapolation. Compare the LiDAR in &sect;01: that
+        number is a timed interval multiplied by a physical constant. The difference is not
+        accuracy. It is whether the quantity was measured at all.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="calib">
+  <div class="col">
+    <div class="sechead"><span class="secnum">03</span><h2>Calibration is a tolerance stack</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2011%20-%20autonomous%20systems/01.%20perception.md" target="_blank" rel="noopener">src 01. perception &#8599;</a>
+    </div>
+    <p>
+      Before sensors can be fused, they have to agree on where they are. Three calibrations do
+      this, and all three are things you have done on an assembly drawing.
+    </p>
+    <p>
+      <b>Intrinsic</b> calibration is characterising the instrument itself &mdash; focal
+      length, principal point, lens distortion. This is the calibration certificate that comes
+      with a gauge. <b>Extrinsic</b> calibration is the rigid transform between two sensors:
+    </p>
+  </div>
+  <div class="mathbox col">$$\mathbf{p}_{\text{cam}} = \begin{bmatrix} R & \mathbf{t} \\ \mathbf{0}^T & 1 \end{bmatrix} \mathbf{p}_{\text{lidar}}$$</div>
+  <div class="col">
+    <p>
+      That is the same 4&times;4 homogeneous transform you use to move a datum from one
+      coordinate frame to another on a fixture drawing, and it is the same object the DH
+      convention builds robot arms out of in &sect;11. <b>Temporal</b> calibration aligns the
+      clocks, and its error budget is blunt: a vehicle at 30&nbsp;m/s covers 30&nbsp;cm in
+      10&nbsp;ms. A 10&nbsp;ms clock skew misplaces every object by a third of a metre, in a
+      way no downstream filter can recover, because the error is systematic and depends on
+      speed.
+    </p>
+
+    <h3>The twist your intuition will get wrong</h3>
+    <p>
+      On a mechanical assembly, tolerance stack-up is additive and roughly uniform: a
+      0.1&nbsp;mm error is 0.1&nbsp;mm wherever it appears. Here it is not, because one of the
+      two error types is angular.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Pixel error from a 1&deg; extrinsic rotation error versus a 5&nbsp;cm translation error, \(f=500\) px.</caption>
+      <thead><tr><th>Target range \(Z\)</th><th>From 1&deg; of rotation</th><th>From 5&nbsp;cm of translation</th></tr></thead>
+      <tbody>
+        <tr><td>10 m</td><td>8.73 px</td><td>2.50 px</td></tr>
+        <tr><td>50 m</td><td>8.73 px</td><td>0.50 px</td></tr>
+        <tr><td>100 m</td><td>8.73 px</td><td>0.25 px</td></tr>
+        <tr><td>200 m</td><td>8.73 px</td><td>0.13 px</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      Translation error projects as \(f t / Z\) and dies away with range. Rotation error
+      projects as \(f\tan\theta\) and <em>does not depend on range at all</em>. At 200&nbsp;m
+      a 1&deg; mounting error is still nearly 9 pixels &mdash; comfortably enough to paint a
+      LiDAR return onto the wrong vehicle, which is precisely the range at which you most
+      need the fusion to be right.
+    </p>
+    <p>
+      The practical consequence: on a sensor mast, get the <em>angles</em> right and stop
+      worrying about the millimetres. That is the reverse of the instinct a machining
+      background builds, and it follows from one factor of \(1/Z\).
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; it is a stack-up, and it wants the same discipline</div>
+      <p>
+        Everything you know about tolerance analysis applies: identify each contributor,
+        propagate it to the feature you care about, and find the dominant term before
+        tightening anything. The only new content is the propagation law, and it is one line
+        of trigonometry. What does <em>not</em> transfer is the assumption that thermal drift
+        is negligible &mdash; a sensor mast that grows a few tenths of a degree in the sun has
+        just moved every long-range detection by several pixels, permanently, until it is
+        recalibrated.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="fusion">
+  <div class="col">
+    <div class="sechead"><span class="secnum">04</span><h2>Fusion, and the BEV grid</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2011%20-%20autonomous%20systems/01.%20perception.md" target="_blank" rel="noopener">src 01. perception &#8599;</a>
+    </div>
+    <p>
+      Sheet 10 &sect;01 already established that early, middle and late fusion are the
+      raw-data, feature and decision levels of the multi-sensor fusion literature, under new
+      names. Nothing about that changes here, so this section is short and only covers what is
+      genuinely new: the coordinate frame.
+    </p>
+    <p>
+      <b>Bird's-eye view</b> is a top-down metric grid of the scene &mdash; ground plane,
+      fixed cell size, ego vehicle at the origin. Camera features are lifted into it using a
+      predicted depth distribution; LiDAR features are already three-dimensional and are
+      voxelised straight in. Both then live on one grid, and a detection head reads it.
+    </p>
+    <p>
+      The reason BEV works is not architectural. It is that perspective is a terrible
+      coordinate system for reasoning about physical space and a top-down metric grid is a good
+      one. In the image, a bicycle at 5&nbsp;m and a truck at 60&nbsp;m can occupy the same
+      pixel count; in BEV they are 1.7&nbsp;m and 12&nbsp;m, unambiguously. Distances add,
+      areas mean something, and two objects that overlap in the grid really do collide.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; this is a plan view</div>
+      <p>
+        BEV is the plan view from a general-arrangement drawing. You already know why layouts
+        are drawn in plan rather than in perspective: because plan preserves the metric
+        relationships you need to reason about clearance, and perspective destroys them. The
+        network has the same problem and reaches the same answer. The only novelty is that the
+        &ldquo;lifting&rdquo; step &mdash; recovering \(Z\) so a pixel can be placed on the
+        ground plane &mdash; is exactly the ill-posed inverse from &sect;02, so the quality of
+        a camera-only BEV grid is bounded by the quality of its depth prior.
+      </p>
+    </div>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/bev_fusion_pipeline.svg" alt="Camera and LiDAR branches encoded separately and projected into a shared bird's-eye-view grid" width="460"></div>
+    <figcaption><b>Fig. 11.3</b> &mdash; Two front ends, one plan view. The grid is the interface between perception and planning. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="stereo">
+  <div class="col">
+    <div class="sechead"><span class="secnum">05</span><h2>Stereo&rsquo;s quadratic error</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2011%20-%20autonomous%20systems/01.%20perception.md" target="_blank" rel="noopener">src 01. perception &#8599;</a>
+    </div>
+    <p>
+      Two cameras a known baseline \(b\) apart see the same world point at different
+      horizontal positions. The difference is the <b>disparity</b> \(d\), and depth follows by
+      similar triangles &mdash; the same construction as any optical triangulation gauge:
+    </p>
+  </div>
+  <div class="mathbox col">$$Z = \frac{f\,b}{d}$$</div>
+  <div class="col">
+    <p>
+      The formula is unremarkable. Its <em>derivative</em> is the whole story:
+    </p>
+  </div>
+  <div class="mathbox col">$$\frac{\partial Z}{\partial d} = -\frac{f b}{d^{2}} = -\frac{Z^{2}}{f b}$$</div>
+  <div class="col">
+    <p>
+      Depth error is <b>quadratic in range</b>. Not linear &mdash; quadratic. With \(f=500\)
+      px and \(b=12\) cm, one pixel of matching error is worth 1.7&nbsp;m at 10&nbsp;m and
+      167&nbsp;m at 100&nbsp;m. Same sensor, same algorithm, same pixel: a hundredfold
+      difference in what it means.
+    </p>
+    <p>
+      This is not a property of stereo cameras. It is a property of triangulating from a short
+      baseline, and it applies to every instrument you have used that works this way. A
+      theodolite pair loses precision on a distant target for exactly this reason. What is
+      different here is the numbers: the baseline is 12&nbsp;cm and the targets are 100&nbsp;m
+      away, a ratio of 1:830, and at that ratio the geometry has almost nothing left to work
+      with.
+    </p>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">What one pixel of matching error is worth</div><div class="lab-tag">Predict, then drag</div></div>
+
+    <div class="predict">
+      <p style="margin-top:0">
+        Your stereo rig has a 12&nbsp;cm baseline and cannot see far enough. You double the
+        baseline to 24&nbsp;cm. What happens to the depth uncertainty at 100&nbsp;m?
+      </p>
+      <button class="pbtn" data-p1="a" type="button">Unchanged &mdash; it is a matching problem</button>
+      <button class="pbtn" data-p1="b" type="button">Halves</button>
+      <button class="pbtn" data-p1="c" type="button">Falls by 4&times;</button>
+      <button class="pbtn" data-p1="d" type="button">Falls by 100&times;</button>
+      <div class="pverdict" id="pv1"></div>
+    </div>
+
+    <svg class="stage" id="sS" viewBox="0 0 480 300" role="img"
+         aria-label="Depth uncertainty band as a function of true range for a stereo pair, widening quadratically">
+      <g id="sGrid"></g>
+      <g id="sBand"></g>
+      <g id="sAx"></g>
+      <g id="sLab"></g>
+    </svg>
+
+    <div class="ctl">
+      <label for="bSl">Baseline \(b\)</label>
+      <input type="range" id="bSl" min="4" max="120" value="12" step="1">
+      <span class="ro-v" id="bVal" style="min-width:66px">0.12 m</span>
+      <label for="pSl">Match error</label>
+      <input type="range" id="pSl" min="5" max="200" value="50" step="5">
+      <span class="ro-v" id="pVal" style="min-width:66px">&plusmn;0.50 px</span>
+      <button class="btn" data-sp="12,50" type="button">Car stereo</button>
+      <button class="btn" data-sp="120,10" type="button">Wide + subpixel</button>
+    </div>
+
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Disparity<br>at 100 m</div><div class="ro-v a" id="oD">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Range band<br>at 100 m</div><div class="ro-v b" id="oB">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Usable range<br>(&plusmn;10% or better)</div><div class="ro-v c" id="oR">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Error at 100 m<br>&divide; error at 10 m</div><div class="ro-v" id="oQ">&mdash;</div></div>
+    </div>
+  </div>
+
+  <div class="lab-foot col">
+    The shaded band is where the true range could actually be, given the stated matching error.
+    It opens out quadratically &mdash; that is the \(Z^2\) term, drawn. Start at
+    <b>Car stereo</b>: at 100&nbsp;m the disparity is 0.60&nbsp;px and half a pixel of error
+    puts the object anywhere from 55&nbsp;m to 600&nbsp;m. That is not a degraded measurement,
+    it is no measurement. Now notice what the two sliders do differently. Doubling the baseline
+    halves the error, because \(b\) is in the denominator once &mdash; so the answer to the
+    prediction is <b>halves</b>, and the tempting &ldquo;4&times;&rdquo; confuses \(b\) with
+    \(Z\). Sub-pixel matching helps by the same linear factor. Neither touches the exponent,
+    which is why the last readout stays pinned at 100&times; no matter what you do: the shape
+    of the problem is fixed by geometry, and you are only ever moving the constant in front of
+    it. This is the honest engineering case for putting a LiDAR on the vehicle. Its error is
+    roughly <em>constant</em> with range, so somewhere past 30&ndash;40&nbsp;m the two curves
+    cross and stay crossed.
+  </div>
+</section>
+
+<section id="det3d">
+  <div class="col">
+    <div class="sechead"><span class="secnum">06</span><h2>Detection in three dimensions</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2011%20-%20autonomous%20systems/01.%20perception.md" target="_blank" rel="noopener">src 01. perception &#8599;</a>
+    </div>
+    <p>
+      A 3D detection is a box: position \((x,y,z)\), dimensions \((l,w,h)\), heading
+      \(\theta\), class, confidence. Nine numbers and a label. The architectures that produce
+      them are variations on things Sheet 08 already covered, so what follows is short.
+    </p>
+    <p>
+      <b>PointPillars</b> divides the ground plane into vertical columns, encodes the points in
+      each column with a small shared network, and thereby turns an unordered point cloud into
+      a regular 2D array &mdash; at which point every convolutional method from Sheet 08
+      applies unchanged. It is a re-gridding step, no more: the same move as binning scattered
+      experimental data so you can run a standard routine on it.
+    </p>
+    <p>
+      <b>CenterPoint</b> predicts a heatmap of object centres in the BEV grid and regresses
+      size, heading and velocity at each peak. Anchor-free, and it extends to tracking for
+      free, because a centre point in one frame can be matched to a centre point in the next.
+    </p>
+    <p>
+      <b>Camera-only</b> 3D detection is the same task with &sect;02's handicap. It has to
+      invent \(Z\) before it can place anything in the grid. The gap to LiDAR has narrowed
+      considerably, largely through temporal fusion &mdash; using several frames from a moving
+      vehicle, which is stereo with the baseline supplied by the vehicle's own motion. That is
+      a real baseline and a real triangulation, and it is why a moving camera measures depth
+      far better than a stationary one.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks &mdash; a box is a lossy model of an object</div>
+      <p>
+        Fitting a rectangular prism to a physical object is a modelling choice with a cost, and
+        the cost shows up on exactly the objects you most want to avoid: a jack-knifed trailer,
+        a ladder fallen off a truck, a tree branch across a lane. These are not rare because
+        they are unusual &mdash; they are rare in the <em>training set</em>, which is a
+        different thing. The next section's occupancy grid exists because of this, and it is a
+        genuinely good idea: stop asking &ldquo;what object is that&rdquo; and start asking
+        &ldquo;is that volume of space occupied&rdquo;, which needs no category list.
+      </p>
+    </div>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/occupancy_vs_bbox.svg" alt="A bounding box wasting space on an irregular shape beside an occupancy grid following the true geometry" width="440"></div>
+    <figcaption><b>Fig. 11.4</b> &mdash; The box has to contain the object; the grid only has to describe it. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="lanes">
+  <div class="col">
+    <div class="sechead"><span class="secnum">07</span><h2>Lanes are a curve fit</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2011%20-%20autonomous%20systems/01.%20perception.md" target="_blank" rel="noopener">src 01. perception &#8599;</a>
+    </div>
+    <p>
+      A lane is represented as lateral offset against distance ahead, almost always as a cubic:
+    </p>
+  </div>
+  <div class="mathbox col">$$x(y) = a_0 + a_1 y + a_2 y^2 + a_3 y^3$$</div>
+  <div class="col">
+    <p>
+      The coefficients are not arbitrary &mdash; each one is a physical quantity you can read
+      off. \(a_0\) is the lateral offset of the vehicle from the lane centre, \(a_1\) is the
+      heading error, \(2a_2\) is the curvature, and \(6a_3\) is the rate of change of curvature.
+      That last one is the <b>clothoid</b> parameter, and it is in the model because highway
+      geometry is <em>designed</em> as clothoids: a road transitions from straight to circular
+      through a spiral of linearly increasing curvature, so the driver can turn the wheel at a
+      constant rate. The cubic is not a generic smoother. It is the third-order Taylor series of
+      exactly the curve a highway engineer laid out.
+    </p>
+    <p>
+      Is it accurate enough? Fit a cubic to a true circular arc and measure the worst error:
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Maximum fit error of a cubic against a true circular arc, over a realistic lookahead.</caption>
+      <thead><tr><th>Arc radius</th><th>Lookahead</th><th>Cubic fit error</th><th>Parabola \(y^2/2R\) alone</th></tr></thead>
+      <tbody>
+        <tr><td>500 m (motorway)</td><td>80 m</td><td>0.61 mm</td><td>4.15 cm</td></tr>
+        <tr><td>250 m (fast A-road)</td><td>80 m</td><td>5.86 mm</td><td>34.6 cm</td></tr>
+        <tr><td>100 m (urban)</td><td>50 m</td><td>20.4 mm</td><td>89.8 cm</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      A lane is 3500&nbsp;mm wide. A worst case of 20&nbsp;mm is 0.6% of a lane &mdash;
+      irrelevant. The cubic is not a compromise, it is comfortably sufficient, and the table
+      also shows why the quadratic that people reach for first is not: 90&nbsp;cm of error on
+      an urban curve is a quarter of a lane, which will steer you into the kerb.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; choosing an order by checking residuals</div>
+      <p>
+        Sheet 04 made this argument in general and here it is concretely: you do not pick a
+        polynomial order by taste, you pick the lowest order whose residual is small compared
+        with the tolerance you actually need. The table above is that calculation. Going to
+        fifth order would reduce a 20&nbsp;mm error that nothing downstream can use, while
+        adding two more parameters for the noise to move around &mdash; the overfitting
+        argument from Sheet 06 &sect;04, in its natural habitat.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="occ">
+  <div class="col">
+    <div class="sechead"><span class="secnum">08</span><h2>The evidence accumulator</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2011%20-%20autonomous%20systems/01.%20perception.md" target="_blank" rel="noopener">src 01. perception &#8599;</a>
+    </div>
+    <p>
+      An occupancy grid stores, for each cell, the probability that it contains something.
+      Each new sensor reading updates that probability by Bayes' rule from Sheet 05. Done
+      naively this means multiplying many numbers below 1, which underflows and is slow. The
+      standard trick is to work in <b>log-odds</b>:
+    </p>
+  </div>
+  <div class="mathbox col">$$l_t = l_{t-1} + \log \frac{P(z_t \mid \text{occ})}{P(z_t \mid \text{free})}$$</div>
+  <div class="col">
+    <p>
+      and recover \(P = 1/(1+e^{-l})\) only when you need it. This is not an approximation. Run
+      eight measurements through sequential Bayes and through the log-odds sum and the two
+      agree to the last bit of a double &mdash; because \(\log(ab)=\log a+\log b\) is an
+      identity, and the logarithm turns the Bayes product into a running total.
+    </p>
+    <p>
+      You have met this before, under a different name. A slide rule multiplies by adding
+      lengths. Decibels add instead of multiplying gains. A Bode plot is a sum of straight
+      lines because it is drawn in logarithms. The move is identical and it is done for the
+      identical reason. Each measurement contributes a fixed increment to a running sum; the
+      map is just a memory of how much evidence has accumulated in each cell.
+    </p>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Evidence adds up &mdash; but only if it is independent</div><div class="lab-tag">Predict, then run</div></div>
+
+    <div class="predict">
+      <p style="margin-top:0">
+        A robot is parked and fires the same range sensor along the same ray twelve times. The
+        log-odds sum reports \(P(\text{occupied}) = 0.999998\). What is wrong with that number?
+      </p>
+      <button class="pbtn" data-p2="a" type="button">Nothing &mdash; twelve looks is twelve looks</button>
+      <button class="pbtn" data-p2="b" type="button">It should be lower; the sensor is noisy</button>
+      <button class="pbtn" data-p2="c" type="button">The twelve readings are not independent</button>
+      <button class="pbtn" data-p2="d" type="button">Log-odds cannot represent it</button>
+      <div class="pverdict" id="pv2"></div>
+    </div>
+
+    <svg class="stage" id="sO" viewBox="0 0 480 300" role="img"
+         aria-label="A ray of occupancy grid cells shaded by probability, with a log-odds bar chart beneath">
+      <g id="oCells"></g>
+      <g id="oBars"></g>
+      <g id="oLab"></g>
+    </svg>
+
+    <div class="ctl">
+      <label for="nSl">Measurements</label>
+      <input type="range" id="nSl" min="1" max="30" value="6" step="1">
+      <span class="ro-v" id="nVal" style="min-width:44px">6</span>
+      <label for="hSl">Sensor \(P(\text{hit}\mid\text{occ})\)</label>
+      <input type="range" id="hSl" min="55" max="95" value="75" step="1">
+      <span class="ro-v" id="hVal" style="min-width:52px">0.75</span>
+      <button class="btn on" data-ind="1" type="button">Robot moving</button>
+      <button class="btn" data-ind="0" type="button">Robot parked</button>
+    </div>
+
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Log-odds<br>at the wall</div><div class="ro-v a" id="oL">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Reported<br>P(occupied)</div><div class="ro-v b" id="oP">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Honest P, given<br>the correlation</div><div class="ro-v c" id="oH">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Odds<br>overstated by</div><div class="ro-v" id="oX">&mdash;</div></div>
+    </div>
+  </div>
+
+  <div class="lab-foot col">
+    The top strip is a single ray of cells; the bars beneath are their log-odds. With the robot
+    <b>moving</b>, each pass sees the wall down a different ray, through different air, with a
+    different noise draw &mdash; the increments are independent and the sum is legitimate. Park
+    the robot and the readings stop being independent: the same beam, the same path, the same
+    systematic error, repeated. The filter cannot tell the difference, because
+    \(l_t = l_{t-1} + \text{const}\) does not know where the constant came from. It keeps
+    adding, and after twelve readings it claims 0.999998 on the strength of what is really
+    about one measurement plus eleven echoes of it. The last readout is the ratio of the odds
+    it reports to the odds it has earned, and it grows without limit. This is the same failure
+    as averaging one thermocouple's reading a thousand times and quoting the standard error as
+    \(\sigma/\sqrt{1000}\): the arithmetic is right, the independence assumption underneath it
+    is false, and the reported confidence is fiction. Real implementations clamp \(l\) to a
+    fixed range for exactly this reason &mdash; not because the maths overflows, but because an
+    unclamped cell becomes unfalsifiable, and a map that cannot be talked out of a stale
+    obstacle will eventually refuse to drive through an open door.
+  </div>
+</section>
+
+<section id="kalman">
+  <div class="col">
+    <div class="sechead"><span class="secnum">09</span><h2>The Kalman filter, at last</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2011%20-%20autonomous%20systems/05.%20space%20and%20extreme%20robotics.md" target="_blank" rel="noopener">src 05. space and extreme &#8599;</a>
+    </div>
+    <p>
+      Sheet 10 kept a running complaint: learned fusion has no \(H\), no \(R\), no innovation
+      to monitor, no observability test. It said twice that you would meet those here. Here
+      they are, and it turns out every one of them is something you can already do.
+    </p>
+    <p>
+      The setup. A state \(\mathbf{x}\) evolves by a known model and is measured through a
+      known map:
+    </p>
+  </div>
+  <div class="mathbox col">$$\mathbf{x}_{t} = F\mathbf{x}_{t-1} + \mathbf{w},\quad \mathbf{w}\sim\mathcal{N}(0,Q) \qquad \mathbf{z}_t = H\mathbf{x}_t + \mathbf{v},\quad \mathbf{v}\sim\mathcal{N}(0,R)$$</div>
+  <div class="col">
+    <p>
+      \(H\) is the <b>observation matrix</b>: it says what your sensor actually sees. A GPS
+      that reports position on a state \([\text{position},\text{velocity}]^T\) has
+      \(H=[1\ \ 0]\) &mdash; it sees the first component and nothing else. \(R\) is the
+      <b>measurement covariance</b>: how much you trust it, in the units of the measurement.
+      \(Q\) is how much you distrust your own model. Those three matrices are the entire
+      specification, and every one of them is a statement you have to be willing to defend.
+    </p>
+    <p>
+      Then the loop. Predict where you will be, measure, and correct:
+    </p>
+  </div>
+  <div class="mathbox col">$$\boldsymbol{\nu}_t = \mathbf{z}_t - H\hat{\mathbf{x}}_t^- \qquad S_t = HP_t^-H^T + R \qquad K_t = P_t^-H^T S_t^{-1}$$</div>
+  <div class="col">
+    <p>
+      \(\boldsymbol\nu\) is the <b>innovation</b> &mdash; the part of the measurement you did
+      not already know. \(S\) is how surprised you were entitled to be. \(K\) is the gain.
+    </p>
+
+    <h3>The gain is something you already compute</h3>
+    <p>
+      Take the scalar case: one state, one sensor. Then
+      \(K = P/(P+R)\), and the posterior variance is
+    </p>
+  </div>
+  <div class="mathbox col">$$P^{+} = (1-K)P = \frac{PR}{P+R} \quad\Longleftrightarrow\quad \frac{1}{P^{+}} = \frac{1}{P} + \frac{1}{R}$$</div>
+  <div class="col">
+    <p>
+      <em>Precisions add.</em> That is the rule you already use when you have two instruments
+      measuring one quantity and you want the best combined estimate: weight each by
+      \(1/\sigma^2\). If \(P=R\), then \(K=0.5\) and the filter takes a plain average. If the
+      sensor is nine times better, \(K=0.9\) and it mostly believes the sensor. If your model
+      is nine times better, \(K=0.1\) and it mostly believes itself. The celebrated Kalman gain
+      is inverse-variance weighting with bookkeeping for the fact that the quantity is moving.
+    </p>
+    <p>
+      The bookkeeping is what \(P^- = FPF^T + Q\) does. Between measurements your uncertainty
+      grows &mdash; partly because the state moved and your knowledge of it smeared through
+      \(F\), and partly because the model was not exactly right, which is \(Q\). Then a
+      measurement pulls it back down. The filter is a tug-of-war between \(Q\) pushing
+      uncertainty up and \(R\) pulling it down, and \(K\) is where they balance.
+    </p>
+
+    <h3>The innovation is a test you can run</h3>
+    <p>
+      This is the part with no counterpart in a learned system, and it is the reason engineers
+      will not give the Kalman filter up. If your \(F\), \(H\), \(Q\) and \(R\) are honest, the
+      innovations have a known distribution. Specifically the <b>normalised innovation
+      squared</b>
+    </p>
+  </div>
+  <div class="mathbox col">$$\text{NIS} = \boldsymbol{\nu}^T S^{-1} \boldsymbol{\nu} \sim \chi^2(m)$$</div>
+  <div class="col">
+    <p>
+      has mean \(m\), the number of measurements. Run it on a correctly specified filter and
+      you get 0.997 against a predicted 1. Now understate \(R\) by a factor of nine &mdash;
+      claim your sensor is three times better than it is &mdash; and the mean NIS climbs to
+      8.31. The filter has not stopped working, and its state estimate still looks plausible.
+      It has become <em>overconfident</em>, and the innovation test says so, loudly, with a
+      number you can threshold.
+    </p>
+    <p>
+      There is a second test. A consistent filter leaves innovations that are <b>white</b>
+      &mdash; serially uncorrelated, because anything predictable left in them is information
+      the filter should have used. Measured lag-1 correlation on a correct filter:
+      \(+0.0035\). A filter with a mis-specified model leaves structure there, and you can see
+      it. This is residual analysis, exactly as in Sheet 04: you do not judge a fit by how good
+      it looks, you judge it by whether what is left over is noise.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; this is a calibrated instrument with a self-check</div>
+      <p>
+        A Kalman filter ships with an error bar (\(P\)) and a built-in consistency test (NIS)
+        whose null distribution is known in advance. That is the difference between an
+        instrument and a gauge that merely reads plausible. It is also exactly what Sheet 10
+        said learned fusion lacks: a network that fuses camera and LiDAR gives you a number
+        with no covariance, no innovation, and no way to ask whether it is being
+        overconfident today.
+      </p>
+    </div>
+
+    <h3>Observability: the question that comes before tuning</h3>
+    <p>
+      Before you tune anything, there is a prior question &mdash; can this sensor suite recover
+      this state <em>at all</em>? That is observability, and it is the rank test from your
+      control systems course, unchanged:
+    </p>
+  </div>
+  <div class="mathbox col">$$\mathcal{O} = \begin{bmatrix} H \\ HF \\ HF^2 \\ \vdots \end{bmatrix}, \qquad \text{observable} \iff \operatorname{rank}\mathcal{O} = n$$</div>
+  <div class="col">
+    <p>
+      Three cases, computed:
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Observability of three state/sensor combinations, by rank of \(\mathcal{O}\).</caption>
+      <thead><tr><th>State</th><th>Sensor</th><th>rank \(\mathcal{O}\)</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td>[position, velocity]</td><td>position</td><td>2 / 2</td><td><b style="color:var(--bridge)">Observable.</b> Velocity is recoverable even though nothing measures it.</td></tr>
+        <tr><td>[position, velocity, accelerometer bias]</td><td>position</td><td>3 / 3</td><td><b style="color:var(--bridge)">Observable.</b> The position fix pins the bias down.</td></tr>
+        <tr><td>[position, velocity, accelerometer bias]</td><td>&mdash; none, IMU only &mdash;</td><td>0 / 3</td><td><b style="color:var(--brk)">Unobservable.</b> No filter can help. Ever.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      The first row is the one people find surprising and it is the everyday magic of the
+      Kalman filter: you measure only position, and you get velocity, because the model says
+      how the two are related and the filter is entitled to use it.
+    </p>
+    <p>
+      The third row is why IMUs drift, stated properly. It is not that the sensor is
+      &ldquo;noisy&rdquo; and a better one would fix it. A constant accelerometer bias
+      \(b\) and a genuine acceleration \(b\) enter the state equation <em>identically</em>
+      &mdash; they are the same column. Nothing in a dead-reckoned trajectory can tell them
+      apart, so the bias state is unobservable, and an unobservable state does not converge.
+      Integrate twice and the position error grows as
+    </p>
+  </div>
+  <div class="mathbox col">$$\varepsilon(t) = \tfrac{1}{2} b\, t^{2}$$</div>
+  <div class="tw col">
+    <table>
+      <caption>Position error from a 0.01 m/s&sup2; accelerometer bias &mdash; a good MEMS part &mdash; with no position fix.</caption>
+      <thead><tr><th>Elapsed</th><th>1 s</th><th>10 s</th><th>60 s</th><th>10 min</th></tr></thead>
+      <tbody>
+        <tr><td>Position error</td><td>0.01 m</td><td>0.50 m</td><td>18.0 m</td><td>1800 m</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks &mdash; unobservable is not the same as badly tuned</div>
+      <p>
+        This distinction is worth more than anything else in the section. A badly tuned filter
+        gives poor estimates that better \(Q\) and \(R\) will improve. An unobservable state
+        gives estimates that <em>no</em> \(Q\) and \(R\) will improve, because the information
+        is not in the measurements. The rank test tells you which situation you are in, before
+        you spend a week tuning. Nothing equivalent exists for a learned estimator: when a
+        neural network's pose output drifts, there is no test that distinguishes &ldquo;needs
+        more data&rdquo; from &ldquo;this is not recoverable from these inputs.&rdquo;
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="servo">
+  <div class="col">
+    <div class="sechead"><span class="secnum">10</span><h2>A 0.707 servo</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2011%20-%20autonomous%20systems/05.%20space%20and%20extreme%20robotics.md" target="_blank" rel="noopener">src 05. space and extreme &#8599;</a>
+    </div>
+    <p>
+      Now the result this sheet has been walking towards. Take the most common tracking filter
+      there is: state \([\text{position},\text{velocity}]^T\), acceleration modelled as white
+      noise of spectral density \(q\), position measured with noise density \(\rho\). Let the
+      filter run to steady state and ask what kind of dynamic system it has become.
+    </p>
+    <p>
+      The steady-state covariance solves the algebraic Riccati equation
+      \(AP + PA^T - PC^T\rho^{-1}CP + Q = 0\), which for this model is three scalar equations.
+      Writing \(P = \begin{psmallmatrix} p_{11} & p_{12} \\ p_{12} & p_{22}\end{psmallmatrix}\),
+      the \((2,2)\) entry gives \(p_{12}^2 = q\rho\) and the \((1,1)\) entry gives
+      \(p_{11}^2 = 2\rho\, p_{12}\), so
+    </p>
+  </div>
+  <div class="mathbox col">$$p_{12} = \sqrt{q\rho}, \qquad p_{11} = \sqrt{2}\,\rho^{3/4} q^{1/4}$$</div>
+  <div class="col">
+    <p>
+      The gain is \(L = PC^T/\rho\), and the closed-loop estimator matrix \(A - LC\) has
+      characteristic polynomial \(s^2 + (p_{11}/\rho)s + p_{12}/\rho\). Compare that with the
+      standard second-order form \(s^2 + 2\zeta\omega_n s + \omega_n^2\):
+    </p>
+  </div>
+  <div class="mathbox col">$$\omega_n^2 = \frac{p_{12}}{\rho} = \sqrt{\frac{q}{\rho}} \qquad 2\zeta\omega_n = \frac{p_{11}}{\rho} = \sqrt{2}\left(\frac{q}{\rho}\right)^{1/4} = \sqrt{2}\,\omega_n$$</div>
+  <div class="col">
+    <p>
+      The \(\omega_n\) cancels:
+    </p>
+  </div>
+  <div class="mathbox col">$$\boxed{\;\zeta = \tfrac{1}{\sqrt2} = 0.7071\ldots, \qquad \omega_n = \left(\frac{q}{\rho}\right)^{1/4}\;}$$</div>
+  <div class="col">
+    <p>
+      <b>The damping ratio does not depend on \(q\), on \(\rho\), or on their ratio.</b> It is
+      \(1/\sqrt2\), always. Changing how much you trust the sensor changes only the
+      <em>bandwidth</em>, as the fourth root of the noise ratio. Checked numerically against
+      the discrete Riccati recursion across four orders of magnitude of \(q/r\), two sample
+      rates and both standard discretisations of \(Q\): \(\zeta = 0.707107\) every time, and
+      \(\omega_n = (q/r\Delta t)^{1/4}\) to four figures.
+    </p>
+    <p>
+      You know that number. \(\zeta = 0.707\) is the maximally flat second-order response
+      &mdash; the damping at which the magnitude curve has no resonant peak at all, the
+      standard Butterworth pole placement, the value on the design chart that every servo and
+      every accelerometer is specified at. You were taught to <em>choose</em> it, as a
+      sensible compromise between speed and overshoot.
+    </p>
+    <p>
+      The Kalman filter is not choosing. It has no chart and no engineering judgement. It is
+      minimising mean squared estimation error, given nothing but &ldquo;position is measured,
+      acceleration is white noise&rdquo; &mdash; and it arrives at exactly the number generations
+      of engineers settled on by taste. The compromise was never a compromise. It is the
+      optimum, and this is the proof.
+    </p>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Where the poles go when you retune</div><div class="lab-tag">Predict, then drag</div></div>
+
+    <div class="predict">
+      <p style="margin-top:0">
+        Your tracker is too sluggish, so you raise the process noise \(q\) by a factor of 100
+        to make it trust the sensor more. What happens to the damping ratio of the resulting
+        filter?
+      </p>
+      <button class="pbtn" data-p3="a" type="button">Falls &mdash; it gets more oscillatory</button>
+      <button class="pbtn" data-p3="b" type="button">Rises &mdash; more measurement, more damping</button>
+      <button class="pbtn" data-p3="c" type="button">Unchanged, at 0.707</button>
+      <button class="pbtn" data-p3="d" type="button">Depends on the sample rate</button>
+      <div class="pverdict" id="pv3"></div>
+    </div>
+
+    <svg class="stage" id="sK" viewBox="0 0 480 300" role="img"
+         aria-label="Left, the s-plane showing a conjugate pole pair sliding along a fixed 45 degree ray; right, the corresponding step response">
+      <g id="kGrid"></g>
+      <g id="kRay"></g>
+      <g id="kPoles"></g>
+      <g id="kStep"></g>
+      <g id="kLab"></g>
+    </svg>
+
+    <div class="ctl">
+      <label for="qSl">\(q/\rho\)</label>
+      <input type="range" id="qSl" min="-40" max="40" value="0" step="1">
+      <span class="ro-v" id="qVal" style="min-width:74px">1.0</span>
+      <button class="btn" data-qp="-30" type="button">Trust the model</button>
+      <button class="btn on" data-qp="0" type="button">Balanced</button>
+      <button class="btn" data-qp="30" type="button">Trust the sensor</button>
+    </div>
+
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Damping ratio<br><span class="gk">&zeta;</span></div><div class="ro-v a" id="oZ">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Bandwidth<br><span class="gk">&omega;</span><sub>n</sub></div><div class="ro-v b" id="oW">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Overshoot<br>on a step</div><div class="ro-v c" id="oOs">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Pole angle from<br>the &minus;Re axis</div><div class="ro-v" id="oA">&mdash;</div></div>
+    </div>
+  </div>
+
+  <div class="lab-foot col">
+    On the left is the s-plane; the dashed ray is 45&deg; from the negative real axis, which is
+    the locus \(\zeta = \cos 45^\circ = 1/\sqrt2\). Drag \(q/\rho\) across eight decades and
+    watch what the poles do: they slide <em>along</em> the ray, never off it. The distance from
+    the origin is \(\omega_n\) and it tracks \((q/\rho)^{1/4}\) &mdash; a factor of 10000 in the
+    noise ratio buys a factor of 10 in bandwidth, which is the fourth root doing its work and a
+    useful thing to know before you try to tune your way out of a lag. The angle readout does
+    not move off 45.0&deg;, so the answer to the prediction is <b>unchanged</b>. On the right is
+    the corresponding step response, and it never changes shape &mdash; only its time axis
+    compresses. Overshoot stays at \(e^{-\pi\zeta/\sqrt{1-\zeta^2}} = 4.3\%\) throughout, the
+    figure off the second-order design chart. That is the sense in which this filter has no
+    tuning knob for character: \(q\) and \(\rho\) set how fast it is, and nothing you can do
+    sets how it behaves. The shape was decided by the model structure, and the model structure
+    is just &ldquo;position is measured, acceleration is noise.&rdquo;
+  </div>
+</section>
+
+<section id="partial">
+  <div class="col">
+    <div class="note">
+      <div class="note-h">Where this sheet stands</div>
+      <p>
+        Sheet 11 is being built in three passes. This first pass covers perception and state
+        estimation &mdash; &sect;01 to &sect;10. The second adds robot kinematics and dynamics
+        (&sect;11&ndash;&sect;16), where the Jacobian, the dead centre, the PID loop and the
+        Zero Moment Point are picked up properly, and vision-language-action models. The third
+        adds self-driving, space and extreme robotics, the swarm consensus result promised in
+        the bridge table at &sect;19, the question bank and the provenance appendix. Section
+        numbers referenced in the bridge table above point to their final positions.
+      </p>
+    </div>
+  </div>
+</section>
+
+</main>
+</div>
+
+<style>
+#sGrid line, #kGrid line, #oBars line{stroke:var(--rule)}
+#sAx line, #kGrid .ax{stroke:var(--rule-strong); stroke-width:1.25}
+#sBand path.band{fill:var(--s1); fill-opacity:.22; stroke:none}
+#sBand path.ideal{fill:none; stroke:var(--ink-3); stroke-width:1.2; stroke-dasharray:4 3}
+#sBand path.edge{fill:none; stroke:var(--s1); stroke-width:1.4}
+#kRay line{stroke:var(--s3); stroke-width:1.3; stroke-dasharray:5 4}
+#kPoles path{stroke:var(--s1); stroke-width:2.2; fill:none}
+#kStep path.sig{fill:none; stroke:var(--s1); stroke-width:1.8}
+#kStep path.tgt{fill:none; stroke:var(--ink-3); stroke-width:1; stroke-dasharray:3 3}
+.tk{fill:var(--ink-3); font-family:'IBM Plex Mono',monospace; font-size:10px}
+.tkb{fill:var(--ink-2); font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600}
+.cellbox{stroke:var(--sheet); stroke-width:1}
+</style>
+
+<script>
+(function(){
+  'use strict';
+  var root=document.documentElement;
+  function dk(){var t=root.getAttribute('data-theme');
+    return t?t==='dark':(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);}
+  try{var sv=localStorage.getItem('ch11-theme'); if(sv==='dark'||sv==='light') root.setAttribute('data-theme',sv);}catch(e){}
+  var tb=document.getElementById('themebtn');
+  if(tb) tb.addEventListener('click',function(){var n=dk()?'light':'dark';
+    root.setAttribute('data-theme',n); try{localStorage.setItem('ch11-theme',n);}catch(e){}});
+  function $(id){return document.getElementById(id);}
+  function fmt(n,d){d=d===undefined?2:d; return (Math.abs(n)<5e-7?0:n).toFixed(d);}
+  function grid(g,x0,y0,w,h,s){var o='',x,y;
+    for(x=x0+s;x<x0+w;x+=s) o+='<line x1="'+x+'" y1="'+y0+'" x2="'+x+'" y2="'+(y0+h)+'"/>';
+    for(y=y0+s;y<y0+h;y+=s) o+='<line x1="'+x0+'" y1="'+y+'" x2="'+(x0+w)+'" y2="'+y+'"/>';
+    g.innerHTML=o;}
+  function predict(attr,vid,ans){
+    document.querySelectorAll('['+attr+']').forEach(function(b){
+      b.addEventListener('click',function(){
+        document.querySelectorAll('['+attr+']').forEach(function(o){o.classList.remove('picked');});
+        b.classList.add('picked');
+        var v=$(vid); v.innerHTML=ans[b.getAttribute(attr)]; v.classList.add('show');
+      });
+    });
+  }
+
+  /* =============== LAB 1 : stereo, and the Z^2 error =================== */
+  /* Mirrors verify_claims.py [Ch11 s06]. f is fixed at 500 px because the
+     point is the exponent, not the constant; b and the match error move the
+     constant only, and the last readout proves it. */
+  var FPX=500, ZMAX=150, PX0=54, PY0=18, PW=400, PH=234;
+  function zx(Z){return PX0 + Z/ZMAX*PW;}
+  function zy(Z){return PY0 + PH - Math.min(Z,ZMAX)/ZMAX*PH;}
+  function band(b,e){
+    /* for true range Z, disparity d=fb/Z; a +-e px match error gives
+       Zlo=fb/(d+e) and Zhi=fb/(d-e), the second diverging when d<=e */
+    var up=[], dn=[], Z, fb=FPX*b;
+    for(Z=1; Z<=ZMAX; Z+=0.75){
+      var d=fb/Z;
+      dn.push([zx(Z), zy(fb/(d+e))]);
+      up.push([zx(Z), zy(d-e>1e-6 ? fb/(d-e) : 1e9)]);
+    }
+    var p='M'+dn.map(function(q){return q[0].toFixed(1)+' '+q[1].toFixed(1);}).join('L');
+    p+='L'+up.reverse().map(function(q){return q[0].toFixed(1)+' '+q[1].toFixed(1);}).join('L')+'Z';
+    return p;
+  }
+  function drawS(){
+    var b=+$('bSl').value/100, e=+$('pSl').value/100, fb=FPX*b;
+    $('bVal').textContent=fmt(b,2)+' m';
+    $('pVal').textContent='±'+fmt(e,2)+' px';
+    grid($('sGrid'),PX0,PY0,PW,PH,PW/6);
+    $('sAx').innerHTML='<line x1="'+PX0+'" y1="'+(PY0+PH)+'" x2="'+(PX0+PW)+'" y2="'+(PY0+PH)+'"/>'
+      +'<line x1="'+PX0+'" y1="'+PY0+'" x2="'+PX0+'" y2="'+(PY0+PH)+'"/>';
+    $('sBand').innerHTML='<path class="band" d="'+band(b,e)+'"/>'
+      +'<path class="ideal" d="M'+zx(0)+' '+zy(0)+'L'+zx(ZMAX)+' '+zy(ZMAX)+'"/>';
+    var lab='',i;
+    for(i=0;i<=6;i++){var Z=i*ZMAX/6;
+      lab+='<text class="tk" x="'+zx(Z)+'" y="'+(PY0+PH+14)+'" text-anchor="middle">'+Z.toFixed(0)+'</text>';
+      lab+='<text class="tk" x="'+(PX0-6)+'" y="'+(zy(Z)+3.5)+'" text-anchor="end">'+Z.toFixed(0)+'</text>';}
+    lab+='<text class="tkb" x="'+(PX0+PW/2)+'" y="'+(PY0+PH+30)+'" text-anchor="middle">true range Z (m)</text>';
+    lab+='<text class="tkb" transform="translate(14,'+(PY0+PH/2)+') rotate(-90)" text-anchor="middle">range the stereo pair could report (m)</text>';
+    $('sLab').innerHTML=lab;
+
+    var d100=fb/100, lo=fb/(d100+e), hi=(d100-e>1e-6)?fb/(d100-e):Infinity;
+    $('oD').textContent=fmt(d100,2)+' px';
+    $('oB').textContent=isFinite(hi)?(fmt(lo,0)+'–'+fmt(hi,0)+' m'):(fmt(lo,0)+'–∞');
+    $('oR').textContent=fmt(0.1*fb/e,1)+' m';
+    var e10=100/(fb/e), e100=10000/(fb/e);   /* dZ = Z^2 e /(f b) */
+    $('oQ').textContent=fmt(e100/e10,0)+'×';
+  }
+  ['bSl','pSl'].forEach(function(id){$(id).addEventListener('input',function(){
+    document.querySelectorAll('[data-sp]').forEach(function(o){o.classList.remove('on');}); drawS();});});
+  document.querySelectorAll('[data-sp]').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var v=btn.getAttribute('data-sp').split(',');
+      $('bSl').value=v[0]; $('pSl').value=v[1];
+      document.querySelectorAll('[data-sp]').forEach(function(o){o.classList.remove('on');});
+      btn.classList.add('on'); drawS();});
+  });
+  drawS();
+  predict('data-p1','pv1',{
+    a:'<b>No &mdash; geometry, not matching, sets the scale.</b> The matching error stays ±0.5 px, but what that error is <i>worth</i> in metres is δZ = Z²ε/(fb). Doubling b halves it. Drag the baseline slider and watch the band close.',
+    b:'<b>Correct.</b> δZ = Z²ε/(fb) and b appears once, in the denominator, so twice the baseline is half the error &mdash; at every range. What does <i>not</i> change is the exponent: the last readout stays at 100× however you set the sliders.',
+    c:'<b>That is the Z dependence, not the b dependence.</b> δZ goes as Z² but only as 1/b. Halving the range would give you 4×; doubling the baseline gives 2×.',
+    d:'<b>Far too optimistic.</b> 100× is what you would get from cutting the <i>range</i> by ten, since the error is quadratic in Z. The baseline enters linearly.'
+  });
+
+  /* ========== LAB 2 : log-odds, and the independence assumption ========= */
+  /* Mirrors verify_claims.py [Ch11 s09]. The bars are the running log-odds
+     sum; the "honest" readout re-does the sum with the correlated readings
+     counted once, which is what perfect correlation is worth. */
+  var NCELL=16, WALL=12, CX0=26, CY0=22, CW=428, CCH=34;
+  function pOf(l){return 1/(1+Math.exp(-l));}
+  /* occupied cells take the primary series colour, free cells the third */
+  function shade(p){ return p>=0.5 ? 'var(--s1)' : 'var(--s3)'; }
+  function drawO(){
+    var n=+$('nSl').value, ph=+$('hSl').value/100;
+    var indep = document.querySelector('[data-ind].on').getAttribute('data-ind')==='1';
+    var lh=Math.log(ph/(1-ph)), lf=Math.log((1-ph)/ph);
+    $('nVal').textContent=n; $('hVal').textContent=fmt(ph,2);
+    var eff = indep ? n : 1;            /* perfectly correlated -> one look */
+    var cells='', bars='', lab='', i, cw=CW/NCELL;
+    for(i=0;i<NCELL;i++){
+      var l = i<WALL ? n*lf : (i===WALL ? n*lh : 0);
+      var p = pOf(l), x=CX0+i*cw;
+      var op = Math.min(0.92, 0.10+Math.abs(p-0.5)*1.75);
+      cells+='<rect class="cellbox" x="'+x.toFixed(1)+'" y="'+CY0+'" width="'+(cw-1.5).toFixed(1)
+        +'" height="'+CCH+'" fill="'+shade(p)+'" fill-opacity="'+op.toFixed(3)+'"/>';
+      var bh=Math.max(-70,Math.min(70, l*5)), by=CY0+CCH+92;
+      bars+='<rect x="'+(x+2).toFixed(1)+'" y="'+(bh>=0?by-bh:by).toFixed(1)+'" width="'+(cw-5.5).toFixed(1)
+        +'" height="'+Math.abs(bh).toFixed(1)+'" fill="'+(bh>=0?'var(--s1)':'var(--s3)')+'" fill-opacity=".75"/>';
+    }
+    bars+='<line x1="'+CX0+'" y1="'+(CY0+CCH+92)+'" x2="'+(CX0+CW)+'" y2="'+(CY0+CCH+92)+'" stroke="var(--rule-strong)"/>';
+    lab='<text class="tkb" x="'+CX0+'" y="'+(CY0-7)+'">sensor</text>'
+      +'<text class="tkb" x="'+(CX0+WALL*cw+cw/2)+'" y="'+(CY0-7)+'" text-anchor="middle">wall</text>'
+      +'<text class="tk" x="'+CX0+'" y="'+(CY0+CCH+112)+'">log-odds per cell (bar up = occupied, down = free)</text>'
+      +'<text class="tk" x="'+CX0+'" y="'+(CY0+CCH+128)+'">'+(indep?'moving: each pass is an independent look'
+        :'parked: the same ray, re-read '+n+' times')+'</text>';
+    $('oCells').innerHTML=cells; $('oBars').innerHTML=bars; $('oLab').innerHTML=lab;
+
+    var lRep=n*lh, lHon=eff*lh;
+    $('oL').textContent=fmt(lRep,2);
+    $('oP').textContent=fmt(pOf(lRep),6);
+    $('oH').textContent=fmt(pOf(lHon),6);
+    $('oX').textContent=fmt(Math.exp(lRep-lHon),1)+'×';
+  }
+  ['nSl','hSl'].forEach(function(id){$(id).addEventListener('input',drawO);});
+  document.querySelectorAll('[data-ind]').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      document.querySelectorAll('[data-ind]').forEach(function(o){o.classList.remove('on');});
+      btn.classList.add('on'); drawO();});
+  });
+  drawO();
+  predict('data-p2','pv2',{
+    a:'<b>They are not twelve looks.</b> The robot never moved, so every reading went down the same ray, through the same air, with the same systematic error. Twelve repetitions of one measurement carry roughly the information of one measurement.',
+    b:'<b>Noise is not the problem here.</b> Even a well-characterised sensor gives this answer, because the error is in the independence assumption, not the noise model. Press <b>Robot parked</b> and compare the two probability readouts.',
+    c:'<b>Correct.</b> lₜ = lₜ₋₁ + const has no idea where the constant came from, so it keeps adding. Perfectly correlated readings should contribute once; the filter counts them twelve times, and the overstatement readout shows by how much.',
+    d:'<b>Representation is fine.</b> Log-odds handles this range comfortably &mdash; that is the reason it is used. The number it reports is precisely computed and substantively wrong.'
+  });
+
+  /* ============ LAB 3 : the steady-state filter's pole locus ============ */
+  /* Mirrors verify_claims.py [Ch11 s11]. zeta is hard-coded to 1/sqrt2
+     because that IS the result: the closed-form Riccati solution gives
+     2*zeta*wn = sqrt2*wn identically, so zeta cannot depend on q or rho. */
+  var ZETA=Math.SQRT1_2, OX=138, OY=150, SW=250, TX0=268, TY0=40, TW=194, TH=200;
+  function drawK(){
+    var v=+$('qSl').value, qr=Math.pow(10,v/10), wn=Math.pow(qr,0.25);
+    $('qVal').textContent = qr>=1 ? fmt(qr,qr<100?1:0) : qr.toExponential(0);
+    /* radius is log-scaled: log10(wn) runs -1..1 over the slider's four decades */
+    var rad=18+(Math.log(wn)/Math.LN10+1)/2*108;
+    var dx=rad*ZETA, dy=rad*Math.sqrt(1-ZETA*ZETA);
+    grid($('kGrid'),18,30,240,240,40);
+    $('kGrid').innerHTML+='<line class="ax" x1="18" y1="'+OY+'" x2="258" y2="'+OY+'"/>'
+      +'<line class="ax" x1="'+OX+'" y1="30" x2="'+OX+'" y2="270"/>';
+    $('kRay').innerHTML='<line x1="'+OX+'" y1="'+OY+'" x2="'+(OX-130*ZETA)+'" y2="'+(OY-130*Math.sqrt(1-ZETA*ZETA))+'"/>'
+      +'<line x1="'+OX+'" y1="'+OY+'" x2="'+(OX-130*ZETA)+'" y2="'+(OY+130*Math.sqrt(1-ZETA*ZETA))+'"/>';
+    function cross(x,y){var s=5;return '<path d="M'+(x-s)+' '+(y-s)+'L'+(x+s)+' '+(y+s)
+      +'M'+(x-s)+' '+(y+s)+'L'+(x+s)+' '+(y-s)+'"/>';}
+    $('kPoles').innerHTML=cross(OX-dx,OY-dy)+cross(OX-dx,OY+dy);
+
+    /* step response of s^2 + 2*zeta*wn*s + wn^2, fixed 8 s window */
+    var wd=wn*Math.sqrt(1-ZETA*ZETA), pts=[], i, T=8;
+    for(i=0;i<=240;i++){
+      var t=i/240*T;
+      var y=1-Math.exp(-ZETA*wn*t)*(Math.cos(wd*t)+(ZETA/Math.sqrt(1-ZETA*ZETA))*Math.sin(wd*t));
+      pts.push([TX0+i/240*TW, TY0+TH-Math.max(0,Math.min(1.35,y))/1.35*TH]);
+    }
+    $('kStep').innerHTML='<path class="tgt" d="M'+TX0+' '+(TY0+TH-1/1.35*TH)+'L'+(TX0+TW)+' '+(TY0+TH-1/1.35*TH)+'"/>'
+      +'<path class="sig" d="M'+pts.map(function(p){return p[0].toFixed(1)+' '+p[1].toFixed(1);}).join('L')+'"/>'
+      +'<line x1="'+TX0+'" y1="'+(TY0+TH)+'" x2="'+(TX0+TW)+'" y2="'+(TY0+TH)+'" stroke="var(--rule-strong)"/>';
+    $('kLab').innerHTML='<text class="tkb" x="'+OX+'" y="24" text-anchor="middle">s-plane</text>'
+      +'<text class="tk" x="256" y="'+(OY-6)+'" text-anchor="end">Re</text>'
+      +'<text class="tk" x="'+(OX+5)+'" y="40">Im</text>'
+      +'<text class="tk" x="'+(OX-118)+'" y="'+(OY-92)+'">ζ = 1/√2 locus</text>'
+      +'<text class="tkb" x="'+(TX0+TW/2)+'" y="24" text-anchor="middle">step response, 8 s window</text>'
+      +'<text class="tk" x="'+TX0+'" y="'+(TY0+TH+15)+'">0 s</text>'
+      +'<text class="tk" x="'+(TX0+TW)+'" y="'+(TY0+TH+15)+'" text-anchor="end">8 s</text>';
+
+    $('oZ').textContent=fmt(ZETA,4);
+    $('oW').textContent=fmt(wn,3)+' rad/s';
+    $('oOs').textContent=fmt(100*Math.exp(-Math.PI*ZETA/Math.sqrt(1-ZETA*ZETA)),2)+'%';
+    $('oA').textContent=fmt(Math.acos(ZETA)*180/Math.PI,1)+'°';
+  }
+  $('qSl').addEventListener('input',function(){
+    document.querySelectorAll('[data-qp]').forEach(function(o){o.classList.remove('on');}); drawK();});
+  document.querySelectorAll('[data-qp]').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      $('qSl').value=btn.getAttribute('data-qp');
+      document.querySelectorAll('[data-qp]').forEach(function(o){o.classList.remove('on');});
+      btn.classList.add('on'); drawK();});
+  });
+  drawK();
+  predict('data-p3','pv3',{
+    a:'<b>Reasonable, and wrong.</b> Raising q does make the filter lean harder on the sensor, and it does get faster &mdash; but the closed-form Riccati solution gives 2ζωₙ = √2·ωₙ identically, so ωₙ cancels and ζ stays at 1/√2. Drag the slider: the poles slide along the ray, not off it.',
+    b:'<b>No &mdash; and the direction is a red herring.</b> ζ does not move at all. Only ωₙ does, as (q/ρ)^(1/4), so 100× the process noise buys 3.16× the bandwidth and nothing else.',
+    c:'<b>Correct.</b> ζ = 1/√2 falls out of the Riccati solution independently of q and ρ. 100× in q gives √√100 = 3.16× in bandwidth; the step response compresses in time and keeps its shape, overshoot pinned at 4.32%.',
+    d:'<b>Checked, and it does not.</b> The same ζ = 0.707107 comes out at Δt = 0.1 and Δt = 0.01, and for both standard discretisations of Q. Δt appears only in ωₙ = (q/rΔt)^(1/4).'
+  });
+})();
+</script>
+<script>
+/* Safety net: if the MathJax bundle cannot be reached, degrade the TeX to
+   readable Unicode instead of leaving raw backslash markup on the page. */
+(function () {
+  'use strict';
+  var GREEK = { theta:'θ', sigma:'σ', delta:'δ', mu:'μ', pi:'π',
+                infty:'∞', alpha:'α', beta:'β', lambda:'λ' };
+  var SUB = { '1':'₁','2':'₂','3':'₃','i':'ᵢ','j':'ⱼ','n':'ₙ','p':'ₚ','x':'ₓ','y':'ᵧ' };
+  var SUP = { '2':'²','3':'³','n':'ⁿ','p':'ᵖ','*':'*' };
+
+  function degrade(t) {
+    t = t.replace(/\$\$/g, '').replace(/\\[()[\]]/g, '');
+    t = t.replace(/\\(?:left|right|textstyle|displaystyle|!|,|;|:)/g, '');
+    t = t.replace(/\\q?quad/g, ' ');
+    t = t.replace(/\\mathbb\{R\}/g, 'ℝ').replace(/\\mathbb\{Z\}/g, 'ℤ')
+         .replace(/\\mathbb\{N\}/g, 'ℕ').replace(/\\mathbb\{Q\}/g, 'ℚ');
+    t = t.replace(/\\(?:mathbf|mathrm|text|textbf|operatorname)\{([^{}]*)\}/g, '$1');
+    t = t.replace(/\\hat\{([^{}]*)\}/g, '$1̂').replace(/\\bar\{([^{}]*)\}/g, '$1̄');
+    t = t.replace(/\\sqrt\{([^{}]*)\}/g, '√($1)');
+    t = t.replace(/\\t?frac\{([^{}]*)\}\{([^{}]*)\}/g, '($1)/($2)');
+    t = t.replace(/\\binom\{([^{}]*)\}\{([^{}]*)\}/g, 'C($1,$2)');
+    t = t.replace(/\\([a-zA-Z]+)/g, function (m, w) {
+      if (GREEK[w]) return GREEK[w];
+      switch (w) {
+        case 'cdot': return '·';
+        case 'times': return '×';
+        case 'le': case 'leq': return '≤';
+        case 'ge': case 'geq': return '≥';
+        case 'neq': return '≠';
+        case 'approx': return '≈';
+        case 'in': return '∈';
+        case 'pm': return '±';
+        case 'to': case 'rightarrow': return '→';
+        case 'Rightarrow': return '⇒';
+        case 'iff': return '⇔';
+        case 'parallel': return '∥';
+        case 'perp': return '⊥';
+        case 'sum': return 'Σ';
+        case 'langle': return '⟨';
+        case 'rangle': return '⟩';
+        case 'wedge': return '∧';
+        case 'ast': return '*';
+        case 'cdots': case 'ldots': case 'dots': return '…';
+        case 'max': case 'min': case 'cos': case 'sin': case 'log': case 'exp': return w;
+        default: return w;
+      }
+    });
+    t = t.replace(/\\\|/g, '‖').replace(/\|\|/g, '‖');
+    t = t.replace(/_\{?([0-9ijnpxy])\}?/g, function (m, c) { return SUB[c] || ('_' + c); });
+    t = t.replace(/\^\{?([23np*])\}?/g, function (m, c) { return SUP[c] || ('^' + c); });
+    t = t.replace(/[{}]/g, '');
+    return t.replace(/[ \t]{2,}/g, ' ');
+  }
+
+  function run() {
+    if (window.MathJax && window.MathJax.startup && window.MathJax.startup.document) return;
+    var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+      acceptNode: function (n) {
+        if (!n.nodeValue || n.nodeValue.indexOf('\\') < 0 && n.nodeValue.indexOf('$$') < 0)
+          return NodeFilter.FILTER_REJECT;
+        var p = n.parentNode;
+        while (p && p !== document.body) {
+          var tag = p.nodeName;
+          if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'CODE' || tag === 'PRE')
+            return NodeFilter.FILTER_REJECT;
+          p = p.parentNode;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    var hits = [], n;
+    while ((n = walker.nextNode())) hits.push(n);
+    hits.forEach(function (node) { node.nodeValue = degrade(node.nodeValue); });
+    document.querySelectorAll('.mathbox').forEach(function (el) {
+      el.style.fontFamily = "'IBM Plex Mono', monospace";
+      el.style.fontSize = '15px';
+      el.style.textAlign = 'center';
+      el.style.padding = '10px 0';
+    });
+  }
+  setTimeout(run, 6000);
+})();
+</script>
+
+<script>
+/* Long display equations can be wider than their container - especially inside a
+   callout box, which is narrower than the main column. After the typesetter
+   finishes, measure each one and shrink it just enough to fit. Only ever shrinks,
+   never grows, and never below a readable floor - so the worst case is the
+   scrollbar we already had. */
+(function () {
+  'use strict';
+  var MIN_SCALE = 0.70;   /* below this, scrolling beats illegible text */
+
+  function fitOne(box) {
+    try {
+      var c = box.querySelector('mjx-container[display="true"]');
+      if (!c) return;
+      var svg = c.querySelector('svg');
+      if (!svg) return;
+      c.style.fontSize = '';
+      var avail = box.clientWidth;
+      if (!avail) return;
+      var w = svg.getBoundingClientRect().width;
+      if (!w || w <= avail) return;
+      var k = Math.max(MIN_SCALE, (avail / w) * 0.98);
+      c.style.fontSize = (k * 100).toFixed(1) + '%';
+      var w2 = svg.getBoundingClientRect().width;      /* one refinement pass */
+      if (w2 > avail) {
+        k = Math.max(MIN_SCALE, k * (avail / w2) * 0.98);
+        c.style.fontSize = (k * 100).toFixed(1) + '%';
+      }
+    } catch (e) { /* leave the equation exactly as it was */ }
+  }
+
+  /* Inline math cannot wrap and is not inside a scrollable .mathbox, so a long
+     inline expression pushes the whole page sideways.  Shrink any that is wider
+     than the text column it sits in; the ex-based sizing keeps the baseline. */
+  function fitInline(c) {
+    try {
+      var svg = c.querySelector('svg'); if (!svg) return;
+      c.style.fontSize = '';
+      var host = c.parentElement; if (!host) return;
+      var avail = host.clientWidth; if (!avail) return;
+      var w = svg.getBoundingClientRect().width;
+      if (!w || w <= avail) return;
+      c.style.fontSize = (Math.max(MIN_SCALE, (avail / w) * 0.98) * 100).toFixed(1) + '%';
+    } catch (e) { /* leave the expression exactly as it was */ }
+  }
+
+  function fitAll() {
+    try { document.querySelectorAll('.mathbox').forEach(fitOne); } catch (e) {}
+    try {
+      document.querySelectorAll('mjx-container:not([display="true"])').forEach(fitInline);
+    } catch (e) {}
+  }
+
+  function start() {
+    fitAll();
+    var t;
+    window.addEventListener('resize', function () {
+      clearTimeout(t); t = setTimeout(fitAll, 160);
+    });
+  }
+
+  function waitForTypesetter(n) {
+    if (window.MathJax && window.MathJax.startup && window.MathJax.startup.promise) {
+      window.MathJax.startup.promise.then(start, start);
+      return;
+    }
+    if (n > 60) return;            /* typesetter never arrived - nothing to fit */
+    setTimeout(function () { waitForTypesetter(n + 1); }, 200);
+  }
+  waitForTypesetter(0);
+})();
+</script>
