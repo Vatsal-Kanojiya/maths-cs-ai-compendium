@@ -5,8 +5,8 @@ minutes instead of re-deriving decisions already made.
 
 ## State
 
-Branch `claude/blissful-euler-0c6xih`, latest commit `b15ab83` carries sheets 1–10 of 20.
-**All ten are published.** Working tree clean, local matches remote.
+Branch `claude/blissful-euler-0c6xih`, latest commit `57a1cf5` carries sheets 1–11 of 20.
+**All eleven are published.** Working tree clean, local matches remote.
 
 | # | Chapter | Folder | Published |
 |---|---------|--------|-----------|
@@ -20,15 +20,23 @@ Branch `claude/blissful-euler-0c6xih`, latest commit `b15ab83` carries sheets 1�
 | 08 | Computer Vision | `ch08-computer-vision/` | https://claude.ai/artifact/YGYUxoUzmFo2R2W5fb7PP7 |
 | 09 | Audio and Speech | `ch09-audio-speech/` | https://claude.ai/artifact/UeVoa1oWJcZJL8KMsbbLHq |
 | 10 | Multimodal Learning | `ch10-multimodal/` | https://claude.ai/artifact/VVW3i2z1z8dxCEUsvupMAW |
+| 11 | Autonomous Systems | `ch11-autonomous-systems/` | https://claude.ai/artifact/9xX3kBS2wW6MJT8keXAvQA |
 
-`verify_claims.py` stands at **277 checks, 0 failures**, covering chapters 01–10. Run it first
+`verify_claims.py` stands at **349 checks, 0 failures**, covering chapters 01–11. Run it first
 in any new session — it is the fastest way to confirm nothing has rotted.
 
-Next up: **Chapter 11 — Autonomous Systems**. Source is `chapter 11 - autonomous systems/`.
-The bridge bank calls it mostly mechanical already, and chapters 09 and 10 both left explicit
-forward pointers to it (Kalman filtering and state estimation, which Chapter 10 §01 set up by
-spending a break box on what learned fusion *lacks* relative to a Kalman filter). Expect one
-run unless the source turns out to be over ~2,000 lines.
+Next up: **Chapter 12 — Graph Neural Networks**. Source is `chapter 12 - graph neural networks/`,
+1,209 lines across 5 files — comfortably one run, no split needed.
+
+**Chapter 12 inherits a promise, exactly as Chapter 11 inherited one from Chapter 10.**
+Chapter 11 §19 already built the graph Laplacian as a stiffness matrix: it showed
+`L @ 1 = 0` is the rigid-body mode of a free–free structure, that degree plays the role of
+mass (which is why swarm consensus lands on a *degree-weighted* mean), and that λ₂ — the
+Fiedler value — sets the convergence rate for the same reason the first elastic mode is the
+second eigenvalue. Chapter 12 should pick that up as something the reader has now been shown
+working, and extend it: Laplacian eigenvectors ↔ mode shapes, message passing ↔ Gauss–Seidel,
+a finite element mesh ↔ a graph. Do not re-derive it from scratch; reference §19 and go
+further.
 
 ### Session hygiene that matters
 
@@ -500,6 +508,67 @@ metric.**
 
 **Cross-references are the tax on splitting.** See the trap above.
 
+## The Chapter 11 lesson worth generalising
+
+**Three of the chapter's best results came from a test that failed, and the test was mine, not
+the page's.** This kept happening and is now the most reliable way to find something worth
+writing:
+
+1. I asserted the steady-state Kalman filter's damping ratio falls as `q/r` rises. The test
+   "passed" — on floating-point noise in the last digits. It does not fall; solving the
+   Riccati equation in closed form gives `ζ = 1/√2` **exactly**, for every `q`, `ρ`, `Δt` and
+   both standard `Q` discretisations. Only `ωₙ = (q/ρ)^(1/4)` moves. The filter *derives* the
+   0.707 a mechanical engineer is taught to pick off a design chart. That became the headline
+   result of the whole sheet.
+2. I asserted behavioural cloning compounds because injected noise accumulates. The test
+   failed, correctly: a contracting closed loop absorbs noise **forever** — deviation at
+   T=160 came out smaller than at T=10. What compounds is *losing the contraction*, and
+   leaving the training distribution is how it is lost. Replaced with a Monte Carlo of the
+   actual argument (cost quadratic in horizon; doubling T costs 3.4×, not 2×).
+3. I asserted damped least squares "flattens at ‖Δx‖/λ". The browser probe showed otherwise:
+   the demand **peaks** exactly where `σ_min = λ` (measured 0.118, predicted 0.123) and then
+   **falls towards zero**. It does not cap the demand; it withdraws from the direction being
+   lost. Better result than the one I had written.
+
+**Lesson: write the claim, then try to break it before you believe it.** Also beware a test
+that passes *vacuously* — `max(0.0, -λ_min)` can never go negative, so a positive-definiteness
+assertion built that way always passes and checks nothing.
+
+**The browser probe found a bug invisible in source, again.** LAB 6 declared `CX0` as an array
+at module scope, colliding with LAB 2's `CX0` number in the same IIFE — so LAB 2 threw on every
+interaction once LAB 6 loaded. Fix: after merging a new lab into an existing page, scan the
+shared script for module-scope `var` collisions (2-space indentation = module scope in these
+files) before publishing. A one-line script does it.
+
+**Corrections found in the source this chapter (five).** All stated on the page with the
+computation:
+- Swarm consensus converges to the **degree-weighted** mean, not "the global average" — 8.1%
+  of the range off on the worked graph. And the source's own lab builds neighbourhoods by
+  k-nearest-neighbours, which is not symmetric, so even that formula fails there. *Best framing
+  found:* the claim is exactly right for a **regular** graph (the lab's Ring preset shows error
+  0.0000) and was generalised to graphs that are not. Say that — it is more useful than "wrong".
+- "No single point of failure" is true for crashes, false for value consensus: freeze one node
+  and the whole swarm adopts its value exactly.
+- A quadruped is not statically stable on three legs — lifting a corner foot leaves a margin of
+  **exactly zero at every aspect ratio**, because a rectangle's centre lies on its diagonal.
+- The VLA action vocabulary is 256 shared bins, not 7×256=1792 — the source's *own* RT-2
+  example emits seven tokens all below 256.
+- Earth–Mars one-way light time derived from orbital radii is 3.03–22.31 min, not 4–24.
+
+**What made this chapter unusual: almost everything transferred.** Twelve of seventeen bridge
+rows read *identical*, not *analogous* — and that is a literal claim, verified. `det J = l₁l₂
+sin q₂`, and at `q₂ = 0` the lost singular direction **is** the radial direction to ten
+decimals, which makes "a singularity is a linkage dead centre" an identity. So the sheet moved
+fast through the identities and spent its length on the four places intuition misleads. When a
+chapter is this close to the reader's training, the risk inverts: the few non-transferring
+items become easy to miss, and they are the dangerous ones.
+
+**A result worth reusing:** `ζωₙ = (b + K_d)/2m` — `K_p` cancels completely. So `K_d` alone
+sets the decay envelope and `K_p` alone sets ringing; raising `K_p` cannot speed up settling.
+Verified across eight gain pairs. This is the kind of one-line consequence that is worth more
+than a page of qualitative tuning advice, and it was found by multiplying two definitions
+together and noticing a cancellation.
+
 ## On splitting a chapter into parts
 
 Chapter 09 (3,250 source lines) was built in four runs and Chapter 10 (1,900) in two, against
@@ -528,7 +597,23 @@ push every part; never leave a part uncommitted at the end of a run.
 
 ## What is actually left
 
-Chapters 11–20, of which 19 and 20 are outline stubs in the source (six files are empty) and
+Chapters 12–20, of which 19 and 20 are outline stubs in the source (six files are empty) and
 may not be worth writing as chapters at all. That makes the real remaining work chapters
-11–18, eight sheets. The bridge bank above has a pre-worked entry for each; Chapters 08, 09
-and 10 all found their headline bridge *outside* the bank, so treat it as a floor.
+12–18, seven sheets. The bridge bank above has a pre-worked entry for each; Chapters 08, 09,
+10 and 11 all found their headline bridge *outside* the bank, so treat it as a floor, not a
+plan.
+
+Source sizes, measured, so the split decision is already made:
+
+| # | Chapter | Source lines | Expect |
+|---|---------|--------------|--------|
+| 12 | Graph neural networks | 1,209 | one run |
+| 13 | Computing and OS | — measure it | — |
+| 14 | Data structures and algorithms | — measure it | — |
+| 15 | Production software engineering | — measure it | — |
+| 16 | SIMD and GPU programming | — measure it | — |
+| 17 | AI inference | — measure it | — |
+| 18 | ML systems design | — measure it | — |
+
+Chapters 13–18 have not been measured. First command in the session that starts one:
+`wc -l "chapter NN - name"/*.md`.
