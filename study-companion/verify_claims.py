@@ -1893,4 +1893,476 @@ print(f"[Ch11 s22] control side: a 0.5 m lane correction in 1.5 s needs "
 print(f"[Ch11 s22]   that is trivial for a 100 Hz steering loop: perception is the binding")
 print(f"[Ch11 s22]   constraint, not control   {P(2*0.5/1.5**2 < 0.5)}")
 
+# =========================== CHAPTER 12 ===================================
+print("\n" + "="*66)
+print("CHAPTER 12 -- GRAPH NEURAL NETWORKS")
+print("="*66)
+
+def _lap(A): return np.diag(A.sum(1)) - A
+def _g(n, edges, w=None):
+    A = np.zeros((n, n))
+    for k, (i, j) in enumerate(edges):
+        v = 1.0 if w is None else w[k]
+        A[i, j] = A[j, i] = v
+    return A
+
+# --- s07: L = D - A IS the direct-stiffness assembly ----------------------
+_E = [(0,1),(0,2),(1,2),(2,3),(3,4)]; _n = 5
+_A = _g(_n, _E); _L = _lap(_A)
+_K = np.zeros((_n,_n)); _ke = np.array([[1.,-1.],[-1.,1.]])
+for i,j in _E:
+    _d=[i,j]
+    for a_ in range(2):
+        for b_ in range(2): _K[_d[a_],_d[b_]] += _ke[a_,b_]
+print(f"\n[Ch12 s07] L = D - A equals the assembled stiffness matrix of unit springs,")
+print(f"[Ch12 s07]   one scalar DOF per node   max|L-K| = {np.abs(_L-_K).max():.2e}   {P(np.allclose(_L,_K))}")
+_w = rng.uniform(0.5,4.0,len(_E)); _Aw=_g(_n,_E,_w); _Kw=np.zeros((_n,_n))
+for (i,j),k in zip(_E,_w):
+    _d=[i,j]
+    for a_ in range(2):
+        for b_ in range(2): _Kw[_d[a_],_d[b_]] += k*_ke[a_,b_]
+print(f"[Ch12 s07] weighted graph == springs of stiffness k_ij           {P(np.allclose(_lap(_Aw),_Kw))}")
+
+# --- s08: x'Lx is twice the strain energy --------------------------------
+_x = rng.normal(size=_n)
+_q  = _x @ _L @ _x
+_se = sum((_x[i]-_x[j])**2 for i,j in _E)
+_U  = 0.5*_se
+print(f"\n[Ch12 s08] x'Lx = sum_edges (xi-xj)^2 = {_q:.10f}                {P(np.isclose(_q,_se))}")
+print(f"[Ch12 s08] x'Lx == 2U, U = strain energy = {_U:.10f}           {P(np.isclose(_q,2*_U))}")
+_xw = rng.normal(size=_n)
+_Uw = 0.5*sum(k*(_xw[i]-_xw[j])**2 for (i,j),k in zip(_E,_w))
+print(f"[Ch12 s08]   holds weighted too                                  {P(np.isclose(_xw@_lap(_Aw)@_xw, 2*_Uw))}")
+print(f"[Ch12 s08]   so 'Laplacian smoothness' IS elastic strain energy: a smooth signal is")
+print(f"[Ch12 s08]   a low-energy configuration of the spring network")
+
+# --- s09: cyclomatic number == degree of static indeterminacy ------------
+def _inc(n, edges):
+    B = np.zeros((n,len(edges)))
+    for e,(i,j) in enumerate(edges): B[i,e]=1.; B[j,e]=-1.
+    return B
+print()
+_ok_ind = True
+for _nm,(_nn,_ee) in {
+    "path (tree)":        (5,[(0,1),(1,2),(2,3),(3,4)]),
+    "path + one cycle":   (5,[(0,1),(1,2),(2,3),(3,4),(4,0)]),
+    "K4":                 (4,[(0,1),(0,2),(0,3),(1,2),(1,3),(2,3)]),
+    "two triangles":      (6,[(0,1),(1,2),(2,0),(3,4),(4,5),(5,3)]),
+}.items():
+    _AA=_g(_nn,_ee); _LL=_lap(_AA); _c=_nn-np.linalg.matrix_rank(_LL)
+    _cyc=len(_ee)-_nn+_c; _red=len(_ee)-np.linalg.matrix_rank(_inc(_nn,_ee))
+    _ok_ind &= (_cyc==_red)
+    print(f"[Ch12 s09] {_nm:16s} cycles m-n+c = {_cyc}, self-equilibrated force sets = {_red}")
+print(f"[Ch12 s09] cyclomatic number == degree of static indeterminacy    {P(_ok_ind)}")
+
+# --- s10: path-graph Laplacian == free-free bar in axial vibration -------
+print()
+for _nn in (6,12):
+    _Ap=_g(_nn,[(i,i+1) for i in range(_nn-1)]); _Lp=_lap(_Ap)
+    _ev,_U_ = np.linalg.eigh(_Lp)
+    _pred=np.array([4*np.sin(np.pi*k/(2*_nn))**2 for k in range(_nn)])
+    _wv=0.0
+    for k in range(_nn):
+        _v=np.array([np.cos(np.pi*k*(j+0.5)/_nn) for j in range(_nn)]); _v/=np.linalg.norm(_v)
+        _gt=_U_[:,k]/np.linalg.norm(_U_[:,k])
+        _wv=max(_wv, min(np.abs(_v-_gt).max(), np.abs(_v+_gt).max()))
+    print(f"[Ch12 s10] path n={_nn:2d}: eigenvalues == 4 sin^2(pi k/2n)  err {np.abs(_ev-_pred).max():.1e}  {P(np.allclose(_ev,_pred))}")
+    print(f"[Ch12 s10]   eigenvectors == cos(pi k (j+1/2)/n), the free-free bar modes  err {_wv:.1e}  {P(_wv<1e-9)}")
+
+# --- s11: the ring -- graph Fourier transform IS the DFT -----------------
+print()
+_nr=8; _Cr=_g(_nr,[(i,(i+1)%_nr) for i in range(_nr)]); _Lr=_lap(_Cr)
+_F=np.array([[np.exp(2j*np.pi*i*k/_nr) for k in range(_nr)] for i in range(_nr)])/np.sqrt(_nr)
+_off=max(abs(_F[:,a].conj()@_Lr@_F[:,b]) for a in range(_nr) for b in range(_nr) if a!=b)
+_dg=np.array([(_F[:,k].conj()@_Lr@_F[:,k]).real for k in range(_nr)])
+print(f"[Ch12 s11] ring: DFT basis diagonalises L, max off-diagonal {_off:.1e}   {P(_off<1e-12)}")
+print(f"[Ch12 s11]   modal stiffnesses == 4 sin^2(pi k/n)                   "
+      f"{P(np.allclose(_dg,[4*np.sin(np.pi*k/_nr)**2 for k in range(_nr)]))}")
+print(f"[Ch12 s11]   so on a ring the 'graph Fourier transform' is not like the DFT, it IS")
+print(f"[Ch12 s11]   the DFT -- and these are the nodal-diameter modes of a bladed disc")
+
+# --- s12: degree really is mass (row-sum lumping, uniform mesh) ----------
+print()
+_nb=7; _Apb=_g(_nb,[(i,i+1) for i in range(_nb-1)]); _Lpb=_lap(_Apb); _Dpb=np.diag(_Apb.sum(1))
+_M=np.zeros((_nb,_nb))
+for i in range(_nb-1): _M[i,i]+=0.5; _M[i+1,i+1]+=0.5     # rho*A*Le/2 to each end node
+print(f"[Ch12 s12] lumped mass diag {np.diag(_M)} vs degree {np.diag(_Dpb)}")
+print(f"[Ch12 s12] M == (rho A Le / 2) D exactly                          {P(np.allclose(_M,0.5*_Dpb))}")
+_Lhat=np.diag(1/np.sqrt(np.diag(_Dpb)))@_Lpb@np.diag(1/np.sqrt(np.diag(_Dpb)))
+_w2=np.sort(np.real(np.linalg.eigvals(np.linalg.solve(_M,_Lpb))))
+print(f"[Ch12 s12] D^-1/2 L D^-1/2 IS the mass-normalised stiffness matrix of that bar:")
+print(f"[Ch12 s12]   eig(Lhat) == w^2 * (rho A Le/2)                      {P(np.allclose(np.sort(_w2*0.5), np.linalg.eigvalsh(_Lhat)))}")
+_rw=np.sort(np.real(np.linalg.eigvals(np.linalg.inv(_Dpb)@_Lpb)))
+print(f"[Ch12 s12]   D^-1 L has the same spectrum but is not symmetric     "
+      f"{P(np.allclose(_rw,np.linalg.eigvalsh(_Lhat)) and not np.allclose(np.linalg.inv(_Dpb)@_Lpb,(np.linalg.inv(_Dpb)@_Lpb).T))}")
+
+# --- s13: message passing is JACOBI; permutation equivariance forbids GS -
+print()
+_Ej=[(0,1),(0,2),(1,2),(2,3),(3,4),(1,4)]; _nj=5
+_Aj=_g(_nj,_Ej); _At=_Aj+np.eye(_nj); _dt=_At.sum(1)
+_Ah=_At/np.sqrt(np.outer(_dt,_dt))
+def _jac(H,M): return M@H
+def _gs(H,M):
+    H=H.copy()
+    for i in range(M.shape[0]): H[i]=M[i]@H
+    return H
+_H0=rng.normal(size=(_nj,2))
+_pi=np.array([3,0,4,1,2]); _Pm=np.zeros((_nj,_nj))
+for _new,_old in enumerate(_pi): _Pm[_new,_old]=1.0
+_res={}
+for _nm,_sw in (("Jacobi",_jac),("Gauss-Seidel",_gs)):
+    _a1=_Pm@_sw(_H0,_Ah); _a2=_sw(_Pm@_H0,_Pm@_Ah@_Pm.T)
+    _res[_nm]=np.abs(_a1-_a2).max()
+    print(f"[Ch12 s13] {_nm:12s}: relabel-then-update == update-then-relabel? "
+          f"{np.allclose(_a1,_a2)}  diff {_res[_nm]:.2e}")
+print(f"[Ch12 s13] permutation equivariance holds for Jacobi, fails for Gauss-Seidel  "
+      f"{P(_res['Jacobi']<1e-12 and _res['Gauss-Seidel']>1e-3)}")
+print(f"[Ch12 s13]   so a GNN cannot be Gauss-Seidel: the answer would depend on node numbering.")
+print(f"[Ch12 s13]   The symmetry requirement of file 01 picks the solver.")
+
+# --- s14: a degree-K polynomial in L is exactly a K-hop stencil ----------
+print()
+_Ep=[(0,1),(1,2),(2,3),(3,4),(4,5),(1,5)]; _np_=6
+_Apo=_g(_np_,_Ep); _Lpo=_lap(_Apo); _Pk=np.eye(_np_); _ok_hop=True
+for k in range(1,4):
+    _Pk=_Pk@_Lpo
+    _hop=np.linalg.matrix_power(np.eye(_np_)+_Apo,k)
+    _ok_hop &= np.array_equal((np.abs(_Pk)>1e-12),(_hop>0))
+print(f"[Ch12 s14] nonzero pattern of L^k == nodes within k hops, k=1,2,3   {P(_ok_hop)}")
+print(f"[Ch12 s14]   spectral filter and spatial stencil are one object; GCN is K=1, the")
+print(f"[Ch12 s14]   narrowest stencil there is -- one relaxation sweep")
+
+# --- s15: over-smoothing lands on sqrt(degree), NOT on a uniform value ---
+print()
+_Ho=rng.normal(size=(_nj,3))
+_qv=np.sqrt(_dt); _qv/=np.linalg.norm(_qv)
+_h1=rng.normal(size=_nj)
+for _ in range(500): _h1=_Ah@_h1
+_h1/=np.linalg.norm(_h1)
+_const=np.ones(_nj)/np.sqrt(_nj)
+print(f"[Ch12 s15] limit direction   {np.round(np.abs(_h1),5)}")
+print(f"[Ch12 s15] sqrt(1+degree)    {np.round(np.abs(_qv),5)}")
+print(f"[Ch12 s15] constant vector   {np.round(_const,5)}")
+print(f"[Ch12 s15] over-smoothing converges to sqrt(1+deg), not to a uniform value  "
+      f"{P(np.allclose(np.abs(_h1),np.abs(_qv)) and not np.allclose(np.abs(_h1),_const))}")
+print(f"[Ch12 s15]   SOURCE CORRECTION: file 03 says 'all node representations converge to the")
+print(f"[Ch12 s15]   same value'. They converge to a multiple of sqrt(1+degree). It IS the")
+print(f"[Ch12 s15]   rigid-body mode -- written in mass-normalised coordinates q = M^(1/2) x.")
+print(f"[Ch12 s15]   Same shape of error as Ch11's degree-weighted-mean correction.")
+_ev_h=np.sort(np.abs(np.linalg.eigvalsh(_Ah)))[::-1]; _mu2=_ev_h[1]
+_prev=None; _rat=[]
+_Hd=rng.normal(size=(_nj,3))
+for k in range(40):
+    _Hd=_Ah@_Hd
+    _r=np.linalg.norm(_Hd-np.outer(_qv,_qv@_Hd))
+    if _prev is not None and _r>1e-13: _rat.append(_r/_prev)
+    _prev=_r
+print(f"[Ch12 s15] per-layer decay ratio measured {_rat[-1]:.6f} == |mu_2(Ahat)| {_mu2:.6f}   "
+      f"{P(np.isclose(_rat[-1],_mu2,rtol=1e-6))}")
+print(f"[Ch12 s15]   layers to lose 90% of what distinguishes nodes: {np.log(0.1)/np.log(_mu2):.1f}")
+
+# --- s16: self-loops are a STABILITY condition ---------------------------
+print()
+_C4=_g(4,[(i,(i+1)%4) for i in range(4)])
+for _sl in (False,True):
+    _Am=_C4+(np.eye(4) if _sl else 0); _d=_Am.sum(1)
+    _Mn=_Am/np.sqrt(np.outer(_d,_d)); _e=np.linalg.eigvalsh(_Mn)
+    _h=np.array([1.,-1.,1.,-1.]); _tr=[_h[0]]
+    for _ in range(30): _h=_Mn@_h; _tr.append(_h[0])
+    _lab="with self-loops   " if _sl else "without self-loops"
+    print(f"[Ch12 s16] C4 {_lab}: lambda_min = {_e[0]:+.6f}, node-0 after 30 rounds = {_tr[-1]:+.3e}")
+    if not _sl:
+        print(f"[Ch12 s16]   |lambda_min| == 1 exactly: the alternating mode never decays  "
+              f"{P(np.isclose(abs(_e[0]),1.0))}")
+    else:
+        print(f"[Ch12 s16]   lambda_min strictly inside (-1,1): it now decays              "
+              f"{P(abs(_e[0])<0.99 and abs(_tr[-1])<1e-6)}")
+print(f"[Ch12 s16]   SOURCE SHARPENING: file 03 gives the reason for A+I as 'each node also")
+print(f"[Ch12 s16]   receives its own message'. On a bipartite graph the real reason is")
+print(f"[Ch12 s16]   stability -- without it the iteration sits exactly on the boundary and")
+print(f"[Ch12 s16]   oscillates forever instead of smoothing. It is added mass, a critical-")
+print(f"[Ch12 s16]   time-step fix, not a courtesy message.")
+
+# --- s17: the source's sum-vs-mean example is backwards ------------------
+print()
+print(f"[Ch12 s17] source (file 03): 'mean cannot distinguish {{1,1}} from {{2,2}}'")
+print(f"[Ch12 s17]   mean{{1,1}} = {np.mean([1,1]):.1f}, mean{{2,2}} = {np.mean([2,2]):.1f} -- distinguished. "
+      f"CLAIM IS FALSE  {P(np.mean([1,1])!=np.mean([2,2]))}")
+print(f"[Ch12 s17] source (file 03): 'max cannot distinguish {{1,2,3}} from {{1,1,3}}'")
+print(f"[Ch12 s17]   max = {max([1,2,3])} and {max([1,1,3])} -- collide. CLAIM IS TRUE          "
+      f"{P(max([1,2,3])==max([1,1,3]))}")
+_nA=np.array([1.,1.,1.,1.]); _nB=np.array([2.,2.])
+print(f"[Ch12 s17] source CODING TASK 2 claims 'sum distinguishes, mean does not'. Running it:")
+print(f"[Ch12 s17]   mean {_nA.mean():.1f} vs {_nB.mean():.1f} -> mean SEPARATES")
+print(f"[Ch12 s17]   sum  {_nA.sum():.1f} vs {_nB.sum():.1f} -> sum COLLIDES")
+print(f"[Ch12 s17]   the task demonstrates the exact opposite of its own caption          "
+      f"{P(_nA.mean()!=_nB.mean() and _nA.sum()==_nB.sum())}")
+print(f"[Ch12 s17] what is actually true: mean and max are killed by DUPLICATION, for any phi:")
+for _ms in ([3.],[3.,3.],[3.,3.,3.]):
+    print(f"[Ch12 s17]   {str(_ms):18s} mean {np.mean(_ms):.1f}  max {np.max(_ms):.1f}  sum {np.sum(_ms):.1f}")
+print(f"[Ch12 s17]   mean and max cannot COUNT; sum can. That is the real separation.     "
+      f"{P(np.mean([3.])==np.mean([3.,3.]) and np.sum([3.])!=np.sum([3.,3.]))}")
+print(f"[Ch12 s17]   but plain sum is not injective either: {{1,3}} and {{2,2}} both give 4  "
+      f"{P(sum([1,3])==sum([2,2]))}")
+print(f"[Ch12 s17]   GIN's theorem says an injective phi EXISTS over a countable feature space,")
+print(f"[Ch12 s17]   not that bare summation is injective. A free body diagram sums forces; it")
+print(f"[Ch12 s17]   does not average them -- and four members at 1 kN load a joint exactly as")
+print(f"[Ch12 s17]   two at 2 kN, so equilibrium cannot tell them apart either.")
+
+# --- s18: what message passing cannot see -------------------------------
+print()
+def _ring_at(n, off, N):
+    A=np.zeros((N,N))
+    for i in range(n): A[off+i,off+(i+1)%n]=A[off+(i+1)%n,off+i]=1.
+    return A
+_C6=_ring_at(6,0,6); _TT=_ring_at(3,0,6)+_ring_at(3,3,6)
+def _wl(A, rounds=8):
+    n=len(A); col=tuple([0]*n)
+    for _ in range(rounds):
+        sig=[(col[i], tuple(sorted(col[j] for j in range(n) if A[i,j]))) for i in range(n)]
+        u={s:k for k,s in enumerate(sorted(set(sig)))}
+        col=tuple(u[s] for s in sig)
+    return tuple(sorted(col))
+_e6=np.round(np.linalg.eigvalsh(_lap(_C6)),9); _et=np.round(np.linalg.eigvalsh(_lap(_TT)),9)
+print(f"[Ch12 s18] hexagon C6 vs two triangles: both 2-regular, 6 nodes, 6 edges")
+print(f"[Ch12 s18]   1-WL colour histograms identical -> every message-passing GNN is blind  "
+      f"{P(_wl(_C6)==_wl(_TT))}")
+print(f"[Ch12 s18]   Laplacian spectra C6 {_e6}")
+print(f"[Ch12 s18]                   2xC3 {_et}")
+print(f"[Ch12 s18]   the spectrum separates them                                        "
+      f"{P(not np.allclose(_e6,_et))}")
+print(f"[Ch12 s18]   zero eigenvalues: {int((_e6<1e-9).sum())} vs {int((_et<1e-9).sum())} -- two loose pieces, two rigid-body modes")
+_G1=_g(6,[(0,2),(0,3),(0,4),(0,5),(1,4),(1,5),(2,3)])
+_G2=_g(6,[(0,2),(0,4),(0,5),(1,2),(1,4),(1,5),(2,3)])
+_s1=np.round(np.linalg.eigvalsh(_lap(_G1)),6); _s2=np.round(np.linalg.eigvalsh(_lap(_G2)),6)
+print(f"[Ch12 s18] and the converse -- a Laplacian-cospectral pair on 6 nodes:")
+print(f"[Ch12 s18]   degree sequences {[int(d) for d in sorted(_G1.sum(1))]} vs {[int(d) for d in sorted(_G2.sum(1))]} -- so not isomorphic")
+print(f"[Ch12 s18]   identical Laplacian spectra {_s1}                {P(np.allclose(_s1,_s2))}")
+print(f"[Ch12 s18]   1-WL SEPARATES this pair                                           "
+      f"{P(_wl(_G1)!=_wl(_G2))}")
+print(f"[Ch12 s18]   so neither test dominates: local message passing misses C6 vs 2xC3, the")
+print(f"[Ch12 s18]   modal survey misses this pair. You cannot hear the shape of a drum, and")
+print(f"[Ch12 s18]   you cannot tap your way round it either. That is why Graphormer and GPS")
+print(f"[Ch12 s18]   carry BOTH a spectral encoding and a message-passing branch.")
+
+# --- s19: GAT -- static attention, and the end of the stiffness bridge ---
+print()
+def _lr(z,s=0.2): return np.where(z>0,z,s*z)
+def _sm(z): p=np.exp(z-z.max()); return p/p.sum()
+_rg=np.random.default_rng(1); _Wh=_rg.normal(size=(8,3)); _av=_rg.normal(size=6)
+_nbh=[2,3,4,5]; _sj=np.array([_av[3:]@_Wh[j] for j in _nbh])
+_okc=True
+for _c in (0.0,3.7,-12.4):
+    _okc &= np.allclose(_sm(_c+_sj), _sm(_sj))
+print(f"[Ch12 s19] pre-activation, softmax_j(c + s_j) == softmax_j(s_j): the query term")
+print(f"[Ch12 s19]   cancels EXACTLY, so attention weights are identical, not merely ranked")
+print(f"[Ch12 s19]   the same                                                           {P(_okc)}")
+_okp = np.allclose(_sm(_lr(6.0+_sj)), _sm(_sj))
+_okn = np.allclose(_sm(_lr(-9.0+_sj)), _sm(0.2*_sj))
+print(f"[Ch12 s19] with LeakyReLU: all raw scores positive -> attn == softmax(s_j)        {P(_okp)}")
+print(f"[Ch12 s19]                 all raw scores negative -> attn == softmax(0.2 s_j)    {P(_okn)}")
+print(f"[Ch12 s19]   in both cases the query node contributes nothing. Only a MIXED-sign")
+print(f"[Ch12 s19]   neighbourhood lets it matter, and only through which side of the kink")
+print(f"[Ch12 s19]   each neighbour falls on.")
+_mix = 0
+for _s in range(2000):
+    _r = np.random.default_rng(_s)
+    _Wm = _r.normal(size=(5,3)); _am = _r.normal(size=6)
+    _raw = np.array([_am[:3]@_Wm[0] + _am[3:]@_Wm[j] for j in range(1,5)])
+    _mix += not ((_raw>0).all() or (_raw<=0).all())
+print(f"[Ch12 s19]   mixed-sign neighbourhoods on random features: {100*_mix/2000:.1f}% -- so GAT is")
+print(f"[Ch12 s19]   genuinely query-dependent part of the time and exactly query-blind the rest")
+_Eg=[(0,1),(0,2),(1,2),(2,3),(3,4),(4,5),(0,5)]; _Ag=_g(6,_Eg)
+_Wh6=_rg.normal(size=(6,3))
+_Mg=np.zeros((6,6))
+for i in range(6):
+    _nb=[j for j in range(6) if _Ag[i,j]]
+    _Mg[i,_nb]=_sm(_lr(np.array([_av@np.concatenate([_Wh6[i],_Wh6[j]]) for j in _nb])))
+_cpx = 0
+for _s in range(400):
+    _r = np.random.default_rng(_s)
+    _Wc = _r.normal(size=(6,3)); _ac = _r.normal(size=6)
+    _Mc = np.zeros((6,6))
+    for i in range(6):
+        _nb = [j for j in range(6) if _Ag[i,j]]
+        _Mc[i,_nb] = _sm(_lr(np.array([_ac@np.concatenate([_Wc[i],_Wc[j]]) for j in _nb])))
+    _cpx += np.max(np.abs(np.linalg.eigvals(_Mc).imag)) > 1e-9
+print(f"[Ch12 s19] GAT attention matrix is row-stochastic {np.allclose(_Mg.sum(1),1)} but NOT symmetric "
+      f"{P(not np.allclose(_Mg,_Mg.T))}")
+print(f"[Ch12 s19]   alpha(0->1) = {_Mg[0,1]:.5f} but alpha(1->0) = {_Mg[1,0]:.5f}")
+print(f"[Ch12 s19]   Maxwell-Betti reciprocity forces a stiffness matrix to be symmetric, so")
+print(f"[Ch12 s19]   there is no strain energy and no guaranteed real modes: complex eigenvalues")
+print(f"[Ch12 s19]   occurred in {_cpx}/400 random draws. Not always -- but never guaranteed.")
+_Ahg=(_Ag+np.eye(6))/np.sqrt(np.outer((_Ag+np.eye(6)).sum(1),(_Ag+np.eye(6)).sum(1)))
+print(f"[Ch12 s19]   and GCN's Ahat row sums are {np.round(_Ahg.sum(1),4)} -- not 1, so file 03's")
+print(f"[Ch12 s19]   'weighted average of its neighbours' is wrong for the symmetric normalisation "
+      f"{P(not np.allclose(_Ahg.sum(1),1))}")
+
+# --- s21: pooling is the Galerkin coarse-grid operator -------------------
+print()
+_Af=_g(8,[(0,1),(1,2),(2,3),(3,4),(4,5),(5,6),(6,7),(0,2),(5,7)]); _Lf=_lap(_Af)
+_S=np.zeros((8,3))
+for i,cl in enumerate([0,0,0,1,1,1,2,2]): _S[i,cl]=1.
+_Lc=_S.T@_Lf@_S
+print(f"[Ch12 s21] DiffPool's A' = S' A S is the Galerkin projection K_c = R' K R")
+print(f"[Ch12 s21]   coarse operator symmetric {np.allclose(_Lc,_Lc.T)}, PSD {np.linalg.eigvalsh(_Lc).min()>-1e-12}")
+print(f"[Ch12 s21]   S 1_coarse == 1_fine, so the rigid-body mode survives: (S'LS)1 = 0   "
+      f"{P(np.allclose(_S@np.ones(3),np.ones(8)) and np.allclose(_Lc@np.ones(3),0))}")
+print(f"[Ch12 s21]   off-diagonals count fine edges crossing clusters: {-_Lc[0,1]:.0f} and {-_Lc[1,2]:.0f}")
+print(f"[Ch12 s21]   this is the multigrid rule that interpolation must reproduce the rigid-body")
+print(f"[Ch12 s21]   modes -- also Guyan reduction and Craig-Bampton substructuring")
+
+# --- s22/s23: equivariance IS frame indifference; 9 = 1 + 3 + 5 ----------
+print()
+def _rot3(r):
+    Q,R=np.linalg.qr(r.normal(size=(3,3))); Q=Q@np.diag(np.sign(np.diag(R)))
+    if np.linalg.det(Q)<0: Q[:,0]*=-1
+    return Q
+_r3=np.random.default_rng(3); _Lg=_r3.normal(size=(3,3))
+_tr=np.trace(_Lg)/3; _sy=0.5*(_Lg+_Lg.T); _an=0.5*(_Lg-_Lg.T); _dv=_sy-_tr*np.eye(3)
+_vo=np.array([_an[2,1],_an[0,2],_an[1,0]])
+_R=_rot3(_r3); _Lr=_R@_Lg@_R.T
+_tr2=np.trace(_Lr)/3; _an2=0.5*(_Lr-_Lr.T); _dv2=0.5*(_Lr+_Lr.T)-_tr2*np.eye(3)
+_vo2=np.array([_an2[2,1],_an2[0,2],_an2[1,0]])
+print(f"[Ch12 s23] velocity gradient 3x3 = 9 components splits as 1 + 3 + 5               {P(1+3+5==9)}")
+print(f"[Ch12 s23]   l=0 volumetric strain rate invariant under rotation                  {P(np.isclose(_tr,_tr2))}")
+print(f"[Ch12 s23]   l=1 vorticity rotates as R w                                         {P(np.allclose(_vo2,_R@_vo))}")
+print(f"[Ch12 s23]   l=2 deviatoric part stays symmetric+traceless and equals R dev R'    "
+      f"{P(np.allclose(_dv2,_R@_dv@_R.T) and abs(np.trace(_dv2))<1e-12)}")
+print(f"[Ch12 s23]   so the l=0/1/2 hierarchy of Tensor Field Networks IS dilatation +")
+print(f"[Ch12 s23]   vorticity + deviatoric strain rate. A stress tensor is 6 = 1 + 5, and")
+print(f"[Ch12 s23]   von Mises uses only the l=2 part -- the same split, for the same reason.")
+_s2d=np.array([[4.,1.],[1.,2.]]); _d2=_s2d-np.trace(_s2d)/2*np.eye(2)
+_ratios=[]
+for _th in (15.,30.,45.):
+    _t=np.radians(_th); _Q=np.array([[np.cos(_t),-np.sin(_t)],[np.sin(_t),np.cos(_t)]])
+    _dd=_Q.T@_d2@_Q
+    _a0=np.degrees(np.arctan2(_d2[0,1],(_d2[0,0]-_d2[1,1])/2))
+    _a1=np.degrees(np.arctan2(_dd[0,1],(_dd[0,0]-_dd[1,1])/2))
+    _ratios.append(((_a0-_a1)%360)/_th)
+print(f"[Ch12 s23] Mohr's circle: axes rotated by theta move the state 2*theta round the")
+print(f"[Ch12 s23]   circle. Measured ratios {np.round(_ratios,6)}                        "
+      f"{P(np.allclose(_ratios,2.0))}")
+print(f"[Ch12 s23]   the factor of 2 every GATE candidate memorises IS the l=2 label: a")
+print(f"[Ch12 s23]   weight-l object picks up l*theta. Same fact, two vocabularies.")
+
+# --- s24: an invariant energy gives equivariant forces for free ----------
+print()
+from itertools import combinations as _cmb
+_r4=np.random.default_rng(3); _pos=_r4.normal(size=(5,3))
+def _en(Pp):
+    return sum(np.exp(-2.0*(np.linalg.norm(Pp[i]-Pp[j])-1.3)**2)/np.linalg.norm(Pp[i]-Pp[j])
+               for i,j in _cmb(range(len(Pp)),2))
+def _fo(Pp,h=1e-6):
+    F=np.zeros_like(Pp)
+    for i in range(len(Pp)):
+        for k in range(3):
+            a=Pp.copy(); a[i,k]+=h; b=Pp.copy(); b[i,k]-=h
+            F[i,k]=-(_en(a)-_en(b))/(2*h)
+    return F
+_Rq=_rot3(_r4)
+_E0,_E1=_en(_pos),_en(_pos@_Rq.T); _F0,_F1=_fo(_pos),_fo(_pos@_Rq.T)
+print(f"[Ch12 s24] source (file 05): invariant architectures 'cannot produce vector outputs")
+print(f"[Ch12 s24]   without breaking symmetry'. Building one and differentiating it:")
+print(f"[Ch12 s24]   energy invariant E(r) = E(Rr) = {_E0:.10f}                    {P(np.isclose(_E0,_E1,atol=1e-10))}")
+print(f"[Ch12 s24]   forces equivariant F(Rr) == R F(r), max err {np.abs(_F1-_F0@_Rq.T).max():.2e}        "
+      f"{P(np.allclose(_F1,_F0@_Rq.T,atol=1e-6))}")
+print(f"[Ch12 s24]   SOURCE CORRECTION: an invariant scalar differentiated w.r.t. position is")
+print(f"[Ch12 s24]   a provably equivariant vector, by the chain rule. F = -grad(E) is how a")
+print(f"[Ch12 s24]   mechanical engineer gets force from a potential, and it is exactly how")
+print(f"[Ch12 s24]   SchNet predicts forces. The claim is false as written.")
+
+# --- s06: A^k counts walks, not paths -----------------------------------
+print()
+_Atri=_g(3,[(0,1),(1,2),(2,0)]); _A2=_Atri@_Atri
+print(f"[Ch12 s06] triangle, A^2 diagonal = {np.diag(_A2)}. Paths of length 2 from 0 back to 0: 0")
+print(f"[Ch12 s06]   (a path repeats no vertex). Walks: 2, via 1 and via 2.")
+print(f"[Ch12 s06]   file 02 says A^k counts paths; it counts WALKS                      "
+      f"{P(_A2[0,0]==2)}")
+print(f"[Ch12 s06]   the giveaway is that diag(A^2) is the degree sequence {np.diag(_A2)}")
+
+# --- s25: the worked example -- a depth budget, and a claim of mine that broke
+print()
+from collections import deque as _dq
+def _nadj(A):
+    At=A+np.eye(len(A)); dt=At.sum(1); return At/np.sqrt(np.outer(dt,dt)), dt
+def _diam(A):
+    n=len(A); best=0
+    for s0 in range(n):
+        d=[-1]*n; d[s0]=0; qq=_dq([s0])
+        while qq:
+            u=qq.popleft()
+            for v in range(n):
+                if A[u,v] and d[v]<0: d[v]=d[u]+1; qq.append(v)
+        if min(d)<0: return None
+        best=max(best,max(d))
+    return best
+def _mu2(A):
+    Ah,_=_nadj(A); return np.sort(np.abs(np.linalg.eigvalsh(Ah)))[::-1][1]
+def _erdos(n,pp,seed):
+    r=np.random.default_rng(seed); A=np.zeros((n,n))
+    for i in range(n):
+        for j in range(i+1,n):
+            if r.random()<pp: A[i,j]=A[j,i]=1.
+    return A
+_mol=np.zeros((14,14))
+for i in range(13): _mol[i,i+1]=_mol[i+1,i]=1.
+_mol[0,5]=_mol[5,0]=1.; _mol[7,12]=_mol[12,7]=1.
+_grid=np.zeros((20,20))
+for i in range(4):
+    for j in range(5):
+        u=i*5+j
+        if i+1<4: v=(i+1)*5+j; _grid[u,v]=_grid[v,u]=1.
+        if j+1<5: v=i*5+j+1; _grid[u,v]=_grid[v,u]=1.
+print(f"[Ch12 s25] DEPTH BUDGET: layers needed (diameter) vs layers affordable before the")
+print(f"[Ch12 s25]   linear operator erases 90% of what distinguishes nodes, = ln(0.1)/ln|mu2|")
+print(f"[Ch12 s25]   {'graph':20s} {'avg deg':>8s} {'diam':>5s} {'|mu2|':>8s} {'L90':>8s}  window")
+_open=[]
+for _nm,_Ax in (("molecule-like chain",_mol), ("4x5 grid",_grid),
+                ("G(24, p=0.20)",_erdos(24,0.20,7)), ("G(24, p=0.50)",_erdos(24,0.50,7)),
+                ("G(24, p=0.80)",_erdos(24,0.80,7)),
+                ("complete K24",np.ones((24,24))-np.eye(24))):
+    _m=_mu2(_Ax); _L=np.log(0.1)/np.log(_m) if _m>1e-12 else 0.1; _d=_diam(_Ax)
+    _w = (_d is not None and _d<=_L); _open.append(_w)
+    print(f"[Ch12 s25]   {_nm:20s} {_Ax.sum(1).mean():8.1f} {str(_d):>5s} {_m:8.5f} {_L:8.1f}  "
+          f"{'OPEN' if _w else 'CLOSED'}")
+print(f"[Ch12 s25]   the window closes only at the dense end                            "
+      f"{P(all(_open[:4]) and not any(_open[4:]))}")
+print(f"[Ch12 s25]   on the sparse graphs GNNs are actually used on, the LINEAR over-smoothing")
+print(f"[Ch12 s25]   mechanism needs tens of layers, not 2-4                            "
+      f"{P(np.log(0.1)/np.log(_mu2(_mol)) > 20)}")
+
+# does a real GCN layer collapse faster than A_hat^k? isolate W and ReLU.
+_Ah,_dtm=_nadj(_mol); _qm=np.sqrt(_dtm); _qm/=np.linalg.norm(_qm)
+def _spread(Lr, mode, seed, dd=16):
+    r=np.random.default_rng(seed); H=r.normal(size=(14,dd))
+    for _ in range(Lr):
+        H=_Ah@H
+        if mode in ("W","WR"):
+            Wm=r.normal(size=(dd,dd)); Wm/=np.linalg.norm(Wm,2); H=H@Wm
+        if mode in ("R","WR"): H=np.maximum(H,0)
+    Rr=H-np.outer(_qm,_qm@H); nn=np.linalg.norm(H)
+    return np.linalg.norm(Rr)/nn if nn>1e-300 else 0.0
+print(f"[Ch12 s25] relative spread remaining, averaged over 30 draws:")
+print(f"[Ch12 s25]   {'layers':>6s} {'Ahat only':>10s} {'+W':>8s} {'+ReLU':>8s} {'+both':>8s} {'mu2^k':>8s}")
+_m2=_mu2(_mol)
+for _Lr in (1,2,4,8,16):
+    _a=np.mean([_spread(_Lr,"-",sd) for sd in range(30)])
+    _b=np.mean([_spread(_Lr,"W",sd) for sd in range(30)])
+    _c=np.mean([_spread(_Lr,"R",sd) for sd in range(30)])
+    _e=np.mean([_spread(_Lr,"WR",sd) for sd in range(30)])
+    print(f"[Ch12 s25]   {_Lr:6d} {_a:10.4f} {_b:8.4f} {_c:8.4f} {_e:8.4f} {_m2**_Lr:8.4f}")
+_a4=np.mean([_spread(4,"-",sd) for sd in range(30)]); _b4=np.mean([_spread(4,"W",sd) for sd in range(30)])
+_c4=np.mean([_spread(4,"R",sd) for sd in range(30)]); _e4=np.mean([_spread(4,"WR",sd) for sd in range(30)])
+print(f"[Ch12 s25]   a random W per layer barely moves it ({_a4:.3f} -> {_b4:.3f})          "
+      f"{P(abs(_a4-_b4)<0.05)}")
+print(f"[Ch12 s25]   ReLU is what accelerates the collapse ({_a4:.3f} -> {_c4:.3f})        "
+      f"{P(_c4 < _a4-0.15)}")
+print(f"[Ch12 s25]   but even with both, 4 layers leave {_e4:.0%} of the spread intact -- so the")
+print(f"[Ch12 s25]   2-4 layer rule is NOT explained by over-smoothing on a sparse graph "
+      f"{P(_e4>0.25)}")
+print(f"[Ch12 s25]   MY OWN CLAIM, BROKEN: I first wrote that mu2 gives 'four to seven layers'")
+print(f"[Ch12 s25]   to 90% loss. True for the small dense test graph of s15, false in general:")
+print(f"[Ch12 s25]   a 14-node sparse chain needs {np.log(0.1)/np.log(_m2):.0f}. Corrected on the page.")
+
 print("\n" + "="*66)
