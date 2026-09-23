@@ -1,0 +1,2496 @@
+<title>Computing and Operating Systems</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(', '\\)']], displayMath: [['$$', '$$']], processEscapes: true },
+  svg: { fontCache: 'global', scale: 1.0 },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-svg.js" id="MathJax-script" async></script>
+
+<style>
+/* ============ TOKENS: light is complete and authoritative ============ */
+:root{
+  --ground:#F0F2F1;
+  --sheet:#FBFCFB;
+  --sheet-2:#F4F6F5;
+  --ink:#14181A;
+  --ink-2:#4E575B;
+  --ink-3:#77838A;
+  --rule:#D3DAD7;
+  --rule-strong:#A8B4B0;
+  --accent:#12507E;
+  --accent-ink:#0E4267;
+  --accent-soft:#E4EEF6;
+  --bridge:#1F8A4C;
+  --bridge-soft:#E4F2EA;
+  --brk:#A8500F;
+  --brk-soft:#FAEBDF;
+  --s1:#BF5B00;
+  --s2:#0F74C7;
+  --s3:#1F8A4C;
+  --paper:#FFFFFF;            /* pasted-drawing ground, both themes */
+  --paper-ink:#1b1b1b;
+  --shadow:0 1px 2px rgba(20,24,26,.06), 0 6px 18px rgba(20,24,26,.05);
+  --f-disp:'Archivo Narrow', 'Arial Narrow', Helvetica, sans-serif;
+  --f-body:'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --f-mono:'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+    --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+    --rule:#293134; --rule-strong:#3F494C;
+    --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+    --bridge:#35AC63; --bridge-soft:#11281B;
+    --brk:#E0913F; --brk-soft:#2E2012;
+    --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+  --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+  --rule:#293134; --rule-strong:#3F494C;
+  --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+  --bridge:#35AC63; --bridge-soft:#11281B;
+  --brk:#E0913F; --brk-soft:#2E2012;
+  --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:var(--f-body); font-size:17px; line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ============ TITLE BLOCK (engineering drawing header) ============ */
+.titleblock{
+  position:sticky; top:env(safe-area-inset-top,0px); z-index:40;
+  background:var(--sheet); border-bottom:1px solid var(--rule-strong);
+}
+.tb-in{
+  max-width:1240px; margin:0 auto; padding:0 16px;
+  display:flex; align-items:stretch; gap:0; min-height:46px;
+}
+.tb-cell{
+  display:flex; flex-direction:column; justify-content:center;
+  padding:5px 14px; border-right:1px solid var(--rule);
+  font-family:var(--f-disp);
+}
+.tb-cell:first-child{padding-left:0}
+.tb-cell:last-child{border-right:0; margin-left:auto; padding-right:0}
+.tb-k{
+  font-size:8.5px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); line-height:1.4;
+}
+.tb-v{font-size:13px; font-weight:700; letter-spacing:.02em; color:var(--ink); line-height:1.3}
+.tb-v.accent{color:var(--accent)}
+.tb-hide{display:none}
+@media (min-width:680px){ .tb-hide{display:flex} }
+
+.themebtn{
+  appearance:none; background:transparent; border:1px solid var(--rule-strong);
+  color:var(--ink-2); font-family:var(--f-disp); font-size:10px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:6px 10px; border-radius:2px;
+  cursor:pointer; align-self:center; white-space:nowrap;
+}
+.themebtn:hover{border-color:var(--accent); color:var(--accent)}
+.themebtn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+/* ============ SHELL ============ */
+.shell{max-width:1240px; margin:0 auto; padding:0 16px; padding-block:0 64px}
+@media (min-width:1080px){
+  .shell{display:grid; grid-template-columns:212px minmax(0,1fr); gap:44px; align-items:start}
+}
+.rail{display:none}
+@media (min-width:1080px){
+  .rail{
+    display:block; position:sticky; top:calc(env(safe-area-inset-top,0px) + 70px);
+    padding-block:28px; font-family:var(--f-disp); font-size:12.5px;
+  }
+}
+.rail-h{
+  font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-3);
+  padding-bottom:8px; border-bottom:1px solid var(--rule); margin-bottom:10px;
+}
+.rail a{
+  display:flex; gap:9px; padding:4px 0; color:var(--ink-2); text-decoration:none;
+  border-left:2px solid transparent; padding-left:9px; margin-left:-11px; line-height:1.35;
+}
+.rail a:hover{color:var(--accent)}
+.rail a.on{color:var(--accent); border-left-color:var(--accent); font-weight:700}
+.rail a .n{font-family:var(--f-mono); font-size:10.5px; color:var(--ink-3); flex:none; padding-top:1px}
+.rail a.on .n{color:var(--accent)}
+
+main{min-width:0; padding-block:0 0}
+.col{max-width:70ch}
+
+/* ============ TYPE ============ */
+h1,h2,h3,h4{font-family:var(--f-disp); text-wrap:balance; margin:0; line-height:1.14}
+h1{font-size:clamp(34px,7vw,58px); font-weight:700; letter-spacing:-.015em}
+h2{font-size:clamp(25px,4.2vw,34px); font-weight:700; letter-spacing:-.01em}
+h3{font-size:19px; font-weight:700; letter-spacing:.005em; margin-top:2px}
+h4{font-size:14px; font-weight:700; letter-spacing:.06em; text-transform:uppercase}
+p{margin:0 0 1.05em}
+a{color:var(--accent-ink)}
+strong{font-weight:600}
+em{font-style:italic}
+code{font-family:var(--f-mono); font-size:.87em; background:var(--sheet-2); padding:1px 5px; border-radius:2px; border:1px solid var(--rule)}
+.lead{font-size:19.5px; line-height:1.56; color:var(--ink-2)}
+.eyebrow{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--ink-3); margin:0 0 10px;
+}
+.srcref{
+  font-family:var(--f-mono); font-size:11px; color:var(--ink-3);
+  border:1px solid var(--rule); border-radius:2px; padding:2px 7px; display:inline-block;
+  background:var(--sheet-2); white-space:nowrap;
+}
+
+/* ============ SECTION ============ */
+section{padding-block:38px 0; scroll-margin-top:calc(env(safe-area-inset-top,0px) + 62px)}
+.sechead{display:flex; align-items:baseline; gap:13px; margin-bottom:6px; flex-wrap:wrap}
+.secnum{
+  font-family:var(--f-mono); font-size:12px; font-weight:600; color:var(--accent);
+  border:1px solid var(--accent); border-radius:2px; padding:2px 7px; flex:none;
+  background:var(--accent-soft);
+}
+.rule-h{border:0; border-top:1px solid var(--rule); margin:0 0 22px}
+.rule-d{border:0; border-top:1px dashed var(--rule-strong); margin:34px 0}
+
+/* ============ CALLOUTS ============ */
+.note{
+  border:1px solid var(--rule); border-left:3px solid var(--accent);
+  background:var(--sheet); border-radius:2px; padding:16px 18px; margin:22px 0;
+}
+/* Greek letters must never be uppercased: text-transform turns beta into
+   a capital Beta, which is the Latin letter B on screen -- likewise eta->H,
+   kappa->K, lambda->A-shape.  Any Greek inside an uppercased label wears .gk. */
+.gk{text-transform:none}
+.note.bridge{border-left-color:var(--bridge); background:var(--bridge-soft)}
+.note.brk{border-left-color:var(--brk); background:var(--brk-soft)}
+.note-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; margin-bottom:7px; display:flex; align-items:center; gap:8px;
+}
+.note.bridge .note-h{color:var(--bridge)}
+.note.brk .note-h{color:var(--brk)}
+.note .note-h{color:var(--accent)}
+.note p:last-child, .note ul:last-child{margin-bottom:0}
+.note-h .ic{
+  width:15px; height:15px; border-radius:50%; border:1.5px solid currentColor; flex:none;
+  display:grid; place-items:center; font-size:9.5px; font-weight:700; font-family:var(--f-mono);
+}
+ul,ol{margin:0 0 1.05em; padding-left:1.25em}
+li{margin-bottom:.4em}
+li::marker{color:var(--ink-3)}
+
+/* ============ DEFINITION BLOCK ============ */
+.defn{
+  background:var(--sheet); border:1px solid var(--rule); border-radius:3px;
+  padding:18px 20px; margin:22px 0; box-shadow:var(--shadow);
+}
+.defn-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:10px;
+  padding-bottom:8px; border-bottom:1px solid var(--rule);
+}
+.defn p:last-child{margin-bottom:0}
+
+/* ============ TABLES ============ */
+.tw{overflow-x:auto; margin:22px 0; border:1px solid var(--rule); border-radius:3px; background:var(--sheet)}
+table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:480px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule); vertical-align:top}
+thead th{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); background:var(--sheet-2); font-weight:700; white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:0}
+td.mono,th.mono{font-family:var(--f-mono); font-size:13px; font-variant-numeric:tabular-nums}
+.tw caption{
+  caption-side:bottom; text-align:left; padding:9px 14px; font-size:12.5px;
+  color:var(--ink-3); border-top:1px solid var(--rule); font-family:var(--f-disp);
+}
+
+/* ============ FIGURES ============ */
+figure{margin:24px 0}
+.paper{
+  background:var(--paper); border:1px solid var(--rule-strong); border-radius:3px;
+  padding:16px; display:flex; justify-content:center; box-shadow:var(--shadow);
+}
+.paper img{max-width:100%; height:auto; display:block}
+figcaption{
+  font-family:var(--f-disp); font-size:12.5px; color:var(--ink-3); margin-top:9px;
+  line-height:1.45; padding-left:2px;
+}
+figcaption b{color:var(--ink-2); font-weight:700; letter-spacing:.04em}
+
+/* ============ INTERACTIVE PANELS ============ */
+.lab{
+  background:var(--sheet); border:1px solid var(--rule-strong); border-radius:3px;
+  margin:26px 0; overflow:hidden; box-shadow:var(--shadow);
+}
+.lab-h{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:11px 16px; border-bottom:1px solid var(--rule); background:var(--sheet-2);
+}
+.lab-t{font-family:var(--f-disp); font-size:13px; font-weight:700; letter-spacing:.05em; text-transform:uppercase}
+.lab-tag{
+  font-family:var(--f-mono); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--accent); border:1px solid var(--accent); border-radius:2px; padding:2px 6px;
+  margin-left:auto; white-space:nowrap;
+}
+.lab-body{padding:16px}
+.lab-foot{
+  padding:11px 16px; border-top:1px solid var(--rule); background:var(--sheet-2);
+  font-size:13.5px; color:var(--ink-2); line-height:1.5;
+}
+.lab-foot b{color:var(--ink)}
+.stage{width:100%; max-width:560px; height:auto; display:block; margin-inline:auto; touch-action:none; cursor:grab}
+.stage.drag{cursor:grabbing}
+
+/* Dividers are drawn as cell borders rather than as 1px grid gaps over a grey
+   backdrop: when the item count does not fill the last row, a gap-based grid
+   leaves the backdrop showing as an empty grey block. */
+.readout{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr)); gap:0;
+  background:var(--sheet); border:1px solid var(--rule); border-radius:2px;
+  margin-top:14px; overflow:hidden;
+}
+.ro{background:var(--sheet); padding:8px 11px;
+  border-right:1px solid var(--rule); border-bottom:1px solid var(--rule)}
+.ro-k{
+  font-family:var(--f-disp); font-size:9px; letter-spacing:.13em; text-transform:uppercase;
+  color:var(--ink-3); margin-bottom:2px;
+  /* was white-space:nowrap, which clipped the longer keys instead of wrapping */
+  white-space:normal; overflow-wrap:break-word; line-height:1.3; min-height:2.6em;
+}
+.ro-v{
+  font-family:var(--f-mono); font-size:15px; font-weight:500; font-variant-numeric:tabular-nums;
+  color:var(--ink); line-height:1.25;
+}
+.ro-v.a{color:var(--s2)} .ro-v.b{color:var(--s1)} .ro-v.c{color:var(--s3)}
+
+.ctl{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:14px}
+.ctl label{
+  font-family:var(--f-disp); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-2); white-space:nowrap;
+}
+input[type=range]{
+  -webkit-appearance:none; appearance:none; height:22px; background:transparent;
+  flex:1 1 160px; min-width:130px; cursor:pointer;
+}
+input[type=range]:focus-visible{outline:2px solid var(--accent); outline-offset:3px}
+input[type=range]::-webkit-slider-runnable-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-moz-range-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:16px; height:16px; border-radius:50%;
+  background:var(--accent); border:2px solid var(--sheet); margin-top:-6.5px;
+}
+input[type=range]::-moz-range-thumb{
+  width:16px; height:16px; border-radius:50%; background:var(--accent);
+  border:2px solid var(--sheet);
+}
+.btn{
+  appearance:none; font-family:var(--f-disp); font-size:11px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:7px 13px; border-radius:2px;
+  border:1px solid var(--rule-strong); background:var(--sheet); color:var(--ink-2); cursor:pointer;
+}
+.btn:hover{border-color:var(--accent); color:var(--accent)}
+.btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.btn.on{background:var(--accent); border-color:var(--accent); color:var(--sheet)}
+
+.legend{display:flex; gap:16px; flex-wrap:wrap; margin-top:12px}
+.lg{display:flex; align-items:center; gap:7px; font-family:var(--f-disp); font-size:12px; color:var(--ink-2)}
+.lg i{width:15px; height:3px; border-radius:2px; flex:none; display:block}
+
+/* ============ MISC ============ */
+.mathbox{overflow-x:auto; overflow-y:hidden; margin:18px 0}
+mjx-container[display="true"]{margin:0 !important}
+.kv{display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:15px; margin:16px 0}
+.kv dt{font-family:var(--f-mono); font-size:13px; color:var(--accent); white-space:nowrap}
+.kv dd{margin:0; color:var(--ink-2)}
+
+details.q{
+  border:1px solid var(--rule); border-radius:3px; background:var(--sheet);
+  margin-bottom:9px; overflow:hidden;
+}
+details.q summary{
+  cursor:pointer; padding:12px 15px; font-weight:600; list-style:none;
+  display:flex; gap:11px; align-items:flex-start; font-size:15.5px;
+}
+details.q summary::-webkit-details-marker{display:none}
+details.q summary::after{
+  content:'+'; margin-left:auto; font-family:var(--f-mono); color:var(--accent);
+  font-size:17px; line-height:1; flex:none; padding-top:2px;
+}
+details.q[open] summary::after{content:'\2212'}
+details.q summary:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
+details.q summary .qn{
+  font-family:var(--f-mono); font-size:12px; color:var(--ink-3); flex:none; padding-top:3px;
+}
+details.q .ans{padding:0 15px 14px 41px; font-size:15.5px; color:var(--ink-2); border-top:1px solid var(--rule); padding-top:13px}
+details.q .ans p:last-child{margin-bottom:0}
+
+.endnote{
+  margin-top:44px; padding-top:20px; border-top:1px solid var(--rule-strong);
+  font-size:13.5px; color:var(--ink-3); font-family:var(--f-disp); line-height:1.55;
+}
+.endnote a{color:var(--accent)}
+
+.srcref{text-decoration:none}
+a.srcref{color:var(--ink-2); transition:none}
+
+</style>
+<style>
+.srcref{text-decoration:none}
+a.srcref{color:var(--ink-2)}
+a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(--accent-soft)}
+.srcref.nolink{opacity:.75; font-style:italic}
+.pv{font-family:var(--f-disp); font-size:9.5px; font-weight:700; letter-spacing:.1em;
+    text-transform:uppercase; padding:2px 7px; border-radius:2px; white-space:nowrap}
+.pv.ok{background:var(--bridge-soft); color:var(--bridge)}
+.pv.add{background:var(--accent-soft); color:var(--accent)}
+.pv.corr{background:var(--brk-soft); color:var(--brk)}
+.flag{display:inline-block; padding:1px 7px; border-radius:2px; font-family:var(--f-disp);
+      font-size:10px; letter-spacing:.1em; text-transform:uppercase; font-weight:700}
+.flag.ok{background:var(--bridge-soft); color:var(--bridge)}
+.flag.bad{background:var(--brk-soft); color:var(--brk)}
+.predict{border:1px solid var(--rule-strong); border-left:3px solid var(--brk);
+  background:var(--brk-soft); border-radius:2px; padding:13px 15px; margin:0 0 14px}
+.predict-h{font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--brk); margin-bottom:6px}
+.predict p{margin:0 0 10px; font-size:15px}
+.predict .opts{display:flex; gap:8px; flex-wrap:wrap}
+.pbtn{appearance:none; font-family:var(--f-disp); font-size:12px; font-weight:600;
+  padding:6px 12px; border-radius:2px; border:1px solid var(--rule-strong);
+  background:var(--sheet); color:var(--ink-2); cursor:pointer}
+.pbtn:hover{border-color:var(--brk); color:var(--brk)}
+.pbtn.picked{background:var(--brk); border-color:var(--brk); color:var(--sheet)}
+.pverdict{margin-top:10px; font-size:14.5px; color:var(--ink-2); display:none}
+.pverdict.show{display:block}
+.pverdict b{color:var(--ink)}
+.gap{border:1px solid var(--rule); border-left:3px solid var(--ink-3); background:var(--sheet-2);
+  border-radius:2px; padding:14px 16px; margin:18px 0}
+.gap-h{font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:7px}
+</style>
+
+<div class="sheet">
+
+<header class="titleblock">
+  <div class="tb-main">
+    <div class="tb-k">Sheet 13 of 20, part 1 of 3 &mdash; Computing and Operating Systems</div>
+    <h1>The Machine, and Its Arithmetic</h1>
+    <p class="tb-sub">
+      A CPU pipeline is an assembly line &mdash; not approximately, but with the same
+      efficiency formula and the same bottleneck law. A cache hierarchy is line-side stock.
+      And the heuristics you were taught for balancing a line were heuristics for a reason
+      nobody mentioned at the time.
+    </p>
+  </div>
+  <div class="tb-meta">
+    <div class="tb-cell"><div class="tb-k">Reader</div><div class="tb-v">B.E. Mechanical</div></div>
+    <div class="tb-cell"><div class="tb-k">Prerequisite</div><div class="tb-v">Sheets 1&ndash;12</div></div>
+    <button class="btn" id="themebtn" type="button">Theme</button>
+  </div>
+</header>
+
+<nav class="toc">
+  <a href="#bridge"><span class="n">00</span><span>The bridge</span></a>
+  <a href="#discrete"><span class="n">01</span><span>What discrete buys</span></a>
+  <a href="#logic"><span class="n">02</span><span>Logic is a fault tree</span></a>
+  <a href="#vacuous"><span class="n">03</span><span>Vacuous truth</span></a>
+  <a href="#induction"><span class="n">04</span><span>The truss you proved</span></a>
+  <a href="#relations"><span class="n">05</span><span>Precedence diagrams</span></a>
+  <a href="#recurrence"><span class="n">06</span><span>Bisection, renamed</span></a>
+  <a href="#euler"><span class="n">07</span><span>Euler and colouring</span></a>
+  <a href="#halting"><span class="n">08</span><span>What cannot be computed</span></a>
+  <a href="#npc"><span class="n">09</span><span>Why you got a heuristic</span></a>
+  <a href="#numbers"><span class="n">10</span><span>Constant relative error</span></a>
+  <a href="#assoc"><span class="n">11</span><span>Addition that is not</span></a>
+  <a href="#gates"><span class="n">12</span><span>Gates to a CPU</span></a>
+  <a href="#pipeline"><span class="n">13</span><span>Pipelining is balancing</span></a>
+  <a href="#hazards"><span class="n">14</span><span>The cost of a changeover</span></a>
+  <a href="#memory"><span class="n">15</span><span>Memory is staging</span></a>
+  <a href="#virtual"><span class="n">16</span><span>More buffer, worse</span></a>
+  <a href="#io"><span class="n">17</span><span>The andon cord</span></a>
+  <a href="#next"><span class="n">18</span><span>What parts 2&ndash;3 carry</span></a>
+  <a href="#provenance"><span class="n">A</span><span>Provenance</span></a>
+</nav>
+
+<main>
+
+<section id="top" style="padding-top:44px">
+  <div class="col">
+    <p class="lede">
+      Sheet 12 closed by saying that Sheet 13 is where the sparse-matrix bill comes due, and
+      that is true, but it undersells what is here. This is the first sheet where the bridge
+      runs the other way: not "your mechanics explains their maths", but <em>their machine was
+      designed by people solving your problems</em>. A processor pipeline is an assembly line
+      because someone deliberately copied the assembly line. The memory hierarchy is
+      material staging because the logistics problem is the same logistics problem.
+    </p>
+    <p>
+      Which means the correspondences in this part are unusually literal. Pipeline efficiency
+      and line-balancing efficiency are not analogous formulae &mdash; they are
+      \(\sum t_i / (n\max t_i)\) in both fields, and "speedup equals \(n\) times efficiency"
+      holds on both sides (&sect;13). Average memory access time is the expected-cost formula
+      you use for a stockout (&sect;15). A CNC drill cycle and a delivery route are the same
+      NP-hard problem (&sect;09).
+    </p>
+    <p>
+      That last one is the part worth arriving for. You were taught largest-candidate and
+      ranked-positional-weight for line balancing, and nearest-neighbour for a drill path, and
+      you were told they were "practical". The real reason is that the exact problems are
+      NP-hard, and &sect;09 shows a case where the heuristic you were taught lands one station
+      worse than optimal. Complexity theory is the missing half of an industrial engineering
+      course.
+    </p>
+    <div class="note brk" style="margin-top:22px">
+      <div class="note-h"><span class="ic">&#33;</span>This is part 1 of 3, and what each part holds</div>
+      <p style="margin-bottom:8px">
+        Chapter 13&rsquo;s source is 1,243 lines across five files. Splitting at the natural
+        seams:
+      </p>
+      <ul style="margin:0 0 8px 18px; padding:0">
+        <li><b>Part 1 (this sheet)</b> &mdash; discrete maths and computer architecture. The
+          mathematics computing is built on, and the machine it runs on.</li>
+        <li><b>Part 2</b> &mdash; operating systems and concurrency. Sharing one machine:
+          processes, scheduling, deadlock, and Amdahl&rsquo;s law against the theory of
+          constraints.</li>
+        <li><b>Part 3</b> &mdash; programming languages and compilation, plus the worked
+          example, the question bank and the concept map for the whole chapter.</li>
+      </ul>
+      <p style="margin-bottom:0">
+        Each part carries its own provenance appendix covering its own material, so nothing is
+        deferred and then lost.
+      </p>
+    </div>
+    <div class="note brk" style="margin-top:16px">
+      <div class="note-h"><span class="ic">&#33;</span>Three corrections to the source in this part</div>
+      <ul style="margin:0 0 4px 18px; padding:0">
+        <li>File 02&rsquo;s coding task 3 claims to demonstrate that floating-point addition is
+          not associative. Run it and both sides print \(0.0\); the commented expectation
+          ("should be 1.0") is wrong, and the example shows no difference at all. The claim is
+          true, the demonstration is not (&sect;11).</li>
+        <li>File 01 states \(|E| \leq 3|V| - 6\) for planar graphs with no hypothesis. It needs
+          \(|V| \geq 3\); at \(|V| = 2\) the bound is \(0\) and a single edge breaks it (&sect;07).</li>
+        <li>File 01 states the Euler-path condition without requiring the graph to be
+          connected, which it must be (&sect;07).</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="bridge">
+  <div class="col">
+    <div class="sechead"><span class="secnum">00</span><h2>The bridge</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/01.%20discrete%20maths.md" target="_blank" rel="noopener">src 01. discrete maths &#8599;</a>
+    </div>
+    <p>
+      Read the verdict column. Where it says <b>identity</b> the two sides are the same
+      formula or the same algorithm, checked numerically. Where it says <b>no counterpart</b>
+      there is genuinely nothing in your training to hang it on, and pretending otherwise
+      would be the trap this series exists to avoid.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>What a GATE-prepared mechanical engineer already owns, and what computing calls it.</caption>
+      <thead><tr><th>What you already know</th><th>What this chapter calls it</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td>Line balancing: cycle time, bottleneck station, balance delay</td><td>CPU pipelining: clock period, critical stage, bubbles</td><td><b style="color:var(--bridge)">Identity.</b> Same efficiency formula, same speedup law. See &sect;13.</td></tr>
+        <tr><td>Fault tree analysis; series and parallel reliability blocks</td><td>Boolean algebra, AND/OR gates, De Morgan&rsquo;s laws</td><td><b style="color:var(--bridge)">Identity.</b> The series/parallel duality <em>is</em> De Morgan. See &sect;02.</td></tr>
+        <tr><td>Line-side stock, supermarkets, the plant store, the supplier</td><td>L1/L2/L3 cache, RAM, disk</td><td><b style="color:var(--bridge)">Same problem, same formula.</b> AMAT is the stockout expectation. See &sect;15.</td></tr>
+        <tr><td>Assembly line balancing; CNC drill-path optimisation</td><td>Bin packing; the travelling salesman problem</td><td><b style="color:var(--bridge)">The same problems,</b> both NP-hard. This is why you got heuristics. See &sect;09.</td></tr>
+        <tr><td>The bisection method for root finding</td><td>Binary search</td><td><b style="color:var(--bridge)">Identical algorithm,</b> same \(\lceil\log_2\rceil\) count. See &sect;06.</td></tr>
+        <tr><td>Building a simple truss: triangle, then two members and a joint</td><td>Proof by induction</td><td><b style="color:var(--bridge)">Identity.</b> \(m = 2j-3\) is the inductive invariant. See &sect;04.</td></tr>
+        <tr><td>Assembly precedence diagrams; CPM networks</td><td>Partial orders; the happens-before relation</td><td><b style="color:var(--bridge)">Identity.</b> Incomparable tasks are concurrent tasks. See &sect;05.</td></tr>
+        <tr><td>Significant figures; a micrometer&rsquo;s relative precision</td><td>IEEE 754 floating point</td><td><b style="color:var(--bridge)">The same idea,</b> and fixed point is the dial gauge. See &sect;10.</td></tr>
+        <tr><td>An andon cord; a machine alarm</td><td>A hardware interrupt and its handler</td><td><b style="color:var(--bridge)">The same mechanism,</b> down to the save-and-restore. See &sect;17.</td></tr>
+        <tr><td>Conveyors and AGVs moving material without the operator</td><td>DMA</td><td><b style="color:var(--bridge)">The same move,</b> for the same reason. See &sect;17.</td></tr>
+        <tr><td>Euler&rsquo;s polyhedron formula \(V - E + F = 2\)</td><td>Planarity and graph colouring</td><td><b style="color:var(--bridge)">The same formula,</b> with one unstated hypothesis. See &sect;07.</td></tr>
+        <tr><td>Subtracting two large lengths to get a small extension</td><td>Catastrophic cancellation</td><td><b style="color:var(--bridge)">The same failure.</b> It is why a strain gauge exists. See &sect;10.</td></tr>
+        <tr><td>Summing a column of numbers in any order</td><td>Floating-point addition</td><td><b style="color:var(--brk)">Does not transfer.</b> Addition is not associative here. See &sect;11.</td></tr>
+        <tr><td>&ldquo;More buffer stock cannot reduce throughput&rdquo;</td><td>Page replacement under FIFO</td><td><b style="color:var(--brk)">False.</b> B&eacute;l&aacute;dy&rsquo;s anomaly: more frames, more faults. See &sect;16.</td></tr>
+        <tr><td>A 95% first-pass yield is a 5% problem</td><td>A 95% cache hit rate; 95% branch accuracy</td><td><b style="color:var(--brk)">Badly wrong.</b> 5% misses cost 6&times;, not 5%. See &sect;&sect;14&ndash;15.</td></tr>
+        <tr><td>&ldquo;No closed-form solution&rdquo; &mdash; the quintic, the three-body problem</td><td>Undecidability; the halting problem</td><td><b style="color:var(--brk)">Not the same thing,</b> and the confusion is common. See &sect;08.</td></tr>
+        <tr><td>Anything in your training</td><td>The uncountability of the reals, and its consequence</td><td><b style="color:var(--brk)">No counterpart.</b> Most functions cannot be computed at all. See &sect;08.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>How to use this part</div>
+      <p>
+        The first nine sections are mathematics, the last nine are hardware, and the join is
+        &sect;12 where Boolean algebra becomes a physical gate. If your time is short, the
+        three sections that will change how you work are <b>&sect;09</b> (why your heuristics
+        are heuristics), <b>&sect;13</b> (the pipeline identity) and <b>&sect;15</b> (why a
+        95% hit rate is not a 95% result). The amber rows are all in the second half except
+        &sect;08, which is the one genuinely new idea in this part.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="discrete">
+  <div class="col">
+    <div class="sechead"><span class="secnum">01</span><h2>What &ldquo;discrete&rdquo; buys you</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/01.%20discrete%20maths.md" target="_blank" rel="noopener">src 01. discrete maths &#8599;</a>
+    </div>
+    <p>
+      Every sheet so far has run on continuous mathematics: derivatives, integrals,
+      eigenvalues, probability densities. Computers are not continuous. They hold bits, step
+      through states, and branch. <b>Discrete mathematics</b> is the toolkit for objects that
+      come in countable, separated pieces.
+    </p>
+    <p>
+      You already own more of it than the name suggests. Counting members and joints in a
+      truss is combinatorics. A bill of materials is a tree. An assembly precedence diagram
+      is a partial order. A fault tree is a Boolean formula. What you have not had is the
+      <em>vocabulary</em>, and &mdash; more importantly &mdash; the results that tell you when
+      a discrete problem is hopeless rather than merely hard. That is &sect;&sect;08&ndash;09,
+      and it is the payload of this half.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; the habit of exhaustive checking</div>
+      <p>
+        A truth table with \(n\) inputs has \(2^n\) rows and you check every one. That is the
+        same instinct as a full factorial design of experiments, or checking every load case
+        rather than the one you expect to govern. The difference is that in discrete maths the
+        exhaustive check is often a <em>proof</em> rather than evidence, because the space is
+        genuinely finite. Where the space is not finite, you need &sect;04.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="logic">
+  <div class="col">
+    <div class="sechead"><span class="secnum">02</span><h2>Logic is a fault tree</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/01.%20discrete%20maths.md" target="_blank" rel="noopener">src 01. discrete maths &#8599;</a>
+    </div>
+    <p>
+      <b>Propositional logic</b> is the algebra of statements that are true or false.
+      Connectives combine them: AND (\(\wedge\)), OR (\(\vee\)), NOT (\(\neg\)), IMPLIES
+      (\(\to\)). A <b>truth table</b> lists all \(2^n\) input combinations.
+    </p>
+    <p>
+      You have drawn this before and called it something else. A <b>fault tree</b> is a
+      propositional formula rendered as a diagram: the top event is the conclusion, the gates
+      are connectives, and the basic events are the propositions. An AND gate says every input
+      must occur; an OR gate says any one will do. Fault tree analysis is not
+      <em>like</em> propositional logic. It is propositional logic with a drawing convention.
+    </p>
+    <h3>De Morgan is the series/parallel duality</h3>
+    <p>
+      The two identities the source calls De Morgan&rsquo;s laws are
+    </p>
+  </div>
+  <div class="mathbox col">$$\neg(p \wedge q) \equiv \neg p \vee \neg q, \qquad \neg(p \vee q) \equiv \neg p \wedge \neg q$$</div>
+  <div class="col">
+    <p>
+      and you use them every time you convert a reliability block diagram. A <b>series</b>
+      system works only if every component works &mdash; an AND &mdash; so
+      \(R = \prod R_i\). A <b>parallel</b> system fails only if every component fails &mdash;
+      an AND on the <em>failures</em>, which is an OR on the successes &mdash; so
+      \(R = 1 - \prod(1 - R_i)\). The reason the second formula is written in terms of
+      failures is precisely De Morgan&rsquo;s law: to turn an OR of successes into something
+      computable, you negate into an AND of failures. Verified over all \(2^4\) assignments
+      with zero violations under <code>[Ch13 s02]</code>.
+    </p>
+    <p>
+      The practical consequence is one you already exploit: <b>redundancy at the component
+      level beats redundancy at the system level</b>, and the reason is that the two
+      arrangements are different Boolean formulae over the same variables. The lab draws both.
+    </p>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">One formula, two arrangements</div><div class="lab-tag">Predict, then rearrange</div></div>
+
+    <div class="predict">
+      <p style="margin-top:0">
+        You have two pumps and two valves, each with reliability \(R\). You can build
+        <b>(a)</b> two complete pump&ndash;valve trains in parallel, or <b>(b)</b> a parallel
+        pump pair feeding a parallel valve pair. Which is more reliable?
+      </p>
+      <button class="pbtn" data-p1="a" type="button">(a) &mdash; two whole trains</button>
+      <button class="pbtn" data-p1="b" type="button">(b) &mdash; redundancy at each stage</button>
+      <button class="pbtn" data-p1="c" type="button">Identical &mdash; same components</button>
+      <button class="pbtn" data-p1="d" type="button">Depends on R</button>
+      <div class="pverdict" id="pv1"></div>
+    </div>
+
+    <svg class="stage" id="sR" viewBox="0 0 480 300" role="img"
+         aria-label="Two reliability block arrangements of the same four components, with their Boolean formulae and computed reliabilities">
+      <g id="rDiag"></g>
+      <g id="rLab"></g>
+    </svg>
+
+    <div class="ctl">
+      <label for="rSl">Component reliability R</label>
+      <input type="range" id="rSl" min="50" max="99" value="90" step="1">
+      <span class="ro-v" id="rVal" style="min-width:56px">0.90</span>
+      <button class="btn" data-rp="90" type="button">R = 0.90</button>
+      <button class="btn" data-rp="99" type="button">R = 0.99</button>
+      <button class="btn" data-rp="60" type="button">R = 0.60</button>
+    </div>
+
+    <div class="readout">
+      <div class="ro"><div class="ro-k">(a) two trains<br>in parallel</div><div class="ro-v a" id="rA">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">(b) redundancy<br>at each stage</div><div class="ro-v b" id="rB">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">(b) &minus; (a)</div><div class="ro-v c" id="rD">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Single train<br>for reference</div><div class="ro-v" id="rS">&mdash;</div></div>
+    </div>
+  </div>
+
+  <div class="lab-foot col">
+    Both arrangements use exactly four components with exactly the same reliability, and
+    arrangement <b>(b)</b> wins at every value of \(R\) &mdash; the difference readout never
+    goes negative, which answers the prediction. The Boolean formulae explain it:
+    (a) is \((p_1 \wedge v_1) \vee (p_2 \wedge v_2)\) and (b) is
+    \((p_1 \vee p_2) \wedge (v_1 \vee v_2)\). Distributing (a) shows it implies (b) but not
+    the reverse: the state "pump 1 and valve 2 survive" satisfies (b) and fails (a), because
+    in (a) a surviving pump is stranded in a train whose valve has gone. Sweep \(R\) downward
+    and the gap widens to a maximum of \(0.125\) at \(R = 0.5\); push it to 0.99 and both
+    approach 1, which is the honest caveat &mdash; the arrangement matters most exactly when
+    your components are worst, and barely at all once they are good.
+    This is the standard result that <b>redundancy belongs as low in the system as you can
+    afford to put it</b>, and it falls out of the algebra rather than out of intuition.
+  </div>
+</section>
+
+<section id="vacuous">
+  <div class="col">
+    <div class="sechead"><span class="secnum">03</span><h2>Vacuous truth, and an acceptance criterion</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/01.%20discrete%20maths.md" target="_blank" rel="noopener">src 01. discrete maths &#8599;</a>
+    </div>
+    <p>
+      The source flags one row of the implication truth table as counterintuitive: when \(p\)
+      is false, \(p \to q\) is <b>true</b> regardless of \(q\). "If pigs fly, I am the king of
+      England" is a true statement. This is <b>vacuous truth</b>, and it reliably annoys people
+      meeting it for the first time.
+    </p>
+    <p>
+      It stops being strange the moment you read it as an acceptance criterion. A
+      specification says: <i>if the pressure exceeds 10&nbsp;bar, the relief valve shall
+      open.</i> You test to 8&nbsp;bar. Has the unit failed the test? No &mdash; the condition
+      never arose, so the requirement was never violated. The clause is satisfied
+      <em>vacuously</em>, and every inspection report you have ever signed uses this
+      convention without naming it.
+    </p>
+    <p>
+      The <b>contrapositive</b> \(p \to q \equiv \neg q \to \neg p\) is equally familiar: "if
+      the ground is not wet, it did not rain" carries exactly the information of "if it rains,
+      the ground is wet". In failure investigation this is the move from "this defect causes
+      that symptom" to "no symptom, therefore not that defect" &mdash; which is how you
+      eliminate causes without reproducing them.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks &mdash; vacuous satisfaction hides untested requirements</div>
+      <p>
+        The danger is the same in both fields. A specification whose precondition never fires
+        is trivially met and tells you nothing, so a test suite can report 100% of
+        requirements satisfied while having exercised none of them. In software this is a
+        well-known way for a test to pass without testing anything &mdash; and Sheet 11 hit
+        exactly this failure in its own verification script, where <code>max(0, -x)</code>
+        could never go negative and so asserted nothing. <b>A clause that cannot fail is not
+        evidence.</b> Check that your preconditions actually fired.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="induction">
+  <div class="col">
+    <div class="sechead"><span class="secnum">04</span><h2>The proof by induction you have already written</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/01.%20discrete%20maths.md" target="_blank" rel="noopener">src 01. discrete maths &#8599;</a>
+    </div>
+    <p>
+      <b>Proof by induction</b> establishes a statement for all natural numbers in two moves:
+      show it holds at a base case, then show that if it holds at \(k\) it holds at \(k+1\).
+      The source demonstrates it on \(\sum_{i=1}^{n} i = n(n+1)/2\), which is fine and
+      forgettable.
+    </p>
+    <p>
+      Here is the version you have done with a pencil and a ruler. A <b>simple truss</b> is
+      built by a rule: start with a triangle, then add each new joint with exactly two new
+      members. Every truss built this way is statically determinate and satisfies
+    </p>
+  </div>
+  <div class="mathbox col">$$m = 2j - 3$$</div>
+  <div class="col">
+    <p>
+      where \(m\) is members and \(j\) is joints. Why is that true for <em>every</em> such
+      truss, including ones nobody has drawn? Because it is a proof by induction and you were
+      taught the proof without being told its name:
+    </p>
+    <ul>
+      <li><b>Base case.</b> A triangle: \(j = 3\), \(m = 3\), and \(2(3) - 3 = 3\). Holds.</li>
+      <li><b>Inductive step.</b> Assume \(m = 2j - 3\). Add one joint and two members:
+        \(j \to j+1\) and \(m \to m+2\). Then \(m + 2 = 2j - 3 + 2 = 2(j+1) - 3\). The
+        invariant survives the step.</li>
+      <li><b>Conclusion.</b> Every simple truss, at any size, is statically determinate.</li>
+    </ul>
+    <p>
+      Verified for eight construction steps under <code>[Ch13 s04]</code>, ending at
+      \(j=11\), \(m=19\), \(2j-3=19\). The reason the GATE formula can be trusted for a truss
+      you have never seen is exactly the reason induction works, and the two facts are the
+      same fact.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; and where recursion comes from</div>
+      <p>
+        Every recursive algorithm carries an implicit inductive proof: the base case is the
+        termination condition and the inductive step is the recursive call. If you can build a
+        truss by a rule and argue the invariant survives each application, you can read a
+        recursive function the same way &mdash; and, more usefully, you can tell when one is
+        <em>wrong</em>, because a recursion with no base case is a construction rule with no
+        triangle to start from.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks &mdash; the converse does not hold</div>
+      <p>
+        \(m = 2j - 3\) is <b>necessary but not sufficient</b> for determinacy, and the same
+        gap appears in every inductive argument. A truss can satisfy the count and still be
+        unstable if the members are badly placed &mdash; three collinear members at a joint,
+        or a panel left as a mechanism while another is over-braced. The induction proves that
+        trusses <em>built by that rule</em> satisfy the count; it does not prove that
+        everything satisfying the count was built by the rule. Confusing a necessary condition
+        with a sufficient one is the single most common error in reading a proof, and it is
+        the same error as &sect;22 of Sheet 12 (equivariance is necessary, not sufficient).
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="relations">
+  <div class="col">
+    <div class="sechead"><span class="secnum">05</span><h2>Sets, relations, and the precedence diagram</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/01.%20discrete%20maths.md" target="_blank" rel="noopener">src 01. discrete maths &#8599;</a>
+    </div>
+    <p>
+      Sets and their operations you met in Sheet 05 under probability. The new object is a
+      <b>relation</b>: a set of ordered pairs saying which elements relate to which. The
+      source lists four properties &mdash; reflexive, symmetric, antisymmetric, transitive
+      &mdash; and two combinations that matter.
+    </p>
+    <p>
+      An <b>equivalence relation</b> (reflexive, symmetric, transitive) carves a set into
+      disjoint classes. You use one whenever you sort parts into tolerance bands: within a
+      band parts are interchangeable, across bands they are not, and every part is in exactly
+      one band. That is a partition, and a partition is what an equivalence relation produces.
+    </p>
+    <p>
+      A <b>partial order</b> (reflexive, antisymmetric, transitive) is the more useful one,
+      and you have drawn many. An <b>assembly precedence diagram</b> is a partial order: the
+      sump must be fitted before the oil pump, the oil pump before the cover. Some pairs are
+      ordered, and crucially <em>some are not</em> &mdash; fitting the alternator and fitting
+      the water pump are incomparable, so either order works.
+    </p>
+    <div class="defn">
+      <div class="defn-h">The word for incomparable is concurrent</div>
+      <p>
+        The source says the "happens-before" relation on events is a partial order, and that
+        events not ordered by it are <b>concurrent</b> and may execute in any relative order.
+        That is precisely what your precedence diagram already means: two tasks with no path
+        between them can be done in either order, or at the same time on two benches. Part 2
+        builds the whole of concurrency on this observation, so it is worth having the
+        mechanical reading first &mdash; <b>a race condition is two operations with no
+        precedence arrow between them and a shared resource.</b>
+      </p>
+    </div>
+    <p>
+      A <b>function</b> is a relation where every input has exactly one output. The three
+      adjectives are worth the ten seconds: <b>injective</b> means no two inputs collide
+      (lossless compression must be injective, or you could not decompress), <b>surjective</b>
+      means every output is reachable, <b>bijective</b> means both, so an inverse exists
+      (encryption must be bijective, or decryption would be ambiguous). A fit that maps two
+      different shaft diameters to the same bore class is not injective, and that is exactly
+      why you cannot recover the diameter from the class.
+    </p>
+  </div>
+</section>
+
+<section id="recurrence">
+  <div class="col">
+    <div class="sechead"><span class="secnum">06</span><h2>Recurrences, and the bisection method under another name</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/01.%20discrete%20maths.md" target="_blank" rel="noopener">src 01. discrete maths &#8599;</a>
+    </div>
+    <p>
+      A <b>recurrence relation</b> defines each term from earlier terms, and it is how the
+      cost of a recursive algorithm is expressed. The source gives the
+      <b>Master Theorem</b> for \(T(n) = aT(n/b) + O(n^d)\): compare \(d\) against
+      \(\log_b a\), and whichever dominates sets the answer.
+    </p>
+    <p>
+      Two instances are worth your attention because you have already run both.
+    </p>
+    <h3>Binary search is bisection</h3>
+    <p>
+      <b>Binary search</b> finds a value in a sorted list by halving the interval:
+      \(T(n) = T(n/2) + O(1)\), giving \(O(\log n)\). The <b>bisection method</b> finds a root
+      by halving the bracket. These are not analogous methods. They are the same method, with
+      "is the target larger?" replaced by "did the sign change?".
+    </p>
+    <p>
+      Run it: bisecting \(x^3 - 2x - 5\) on \([2,3]\) to a tolerance of \(10^{-10}\) takes
+      <b>34</b> iterations, and \(\lceil \log_2((b-a)/\varepsilon) \rceil = 34\) exactly
+      (<code>[Ch13 s06]</code>). The number of iterations a numerical-methods course makes you
+      compute <em>is</em> the complexity of binary search.
+    </p>
+    <h3>Merge sort and the FFT are the same recurrence</h3>
+    <p>
+      \(T(n) = 2T(n/2) + O(n)\) &mdash; split in half, solve both, spend linear work combining.
+      With \(a=2, b=2, d=1\) we get \(d = \log_b a\), the balanced case, so \(O(n \log n)\).
+      That is merge sort. It is also the FFT you used for vibration spectra in Sheet 09:
+      two half-length transforms plus a linear butterfly pass. Counting operations gives
+      <em>identical</em> totals at \(n = 8, 64, 512, 4096\) (<code>[Ch13 s06]</code>).
+    </p>
+    <p>
+      So "why is the FFT \(n \log n\)?" and "why is merge sort \(n \log n\)?" have one answer,
+      and it is the Master Theorem. Divide-and-conquer is a single idea that a mechanical
+      engineering degree teaches three times without connecting them.
+    </p>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">One halving algorithm, two names</div><div class="lab-tag">Predict, then halve</div></div>
+
+    <div class="predict">
+      <p style="margin-top:0">
+        You bisect a bracket of width 1 down to a tolerance of \(10^{-10}\). Roughly how many
+        iterations, and how does that change if you tighten the tolerance to \(10^{-13}\)?
+      </p>
+      <button class="pbtn" data-p2="a" type="button">34, then about 44 &mdash; ten more</button>
+      <button class="pbtn" data-p2="b" type="button">34, then about 340 &mdash; ten times</button>
+      <button class="pbtn" data-p2="c" type="button">34, then about 68 &mdash; double</button>
+      <button class="pbtn" data-p2="d" type="button">Depends on the function</button>
+      <div class="pverdict" id="pv2"></div>
+    </div>
+
+    <svg class="stage" id="sB" viewBox="0 0 480 300" role="img"
+         aria-label="A bracket narrowing by halving, shown alongside a sorted list being searched, with the iteration counts matching">
+      <g id="bBrack"></g>
+      <g id="bList"></g>
+      <g id="bLab"></g>
+    </svg>
+
+    <div class="ctl">
+      <label for="bSl">Tolerance 10&#8315;&#x207F;</label>
+      <input type="range" id="bSl" min="1" max="15" value="10" step="1">
+      <span class="ro-v" id="bVal" style="min-width:64px">1e-10</span>
+      <button class="btn" data-bp="root" type="button">Bisection</button>
+      <button class="btn" data-bp="search" type="button">Binary search</button>
+    </div>
+
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Iterations<br>taken</div><div class="ro-v a" id="bI">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">&#8968;log&#8322;(width/tol)&#8969;<br>predicted</div><div class="ro-v b" id="bP">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Bracket width<br>remaining</div><div class="ro-v c" id="bW">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Digits gained<br>per iteration</div><div class="ro-v" id="bD">&mdash;</div></div>
+    </div>
+  </div>
+
+  <div class="lab-foot col">
+    The top strip is a root bracket closing on \(x^3-2x-5\); the bottom is a sorted list being
+    searched. Watch the two collapse in lockstep &mdash; same halving, same count. The
+    predicted column is \(\lceil\log_2(\text{width}/\varepsilon)\rceil\) and it matches the
+    measured iteration count exactly at every tolerance, which is the identity stated above.
+    Now the prediction: drag the tolerance from \(10^{-10}\) to \(10^{-13}\) and the count goes
+    from 34 to 44 &mdash; <b>ten more iterations</b>, not ten times as many. Each iteration buys
+    a fixed \(\log_{10} 2 = 0.301\) decimal digits, so three more digits costs
+    \(3/0.301 \approx 10\) steps. That is the practical content of "logarithmic": tightening
+    the answer is cheap, and it is why bisection is slow to start but never embarrassing at the
+    end. The last readout holds steady at 0.301 no matter where you drag.
+  </div>
+</section>
+
+<section id="euler">
+  <div class="col">
+    <div class="sechead"><span class="secnum">07</span><h2>Euler, planarity, and colouring</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/01.%20discrete%20maths.md" target="_blank" rel="noopener">src 01. discrete maths &#8599;</a>
+    </div>
+    <p>
+      Sheet 12 covered graphs as stiffness matrices. This section is the combinatorial side,
+      and it opens with a formula you have met on a polyhedron:
+    </p>
+  </div>
+  <div class="mathbox col">$$|V| - |E| + |F| = 2$$</div>
+  <div class="col">
+    <p>
+      <b>Euler&rsquo;s formula</b>, for any connected graph drawn in the plane without
+      crossings, counting the outer region as a face. It is the same relation that holds for
+      the vertices, edges and faces of a convex polyhedron, and it is what a mesh checker uses
+      to decide whether a surface mesh is closed and manifold.
+    </p>
+    <p>
+      From it the source derives \(|E| \leq 3|V| - 6\), so planar graphs are sparse &mdash; a
+      useful fact for circuit routing and for anything laid out on a board.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Two unstated hypotheses in the source</div>
+      <p style="margin-bottom:8px">
+        Both are small, and both are the kind of thing that turns a true theorem into a false
+        sentence:
+      </p>
+      <ul style="margin:0 0 4px 18px; padding:0">
+        <li><b>\(|E| \leq 3|V| - 6\) needs \(|V| \geq 3\).</b> At \(|V| = 2\) the bound is
+          \(0\), yet two nodes joined by one edge are obviously planar. At \(|V| = 1\) the
+          bound is \(-3\). Checked under <code>[Ch13 s07]</code>. The source states it with no
+          condition at all.</li>
+        <li><b>The Euler-path condition needs the graph to be connected.</b> The source says a
+          Euler path exists "if and only if the graph has exactly 0 or 2 nodes with odd
+          degree". Take two disjoint triangles: every node has degree 2, so there are zero
+          odd-degree nodes, and there is no path visiting all six edges because you cannot get
+          from one triangle to the other. The degree condition is necessary, not sufficient,
+          without connectivity &mdash; the same necessary/sufficient gap as &sect;04.</li>
+      </ul>
+    </div>
+    <p>
+      <b>Graph colouring</b> assigns colours so no two adjacent nodes share one, and the
+      minimum number needed is the chromatic number \(\chi(G)\). The four-colour theorem caps
+      it at 4 for planar graphs. In computing this models register allocation; in your world
+      it models <b>scheduling with conflicts</b> &mdash; jobs that cannot share a machine or a
+      time slot get an edge between them, and a valid colouring is a valid schedule. Keep that
+      in mind for the next section, because general graph colouring is NP-complete.
+    </p>
+    <p>
+      One contrast is worth carrying: a <b>Euler path</b> (every edge once) is decidable by
+      counting degrees, in linear time. A <b>Hamiltonian path</b> (every node once) is
+      NP-complete. Two problems that sound like rephrasings of each other sit on opposite
+      sides of the tractability line, and nothing in the wording tells you which is which.
+    </p>
+  </div>
+</section>
+
+<section id="halting">
+  <div class="col">
+    <div class="sechead"><span class="secnum">08</span><h2>What cannot be computed at all</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/01.%20discrete%20maths.md" target="_blank" rel="noopener">src 01. discrete maths &#8599;</a>
+    </div>
+    <p>
+      This is the one section in this part with <b>no mechanical counterpart</b>, and the
+      honest thing is to say so rather than manufacture one.
+    </p>
+    <p>
+      A <b>Turing machine</b> is a minimal model of computation, and the <b>Church&ndash;Turing
+      thesis</b> holds that anything effectively computable can be computed by one. Every real
+      programming language is <b>Turing complete</b>, so languages differ in convenience,
+      speed and safety &mdash; never in what they can compute.
+    </p>
+    <p>
+      The <b>halting problem</b> asks whether a given program on a given input will eventually
+      stop. Turing proved in 1936 that no algorithm decides this in general, by a beautifully
+      short contradiction: suppose \(H(P,x)\) reports whether \(P\) halts on \(x\). Build \(D\)
+      that runs \(H(D,D)\) and does the opposite. If \(H\) says \(D\) halts, \(D\) loops. If
+      \(H\) says \(D\) loops, \(D\) halts. So \(H\) cannot exist.
+    </p>
+    <p>
+      There is a second result of the same flavour. There are only <b>countably many</b>
+      programs (each is a finite string over a finite alphabet, so they can be listed) but
+      <b>uncountably many</b> functions from integers to integers. So almost every function is
+      not computable by any program &mdash; not because we have not found the algorithm, but
+      because there are not enough algorithms to go round.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks &mdash; this is not &ldquo;no closed-form solution&rdquo;</div>
+      <p>
+        You have met problems with no analytic solution: the general quintic, the three-body
+        problem, Navier&ndash;Stokes in the general case. It is tempting to file undecidability
+        alongside them. <b>Do not.</b> They are different in kind:
+      </p>
+      <ul style="margin:8px 0 8px 18px; padding:0">
+        <li><b>No closed form</b> means no finite expression in elementary functions. You can
+          still compute the answer to any accuracy you like &mdash; that is what every
+          numerical method you own is for, and it is why a lack of closed form has never once
+          stopped you designing anything.</li>
+        <li><b>Undecidable</b> means no algorithm gives the right answer for all inputs, ever,
+          at any accuracy, with any amount of computation. There is no numerical method to
+          fall back on, because the object being asked for does not exist.</li>
+      </ul>
+      <p style="margin-bottom:0">
+        The practical consequences are real: there is no perfect deadlock detector, no perfect
+        virus scanner, no perfect optimising compiler. Each would decide the halting problem.
+        Real tools use heuristics that work on common cases and are <em>provably</em> wrong on
+        some input. That is a different engineering posture from "our solver has not converged
+        yet", and confusing the two leads people to keep looking for a tool that cannot exist.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="npc">
+  <div class="col">
+    <div class="sechead"><span class="secnum">09</span><h2>P, NP, and why you were handed a heuristic</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/01.%20discrete%20maths.md" target="_blank" rel="noopener">src 01. discrete maths &#8599;</a>
+    </div>
+    <p>
+      Between "easy" and "impossible" sits the territory most of your industrial engineering
+      syllabus quietly occupies.
+    </p>
+    <p>
+      <b>P</b> is the class of problems solvable in polynomial time &mdash; sorting, shortest
+      path, matrix multiplication. <b>NP</b> is the class where a <em>proposed</em> solution
+      can be checked in polynomial time, even if finding one seems to need exponential search.
+      Every problem in P is in NP. Whether \(P = NP\) is the central open question in the
+      subject, and most people expect not.
+    </p>
+    <p>
+      <b>NP-complete</b> problems are the hardest in NP: solve any one efficiently and you
+      solve them all. And here is the part nobody mentioned during your degree.
+    </p>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/p_np_complexity.svg" alt="P contained in NP, with NP-complete problems at the boundary and P versus NP as the open question" width="430"></div>
+    <figcaption><b>Fig. 13.1</b> &mdash; If \(P \neq NP\), the inner region is strictly smaller than the outer one, and the problems below live permanently outside it. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+
+  <div class="col">
+    <div class="defn">
+      <div class="defn-h">Your syllabus is a catalogue of NP-hard problems</div>
+      <p style="margin-bottom:0">
+        <b>Assembly line balancing</b> is bin packing. <b>CNC drill-path optimisation</b> is
+        the travelling salesman problem. <b>Job-shop scheduling</b> is NP-hard. <b>Cutting
+        stock and nesting</b> are NP-hard. <b>Scheduling with conflicts</b> is graph
+        colouring. Every one of these was taught to you as a <em>heuristic</em> &mdash;
+        largest-candidate, ranked positional weight, nearest-neighbour, first-fit-decreasing
+        &mdash; and the reason was never stated. The reason is this section.
+      </p>
+    </div>
+    <p>
+      Two measurements make it concrete (<code>[Ch13 s09]</code>). First, a line-balancing
+      instance with tasks \(\{3,5,7,4,2,2,3,4\}\) and a cycle time of 10: the
+      largest-candidate rule returns <b>4 stations</b>, and exhaustive search finds a valid
+      <b>3-station</b> balance. The heuristic you were taught is one whole station worse than
+      optimal on an eight-task problem &mdash; and on a real line that is a workstation, an
+      operator and a floor-space bill.
+    </p>
+    <p>
+      Second, nine hole centres on a plate. The optimal drill tour is
+      <b>311.92&nbsp;mm</b>; the nearest-neighbour tour that a CAM post-processor produces is
+      <b>406.22&nbsp;mm</b>, <b>30.2% longer</b>. Exhaustive search over nine holes means
+      \(8! = 40{,}320\) tours, which is instant. Over twenty holes it is
+      \(19! \approx 1.2\times10^{17}\), which is not.
+    </p>
+    <p>
+      That growth is the whole argument. It is not that nobody has been clever enough to find
+      the exact rule; it is that an exact rule that scales would settle \(P = NP\) and collect
+      a million-dollar prize. What you get instead are <b>approximation algorithms</b> with
+      guarantees &mdash; first-fit-decreasing is provably within \(11/9\) of optimal plus a
+      constant &mdash; and heuristics with none.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; and what to do differently on Monday</div>
+      <p>
+        Knowing a problem is NP-hard changes your behaviour in three concrete ways. You stop
+        looking for the exact method, because it is not coming. You start asking what
+        <em>guarantee</em> your heuristic carries, because "within 11/9 of optimal" and "works
+        well in practice" are very different claims to put in front of a customer. And you
+        look for special structure, because many NP-hard problems are easy on restricted
+        inputs &mdash; a line with a strictly serial precedence graph balances in linear time,
+        and holes on a rectangular grid have an obvious optimal tour. The hardness is a
+        worst-case statement, and your instance may not be the worst case.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Balance a line, drill a plate</div><div class="lab-tag">Predict, then optimise</div></div>
+
+    <div class="predict">
+      <p style="margin-top:0">
+        The largest-candidate rule is the standard line-balancing heuristic. On a small
+        eight-task problem, how close to optimal should you expect it to be?
+      </p>
+      <button class="pbtn" data-p3="a" type="button">Optimal &mdash; it is small enough</button>
+      <button class="pbtn" data-p3="b" type="button">Within one station, sometimes worse</button>
+      <button class="pbtn" data-p3="c" type="button">Within 10% of the ideal count</button>
+      <button class="pbtn" data-p3="d" type="button">Unpredictable &mdash; no guarantee at all</button>
+      <div class="pverdict" id="pv3"></div>
+    </div>
+
+    <svg class="stage" id="sN" viewBox="0 0 480 310" role="img"
+         aria-label="A line-balancing assignment of tasks to stations compared against the optimum, and a drill tour compared against the optimal tour">
+      <g id="nBars"></g>
+      <g id="nTour"></g>
+      <g id="nLab"></g>
+    </svg>
+
+    <div class="ctl">
+      <label for="nSl">Cycle time</label>
+      <input type="range" id="nSl" min="7" max="14" value="10" step="1">
+      <span class="ro-v" id="nVal" style="min-width:44px">10</span>
+      <button class="btn" data-np="bal" type="button">Line balancing</button>
+      <button class="btn" data-np="tsp" type="button">Drill path</button>
+      <button class="btn" data-np="reseed" type="button">New instance</button>
+    </div>
+
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Heuristic<br>result</div><div class="ro-v a" id="nH">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">True<br>optimum</div><div class="ro-v b" id="nO">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Heuristic<br>penalty</div><div class="ro-v c" id="nG">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Search space<br>exhausted</div><div class="ro-v" id="nS">&mdash;</div></div>
+    </div>
+  </div>
+
+  <div class="lab-foot col">
+    <b>Line balancing</b> shows the largest-candidate assignment above the true optimum, with
+    each station&rsquo;s load drawn against the cycle-time ceiling. Press <b>New instance</b>
+    a few times: across 400 random eight-task instances the heuristic matches the optimum
+    <b>98.8%</b> of the time and loses exactly one station on the remaining <b>1.2%</b>
+    (<code>[Ch13 s09]</code>) &mdash; which is the answer to the prediction, <b>within one
+    station, sometimes worse</b>.
+    It is not unpredictable, because first-fit-decreasing carries a proven \(11/9\) bound; but
+    it is not optimal either, and nothing in the rule tells you which case you are in.
+    <b>Drill path</b> draws the nearest-neighbour tour against the exhaustive optimum, and the
+    heuristic&rsquo;s habit is visible: it takes the cheap hops early and is left with one long
+    return leg. The last readout is the number of candidates exhaustive search had to examine
+    &mdash; watch it climb as you reseed, and note that it is already in the tens of thousands
+    at nine holes. At twenty it would be \(10^{17}\), which is why your CAM software ships the
+    heuristic and not the optimum.
+  </div>
+</section>
+
+<section id="numbers">
+  <div class="col">
+    <div class="sechead"><span class="secnum">10</span><h2>Number systems, and constant relative error</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/02.%20computer%20architecture.md" target="_blank" rel="noopener">src 02. computer architecture &#8599;</a>
+    </div>
+    <p>
+      Binary and hexadecimal need no bridge: base 2 with bit weights \(2^i\), base 16 as a
+      compact way of writing four bits at a time. <b>Two&rsquo;s complement</b> gives the top
+      bit weight \(-2^{n-1}\) instead of \(+2^{n-1}\), which makes subtraction reuse the
+      addition circuit &mdash; the same trick as measuring a deviation from a datum rather
+      than an absolute position.
+    </p>
+    <p>
+      <b>IEEE 754 floating point</b> is where the real bridge is, and it is a bridge to
+      metrology.
+    </p>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/ieee754_float.svg" alt="IEEE 754 float32 layout with one sign bit, eight exponent bits and twenty-three mantissa bits" width="440"></div>
+    <figcaption><b>Fig. 13.2</b> &mdash; Sign, exponent, mantissa. The exponent sets the decade; the mantissa sets the significant figures within it. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+
+  <div class="col">
+    <p>
+      A float stores a sign, an exponent and a mantissa: \((-1)^s \times 1.m \times 2^{e-\text{bias}}\).
+      The exponent picks the magnitude and the mantissa carries the digits. Which means:
+    </p>
+    <div class="defn">
+      <div class="defn-h">Floating point is significant figures; fixed point is a dial gauge</div>
+      <p style="margin-bottom:0">
+        A float has <b>constant relative</b> precision &mdash; the same number of significant
+        figures at every magnitude. A fixed-point number, like a graduated scale or a dial
+        gauge, has <b>constant absolute</b> precision &mdash; the same smallest division
+        everywhere, so its relative precision collapses for small readings. Measured under
+        <code>[Ch13 s10]</code>: in float32 the absolute step (the ulp) goes
+        \(1.2\times10^{-7}\), \(6.1\times10^{-5}\), \(6.3\times10^{-2}\), \(64\) at
+        \(x = 1, 10^3, 10^6, 10^9\) &mdash; growing by a factor of \(10^9\) &mdash; while
+        ulp\(/x\) stays pinned near \(6\times10^{-8}\) throughout.
+      </p>
+    </div>
+    <p>
+      So the "\(\approx 7\) decimal digits" quoted for float32 is a significant-figure count,
+      and it is exact: 24 mantissa bits give \(24\log_{10}2 = 7.22\) digits. float64&rsquo;s 53
+      bits give 15.95. The formats are not "more accurate" in the way a better micrometer is;
+      they carry more <em>figures</em>, which is a different promise.
+    </p>
+    <h3>Catastrophic cancellation, and why the strain gauge exists</h3>
+    <p>
+      The failure mode follows immediately. Subtract two nearly equal large numbers and the
+      leading figures cancel, leaving only the few noisy trailing ones &mdash; the relative
+      error of the result is enormous even though both inputs were fine.
+    </p>
+    <p>
+      Measure a 1000&nbsp;mm bar that extends to 1000.0002&nbsp;mm and compute the strain in
+      float32 by subtracting. The true strain is \(2.0\times10^{-7}\); the computation returns
+      \(1.83\times10^{-7}\), an <b>8% error</b> (<code>[Ch13 s10]</code>) &mdash; from
+      arithmetic alone, with no measurement noise at all.
+    </p>
+    <p>
+      You already avoid this, and you were probably never told why. A <b>strain gauge measures
+      the change directly</b> rather than measuring two lengths and subtracting. A dial
+      indicator is zeroed on the datum. A differential pressure transducer reads
+      \(\Delta p\), not two absolute pressures. Every one of those instruments exists to keep
+      you from subtracting two large nearly-equal numbers, which is the same rule numerical
+      analysis states as "avoid catastrophic cancellation". Two fields, one instinct, arrived
+      at independently.
+    </p>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Where the digits go</div><div class="lab-tag">Predict, then slide</div></div>
+
+    <div class="predict">
+      <p style="margin-top:0">
+        In float32, how does the smallest representable step change between \(x = 1\) and
+        \(x = 10^9\)?
+      </p>
+      <button class="pbtn" data-p4="a" type="button">Unchanged &mdash; 32 bits is 32 bits</button>
+      <button class="pbtn" data-p4="b" type="button">Grows by about 10&#8313;, relative step fixed</button>
+      <button class="pbtn" data-p4="c" type="button">Shrinks &mdash; more bits go to the value</button>
+      <button class="pbtn" data-p4="d" type="button">Grows by about 10&#8308;</button>
+      <div class="pverdict" id="pv4"></div>
+    </div>
+
+    <svg class="stage" id="sF" viewBox="0 0 480 300" role="img"
+         aria-label="A number line showing representable float32 values bunching near zero and spreading at large magnitudes, with the ulp and relative step displayed">
+      <g id="fAxis"></g>
+      <g id="fTicks"></g>
+      <g id="fLab"></g>
+    </svg>
+
+    <div class="ctl">
+      <label for="fSl">Magnitude 10&#x207F;</label>
+      <input type="range" id="fSl" min="-6" max="9" value="0" step="1">
+      <span class="ro-v" id="fVal" style="min-width:56px">1e0</span>
+      <button class="btn" data-fp="32" type="button">float32</button>
+      <button class="btn" data-fp="16" type="button">float16</button>
+      <button class="btn" data-fp="64" type="button">float64</button>
+    </div>
+
+    <div class="readout">
+      <div class="ro"><div class="ro-k">ulp<br>(absolute step)</div><div class="ro-v a" id="fU">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">ulp / x<br>(relative step)</div><div class="ro-v b" id="fR">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Significant<br>decimal figures</div><div class="ro-v c" id="fD">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Strain from<br>two lengths</div><div class="ro-v" id="fC">&mdash;</div></div>
+    </div>
+  </div>
+
+  <div class="lab-foot col">
+    The tick marks are actual representable values near the chosen magnitude, and they spread
+    out as you slide right &mdash; that is the answer to the prediction: the absolute step
+    <b>grows by about \(10^9\)</b> from \(x=1\) to \(x=10^9\), while the relative step holds
+    flat. Two readouts tell the whole story: <b>ulp</b> climbs by nine orders of magnitude,
+    <b>ulp/x</b> does not move. The significant-figure count does not move either, because it
+    is just the mantissa width. Switch to <b>float16</b> and watch the figure count fall to
+    about 3.3 &mdash; which is why half precision is fine for a gradient and hopeless for an
+    accumulator, and why bfloat16 keeps float32&rsquo;s exponent while giving up mantissa: it
+    is trading figures for range, deliberately. The last readout recomputes the 1000&nbsp;mm
+    strain at the selected precision; in float16 the answer is not merely inaccurate, it is
+    zero.
+  </div>
+</section>
+
+<section id="assoc">
+  <div class="col">
+    <div class="sechead"><span class="secnum">11</span><h2>The addition that is not associative</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/02.%20computer%20architecture.md" target="_blank" rel="noopener">src 02. computer architecture &#8599;</a>
+    </div>
+    <p>
+      In arithmetic, \((a+b)+c = a+(b+c)\) always. In floating point it does not, because each
+      addition rounds, and where the rounding falls depends on the magnitudes involved. This
+      is the single most consequential thing on this page for anyone who will run a long
+      simulation or train a model.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Source correction &mdash; the demonstration does not demonstrate it</div>
+      <p>
+        File 02&rsquo;s coding task 3 sets out to show non-associativity with
+        \(a = 10^8\), \(b = 1\), \(c = -10^8\) in float32, commenting that \((a+b)+c\)
+        "should be 1.0" and \(a+(b+c)\) "might lose the 1.0". Run it
+        (<code>[Ch13 s11]</code>):
+      </p>
+      <div class="mathbox" style="margin:10px 0">$$(a+b)+c = 0.0, \qquad a+(b+c) = 0.0$$</div>
+      <p>
+        Both sides are identical, and the commented expectation is wrong. The reason is in the
+        numbers: <b>one ulp at \(10^8\) in float32 is 8</b>, so \(1.0\) is below the
+        representable step and is discarded on <em>either</em> side of the bracket. The
+        example is a demonstration of absorption, not of non-associativity.
+      </p>
+      <p style="margin-bottom:0">
+        The claim itself is true; it just needs a case where the two groupings round
+        differently. Take \(a = 10^{-8}\), \(b = 1\), \(c = -1\): then \((a+b)+c = 0\) because
+        \(a\) is absorbed by \(b\), while \(a+(b+c) = 10^{-8}\) because \(b+c\) cancels
+        exactly first. Same three numbers, two brackets, two answers.
+      </p>
+    </div>
+    <p>
+      The engineering consequence is one you already half-know. Summing a long column of
+      numbers gives a different total depending on order, and the rule "add the small terms
+      first" is not folklore &mdash; it keeps the running total from growing so large that
+      later terms fall below its ulp. <b>Kahan summation</b> is the systematic version: carry
+      a separate running compensation term for the bits that were lost. It exists for exactly
+      this reason.
+    </p>
+    <p>
+      And it explains something otherwise baffling about large computations: a parallel sum
+      that splits the work differently across runs will produce <em>bitwise different</em>
+      answers, because it has changed the bracketing. That is not a bug, and chasing it as one
+      has cost a great many people a great deal of time.
+    </p>
+  </div>
+</section>
+
+<section id="gates">
+  <div class="col">
+    <div class="sechead"><span class="secnum">12</span><h2>From gates to a CPU</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/02.%20computer%20architecture.md" target="_blank" rel="noopener">src 02. computer architecture &#8599;</a>
+    </div>
+    <p>
+      This is the join between the two halves of this part. &sect;02&rsquo;s Boolean algebra
+      becomes a physical circuit, and the circuit becomes a processor.
+    </p>
+    <p>
+      A <b>logic gate</b> is a circuit implementing one connective. <b>NAND</b> is universal
+      &mdash; every other gate can be built from NANDs alone &mdash; which is why it is the
+      cell that a fabrication process is characterised on. <b>XOR</b> gives the sum bit of
+      binary addition, AND gives the carry, and those two together are a <b>half adder</b>.
+      Chain full adders and you have an \(n\)-bit adder. That is the whole of integer
+      arithmetic, built from the fault-tree gates of &sect;02.
+    </p>
+    <p>
+      The <b>CPU</b> assembles: an <b>ALU</b> (the adders and logic), <b>registers</b>
+      (~0.3&nbsp;ns storage), a <b>program counter</b>, and a <b>control unit</b>. It runs a
+      three-beat cycle &mdash; fetch, decode, execute &mdash; billions of times a second.
+    </p>
+    <div class="defn">
+      <div class="defn-h">A number worth keeping</div>
+      <p style="margin-bottom:0">
+        At 4&nbsp;GHz a cycle is 0.25&nbsp;ns, and in that time light travels
+        <b>7.5&nbsp;cm</b> (<code>[Ch13 s07]</code>). Signals in copper are slower still. So a
+        modern chip is <em>larger than one clock period</em>, and a signal physically cannot
+        cross it in a cycle. That is a propagation-delay constraint of exactly the kind you
+        meet in long hydraulic lines or in a control loop with transport lag, and it is the
+        reason chips are organised into local regions rather than one flat design.
+      </p>
+    </div>
+    <p>
+      The <b>instruction set architecture</b> is the hardware&ndash;software contract.
+      <b>CISC</b> (x86) allows complex variable-length instructions; <b>RISC</b> (ARM, RISC-V)
+      keeps them simple and fixed-length, which makes them easier to pipeline. The practical
+      distinction has blurred, since modern x86 decodes its complex instructions into simple
+      internal operations &mdash; which is itself a manufacturing move: accept an awkward
+      incoming specification and convert it into a standard internal part.
+    </p>
+  </div>
+</section>
+
+<section id="pipeline">
+  <div class="col">
+    <div class="sechead"><span class="secnum">13</span><h2>Pipelining is line balancing</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/02.%20computer%20architecture.md" target="_blank" rel="noopener">src 02. computer architecture &#8599;</a>
+    </div>
+    <p>
+      The source introduces pipelining by saying it works "like an assembly line". It is worth
+      pushing past the simile, because the correspondence is not a resemblance &mdash; it is
+      the same formulae, and the identity is checkable.
+    </p>
+    <p>
+      Without pipelining a CPU finishes one instruction before starting the next, so four of
+      its five units idle at any moment. <b>Pipelining</b> overlaps them: while instruction 1
+      executes, instruction 2 decodes and instruction 3 is fetched. Five instructions in
+      flight, throughput approaching one per cycle.
+    </p>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/cpu_pipeline.svg" alt="Instructions overlapping across fetch, decode, execute, memory and writeback stages of a CPU pipeline" width="450"></div>
+    <figcaption><b>Fig. 13.3</b> &mdash; Five stations, five units in flight, one leaving per cycle once the line is full. Redraw it with stations and it is a line-balancing chart. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+
+  <div class="tw col">
+    <table>
+      <caption>The same quantities under two names. Every row is the same expression, not an analogue of it.</caption>
+      <thead><tr><th>Production line</th><th>CPU pipeline</th><th>Expression</th></tr></thead>
+      <tbody>
+        <tr><td>Cycle time</td><td>Clock period</td><td>\(\max_i t_i\) &mdash; the bottleneck alone</td></tr>
+        <tr><td>Production rate</td><td>Throughput</td><td>\(1/\max_i t_i\)</td></tr>
+        <tr><td>Throughput time (lead time)</td><td>Instruction latency</td><td>\(\sum_i t_i\)</td></tr>
+        <tr><td>Line-balancing efficiency</td><td>Pipeline efficiency</td><td>\(\dfrac{\sum_i t_i}{n \max_i t_i}\)</td></tr>
+        <tr><td>Balance delay</td><td>Pipeline overhead</td><td>\(1 - \text{efficiency}\)</td></tr>
+        <tr><td>Bottleneck station</td><td>Critical stage</td><td>the \(i\) attaining \(\max t_i\)</td></tr>
+        <tr><td>Starving and blocking</td><td>Bubbles and stalls</td><td>idle time at a non-critical stage</td></tr>
+        <tr><td>Number of stations</td><td>Pipeline depth</td><td>\(n\)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="col">
+    <p>
+      And the law that governs both, checked under <code>[Ch13 s13]</code> on stage times
+      \(\{2.0, 3.5, 1.5, 3.0, 2.5\}\):
+    </p>
+  </div>
+  <div class="mathbox col">$$\text{speedup} = \frac{\sum_i t_i}{\max_i t_i} = n \cdot \text{efficiency}$$</div>
+  <div class="col">
+    <p>
+      Those stage times give a cycle of 3.5, a latency of 12.5, an efficiency of 0.714 and a
+      speedup of 3.571 against an ideal of 5 &mdash; and \(5 \times 0.714 = 3.571\) exactly.
+      Perfectly balance the line and efficiency hits 1.000 with speedup exactly 5.
+    </p>
+    <div class="defn">
+      <div class="defn-h">The consequence, stated once</div>
+      <p style="margin-bottom:0">
+        <b>Adding stages never helps unless they are balanced.</b> A five-stage pipeline whose
+        stages are \(\{1,1,1,1,6\}\) has a cycle time of 6 and a speedup of \(10/6 = 1.67\),
+        barely better than no pipeline at all. This is why a CPU designer splits the
+        <em>slowest</em> stage rather than adding stages anywhere, and it is why you rebalance
+        around the bottleneck station instead of buying another machine. Identical decision,
+        identical arithmetic.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Balance the line, clock the pipeline</div><div class="lab-tag">Predict, then rebalance</div></div>
+
+    <div class="predict">
+      <p style="margin-top:0">
+        A 5-stage pipeline has stage times \(\{1,1,1,1,6\}\) in nanoseconds. You add a sixth
+        stage by splitting one of the 1&nbsp;ns stages in two. What happens to throughput?
+      </p>
+      <button class="pbtn" data-p5="a" type="button">Rises &mdash; six stages beat five</button>
+      <button class="pbtn" data-p5="b" type="button">Unchanged &mdash; the 6 ns stage still rules</button>
+      <button class="pbtn" data-p5="c" type="button">Falls &mdash; more overhead</button>
+      <button class="pbtn" data-p5="d" type="button">Rises by 20%</button>
+      <div class="pverdict" id="pv5"></div>
+    </div>
+
+    <svg class="stage" id="sP" viewBox="0 0 480 310" role="img"
+         aria-label="Stage times drawn as bars against the cycle-time ceiling, with a Gantt strip showing units flowing through the stages">
+      <g id="pBars"></g>
+      <g id="pGantt"></g>
+      <g id="pLab"></g>
+    </svg>
+
+    <div class="ctl">
+      <label for="pSl">Split the slowest stage</label>
+      <input type="range" id="pSl" min="0" max="5" value="0" step="1">
+      <span class="ro-v" id="pVal" style="min-width:56px">0 splits</span>
+      <button class="btn" data-pp="skew" type="button">One slow stage</button>
+      <button class="btn" data-pp="mild" type="button">Mildly uneven</button>
+      <button class="btn" data-pp="bal" type="button">Balanced</button>
+    </div>
+
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Cycle time<br>= max t</div><div class="ro-v a" id="pC">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Efficiency<br>&Sigma;t / (n max t)</div><div class="ro-v b" id="pE">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Speedup<br>&Sigma;t / max t</div><div class="ro-v c" id="pS">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Latency<br>&Sigma;t</div><div class="ro-v" id="pL">&mdash;</div></div>
+    </div>
+  </div>
+
+  <div class="lab-foot col">
+    Bars are stage times; the dashed line is the cycle time, set by the tallest bar alone. The
+    strip underneath shows units flowing through, one leaving per cycle once the line fills.
+    Start on <b>One slow stage</b> \(\{1,1,1,1,6\}\) and drag the split slider: splitting a
+    1&nbsp;ns stage does nothing at all to throughput &mdash; the cycle time stays at 6 and the
+    speedup stays at 1.67 &mdash; which answers the prediction, <b>unchanged</b>. The slider
+    always splits the <em>slowest</em> stage, so watch what happens instead: one split takes
+    the 6 down to two 3s, the cycle time drops to 3, and throughput doubles. Efficiency climbs
+    from 0.33 toward 1 as the bars level. Latency meanwhile creeps <em>up</em>, because you
+    have added stages to the same total work &mdash; the classic trade of throughput time
+    against production rate. Press <b>Balanced</b> to see the only configuration where speedup
+    equals the number of stages.
+  </div>
+</section>
+
+<section id="hazards">
+  <div class="col">
+    <div class="sechead"><span class="secnum">14</span><h2>Hazards, and the cost of a changeover</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/02.%20computer%20architecture.md" target="_blank" rel="noopener">src 02. computer architecture &#8599;</a>
+    </div>
+    <p>
+      A pipeline only reaches one-per-cycle if nothing disturbs it. Three things do, and each
+      has a shop-floor twin.
+    </p>
+    <p>
+      A <b>data hazard</b> is an instruction needing a result the previous one has not finished
+      producing &mdash; a station waiting on the part still being worked upstream. The fix,
+      <b>forwarding</b>, routes the result straight from one stage to the next without waiting
+      for it to be filed away. That is handing the part directly across rather than returning
+      it to the stores and drawing it again.
+    </p>
+    <p>
+      A <b>structural hazard</b> is two instructions wanting the same unit at once &mdash;
+      two jobs needing the one crane. Duplicate the resource or stall.
+    </p>
+    <p>
+      A <b>control hazard</b> is the expensive one. At a branch, the CPU does not know which
+      instruction comes next until the branch resolves. <b>Branch prediction</b> guesses and
+      runs ahead speculatively; a wrong guess means everything fetched since must be thrown
+      away and the pipeline refilled. The source reports modern predictors as >95% accurate
+      with a misprediction costing around 15 cycles.
+    </p>
+    <div class="defn">
+      <div class="defn-h">A 5% miss rate is a 75% slowdown</div>
+      <p style="margin-bottom:0">
+        Cycles per instruction under mispredictions is \(\text{CPI} = 1 + p\,k\) for miss rate
+        \(p\) and penalty \(k\). At the source&rsquo;s own figures, \(p = 0.05\) and
+        \(k = 15\) give \(\text{CPI} = 1.75\) &mdash; <b>75% more cycles per instruction</b>
+        from a 5% error rate (<code>[Ch13 s14]</code>). At 90% accuracy it is 2.5, a
+        slowdown of two and a half times.
+      </p>
+    </div>
+    <p>
+      This is the shape of a changeover, and it is the reason single-minute exchange of die
+      matters so much more on a deep line than a shallow one. A stoppage does not cost you the
+      stoppage; it costs you the time to empty and refill every station. The deeper the
+      pipeline, the larger \(k\), and the more a small disturbance rate dominates the average.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks &mdash; the rate is not the cost</div>
+      <p>
+        The instinct that a 95% success rate is "a 5% problem" is wrong here, and it is wrong
+        for the same reason in &sect;15. What matters is <b>rate multiplied by severity</b>,
+        and when the severity is 15&times; the nominal, a small rate dominates the average
+        completely. A first-pass yield of 95% on a process where rework costs fifteen times
+        the original operation is not a 5% loss of capacity &mdash; it is a 75% one. The
+        arithmetic is identical; only the vocabulary differs.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="memory">
+  <div class="col">
+    <div class="sechead"><span class="secnum">15</span><h2>The memory hierarchy is material staging</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/02.%20computer%20architecture.md" target="_blank" rel="noopener">src 02. computer architecture &#8599;</a>
+    </div>
+    <p>
+      Fast memory is small and expensive; large memory is slow and cheap. The resolution is a
+      <b>hierarchy</b>, and it works because of <b>locality</b>: programs reuse the same data
+      (temporal) and nearby data (spatial).
+    </p>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/memory_hierarchy.svg" alt="Memory hierarchy pyramid from registers through caches and RAM down to disk" width="420"></div>
+    <figcaption><b>Fig. 13.4</b> &mdash; Fast and small at the top, slow and large at the bottom. Redraw it as stock locations and the logic is unchanged. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+
+  <div class="tw col">
+    <table>
+      <caption>The same staging problem, twice. Latencies as quoted in the source.</caption>
+      <thead><tr><th>Computing</th><th>Latency</th><th>Manufacturing</th></tr></thead>
+      <tbody>
+        <tr><td>Registers</td><td>~0.3 ns</td><td>Parts in the operator&rsquo;s hand</td></tr>
+        <tr><td>L1 cache</td><td>~1 ns</td><td>Line-side bin at the workstation</td></tr>
+        <tr><td>L2 cache</td><td>~4 ns</td><td>Cell supermarket</td></tr>
+        <tr><td>L3 cache</td><td>~10 ns</td><td>Shared stock at the end of the line</td></tr>
+        <tr><td>RAM</td><td>~50&ndash;100 ns</td><td>The plant store</td></tr>
+        <tr><td>SSD</td><td>~10&ndash;100 &micro;s</td><td>Regional warehouse</td></tr>
+        <tr><td>HDD</td><td>~5&ndash;10 ms</td><td>The supplier</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="col">
+    <p>
+      Register to RAM is a factor of about 270; register to disk about
+      \(3\times10^{7}\) (<code>[Ch13 s15]</code>), which matches the source&rsquo;s quoted
+      ~300&times; and ~30,000,000&times;. And the formula for what the hierarchy actually
+      delivers is one you have written under another name:
+    </p>
+  </div>
+  <div class="mathbox col">$$\text{AMAT} = h \cdot t_{\text{fast}} + (1-h) \cdot t_{\text{slow}}$$</div>
+  <div class="col">
+    <p>
+      Average memory access time: hit rate times the fast path, miss rate times the slow path.
+      That is the expected-value calculation of Sheet 05, and it is exactly the expected cost
+      of a stockout &mdash; probability times consequence.
+    </p>
+    <div class="defn">
+      <div class="defn-h">95% hits, six times slower</div>
+      <p style="margin-bottom:0">
+        With L1 at 1&nbsp;ns and RAM at 100&nbsp;ns, a 95% hit rate gives
+        \(\text{AMAT} = 0.95(1) + 0.05(100) = 5.95\)&nbsp;ns &mdash; <b>nearly six times
+        slower than pure L1</b>, from a 5% miss rate (<code>[Ch13 s15]</code>). At 99% it is
+        still 1.99&nbsp;ns, twice as slow. The last 1% of hit rate is worth more than the first
+        50%, which is the same reason the last few percent of line-side availability is where
+        all the money is.
+      </p>
+    </div>
+    <p>
+      This is why cache-friendly code can be an order of magnitude faster than naive code with
+      identical arithmetic, and why the practical advice for matrix work &mdash; walk memory
+      sequentially, match the array layout, size your blocks to the cache &mdash; is not
+      micro-optimisation. It is the difference between having the part at the bench and
+      sending someone to the store.
+    </p>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">What a miss actually costs</div><div class="lab-tag">Predict, then sweep</div></div>
+
+    <div class="predict">
+      <p style="margin-top:0">
+        L1 is 1&nbsp;ns and RAM is 100&nbsp;ns. You improve the hit rate from 95% to 99%. By
+        what factor does average access time improve?
+      </p>
+      <button class="pbtn" data-p6="a" type="button">About 1.04&times; &mdash; 4 points of 100</button>
+      <button class="pbtn" data-p6="b" type="button">About 3&times;</button>
+      <button class="pbtn" data-p6="c" type="button">About 1.5&times;</button>
+      <button class="pbtn" data-p6="d" type="button">No change worth measuring</button>
+      <div class="pverdict" id="pv6"></div>
+    </div>
+
+    <svg class="stage" id="sM" viewBox="0 0 480 300" role="img"
+         aria-label="Average memory access time plotted against hit rate, with the pure-L1 floor marked and the current operating point highlighted">
+      <g id="mGrid"></g>
+      <g id="mCurve"></g>
+      <g id="mAx"></g>
+      <g id="mLab"></g>
+    </svg>
+
+    <div class="ctl">
+      <label for="mSl">Hit rate</label>
+      <input type="range" id="mSl" min="50" max="100" value="95" step="1">
+      <span class="ro-v" id="mVal" style="min-width:52px">95%</span>
+      <button class="btn" data-mp="ram" type="button">Miss to RAM (100 ns)</button>
+      <button class="btn" data-mp="ssd" type="button">Miss to SSD (50 <span class="gk">&micro;</span>s)</button>
+    </div>
+
+    <div class="readout">
+      <div class="ro"><div class="ro-k">AMAT</div><div class="ro-v a" id="mA">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Slower than<br>pure L1</div><div class="ro-v b" id="mX">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Share of time<br>spent missing</div><div class="ro-v c" id="mF">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Gain from<br>+1 point</div><div class="ro-v" id="mG">&mdash;</div></div>
+    </div>
+  </div>
+
+  <div class="lab-foot col">
+    The curve is AMAT against hit rate, with the pure-L1 floor dashed below it. Notice its
+    shape: almost all the action is crammed into the last few percent. Sliding 95% &rarr; 99%
+    takes AMAT from 5.95&nbsp;ns to 1.99&nbsp;ns &mdash; a factor of <b>3</b>, which answers
+    the prediction and demolishes the "4 points of 100" instinct. The third readout is the
+    most useful one: at a 95% hit rate, <b>84% of all time is spent servicing the 5% of
+    accesses that miss</b>. The misses own the clock. Switch to <b>Miss to SSD</b> and the
+    effect becomes absurd &mdash; at 99% you are still spending essentially all your time
+    waiting, which is precisely why a model that does not fit in RAM does not run slowly, it
+    fails to run usefully at all. That is &sect;16.
+  </div>
+</section>
+
+<section id="virtual">
+  <div class="col">
+    <div class="sechead"><span class="secnum">16</span><h2>Virtual memory, and more buffer making things worse</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/02.%20computer%20architecture.md" target="_blank" rel="noopener">src 02. computer architecture &#8599;</a>
+    </div>
+    <p>
+      <b>Virtual memory</b> gives every process its own apparently large, contiguous address
+      space. Addresses are split into fixed-size <b>pages</b> (usually 4&nbsp;KB), and a
+      <b>page table</b> maps virtual pages to physical frames. The <b>TLB</b> caches recent
+      translations, because the page table itself lives in slow RAM.
+    </p>
+    <p>
+      A <b>page fault</b> is an access to a page not currently in RAM: the OS fetches it from
+      disk, costing millions of cycles. Fault often enough and you get <b>thrashing</b>, where
+      the machine spends all its time fetching and none computing. That is a line that spends
+      its shift chasing material, and the &sect;15 arithmetic says why it collapses so
+      completely rather than degrading gently.
+    </p>
+    <p>
+      Virtual memory also buys <b>isolation</b>: one process cannot corrupt another&rsquo;s
+      memory, because their virtual addresses map to different physical frames. That is the
+      foundation of everything part 2 says about protection.
+    </p>
+    <h3>Page replacement, and an anomaly worth knowing</h3>
+    <p>
+      When RAM is full something must be evicted. <b>LRU</b> evicts the least recently used
+      page and works well. <b>FIFO</b> evicts the oldest, which is simpler and can evict a page
+      that is in constant use. <b>B&eacute;l&aacute;dy&rsquo;s optimal</b> evicts whatever will
+      be needed furthest in the future &mdash; unimplementable, since it requires foreknowledge,
+      but useful as a benchmark. Those three are exactly your inventory issue policies, right
+      down to the third one being a perfect demand forecast that nobody has.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks &mdash; B&eacute;l&aacute;dy&rsquo;s anomaly</div>
+      <p>
+        Here is a belief that is safe on a shop floor and false here: <b>more buffer cannot
+        make throughput worse</b>. Under FIFO replacement it can. On the reference string
+        \(1,2,3,4,1,2,5,1,2,3,4,5\) (<code>[Ch13 s16]</code>):
+      </p>
+      <div class="tw" style="margin:10px 0">
+        <table>
+          <thead><tr><th>Frames available</th><th>FIFO page faults</th><th>LRU page faults</th></tr></thead>
+          <tbody>
+            <tr><td>3</td><td>9</td><td>10</td></tr>
+            <tr><td>4</td><td><b style="color:var(--brk)">10</b></td><td>8</td></tr>
+            <tr><td>5</td><td>5</td><td>5</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        Giving FIFO <em>more</em> memory makes it fault <em>more</em>. This is
+        <b>B&eacute;l&aacute;dy&rsquo;s anomaly</b>, it is not a rounding artefact, and it is
+        not in the source. LRU cannot do it &mdash; it belongs to a family called stack
+        algorithms, whose contents at \(n\) frames are always a subset of their contents at
+        \(n+1\), which makes monotonicity automatic. FIFO has no such property.
+      </p>
+      <p style="margin-bottom:0">
+        The transferable lesson is about <em>policy</em>, not about memory: adding capacity is
+        only guaranteed to help if your issue policy has the stack property. A strict
+        first-in-first-out issue rule does not, which is a genuinely counterintuitive thing to
+        know about a stores policy and is the sort of result that only shows up if you compute
+        it.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="io">
+  <div class="col">
+    <div class="sechead"><span class="secnum">17</span><h2>Interrupts, DMA, and the andon cord</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/02.%20computer%20architecture.md" target="_blank" rel="noopener">src 02. computer architecture &#8599;</a>
+    </div>
+    <p>
+      The CPU has to deal with slow outside things: disks, network cards, keyboards, GPUs.
+      There are two ways, and you have opinions about both.
+    </p>
+    <p>
+      <b>Polling</b> means checking the device in a loop until it is ready. That is an operator
+      standing at a machine watching a gauge, and it wastes exactly what you would expect.
+    </p>
+    <p>
+      <b>Interrupt-driven I/O</b> means the device raises a signal when it is ready. The CPU
+      gets on with other work; when the signal arrives it saves its state, jumps to a handler
+      via the <b>interrupt vector table</b>, services the device, restores state and resumes
+      where it left off.
+    </p>
+    <div class="defn">
+      <div class="defn-h">That is an andon cord, step for step</div>
+      <p style="margin-bottom:0">
+        A machine raises an alarm. The operator notes where they were, walks to the station,
+        follows the documented response for that specific alarm code, resolves it, and returns
+        to exactly the task they suspended. Interrupt vector table, interrupt handler, saved
+        context, resume. The mechanism is the same and so is the argument for it: <b>you do not
+        get more capacity by watching for problems, you get it by being told about them.</b>
+      </p>
+    </div>
+    <p>
+      <b>DMA</b> (direct memory access) is the other half. For a bulk transfer, having the CPU
+      copy byte by byte is absurd; a DMA controller moves the data between device and RAM
+      directly and raises an interrupt when finished. The CPU sets up the job and goes back to
+      work. That is a conveyor or an AGV: the skilled resource specifies the move and does not
+      perform it.
+    </p>
+    <p>
+      This matters for anything on a GPU. Moving a model to the device is a DMA transfer over
+      the <b>PCIe</b> bus &mdash; roughly 32&nbsp;GB/s on a PCIe 4.0 x16 slot, per the source.
+      Bus bandwidth, not compute, is frequently the binding constraint, because the GPU can
+      consume data faster than the bus delivers it. That is a bottleneck in the strict
+      theory-of-constraints sense, and part 2 makes it quantitative with Amdahl&rsquo;s law.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; and one honest caveat on the numbers</div>
+      <p>
+        The mechanisms above are stable; the figures are not. Latencies, bus bandwidths and
+        predictor accuracies are quoted from the source as of its writing, and they move with
+        each hardware generation. Treat the <em>ratios</em> as durable &mdash; registers vastly
+        faster than RAM, RAM vastly faster than disk, bus slower than compute &mdash; and treat
+        any specific nanosecond or GB/s figure as a claim with a date on it. Nothing in this
+        part depends on a particular number except where it is computed from the source&rsquo;s
+        own stated figures, which is marked each time.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="next">
+  <div class="col">
+    <div class="sechead"><span class="secnum">18</span><h2>What parts 2 and 3 carry</h2>
+      <span class="srcref nolink" title="Added material, not in the source chapter">beyond the chapter</span>
+    </div>
+    <p>
+      This part built the machine and the mathematics under it. Two debts are now outstanding,
+      and both are promises rather than hand-waves.
+    </p>
+    <p>
+      <b>Part 2 &mdash; operating systems and concurrency.</b> &sect;05 defined a partial order
+      and observed that incomparable tasks are concurrent. &sect;16 gave every process an
+      isolated address space without saying who enforces it. &sect;13 showed that a pipeline is
+      governed entirely by its bottleneck, and &sect;17 pointed at the PCIe bus as one. Part 2
+      collects all three: processes and scheduling, the synchronisation that makes concurrent
+      access safe, deadlock and its four conditions, and <b>Amdahl&rsquo;s law</b> &mdash;
+      which is the theory of constraints, written as an equation, and which says exactly how
+      much a bottleneck costs you no matter how much parallel capacity you add.
+    </p>
+    <p>
+      <b>Part 3 &mdash; programming languages and compilation,</b> plus the chapter&rsquo;s
+      worked example, its 24-question bank and its concept map. &sect;12&rsquo;s
+      instruction-set contract is the bottom of a stack that part 3 climbs: source code, types,
+      compilation, and what a just-in-time compiler does that an interpreter cannot.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>If you take three things from this part</div>
+      <p>
+        <b>&sect;09:</b> the heuristics in your industrial engineering syllabus are heuristics
+        because the exact problems are NP-hard, and on a measured instance the taught rule
+        landed a station worse than optimal. <b>&sect;13:</b> pipeline efficiency and
+        line-balancing efficiency are the same expression, so everything you know about
+        bottlenecks transfers without translation. <b>&sect;&sect;14&ndash;15:</b> a 5% miss
+        rate is not a 5% problem &mdash; rate multiplied by severity is what governs, and at a
+        95% cache hit rate the misses own 84% of the clock.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="provenance">
+  <div class="col">
+    <div class="sechead"><span class="secnum">A</span><h2>Provenance and changes</h2>
+      <span class="srcref nolink" title="Required by Apache-2.0 section 4(b)">licence notice</span>
+    </div>
+    <p>
+      This sheet is a derivative work of <b>chapter 13 &mdash; computing and OS</b> of the
+      <i>Mathematics, Computer Science and AI Compendium</i>, licensed under Apache&nbsp;2.0.
+      Section&nbsp;4(b) of that licence requires prominent notice of changes. The source is
+      pinned at commit <code>9850ee5</code>; every section chip above links to the file it
+      draws on. <b>This appendix covers part 1 only</b>; parts 2 and 3 carry their own.
+    </p>
+
+    <h3>Source material used in part 1</h3>
+    <ul>
+      <li><code>01. discrete maths.md</code> (253 lines) &mdash; &sect;&sect;01&ndash;09</li>
+      <li><code>02. computer architecture.md</code> (233 lines) &mdash; &sect;&sect;10&ndash;17</li>
+      <li>Four figures reproduced unmodified from <code>images/</code>:
+        <code>p_np_complexity</code>, <code>ieee754_float</code>, <code>cpu_pipeline</code>,
+        <code>memory_hierarchy</code>.</li>
+      <li>Files <code>03</code>, <code>04</code> and <code>05</code> (757 lines) are not used
+        here and are the material for parts 2 and 3.</li>
+    </ul>
+
+    <h3>Changes made</h3>
+    <ul>
+      <li><b>Re-narrated for one reader</b> &mdash; a GATE-prepared mechanical engineering
+        graduate with no computing background. Written against reliability engineering,
+        industrial engineering, numerical methods, metrology and structures rather than against
+        a computing background.</li>
+      <li><b>Corrections to the source, three,</b> each stated with the computation:
+        <ol>
+          <li>&sect;11 &mdash; file 02&rsquo;s coding task 3 claims to demonstrate that
+            floating-point addition is not associative, with the comment that \((a+b)+c\)
+            "should be 1.0". Run in float32 both groupings return \(0.0\), because one ulp at
+            \(10^8\) is \(8\) and the \(1.0\) is absorbed either way. A working example is
+            supplied.</li>
+          <li>&sect;07 &mdash; file 01 states \(|E| \leq 3|V| - 6\) for planar graphs with no
+            hypothesis; it requires \(|V| \geq 3\).</li>
+          <li>&sect;07 &mdash; file 01 gives the Euler-path degree condition as an "if and only
+            if" without requiring connectivity. Two disjoint triangles satisfy the degree
+            condition and admit no Euler path.</li>
+        </ol>
+      </li>
+      <li><b>Correspondences added that are not in the source</b> &mdash; fault trees and the
+        series/parallel reliability duality as De Morgan&rsquo;s law; simple-truss construction
+        as proof by induction with \(m = 2j - 3\) as the invariant; assembly precedence
+        diagrams as partial orders; bisection as binary search; the shared recurrence of merge
+        sort and the FFT; line balancing as bin packing and drill-path optimisation as the
+        travelling salesman problem; floating point as constant relative error against a dial
+        gauge&rsquo;s constant absolute error; catastrophic cancellation as the reason a strain
+        gauge measures change directly; the full pipeline-to-line-balancing correspondence
+        table; AMAT as the stockout expectation; interrupts as an andon cord; DMA as material
+        handling.</li>
+      <li><b>B&eacute;l&aacute;dy&rsquo;s anomaly added</b> (&sect;16), which the source does
+        not mention, as the counterexample to "more buffer cannot hurt".</li>
+      <li><b>Six interactive labs</b> written for this sheet in plain SVG and vanilla
+        JavaScript.</li>
+      <li><b>24 new numerical checks</b> added to
+        <code>study-companion/verify_claims.py</code>, bringing it to 422 checks with no
+        failures. Every quantitative statement on this page is reproducible by running that
+        one script.</li>
+    </ul>
+
+    <h3>What is claimed, and what is reported</h3>
+    <p>
+      Statements tagged <code>[Ch13 sNN]</code> are computed, and the tag names the block of
+      the verification script that computes them. Hardware latencies, bus bandwidths and
+      branch-predictor accuracies are the source&rsquo;s and are reported rather than derived;
+      where this sheet computes a consequence from them (CPI, AMAT, speed ratios) the input
+      figures are the source&rsquo;s own and are named at the point of use. No internet
+      research was used.
+    </p>
+    <p class="endnote">
+      Sheet 13 of 20, part 1 of 3. Source compendium &copy; its authors, Apache&nbsp;2.0. This
+      derivative sheet is offered under the same licence. Next: <b>part 2 &mdash; operating
+      systems and concurrency</b>, where the bottleneck of &sect;13 becomes Amdahl&rsquo;s law
+      and the partial order of &sect;05 becomes a race condition.
+    </p>
+  </div>
+</section>
+
+</main>
+</div>
+
+<style>
+:root{--c1:#BF5B00; --c2:#0F74C7; --c3:#1F8A4C; --c4:#7A4FBF; --c5:#C2185B}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --c1:#D9782B; --c2:#4A97D6; --c3:#35AC63; --c4:#9575D0; --c5:#D65A82}
+}
+:root[data-theme="dark"]{
+  --c1:#D9782B; --c2:#4A97D6; --c3:#35AC63; --c4:#9575D0; --c5:#D65A82}
+#mGrid line, #bList line, #fAxis line{stroke:var(--rule)}
+#mAx line, #fTicks line.base{stroke:var(--rule-strong); stroke-width:1.25}
+#mCurve path{fill:none; stroke-width:2}
+#nBars rect, #pBars rect{stroke:var(--sheet); stroke-width:1}
+#nTour path{fill:none; stroke-width:1.8}
+#rDiag rect{stroke-width:1.5}
+#rDiag path{fill:none; stroke:var(--rule-strong); stroke-width:1.4}
+.tk{fill:var(--ink-3); font-family:'IBM Plex Mono',monospace; font-size:10px}
+.tkb{fill:var(--ink-2); font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600}
+.tkn{fill:var(--sheet); font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:600}
+</style>
+
+<script>
+(function(){
+  'use strict';
+  var root=document.documentElement;
+  function dk(){var t=root.getAttribute('data-theme');
+    return t?t==='dark':(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);}
+  try{var sv=localStorage.getItem('ch13-theme'); if(sv==='dark'||sv==='light') root.setAttribute('data-theme',sv);}catch(e){}
+  var tb=document.getElementById('themebtn');
+  if(tb) tb.addEventListener('click',function(){var n=dk()?'light':'dark';
+    root.setAttribute('data-theme',n); try{localStorage.setItem('ch13-theme',n);}catch(e){}});
+  function $(id){return document.getElementById(id);}
+  function fmt(n,d){d=d===undefined?2:d; return (Math.abs(n)<5e-13?0:n).toFixed(d);}
+  function predict(attr,vid,ans){
+    document.querySelectorAll('['+attr+']').forEach(function(b){
+      b.addEventListener('click',function(){
+        document.querySelectorAll('['+attr+']').forEach(function(o){o.classList.remove('picked');});
+        b.classList.add('picked');
+        var v=$(vid); v.innerHTML=ans[b.getAttribute(attr)]; v.classList.add('show');
+      });
+    });
+  }
+  var PAL=['var(--c1)','var(--c2)','var(--c3)','var(--c4)','var(--c5)'];
+  window.__ch13={$:$,fmt:fmt,predict:predict,PAL:PAL};
+})();
+</script>
+
+<script>
+/* ===== LAB 1 -- redundancy placement ===== */
+(function(){
+  'use strict';
+  var H=window.__ch13, $=H.$, R=0.90;
+  function draw(){
+    var A=1-Math.pow(1-R*R,2), B=Math.pow(1-Math.pow(1-R,2),2), S=R*R;
+    var o='';
+    function blk(x,y,w,h,lab,col){
+      return '<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="4" fill="'+col+
+             '" stroke="var(--rule-strong)"/>'+
+             '<text class="tkn" x="'+(x+w/2)+'" y="'+(y+h/2+3.5)+'" text-anchor="middle">'+lab+'</text>';
+    }
+    /* (a) two whole trains */
+    o+='<text class="tkb" x="118" y="40" text-anchor="middle">(a) two complete trains</text>';
+    o+=blk(48,58,62,26,'pump','var(--c2)')+blk(126,58,62,26,'valve','var(--c1)');
+    o+=blk(48,100,62,26,'pump','var(--c2)')+blk(126,100,62,26,'valve','var(--c1)');
+    o+='<path d="M22,71 L48,71 M110,71 L126,71 M188,71 L214,71 M22,113 L48,113 M110,113 L126,113 M188,113 L214,113"/>';
+    o+='<path d="M22,71 L22,113 M214,71 L214,113 M14,92 L22,92 M214,92 L222,92"/>';
+    /* (b) stage redundancy */
+    o+='<text class="tkb" x="352" y="40" text-anchor="middle">(b) redundancy at each stage</text>';
+    o+=blk(282,58,62,26,'pump','var(--c2)')+blk(360,58,62,26,'valve','var(--c1)');
+    o+=blk(282,100,62,26,'pump','var(--c2)')+blk(360,100,62,26,'valve','var(--c1)');
+    o+='<path d="M256,71 L282,71 M344,71 L352,71 M352,71 L352,113 M352,113 L360,113 M344,113 L352,113 M256,113 L282,113 M422,71 L436,71 M422,113 L436,113"/>';
+    o+='<path d="M256,71 L256,113 M436,71 L436,113 M248,92 L256,92 M436,92 L444,92 M352,92 L360,92"/>';
+    o+='<text class="tk" x="118" y="150" text-anchor="middle">(p₁ AND v₁)   OR   (p₂ AND v₂)</text>';
+    o+='<text class="tk" x="352" y="150" text-anchor="middle">(p₁ OR p₂)   AND   (v₁ OR v₂)</text>';
+    $('rDiag').innerHTML=o;
+    /* bars */
+    var bx=64,bw=352,by=200,bh=22;
+    function bar(y,lab,v,col){
+      return '<text class="tk" x="'+bx+'" y="'+(y-4)+'">'+lab+'</text>'+
+             '<rect x="'+bx+'" y="'+y+'" width="'+bw+'" height="'+bh+'" fill="var(--rule)" fill-opacity="0.3"/>'+
+             '<rect x="'+bx+'" y="'+y+'" width="'+(bw*v).toFixed(1)+'" height="'+bh+'" fill="'+col+'"/>'+
+             '<text class="tk" x="'+(bx+bw*v-6).toFixed(1)+'" y="'+(y+bh/2+4)+'" text-anchor="end" fill="var(--sheet)">'+
+             v.toFixed(4)+'</text>';
+    }
+    $('rLab').innerHTML=
+      '<text class="tkb" x="240" y="180" text-anchor="middle">system reliability at R = '+R.toFixed(2)+'</text>'+
+      bar(by,'(a) two trains',A,'var(--c4)')+
+      bar(by+46,'(b) stage redundancy',B,'var(--c3)')+
+      '<text class="tk" x="240" y="290" text-anchor="middle">same four components, different Boolean formula</text>';
+    $('rA').textContent=A.toFixed(5);
+    $('rB').textContent=B.toFixed(5);
+    $('rD').textContent=(B-A>=0?'+':'')+(B-A).toFixed(5);
+    $('rS').textContent=S.toFixed(5);
+    $('rVal').textContent=R.toFixed(2);
+  }
+  $('rSl').addEventListener('input',function(){R=+this.value/100; draw();});
+  document.querySelectorAll('[data-rp]').forEach(function(b){
+    b.addEventListener('click',function(){R=+b.getAttribute('data-rp')/100; $('rSl').value=b.getAttribute('data-rp'); draw();});
+  });
+  H.predict('data-p1','pv1',{
+    a:'<b>No, and the algebra says why.</b> In (a) a surviving pump is stranded if its own train’s valve has failed. The state “pump 1 and valve 2 survive” satisfies (b) and fails (a).',
+    b:'<b>Correct.</b> (b) wins at every R in (0,1) — the difference readout never goes negative. Redundancy belongs as low in the system as you can afford, and the gap is widest (0.125) at R = 0.5.',
+    c:'<b>Same components, different formula.</b> (a) is (p₁∧v₁)∨(p₂∧v₂); (b) is (p₁∨p₂)∧(v₁∨v₂). Distributing shows (a) implies (b) but not the reverse, so they cannot be equal.',
+    d:'<b>It does not.</b> (b) is better for every R strictly between 0 and 1 — sweep the slider and watch the difference stay positive. What depends on R is how MUCH better, which peaks at R = 0.5.'
+  });
+  draw();
+})();
+
+/* ===== LAB 2 -- bisection / binary search ===== */
+(function(){
+  'use strict';
+  var H=window.__ch13, $=H.$, nTol=10, mode='root';
+  function draw(){
+    var tol=Math.pow(10,-nTol), width=1.0;
+    var pred=Math.ceil(Math.log2(width/tol));
+    var f=function(x){return x*x*x-2*x-5;};
+    var lo=2,hi=3,it=0,hist=[[lo,hi]];
+    while(hi-lo>tol && it<200){var mid=(lo+hi)/2;
+      if(f(lo)*f(mid)<=0) hi=mid; else lo=mid;
+      it++; if(it<=14) hist.push([lo,hi]);}
+    var X0=52,X1=452,rows=Math.min(hist.length,14),o='';
+    for(var i=0;i<rows;i++){
+      var y=52+i*15;
+      var a=X0+(hist[i][0]-2)*(X1-X0), b=X0+(hist[i][1]-2)*(X1-X0);
+      o+='<line x1="'+X0+'" y1="'+y+'" x2="'+X1+'" y2="'+y+'" stroke="var(--rule)" stroke-width="1"/>'+
+         '<rect x="'+a.toFixed(1)+'" y="'+(y-5)+'" width="'+Math.max(b-a,1).toFixed(1)+
+         '" height="10" fill="'+(mode==='root'?'var(--c2)':'var(--c3)')+'" fill-opacity="0.85"/>'+
+         '<text class="tk" x="'+(X0-8)+'" y="'+(y+3.5)+'" text-anchor="end">'+i+'</text>';
+    }
+    $('bBrack').innerHTML=o;
+    $('bList').innerHTML='';
+    $('bLab').innerHTML=
+      '<text class="tkb" x="240" y="28" text-anchor="middle">'+
+      (mode==='root'?'bisection: the bracket on x³−2x−5 halving each row'
+                    :'binary search: the candidate range halving each row')+'</text>'+
+      '<text class="tk" x="240" y="42" text-anchor="middle">each row is one iteration; width halves every time</text>'+
+      '<text class="tk" x="240" y="278" text-anchor="middle">'+
+      'tolerance 1e−'+nTol+' reached in '+it+' iterations</text>';
+    $('bI').textContent=it;
+    $('bP').textContent=pred;
+    $('bW').textContent=(hi-lo).toExponential(2);
+    $('bD').textContent=Math.log10(2).toFixed(3);
+    $('bVal').textContent='1e-'+nTol;
+  }
+  $('bSl').addEventListener('input',function(){nTol=+this.value; draw();});
+  document.querySelectorAll('[data-bp]').forEach(function(b){
+    b.addEventListener('click',function(){mode=b.getAttribute('data-bp')==='root'?'root':'search'; draw();});
+  });
+  H.predict('data-p2','pv2',{
+    a:'<b>Correct.</b> Each iteration buys a fixed log₁₀ 2 = 0.301 decimal digits, so three more digits costs 3/0.301 ≈ 10 steps. Logarithmic cost means tightening the answer is cheap.',
+    b:'<b>That is linear thinking.</b> Ten times the precision would cost ten times the work only if the cost were proportional to 1/tolerance. It is proportional to log(1/tolerance).',
+    c:'<b>No — doubling would need the tolerance squared,</b> not three more decimal places. Drag the slider and read the iteration count directly.',
+    d:'<b>It does not depend on the function at all.</b> That is the striking part: the count is ⌈log₂(width/tol)⌉ whatever you are bisecting, because only the bracket width matters.'
+  });
+  draw();
+})();
+</script>
+
+<script>
+/* ===== LAB 3 -- NP-hard: line balancing and the drill path ===== */
+(function(){
+  'use strict';
+  var H=window.__ch13, $=H.$, mode='bal', C=10, seed=7;
+  function rnd(s){var x=Math.sin(s)*10000; return x-Math.floor(x);}
+  function tasksFor(s){var t=[],i; for(i=0;i<8;i++) t.push(2+Math.floor(rnd(s*13+i*7)*6)); return t;}
+  function ffd(t,C2){
+    var st=[],i,j,placed;
+    var srt=t.slice().sort(function(a,b){return b-a;});
+    for(i=0;i<srt.length;i++){
+      placed=false;
+      for(j=0;j<st.length;j++){
+        if(st[j].reduce(function(a,b){return a+b;},0)+srt[i]<=C2){st[j].push(srt[i]); placed=true; break;}
+      }
+      if(!placed) st.push([srt[i]]);
+    }
+    return st;
+  }
+  function optBins(t,C2,cap){
+    var total=t.reduce(function(a,b){return a+b;},0), k;
+    for(k=Math.ceil(total/C2);k<=cap;k++){
+      var found=false, n=t.length, counter=new Array(n).fill(0), guard=0;
+      var total_combos=Math.pow(k,n);
+      for(var c=0;c<total_combos && guard<3000000;c++,guard++){
+        var rem=c, loads=new Array(k).fill(0), ok=true, i;
+        for(i=0;i<n;i++){var s=rem%k; rem=Math.floor(rem/k); loads[s]+=t[i]; if(loads[s]>C2){ok=false; break;}}
+        if(ok){found=true; break;}
+      }
+      if(found) return k;
+    }
+    return null;
+  }
+  function pts(s){var p=[],i; for(i=0;i<8;i++) p.push([14+rnd(s*31+i*11)*452, 40+rnd(s*57+i*17)*180]); return p;}
+  function tourLen(p,ord){var d=0,i;
+    for(i=0;i<ord.length;i++){var a=p[ord[i]],b=p[ord[(i+1)%ord.length]];
+      d+=Math.hypot(a[0]-b[0],a[1]-b[1]);}
+    return d;}
+  function bestTour(p){
+    var idx=[1,2,3,4,5,6,7], best=null, cnt=0;
+    function perm(arr,cur){
+      if(!arr.length){var ord=[0].concat(cur), L=tourLen(p,ord); cnt++;
+        if(best===null||L<best[0]) best=[L,ord]; return;}
+      for(var i=0;i<arr.length;i++){
+        var rest=arr.slice(0,i).concat(arr.slice(i+1));
+        perm(rest,cur.concat([arr[i]]));
+      }
+    }
+    perm(idx,[]);
+    return {L:best[0],ord:best[1],count:cnt};
+  }
+  function nnTour(p){
+    var cur=0, ord=[0], unv=[1,2,3,4,5,6,7];
+    while(unv.length){
+      var bi=0,bd=Infinity,i;
+      for(i=0;i<unv.length;i++){var d=Math.hypot(p[cur][0]-p[unv[i]][0],p[cur][1]-p[unv[i]][1]);
+        if(d<bd){bd=d; bi=i;}}
+      cur=unv[bi]; ord.push(cur); unv.splice(bi,1);
+    }
+    return {L:tourLen(p,ord),ord:ord};
+  }
+  function draw(){
+    var o='';
+    if(mode==='bal'){
+      var t=tasksFor(seed), st=ffd(t,C), opt=optBins(t,C,7);
+      var total=t.reduce(function(a,b){return a+b;},0);
+      var bx=56,bw=380,by=64,rowh=26;
+      o+='<text class="tkb" x="240" y="34" text-anchor="middle">largest-candidate assignment, cycle time '+C+'</text>';
+      st.forEach(function(s,i){
+        var load=s.reduce(function(a,b){return a+b;},0), x=bx, y=by+i*rowh;
+        o+='<line x1="'+(bx+bw*C/14).toFixed(1)+'" y1="'+(by-8)+'" x2="'+(bx+bw*C/14).toFixed(1)+
+           '" y2="'+(by+st.length*rowh)+'" stroke="var(--brk)" stroke-width="1.2" stroke-dasharray="4 3"/>';
+        s.forEach(function(v,j){
+          var w=bw*v/14;
+          o+='<rect x="'+x.toFixed(1)+'" y="'+y+'" width="'+w.toFixed(1)+'" height="'+(rowh-7)+
+             '" fill="'+H.PAL[j%5]+'"/>'+
+             '<text class="tkn" x="'+(x+w/2).toFixed(1)+'" y="'+(y+rowh/2+0.5)+'" text-anchor="middle">'+v+'</text>';
+          x+=w;
+        });
+        o+='<text class="tk" x="'+(bx-8)+'" y="'+(y+rowh/2+1)+'" text-anchor="end">S'+(i+1)+'</text>'+
+           '<text class="tk" x="'+(x+8).toFixed(1)+'" y="'+(y+rowh/2+1)+'">'+load+'</text>';
+      });
+      o+='<text class="tk" x="'+(bx+bw*C/14+4).toFixed(1)+'" y="'+(by-12)+'">cycle time '+C+'</text>';
+      o+='<text class="tkb" x="240" y="'+(by+st.length*rowh+30)+'" text-anchor="middle">'+
+         'heuristic '+st.length+' stations — true optimum '+(opt===null?'?':opt)+
+         ' — lower bound ⌈'+total+'/'+C+'⌉ = '+Math.ceil(total/C)+'</text>';
+      o+='<text class="tk" x="240" y="'+(by+st.length*rowh+48)+'" text-anchor="middle">'+
+         (opt!==null&&st.length>opt?'the taught rule costs one extra station on this instance'
+                                   :'the taught rule is optimal on this instance')+'</text>';
+      $('nBars').innerHTML=o; $('nTour').innerHTML='';
+      $('nH').textContent=st.length+' stations';
+      $('nO').textContent=(opt===null?'—':opt+' stations');
+      $('nG').textContent=(opt===null?'—':(st.length-opt===0?'none':'+'+(st.length-opt)+' station'));
+      $('nS').textContent=(opt===null?'\u2014':Math.pow(opt,8).toLocaleString());
+    } else {
+      var p=pts(seed), bt=bestTour(p), nn=nnTour(p);
+      function path(ord,col,w,dash){
+        var d='M'+p[ord[0]][0].toFixed(1)+','+p[ord[0]][1].toFixed(1);
+        ord.slice(1).forEach(function(i){d+=' L'+p[i][0].toFixed(1)+','+p[i][1].toFixed(1);});
+        d+=' Z';
+        return '<path d="'+d+'" stroke="'+col+'" stroke-width="'+w+'"'+
+               (dash?' stroke-dasharray="5 4"':'')+'/>';
+      }
+      o+=path(bt.ord,'var(--c3)',2.2,false)+path(nn.ord,'var(--c1)',1.8,true);
+      $('nTour').innerHTML=o;
+      var q='';
+      p.forEach(function(pt,i){
+        q+='<circle cx="'+pt[0].toFixed(1)+'" cy="'+pt[1].toFixed(1)+'" r="8" fill="var(--ink-2)"/>'+
+           '<text class="tkn" x="'+pt[0].toFixed(1)+'" y="'+(pt[1]+3.5).toFixed(1)+'" text-anchor="middle">'+i+'</text>';
+      });
+      q+='<text class="tkb" x="240" y="26" text-anchor="middle">8 hole centres — solid = optimal tour, dashed = nearest-neighbour</text>'+
+         '<text class="tkb" x="240" y="256" text-anchor="middle">optimum '+bt.L.toFixed(1)+
+         ' mm — nearest-neighbour '+nn.L.toFixed(1)+' mm ('+
+         (100*(nn.L/bt.L-1)).toFixed(1)+'% longer)</text>'+
+         '<text class="tk" x="240" y="274" text-anchor="middle">'+
+         bt.count.toLocaleString()+' tours examined exhaustively; at 20 holes it would be 1.2×10¹⁷</text>';
+      $('nBars').innerHTML=q;
+      $('nH').textContent=nn.L.toFixed(1)+' mm';
+      $('nO').textContent=bt.L.toFixed(1)+' mm';
+      $('nG').textContent='+'+(100*(nn.L/bt.L-1)).toFixed(1)+'%';
+      $('nS').textContent=bt.count.toLocaleString();
+    }
+    $('nLab').innerHTML='';
+    $('nVal').textContent=C;
+  }
+  $('nSl').addEventListener('input',function(){C=+this.value; draw();});
+  document.querySelectorAll('[data-np]').forEach(function(b){
+    b.addEventListener('click',function(){
+      var v=b.getAttribute('data-np');
+      if(v==='reseed') seed=Math.floor(Math.random()*9000)+10; else mode=v;
+      draw();
+    });
+  });
+  H.predict('data-p3','pv3',{
+    a:'<b>Not always.</b> Press <b>New instance</b> a few times — most are optimal, but some cost an extra station. Over 400 random instances the rule was optimal 98.8% of the time and one station worse 1.2%.',
+    b:'<b>Correct, and that is the honest answer.</b> First-fit-decreasing is provably within 11/9 of optimal plus a constant. Measured on 400 random 8-task instances: optimal 98.8% of the time, one station worse 1.2%.',
+    c:'<b>Stations are integers.</b> A ‘10%’ answer has no meaning when the outcome is 3 or 4 stations — and one extra station on a four-station line is 25%, not 10%.',
+    d:'<b>Too pessimistic.</b> There IS a guarantee: first-fit-decreasing never exceeds 11/9 of optimal plus a constant. What there is no guarantee of is optimality, which is a different thing.'
+  });
+  draw();
+})();
+</script>
+
+<script>
+/* ===== LAB 4 -- float anatomy ===== */
+(function(){
+  'use strict';
+  var H=window.__ch13, $=H.$, mag=0, fmtSel=32;
+  var MANT={16:11,32:24,64:53};
+  function ulpOf(x,bits){
+    if(x===0) return 0;
+    var e=Math.floor(Math.log2(Math.abs(x)));
+    return Math.pow(2,e-(MANT[bits]-1));
+  }
+  function draw(){
+    var x=Math.pow(10,mag), u=ulpOf(x,fmtSel), rel=u/x;
+    var digits=MANT[fmtSel]*Math.log10(2);
+    var X0=48,X1=452,Y=150,o='';
+    o+='<line class="base" x1="'+X0+'" y1="'+Y+'" x2="'+X1+'" y2="'+Y+'"/>';
+    $('fAxis').innerHTML=o;
+    /* representable ticks around x, spaced by ulp, scaled so 16 ulps span the axis */
+    var span=16*u, o2='';
+    for(var k=-8;k<=8;k++){
+      var px=X0+(X1-X0)*((k*u)+span/2)/span;
+      var tall=(k===0)?16:9;
+      o2+='<line x1="'+px.toFixed(1)+'" y1="'+(Y-tall)+'" x2="'+px.toFixed(1)+'" y2="'+(Y+tall)+
+          '" stroke="'+(k===0?'var(--c1)':'var(--c2)')+'" stroke-width="'+(k===0?2.2:1.2)+'"/>';
+    }
+    $('fTicks').innerHTML=o2;
+    /* strain demo at this precision */
+    var L1=1000.0002, L2=1000.0, uL=ulpOf(1000,fmtSel);
+    var r1=Math.round(L1/uL)*uL, r2=Math.round(L2/uL)*uL;
+    var strain=(r1-r2)/r2, truth=2e-7;
+    $('fLab').innerHTML=
+      '<text class="tkb" x="240" y="42" text-anchor="middle">representable float'+fmtSel+
+      ' values either side of '+(mag>=0?'10':'10')+'<tspan dy="-4" font-size="8">'+mag+'</tspan></text>'+
+      '<text class="tk" x="240" y="60" text-anchor="middle">every tick is a number this format can store; the gaps between them are the ulp</text>'+
+      '<text class="tk" x="240" y="'+(Y+38)+'" text-anchor="middle">step between neighbours = '+
+      u.toExponential(3)+'</text>'+
+      '<text class="tk" x="240" y="'+(Y+58)+'" text-anchor="middle">'+
+      'nothing between two ticks exists in this format — it rounds to one of them</text>'+
+      '<text class="tkb" x="240" y="'+(Y+92)+'" text-anchor="middle">strain of a 1000 mm bar extending 0.0002 mm</text>'+
+      '<text class="tk" x="240" y="'+(Y+110)+'" text-anchor="middle">computed '+
+      (strain===0?'0 (the extension vanished)':strain.toExponential(4))+
+      '   —   true 2.0000e-7</text>';
+    $('fU').textContent=u.toExponential(3);
+    $('fR').textContent=rel.toExponential(3);
+    $('fD').textContent=digits.toFixed(2);
+    $('fC').textContent=(strain===0?'0 — lost':((Math.abs(strain-truth)/truth*100).toFixed(1)+'% err'));
+    $('fVal').textContent='1e'+mag;
+  }
+  $('fSl').addEventListener('input',function(){mag=+this.value; draw();});
+  document.querySelectorAll('[data-fp]').forEach(function(b){
+    b.addEventListener('click',function(){fmtSel=+b.getAttribute('data-fp'); draw();});
+  });
+  H.predict('data-p4','pv4',{
+    a:'<b>The format is 32 bits everywhere, but the SPACING is not.</b> The exponent moves the whole ladder of representable values; only the number of rungs stays fixed.',
+    b:'<b>Correct.</b> The ulp goes from 1.2e-7 at x=1 to 64 at x=1e9 — nine orders of magnitude — while ulp/x stays pinned near 6e-8. Constant relative precision is exactly what significant figures mean.',
+    c:'<b>Backwards.</b> Larger magnitudes need a larger exponent, and the same mantissa then covers a wider interval, so the absolute step grows.',
+    d:'<b>Out by five orders.</b> Drag to 1e9 and read the ulp: 64, against 1.2e-7 at x=1. That is a factor of about 5×10⁸, not 10⁴.'
+  });
+  draw();
+})();
+
+/* ===== LAB 5 -- pipeline / line balance ===== */
+(function(){
+  'use strict';
+  var H=window.__ch13, $=H.$, preset='skew', splits=0;
+  var BASE={skew:[1,1,1,1,6], mild:[2,3.5,1.5,3,2.5], bal:[2,2,2,2,2]};
+  function stages(){
+    var s=BASE[preset].slice(),i;
+    for(i=0;i<splits;i++){
+      var mx=0,mi=0,j;
+      for(j=0;j<s.length;j++) if(s[j]>mx){mx=s[j]; mi=j;}
+      if(mx<=0.26) break;
+      s.splice(mi,1,mx/2,mx/2);
+    }
+    return s;
+  }
+  function draw(){
+    var s=stages(), n=s.length;
+    var mx=Math.max.apply(null,s), tot=s.reduce(function(a,b){return a+b;},0);
+    var eff=tot/(n*mx), sp=tot/mx;
+    var X0=54,X1=452,Y0=48,Y1=172,o='';
+    var bw=(X1-X0)/n-6;
+    for(var i=0;i<n;i++){
+      var h=(Y1-Y0)*s[i]/Math.max(mx,0.001);
+      var x=X0+i*((X1-X0)/n);
+      o+='<rect x="'+x.toFixed(1)+'" y="'+(Y1-h).toFixed(1)+'" width="'+bw.toFixed(1)+
+         '" height="'+h.toFixed(1)+'" fill="'+(Math.abs(s[i]-mx)<1e-9?'var(--c1)':'var(--c2)')+'"/>'+
+         '<text class="tk" x="'+(x+bw/2).toFixed(1)+'" y="'+(Y1+14)+'" text-anchor="middle">'+
+         s[i].toFixed(s[i]%1?2:0)+'</text>';
+    }
+    o+='<line x1="'+X0+'" y1="'+Y0+'" x2="'+X1+'" y2="'+Y0+
+       '" stroke="var(--brk)" stroke-width="1.4" stroke-dasharray="5 4"/>'+
+       '<text class="tk" x="'+(X1-2)+'" y="'+(Y0-5)+'" text-anchor="end">cycle time = max t = '+
+       mx.toFixed(2)+'</text>';
+    $('pBars').innerHTML=o;
+    /* gantt: units flowing */
+    var GY=212, gh=11, o2='', cell=Math.min(30,(X1-X0)/(n+4));
+    for(var u=0;u<4;u++){
+      for(var st=0;st<n;st++){
+        var gx=X0+(u+st)*cell, gy=GY+u*(gh+3);
+        if(gx+cell>X1) continue;
+        o2+='<rect x="'+gx.toFixed(1)+'" y="'+gy+'" width="'+(cell-2).toFixed(1)+'" height="'+gh+
+            '" fill="'+H.PAL[u%5]+'" fill-opacity="0.85"/>';
+      }
+      o2+='<text class="tk" x="'+(X0-8)+'" y="'+(GY+u*(gh+3)+gh-2)+'" text-anchor="end">u'+(u+1)+'</text>';
+    }
+    $('pGantt').innerHTML=o2;
+    $('pLab').innerHTML=
+      '<text class="tkb" x="240" y="28" text-anchor="middle">'+n+
+      ' stages — the tallest bar alone sets the clock</text>'+
+      '<text class="tk" x="240" y="200" text-anchor="middle">units entering the line, one stage per cycle</text>'+
+      '<text class="tk" x="240" y="298" text-anchor="middle">speedup = Σt / max t = '+
+      sp.toFixed(3)+' = n × efficiency = '+n+' × '+eff.toFixed(3)+'</text>';
+    $('pC').textContent=mx.toFixed(3);
+    $('pE').textContent=eff.toFixed(4);
+    $('pS').textContent=sp.toFixed(3)+' / '+n;
+    $('pL').textContent=tot.toFixed(2);
+    $('pVal').textContent=splits+' split'+(splits===1?'':'s');
+  }
+  $('pSl').addEventListener('input',function(){splits=+this.value; draw();});
+  document.querySelectorAll('[data-pp]').forEach(function(b){
+    b.addEventListener('click',function(){preset=b.getAttribute('data-pp'); splits=0; $('pSl').value=0; draw();});
+  });
+  H.predict('data-p5','pv5',{
+    a:'<b>Only if you split the right stage.</b> Depth alone does nothing — throughput is 1/max(t), and splitting a 1 ns stage leaves the 6 ns stage exactly where it was.',
+    b:'<b>Correct.</b> Cycle time is max(tᵢ) and nothing else. Splitting a non-bottleneck stage adds depth, adds latency, and changes throughput not at all — which is why you always attack the bottleneck.',
+    c:'<b>Right instinct, wrong mechanism.</b> Real pipelines do pay register overhead per stage, but in the idealised model here throughput is unchanged, not reduced. Either way it is not an improvement.',
+    d:'<b>No — zero percent.</b> The slider in this lab splits the SLOWEST stage, which does help; splitting a 1 ns stage instead would move nothing at all.'
+  });
+  draw();
+})();
+
+/* ===== LAB 6 -- AMAT ===== */
+(function(){
+  'use strict';
+  var H=window.__ch13, $=H.$, h=0.95, slow=100;
+  function draw(){
+    var fast=1.0;
+    var X0=56,X1=452,Y0=50,Y1=232,o='';
+    var amatAt=function(hh){return hh*fast+(1-hh)*slow;};
+    var ymax=amatAt(0.5);
+    function px(hh){return X0+(X1-X0)*(hh-0.5)/0.5;}
+    function py(v){return Y1-(Y1-Y0)*Math.min(v,ymax)/ymax;}
+    for(var g=0.5;g<=1.0001;g+=0.1) o+='<line x1="'+px(g).toFixed(1)+'" y1="'+Y0+'" x2="'+px(g).toFixed(1)+'" y2="'+Y1+'"/>';
+    $('mGrid').innerHTML=o;
+    var d='M';
+    for(var hh=0.5;hh<=1.0001;hh+=0.005) d+=px(hh).toFixed(1)+','+py(amatAt(hh)).toFixed(1)+' L';
+    d=d.slice(0,-2);
+    var cur=amatAt(h);
+    $('mCurve').innerHTML='<path d="'+d+'" stroke="var(--c2)"/>'+
+      '<line x1="'+X0+'" y1="'+py(fast).toFixed(1)+'" x2="'+X1+'" y2="'+py(fast).toFixed(1)+
+      '" stroke="var(--ink-3)" stroke-width="1.2" stroke-dasharray="4 3"/>'+
+      '<circle cx="'+px(h).toFixed(1)+'" cy="'+py(cur).toFixed(1)+'" r="6" fill="var(--c1)"/>'+
+      '<line x1="'+px(h).toFixed(1)+'" y1="'+py(cur).toFixed(1)+'" x2="'+px(h).toFixed(1)+'" y2="'+Y1+
+      '" stroke="var(--c1)" stroke-width="1" stroke-dasharray="3 3"/>';
+    $('mAx').innerHTML='<line x1="'+X0+'" y1="'+Y1+'" x2="'+X1+'" y2="'+Y1+'"/>'+
+      '<line x1="'+X0+'" y1="'+Y0+'" x2="'+X0+'" y2="'+Y1+'"/>';
+    var lab='';
+    for(var t=0.5;t<=1.0001;t+=0.1)
+      lab+='<text class="tk" x="'+px(t).toFixed(1)+'" y="'+(Y1+15)+'" text-anchor="middle">'+
+           (t*100).toFixed(0)+'%</text>';
+    var missShare=(1-h)*slow/cur;
+    $('mLab').innerHTML=lab+
+      '<text class="tkb" x="240" y="28" text-anchor="middle">average memory access time against hit rate</text>'+
+      '<text class="tk" x="240" y="'+(Y1+32)+'" text-anchor="middle">hit rate</text>'+
+      '<text class="tk" x="'+(X0+4)+'" y="'+(py(fast)-5).toFixed(1)+'">pure L1 floor = 1 ns</text>'+
+      '<text class="tk" x="240" y="'+(Y1+52)+'" text-anchor="middle">'+
+      (100*missShare).toFixed(0)+'% of all time is spent on the '+(100*(1-h)).toFixed(0)+
+      '% of accesses that miss</text>';
+    var gain=amatAt(Math.min(h+0.01,1))>0?cur/amatAt(Math.min(h+0.01,1)):1;
+    $('mA').textContent=cur<1000?cur.toFixed(2)+' ns':(cur/1000).toFixed(2)+' µs';
+    $('mX').textContent=(cur/fast).toFixed(2)+'×';
+    $('mF').textContent=(100*missShare).toFixed(1)+'%';
+    $('mG').textContent=gain.toFixed(3)+'×';
+    $('mVal').textContent=(h*100).toFixed(0)+'%';
+  }
+  $('mSl').addEventListener('input',function(){h=+this.value/100; draw();});
+  document.querySelectorAll('[data-mp]').forEach(function(b){
+    b.addEventListener('click',function(){slow=b.getAttribute('data-mp')==='ram'?100:50000; draw();});
+  });
+  H.predict('data-p6','pv6',{
+    a:'<b>That is the instinct this lab exists to break.</b> Hit rate is not throughput. AMAT goes 5.95 ns → 1.99 ns, a factor of 3, because the misses dominate the average.',
+    b:'<b>Correct.</b> 0.95(1)+0.05(100) = 5.95 ns; 0.99(1)+0.01(100) = 1.99 ns. Three times better from four points of hit rate, because a miss costs 100× a hit.',
+    c:'<b>Under by half.</b> Read the AMAT readout at 95% and at 99%: 5.95 and 1.99. That is 3×, not 1.5×.',
+    d:'<b>It is the single most valuable change available.</b> At 95% hit rate, 84% of all time is going into the 5% of accesses that miss — the third readout shows it.'
+  });
+  draw();
+})();
+</script>
+<script>
+/* Long display equations can be wider than their container - especially inside a
+   callout box, which is narrower than the main column. After the typesetter
+   finishes, measure each one and shrink it just enough to fit. Only ever shrinks,
+   never grows, and never below a readable floor - so the worst case is the
+   scrollbar we already had. */
+(function () {
+  'use strict';
+  var MIN_SCALE = 0.70;   /* below this, scrolling beats illegible text */
+
+  function fitOne(box) {
+    try {
+      var c = box.querySelector('mjx-container[display="true"]');
+      if (!c) return;
+      var svg = c.querySelector('svg');
+      if (!svg) return;
+      c.style.fontSize = '';
+      var avail = box.clientWidth;
+      if (!avail) return;
+      var w = svg.getBoundingClientRect().width;
+      if (!w || w <= avail) return;
+      var k = Math.max(MIN_SCALE, (avail / w) * 0.98);
+      c.style.fontSize = (k * 100).toFixed(1) + '%';
+      var w2 = svg.getBoundingClientRect().width;      /* one refinement pass */
+      if (w2 > avail) {
+        k = Math.max(MIN_SCALE, k * (avail / w2) * 0.98);
+        c.style.fontSize = (k * 100).toFixed(1) + '%';
+      }
+    } catch (e) { /* leave the equation exactly as it was */ }
+  }
+
+  /* Inline math cannot wrap and is not inside a scrollable .mathbox, so a long
+     inline expression pushes the whole page sideways.  Shrink any that is wider
+     than the text column it sits in; the ex-based sizing keeps the baseline. */
+  function fitInline(c) {
+    try {
+      var svg = c.querySelector('svg'); if (!svg) return;
+      c.style.fontSize = '';
+      var host = c.parentElement; if (!host) return;
+      var avail = host.clientWidth; if (!avail) return;
+      var w = svg.getBoundingClientRect().width;
+      if (!w || w <= avail) return;
+      c.style.fontSize = (Math.max(MIN_SCALE, (avail / w) * 0.98) * 100).toFixed(1) + '%';
+    } catch (e) { /* leave the expression exactly as it was */ }
+  }
+
+  function fitAll() {
+    try { document.querySelectorAll('.mathbox').forEach(fitOne); } catch (e) {}
+    try {
+      document.querySelectorAll('mjx-container:not([display="true"])').forEach(fitInline);
+    } catch (e) {}
+  }
+
+  function start() {
+    fitAll();
+    var t;
+    window.addEventListener('resize', function () {
+      clearTimeout(t); t = setTimeout(fitAll, 160);
+    });
+  }
+
+  function waitForTypesetter(n) {
+    if (window.MathJax && window.MathJax.startup && window.MathJax.startup.promise) {
+      window.MathJax.startup.promise.then(start, start);
+      return;
+    }
+    if (n > 60) return;            /* typesetter never arrived - nothing to fit */
+    setTimeout(function () { waitForTypesetter(n + 1); }, 200);
+  }
+  waitForTypesetter(0);
+})();
+</script>
+
+</body>
+</html>

@@ -2365,4 +2365,248 @@ print(f"[Ch12 s25]   MY OWN CLAIM, BROKEN: I first wrote that mu2 gives 'four to
 print(f"[Ch12 s25]   to 90% loss. True for the small dense test graph of s15, false in general:")
 print(f"[Ch12 s25]   a 14-node sparse chain needs {np.log(0.1)/np.log(_m2):.0f}. Corrected on the page.")
 
+# =========================== CHAPTER 13 (part 1) =========================
+print("\n" + "="*66)
+print("CHAPTER 13 PART 1 -- DISCRETE MATHS AND COMPUTER ARCHITECTURE")
+print("="*66)
+import itertools as _it, math as _m, struct as _st
+
+# --- s04: a simple truss is built by induction --------------------------
+_j,_mm=3,3; _ok=True
+for _ in range(8):
+    _j+=1; _mm+=2; _ok &= (_mm==2*_j-3)
+print(f"\n[Ch13 s04] simple-truss construction: base case triangle (j=3,m=3), inductive step")
+print(f"[Ch13 s04]   adds 1 joint and 2 members. m = 2j-3 preserved for 8 steps          {P(_ok)}")
+print(f"[Ch13 s04]   final j={_j}, m={_mm}, 2j-3={2*_j-3}. That construction IS a proof by")
+print(f"[Ch13 s04]   induction, and GATE teaches it without naming it.")
+
+# --- s02: De Morgan == series/parallel reliability duality ---------------
+_bad=0
+for _v in _it.product([False,True],repeat=4):
+    if (not all(_v)) != any(not x for x in _v): _bad+=1
+    if (not any(_v)) != all(not x for x in _v): _bad+=1
+_R=rng.uniform(0.7,0.99,4)
+print(f"\n[Ch13 s02] De Morgan over all 2^4 assignments, violations: {_bad}            {P(_bad==0)}")
+print(f"[Ch13 s02]   series R = prod(Ri) = {np.prod(_R):.6f}   (AND gate: all must work)")
+print(f"[Ch13 s02]   parallel R = 1-prod(1-Ri) = {1-np.prod(1-_R):.6f}  (OR gate: any may work)")
+print(f"[Ch13 s02]   a fault tree IS a propositional formula drawn with gates; the")
+print(f"[Ch13 s02]   series/parallel duality of reliability blocks IS De Morgan's law")
+
+# --- s06: binary search IS bisection -------------------------------------
+_f=lambda x: x**3-2*x-5
+_a,_b,_eps=2.0,3.0,1e-10
+_pred=_m.ceil(_m.log2((_b-_a)/_eps)); _lo,_hi,_bi=_a,_b,0
+while _hi-_lo>_eps:
+    _mid=(_lo+_hi)/2
+    if _f(_lo)*_f(_mid)<=0: _hi=_mid
+    else: _lo=_mid
+    _bi+=1
+print(f"\n[Ch13 s06] bisection on x^3-2x-5 over [2,3] to 1e-10: {_bi} iterations")
+print(f"[Ch13 s06]   ceil(log2((b-a)/eps)) = {_pred}                                    {P(_bi==_pred)}")
+print(f"[Ch13 s06]   binary search is the same recurrence T(n)=T(n/2)+O(1), the same")
+print(f"[Ch13 s06]   halving argument and the same log2 count. Identical algorithm.")
+
+# --- s06: merge sort and the FFT share a recurrence ----------------------
+def _ms(n): return 0 if n<=1 else _ms(n//2)+_ms(n-n//2)+n
+def _fft(n): return 0 if n<=1 else 2*_fft(n//2)+n
+_same=all(_ms(n)==_fft(n) for n in (8,64,512,4096))
+print(f"[Ch13 s06] merge-sort comparisons == FFT butterflies at n=8..4096            {P(_same)}")
+for _n in (8,512,32768):
+    print(f"[Ch13 s06]   n={_n:5d}: ops {_ms(_n):6d}, n log2 n = {int(_n*_m.log2(_n)):6d}, ratio {_ms(_n)/(_n*_m.log2(_n)):.3f}")
+print(f"[Ch13 s06]   Master Theorem a=2,b=2,d=1 -> d == log_b a, the balanced case, O(n log n)")
+
+# --- s13: pipelining IS line balancing ----------------------------------
+_stg=np.array([2.0,3.5,1.5,3.0,2.5]); _n=len(_stg)
+_cyc=_stg.max(); _tot=_stg.sum(); _eff=_tot/(_n*_cyc); _sp=_tot/_cyc
+print(f"\n[Ch13 s13] stage/station times {_stg}, n = {_n}")
+print(f"[Ch13 s13]   cycle time = max(t_i) = {_cyc:.3f}  (the bottleneck sets it)")
+print(f"[Ch13 s13]   throughput = 1/cycle  = {1/_cyc:.4f}     latency = sum(t_i) = {_tot:.3f}")
+print(f"[Ch13 s13]   efficiency = sum/(n*max) = {_eff:.4f}, balance delay {1-_eff:.4f}")
+print(f"[Ch13 s13]   speedup = sum/max = {_sp:.3f} of an ideal {_n}")
+print(f"[Ch13 s13]   speedup == n * efficiency                                       {P(np.isclose(_sp,_n*_eff))}")
+_balv=np.full(_n,_tot/_n)
+print(f"[Ch13 s13]   perfectly balanced line: efficiency {_balv.sum()/(_n*_balv.max()):.4f}, "
+      f"speedup {_balv.sum()/_balv.max():.3f}                {P(np.isclose(_balv.sum()/_balv.max(),_n))}")
+print(f"[Ch13 s13]   'pipeline efficiency' and 'line-balancing efficiency' are the same")
+print(f"[Ch13 s13]   expression. Perfect balance is the only route to speedup = n.")
+
+# --- s14: a 5% misprediction rate is not a 5% cost ----------------------
+print()
+for _acc in (0.99,0.95,0.90):
+    _p=1-_acc; _cpi=1+_p*15
+    print(f"[Ch13 s14] branch accuracy {_acc:.2f} -> CPI = 1 + {_p:.2f}*15 = {_cpi:.3f}, {_cpi-1:.0%} more cycles")
+print(f"[Ch13 s14]   at the source's own figures (>95% accurate, ~15 cycle penalty) a 5%")
+print(f"[Ch13 s14]   miss rate costs 75% more cycles per instruction                  {P(abs((1+0.05*15)-1.75)<1e-12)}")
+
+# --- s15: AMAT -- a 95% hit rate is not 95% of the speed ---------------
+print()
+for _h in (0.99,0.95,0.90):
+    _amat=_h*1.0+(1-_h)*100.0
+    print(f"[Ch13 s15] hit rate {_h:.2f} -> AMAT = {_amat:6.3f} ns = {_amat:5.2f}x slower than pure L1")
+print(f"[Ch13 s15]   95% hits still runs 5.95x slower than L1                         {P(abs(0.95+0.05*100-5.95)<1e-12)}")
+print(f"[Ch13 s15]   AMAT = h*t_fast + (1-h)*t_slow is Sheet 05's expected-cost formula:")
+print(f"[Ch13 s15]   rate times severity, not rate alone -- a stockout penalty exactly")
+print(f"[Ch13 s15]   register->RAM {80/0.3:.0f}x, register->HDD {1e7/0.3:.3g}x (source: ~300x, ~3e7x)")
+
+# --- s16: Belady's anomaly ---------------------------------------------
+def _fifo(ref,fr):
+    q=[];f=0
+    for p_ in ref:
+        if p_ not in q:
+            f+=1
+            if len(q)>=fr: q.pop(0)
+            q.append(p_)
+    return f
+def _lru(ref,fr):
+    q=[];f=0
+    for p_ in ref:
+        if p_ in q: q.remove(p_); q.append(p_)
+        else:
+            f+=1
+            if len(q)>=fr: q.pop(0)
+            q.append(p_)
+    return f
+_ref=[1,2,3,4,1,2,5,1,2,3,4,5]
+print(f"\n[Ch13 s16] reference string {_ref}")
+for _fr in (3,4,5):
+    print(f"[Ch13 s16]   {_fr} frames: FIFO {_fifo(_ref,_fr):2d} faults, LRU {_lru(_ref,_fr):2d} faults")
+print(f"[Ch13 s16] BELADY'S ANOMALY: FIFO faults MORE with 4 frames than with 3        "
+      f"{P(_fifo(_ref,4)>_fifo(_ref,3))}")
+print(f"[Ch13 s16]   LRU is a stack algorithm and cannot do this                       "
+      f"{P(_lru(_ref,4)<=_lru(_ref,3))}")
+print(f"[Ch13 s16]   not in the source. It is the counterexample to 'more buffer is")
+print(f"[Ch13 s16]   never worse' -- buying stock can cut throughput under FIFO issue.")
+
+# --- s10: floating point is constant RELATIVE error --------------------
+print()
+print(f"[Ch13 s10] float32 mantissa 24 bits -> {24*_m.log10(2):.2f} decimal digits (source ~7)   "
+      f"{P(abs(24*_m.log10(2)-7)<0.3)}")
+print(f"[Ch13 s10] float64 mantissa 53 bits -> {53*_m.log10(2):.2f} decimal digits (source ~15)  "
+      f"{P(abs(53*_m.log10(2)-16)<1)}")
+_relc=[]
+for _x in (1.0,1e3,1e6,1e9):
+    _xf=np.float32(_x); _ulp=float(np.nextafter(_xf,np.float32(np.inf))-_xf)
+    _relc.append(_ulp/_x)
+    print(f"[Ch13 s10]   x={_x:8.0e}: ulp = {_ulp:12.6e}, ulp/x = {_ulp/_x:.6e}")
+print(f"[Ch13 s10]   absolute step grows with magnitude, relative step is constant     "
+      f"{P(max(_relc)/min(_relc) < 2.1)}")
+print(f"[Ch13 s10]   floating point is significant figures in hardware; a dial gauge is")
+print(f"[Ch13 s10]   the opposite -- fixed absolute resolution, relative precision that")
+print(f"[Ch13 s10]   collapses for small readings")
+_L1,_L2=np.float32(1000.0002),np.float32(1000.0)
+_got=float((_L1-_L2)/_L2)
+print(f"[Ch13 s10] catastrophic cancellation: strain from two float32 lengths gives")
+print(f"[Ch13 s10]   {_got:.6e} against a true 2.0e-07 -- {abs(_got-2e-7)/2e-7:.0%} error      "
+      f"{P(abs(_got-2e-7)/2e-7 > 0.05)}")
+print(f"[Ch13 s10]   which is why a strain gauge measures the CHANGE rather than")
+print(f"[Ch13 s10]   subtracting two large lengths")
+
+# --- s11: the source's non-associativity demo does not demonstrate it ---
+print()
+_a3,_b3,_c3=np.float32(1e8),np.float32(1.0),np.float32(-1e8)
+_Ls,_Rs=(_a3+_b3)+_c3, _a3+(_b3+_c3)
+print(f"[Ch13 s11] SOURCE CORRECTION -- file 02 coding task 3 claims to show that float")
+print(f"[Ch13 s11]   addition is not associative, with a=1e8, b=1.0, c=-1e8 and the")
+print(f"[Ch13 s11]   comment '(a+b)+c should be 1.0'. Running it in float32:")
+print(f"[Ch13 s11]     (a+b)+c = {_Ls}   a+(b+c) = {_Rs}   equal: {_Ls==_Rs}")
+print(f"[Ch13 s11]   the demo shows NO difference, and the commented expectation is wrong  "
+      f"{P(_Ls==_Rs and float(_Ls)==0.0)}")
+_ulp8=float(np.nextafter(np.float32(1e8),np.float32(np.inf))-np.float32(1e8))
+print(f"[Ch13 s11]   ulp(1e8) in float32 is {_ulp8:.0f}, so 1.0 is below the representable")
+print(f"[Ch13 s11]   step on BOTH sides and is lost either way")
+_a4,_b4,_c4=np.float32(1e-8),np.float32(1.0),np.float32(-1.0)
+print(f"[Ch13 s11]   a pair that IS non-associative: a=1e-8, b=1.0, c=-1.0 ->")
+print(f"[Ch13 s11]     (a+b)+c = {float((_a4+_b4)+_c4):.6e}, a+(b+c) = {float(_a4+(_b4+_c4)):.6e}   "
+      f"{P((_a4+_b4)+_c4 != _a4+(_b4+_c4))}")
+print(f"[Ch13 s11]   the claim is true; the example chosen to show it is not")
+
+# --- s09: why you were taught a heuristic ------------------------------
+def _ffd(t,C):
+    st=[]
+    for v in sorted(t,reverse=True):
+        for s_ in st:
+            if sum(s_)+v<=C: s_.append(v); break
+        else: st.append([v])
+    return st
+def _opt(t,C,cap=7):
+    for k in range(_m.ceil(sum(t)/C), cap+1):
+        for asg in _it.product(range(k),repeat=len(t)):
+            ld=[0]*k; good=True
+            for v,s_ in zip(t,asg):
+                ld[s_]+=v
+                if ld[s_]>C: good=False; break
+            if good and all(l>0 for l in ld): return k
+    return None
+_tt=[3,5,7,4,2,2,3,4]; _C=10
+print(f"\n[Ch13 s09] line balancing, tasks {_tt}, cycle time {_C}")
+print(f"[Ch13 s09]   largest-candidate / first-fit-decreasing: {len(_ffd(_tt,_C))} stations {_ffd(_tt,_C)}")
+print(f"[Ch13 s09]   true optimum: {_opt(_tt,_C)} stations")
+print(f"[Ch13 s09]   the heuristic is one station WORSE than optimal                   "
+      f"{P(len(_ffd(_tt,_C))>_opt(_tt,_C))}")
+_rt=np.random.default_rng(11).uniform(0,100,(9,2))
+_D=np.linalg.norm(_rt[:,None,:]-_rt[None,:,:],axis=-1)
+_best=min((sum(_D[((0,)+pp)[i],((0,)+pp)[(i+1)%9]] for i in range(9)), pp)
+          for pp in _it.permutations(range(1,9)))[0]
+_cur,_nn,_unv=0,[0],set(range(1,9))
+while _unv:
+    _nx=min(_unv,key=lambda j:_D[_cur,j]); _nn.append(_nx); _unv.discard(_nx); _cur=_nx
+_nnd=sum(_D[_nn[i],_nn[(i+1)%9]] for i in range(9))
+print(f"[Ch13 s09] CNC drill path over 9 holes IS a travelling salesman problem:")
+print(f"[Ch13 s09]   exhaustive optimum {_best:.2f} mm, nearest-neighbour {_nnd:.2f} mm,")
+print(f"[Ch13 s09]   heuristic {100*(_nnd/_best-1):.1f}% longer                                    "
+      f"{P(_nnd>_best)}")
+print(f"[Ch13 s09]   tours for 9 holes {_m.factorial(8):,}; for 20 holes {_m.factorial(19):.3g}")
+print(f"[Ch13 s09]   you were handed largest-candidate, RPW and nearest-neighbour because")
+print(f"[Ch13 s09]   the exact problems are NP-hard. Nobody said so at the time.")
+
+# --- s07: the planarity bound has an unstated hypothesis ---------------
+print()
+print(f"[Ch13 s07] file 01 states |E| <= 3|V| - 6 for planar graphs, unconditionally:")
+for _V in (1,2,3):
+    print(f"[Ch13 s07]   |V|={_V}: bound {3*_V-6:2d}, a tree has {_V-1} edges -> "
+          f"{'holds' if _V-1<=3*_V-6 else 'BOUND BROKEN'}")
+print(f"[Ch13 s07]   the bound needs |V| >= 3                                          "
+      f"{P(not (1-1<=3*1-6) and not (2-1<=3*2-6) and (3-1<=3*3-6))}")
+print(f"[Ch13 s07] 4 GHz -> {1/4e9*1e9:.2f} ns per cycle; light covers {3e8*0.25e-9*100:.1f} cm "
+      f"(source: 7.5 cm)   {P(abs(3e8*0.25e-9*100-7.5)<0.01)}")
+_phi=(1+_m.sqrt(5))/2; _psi=(1-_m.sqrt(5))/2
+_F=[0,1]
+for _i in range(2,31): _F.append(_F[-1]+_F[-2])
+_ferr=max(abs(_F[n]-(_phi**n-_psi**n)/_m.sqrt(5)) for n in range(31))
+print(f"[Ch13 s07] Fibonacci closed form exact to {_ferr:.1e} over n<=30                 {P(_ferr<1e-6)}")
+
+# --- s02: redundancy low in the system beats redundancy high -----------
+_Rv=np.linspace(0.001,0.999,5000)
+_arrA=1-(1-_Rv**2)**2          # two complete pump-valve trains in parallel
+_arrB=(1-(1-_Rv)**2)**2        # parallel pumps feeding parallel valves
+_gap=_arrB-_arrA
+print(f"\n[Ch13 s02] same four components, two arrangements:")
+print(f"[Ch13 s02]   (a) two whole trains in parallel  = 1-(1-R^2)^2")
+print(f"[Ch13 s02]   (b) redundancy at each stage      = (1-(1-R)^2)^2")
+for _r in (0.6,0.9,0.99):
+    print(f"[Ch13 s02]   R={_r}: (a)={1-(1-_r**2)**2:.6f}  (b)={(1-(1-_r)**2)**2:.6f}  "
+          f"diff {(1-(1-_r)**2)**2-(1-(1-_r**2)**2):+.6f}")
+print(f"[Ch13 s02]   (b) beats (a) for every R in (0,1)                                {P(_gap.min()>0)}")
+print(f"[Ch13 s02]   widest gap {_gap.max():.4f} at R = {_Rv[_gap.argmax()]:.3f}                            "
+      f"{P(abs(_Rv[_gap.argmax()]-0.5)<0.01 and abs(_gap.max()-0.125)<1e-3)}")
+print(f"[Ch13 s02]   so redundancy belongs as low in the system as you can afford, and")
+print(f"[Ch13 s02]   it matters most exactly when components are worst")
+
+# --- s09: how often does the taught heuristic actually lose? -----------
+_tie=_loss=_ntot=0
+_rg9=np.random.default_rng(5)
+for _ in range(400):
+    _t9=[int(x) for x in _rg9.integers(2,8,8)]
+    _o9=_opt(_t9,10,cap=8)
+    if _o9 is None: continue
+    _g9=len(_ffd(_t9,10)); _ntot+=1
+    if _g9==_o9: _tie+=1
+    elif _g9>_o9: _loss+=1
+print(f"\n[Ch13 s09] over {_ntot} random 8-task instances at cycle time 10:")
+print(f"[Ch13 s09]   largest-candidate matches the optimum {_tie} times ({100*_tie/_ntot:.1f}%)")
+print(f"[Ch13 s09]   and loses exactly one station {_loss} times ({100*_loss/_ntot:.1f}%)     "
+      f"{P(_tie>_loss and _loss>0)}")
+print(f"[Ch13 s09]   so the heuristic is usually optimal and occasionally not, with nothing")
+print(f"[Ch13 s09]   in the rule to tell you which case you are looking at")
+
 print("\n" + "="*66)
