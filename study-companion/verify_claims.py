@@ -2609,4 +2609,185 @@ print(f"[Ch13 s09]   and loses exactly one station {_loss} times ({100*_loss/_nt
 print(f"[Ch13 s09]   so the heuristic is usually optimal and occasionally not, with nothing")
 print(f"[Ch13 s09]   in the rule to tell you which case you are looking at")
 
+# =========================== CHAPTER 13 (part 2) =========================
+print("\n" + "="*66)
+print("CHAPTER 13 PART 2 -- OPERATING SYSTEMS AND CONCURRENCY")
+print("="*66)
+
+def _amdahl(p,n): return 1/((1-p)+p/n)
+def _gust(p,n): return (1-p)+p*n
+
+# --- s17: Amdahl is the two-station line where one station cannot split ---
+_p=0.95
+print(f"\n[Ch13 s17] Amdahl with p = {_p}: speedup 1/((1-p)+p/n)")
+for _n in (1,4,16,64,1024):
+    print(f"[Ch13 s17]   n={_n:5d} -> {_amdahl(_p,_n):7.3f}")
+print(f"[Ch13 s17]   asymptote 1/(1-p) = {1/(1-_p):.1f}                                    "
+      f"{P(abs(_amdahl(_p,10**9)-1/(1-_p))<1e-4)}")
+_ok17=all(abs(_amdahl(_p,_n)-1/((1-_p)+_p/_n))<1e-12 for _n in (1,2,7,64,999))
+print(f"[Ch13 s17]   read as a TWO-STATION line: station A = {1-_p:.2f} (cannot be split),")
+print(f"[Ch13 s17]   station B = {_p:.2f} shared by n operators. Time = (1-p) + p/n, and the")
+print(f"[Ch13 s17]   Amdahl speedup is exactly 1/that time                            {P(_ok17)}")
+for _n in (4,16,64):
+    _A,_B=1-_p,_p/_n
+    print(f"[Ch13 s17]     n={_n:3d}: A={_A:.4f} B={_B:.4f} -> bottleneck is "
+          f"{'A, the serial station' if _A>_B else 'B, the parallel station'}")
+print(f"[Ch13 s17]   once B falls below A, more operators buy nothing. That is Goldratt:")
+print(f"[Ch13 s17]   an hour saved at a non-bottleneck is a mirage.")
+
+# --- s18: Amdahl vs Gustafson answer different questions ----------------
+print()
+print(f"[Ch13 s18] {'n':>6s} {'Amdahl (fixed job)':>19s} {'Gustafson (fixed time)':>23s}")
+for _n in (4,16,64,256):
+    print(f"[Ch13 s18] {_n:6d} {_amdahl(0.95,_n):19.2f} {_gust(0.95,_n):23.2f}")
+print(f"[Ch13 s18]   they diverge without contradicting: Amdahl fixes the job and asks how")
+print(f"[Ch13 s18]   much faster (capped), Gustafson fixes the time and asks how much more")
+print(f"[Ch13 s18]   work (linear). Cycle-time reduction against capacity expansion.   "
+      f"{P(_gust(0.95,256)>_amdahl(0.95,256)*10)}")
+
+# --- s04: SJF is the SPT dispatching rule, and SPT is optimal -----------
+_jobs=[('P1',10),('P2',4),('P3',6),('P4',2),('P5',8)]
+def _mflow(order):
+    _t=0; _tot=0
+    for _nm,_b in order: _t+=_b; _tot+=_t
+    return _tot/len(order)
+_spt=sorted(_jobs,key=lambda j:j[1])
+_bestp=min(_it.permutations(_jobs), key=_mflow)
+print(f"\n[Ch13 s04] jobs {[(n,b) for n,b in _jobs]}")
+print(f"[Ch13 s04]   FCFS mean flow time {_mflow(_jobs):.2f}; SPT {_mflow(_spt):.2f}; "
+      f"exhaustive best {_mflow(_bestp):.2f}")
+print(f"[Ch13 s04]   SPT attains the exhaustive optimum                                "
+      f"{P(abs(_mflow(_spt)-_mflow(_bestp))<1e-12)}")
+_bad4=0
+_rg4=np.random.default_rng(3)
+for _ in range(300):
+    _js=[(f'J{i}',int(x)) for i,x in enumerate(_rg4.integers(1,20,6))]
+    if abs(_mflow(sorted(_js,key=lambda j:j[1]))-_mflow(min(_it.permutations(_js),key=_mflow)))>1e-9:
+        _bad4+=1
+print(f"[Ch13 s04]   over 300 random 6-job instances SPT was never beaten ({_bad4} failures)  {P(_bad4==0)}")
+print(f"[Ch13 s04]   FCFS is {100*(_mflow(_jobs)/_mflow(_spt)-1):.1f}% worse here -- the convoy effect")
+print(f"[Ch13 s04]   'shortest job first minimises average waiting time' in an OS text IS")
+print(f"[Ch13 s04]   the SPT rule minimising mean flow time in a scheduling text. Same")
+print(f"[Ch13 s04]   theorem, and the same fatal caveat: you must know the times in advance.")
+
+# --- s05: the time quantum has the EOQ form -----------------------------
+print()
+print(f"[Ch13 s05] EOQ minimises D*S/Q + H*Q/2  ->  Q* = sqrt(2DS/H)")
+print(f"[Ch13 s05] quantum cost A/q + B*q       ->  q* = sqrt(A/B)   (same structure)")
+_okq=True
+for _A,_B in ((0.05,0.1),(0.05,0.02),(0.2,0.05)):
+    _qs=np.linspace(0.01,5,20000); _tot=_A/_qs+_B*_qs
+    _okq &= abs(_qs[_tot.argmin()]-_m.sqrt(_A/_B))<2e-3
+    print(f"[Ch13 s05]   A={_A}, B={_B}: numeric argmin {_qs[_tot.argmin()]:.4f}, "
+          f"sqrt(A/B) = {_m.sqrt(_A/_B):.4f}")
+print(f"[Ch13 s05]   the optimum has the EOQ form in every case                        {P(_okq)}")
+print(f"[Ch13 s05]   and the same flat bottom: 2x off optimum costs {((1/2+2)/2-1)*100:.0f}% extra   "
+      f"{P(abs((1/2+2)/(1+1)-1.25)<1e-12)}")
+print(f"[Ch13 s05]   the quantum IS a batch size and the context switch IS a setup:")
+print(f"[Ch13 s05]   too small means constant changeovers, too large means long waits.")
+
+# --- s13: the lost update ------------------------------------------------
+def _interleave(nt,incs,seed):
+    _r=np.random.default_rng(seed)
+    _c=0; _regs=[None]*nt; _todo=[incs]*nt; _stage=[0]*nt
+    while any(t>0 for t in _todo):
+        _live=[i for i in range(nt) if _todo[i]>0]
+        _i=_live[_r.integers(len(_live))]
+        if _stage[_i]==0: _regs[_i]=_c; _stage[_i]=1
+        elif _stage[_i]==1: _regs[_i]+=1; _stage[_i]=2
+        else: _c=_regs[_i]; _stage[_i]=0; _todo[_i]-=1
+    return _c
+_exp=200; _got=_interleave(4,50,7)
+print(f"\n[Ch13 s13] counter += 1 is read, add, write -- three steps, not one.")
+print(f"[Ch13 s13]   4 threads x 50 increments, expected {_exp}, interleaved {_got}, "
+      f"lost {_exp-_got} ({100*(_exp-_got)/_exp:.0f}%)     {P(_got<_exp)}")
+print(f"[Ch13 s13]   two operators both read a kanban count of 12, both decrement, both")
+print(f"[Ch13 s13]   write 11. One withdrawal has vanished. Same bug, same fix.")
+
+# --- s14: a counting semaphore is a kanban card count -------------------
+def _simwip(cap,arr,svc,T,seed):
+    _r=np.random.default_rng(seed)
+    _t=0.0;_n=0;_area=0.0;_last=0.0;_done=0;_blk=0
+    _na=_r.exponential(1/arr); _nd=np.inf
+    while _t<T:
+        _t2=min(_na,_nd); _area+=_n*(_t2-_last); _last=_t2; _t=_t2
+        if _na<=_nd:
+            if _n<cap: _n+=1
+            else: _blk+=1
+            if _n==1: _nd=_t+_r.exponential(1/svc)
+            _na=_t+_r.exponential(1/arr)
+        else:
+            _n-=1; _done+=1
+            _nd=_t+_r.exponential(1/svc) if _n>0 else np.inf
+    return _area/T,_done/T,_blk
+print()
+_rows=[]
+for _cap in (1,3,10,10**6):
+    _L,_thr,_blk=_simwip(_cap,0.8,1.0,200000,11); _rows.append((_cap,_L,_thr))
+    print(f"[Ch13 s14] card count {('unbounded' if _cap>1000 else str(_cap)):>9s}: "
+          f"mean WIP {_L:6.3f}, throughput {_thr:.4f}, turned away {_blk}")
+_c10=[r for r in _rows if r[0]==10][0]; _cinf=[r for r in _rows if r[0]>1000][0]
+print(f"[Ch13 s14]   10 cards cuts mean WIP by {100*(1-_c10[1]/_cinf[1]):.0f}% for "
+      f"{100*(1-_c10[2]/_cinf[2]):.1f}% of throughput   {P(_c10[1]<_cinf[1] and _c10[2]>0.95*_cinf[2])}")
+print(f"[Ch13 s14]   but 1 card costs {100*(1-_rows[0][2]/_cinf[2]):.0f}% of throughput -- capping WIP is")
+print(f"[Ch13 s14]   only cheap while the cap sits above the working queue length.")
+print(f"[Ch13 s14]   a semaphore initialised to n IS a kanban loop with n cards, and")
+print(f"[Ch13 s14]   CONWIP is the same device under a third name.")
+
+# --- s06: Little's law ---------------------------------------------------
+def _little(arr,svc,T,seed):
+    _r=np.random.default_rng(seed)
+    _t=0.0;_n=0;_area=0.0;_last=0.0;_comp=0;_tw=0.0;_at=[]
+    _na=_r.exponential(1/arr); _nd=np.inf
+    while _t<T:
+        _t2=min(_na,_nd); _area+=_n*(_t2-_last); _last=_t2; _t=_t2
+        if _na<=_nd:
+            _n+=1; _at.append(_t)
+            if _n==1: _nd=_t+_r.exponential(1/svc)
+            _na=_t+_r.exponential(1/arr)
+        else:
+            _n-=1; _comp+=1; _tw+=_t-_at.pop(0)
+            _nd=_t+_r.exponential(1/svc) if _n>0 else np.inf
+    return _area/T,_comp/T,_tw/_comp
+_L6,_lam6,_W6=_little(0.7,1.0,400000,5)
+print(f"\n[Ch13 s06] M/M/1 simulation: L = {_L6:.4f}, lambda = {_lam6:.4f}, W = {_W6:.4f}")
+print(f"[Ch13 s06]   lambda * W = {_lam6*_W6:.4f} against L = {_L6:.4f}                        "
+      f"{P(abs(_lam6*_W6-_L6)/_L6 < 0.01)}")
+print(f"[Ch13 s06]   theory for rho=0.7: L = rho/(1-rho) = {0.7/0.3:.4f}                   "
+      f"{P(abs(_L6-0.7/0.3)<0.1)}")
+print(f"[Ch13 s06]   Little's law is not in the source. It holds for the run queue and the")
+print(f"[Ch13 s06]   shop floor alike, and it assumes nothing about the distributions.")
+
+# --- s15: deadlock and the total order -----------------------------------
+def _dine(n,ordered):
+    _held=[None]*n; _want=[]
+    for _ph in range(n):
+        _l,_r2=_ph,(_ph+1)%n
+        _want.append((min(_l,_r2),max(_l,_r2)) if ordered else (_l,_r2))
+    for _ph in range(n):
+        _f=_want[_ph][0]
+        if _held[_f] is None: _held[_f]=_ph
+    return not any(_held[_want[_ph][1]] is None or _held[_want[_ph][1]]==_ph
+                   for _ph in range(n) if _held[_want[_ph][0]]==_ph)
+print()
+for _n in (5,7):
+    print(f"[Ch13 s15] {_n} philosophers, all take LEFT first  -> deadlocked {_dine(_n,False)}")
+    print(f"[Ch13 s15] {_n} philosophers, total order on forks -> deadlocked {_dine(_n,True)}")
+print(f"[Ch13 s15]   a total order on resources makes circular wait impossible         "
+      f"{P(_dine(5,False) and not _dine(5,True) and _dine(7,False) and not _dine(7,True))}")
+print(f"[Ch13 s15]   'every thread acquires locks in the same order' IS 'every operator")
+print(f"[Ch13 s15]   draws tooling in the documented sequence'. Standard work, same reason.")
+
+# --- s10: latency against bandwidth --------------------------------------
+_link=10e9/8
+print(f"\n[Ch13 s10] a 10 Gbit/s link moves {_link/1e9:.2f} GB/s:")
+for _D,_hrs in ((1e12,4),(100e12,4)):
+    _tn=_D/_link/3600
+    print(f"[Ch13 s10]   {_D/1e12:6.1f} TB: over the link {_tn:7.2f} h, by van {_hrs} h -> "
+          f"{'the VAN wins' if _hrs<_tn else 'the link wins'}")
+print(f"[Ch13 s10]   crossover at {_link*3600*4/1e12:.1f} TB for a four-hour drive           "
+      f"{P(abs(_link*3600*4/1e12-18.0)<0.5)}")
+print(f"[Ch13 s10]   a van of disks has colossal bandwidth and dreadful latency: it is a")
+print(f"[Ch13 s10]   batch transfer, and the trade is the weekly lorry against the milk-run.")
+
 print("\n" + "="*66)

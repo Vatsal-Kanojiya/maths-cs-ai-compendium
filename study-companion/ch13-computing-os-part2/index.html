@@ -1,0 +1,2204 @@
+<title>Operating Systems and Concurrency</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(', '\\)']], displayMath: [['$$', '$$']], processEscapes: true },
+  svg: { fontCache: 'global', scale: 1.0 },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-svg.js" id="MathJax-script" async></script>
+
+<style>
+/* ============ TOKENS: light is complete and authoritative ============ */
+:root{
+  --ground:#F0F2F1;
+  --sheet:#FBFCFB;
+  --sheet-2:#F4F6F5;
+  --ink:#14181A;
+  --ink-2:#4E575B;
+  --ink-3:#77838A;
+  --rule:#D3DAD7;
+  --rule-strong:#A8B4B0;
+  --accent:#12507E;
+  --accent-ink:#0E4267;
+  --accent-soft:#E4EEF6;
+  --bridge:#1F8A4C;
+  --bridge-soft:#E4F2EA;
+  --brk:#A8500F;
+  --brk-soft:#FAEBDF;
+  --s1:#BF5B00;
+  --s2:#0F74C7;
+  --s3:#1F8A4C;
+  --paper:#FFFFFF;            /* pasted-drawing ground, both themes */
+  --paper-ink:#1b1b1b;
+  --shadow:0 1px 2px rgba(20,24,26,.06), 0 6px 18px rgba(20,24,26,.05);
+  --f-disp:'Archivo Narrow', 'Arial Narrow', Helvetica, sans-serif;
+  --f-body:'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --f-mono:'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+    --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+    --rule:#293134; --rule-strong:#3F494C;
+    --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+    --bridge:#35AC63; --bridge-soft:#11281B;
+    --brk:#E0913F; --brk-soft:#2E2012;
+    --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+  --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+  --rule:#293134; --rule-strong:#3F494C;
+  --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+  --bridge:#35AC63; --bridge-soft:#11281B;
+  --brk:#E0913F; --brk-soft:#2E2012;
+  --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:var(--f-body); font-size:17px; line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ============ TITLE BLOCK (engineering drawing header) ============ */
+.titleblock{
+  position:sticky; top:env(safe-area-inset-top,0px); z-index:40;
+  background:var(--sheet); border-bottom:1px solid var(--rule-strong);
+}
+.tb-in{
+  max-width:1240px; margin:0 auto; padding:0 16px;
+  display:flex; align-items:stretch; gap:0; min-height:46px;
+}
+.tb-cell{
+  display:flex; flex-direction:column; justify-content:center;
+  padding:5px 14px; border-right:1px solid var(--rule);
+  font-family:var(--f-disp);
+}
+.tb-cell:first-child{padding-left:0}
+.tb-cell:last-child{border-right:0; margin-left:auto; padding-right:0}
+.tb-k{
+  font-size:8.5px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); line-height:1.4;
+}
+.tb-v{font-size:13px; font-weight:700; letter-spacing:.02em; color:var(--ink); line-height:1.3}
+.tb-v.accent{color:var(--accent)}
+.tb-hide{display:none}
+@media (min-width:680px){ .tb-hide{display:flex} }
+
+.themebtn{
+  appearance:none; background:transparent; border:1px solid var(--rule-strong);
+  color:var(--ink-2); font-family:var(--f-disp); font-size:10px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:6px 10px; border-radius:2px;
+  cursor:pointer; align-self:center; white-space:nowrap;
+}
+.themebtn:hover{border-color:var(--accent); color:var(--accent)}
+.themebtn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+/* ============ SHELL ============ */
+.shell{max-width:1240px; margin:0 auto; padding:0 16px; padding-block:0 64px}
+@media (min-width:1080px){
+  .shell{display:grid; grid-template-columns:212px minmax(0,1fr); gap:44px; align-items:start}
+}
+.rail{display:none}
+@media (min-width:1080px){
+  .rail{
+    display:block; position:sticky; top:calc(env(safe-area-inset-top,0px) + 70px);
+    padding-block:28px; font-family:var(--f-disp); font-size:12.5px;
+  }
+}
+.rail-h{
+  font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-3);
+  padding-bottom:8px; border-bottom:1px solid var(--rule); margin-bottom:10px;
+}
+.rail a{
+  display:flex; gap:9px; padding:4px 0; color:var(--ink-2); text-decoration:none;
+  border-left:2px solid transparent; padding-left:9px; margin-left:-11px; line-height:1.35;
+}
+.rail a:hover{color:var(--accent)}
+.rail a.on{color:var(--accent); border-left-color:var(--accent); font-weight:700}
+.rail a .n{font-family:var(--f-mono); font-size:10.5px; color:var(--ink-3); flex:none; padding-top:1px}
+.rail a.on .n{color:var(--accent)}
+
+main{min-width:0; padding-block:0 0}
+.col{max-width:70ch}
+
+/* ============ TYPE ============ */
+h1,h2,h3,h4{font-family:var(--f-disp); text-wrap:balance; margin:0; line-height:1.14}
+h1{font-size:clamp(34px,7vw,58px); font-weight:700; letter-spacing:-.015em}
+h2{font-size:clamp(25px,4.2vw,34px); font-weight:700; letter-spacing:-.01em}
+h3{font-size:19px; font-weight:700; letter-spacing:.005em; margin-top:2px}
+h4{font-size:14px; font-weight:700; letter-spacing:.06em; text-transform:uppercase}
+p{margin:0 0 1.05em}
+a{color:var(--accent-ink)}
+strong{font-weight:600}
+em{font-style:italic}
+code{font-family:var(--f-mono); font-size:.87em; background:var(--sheet-2); padding:1px 5px; border-radius:2px; border:1px solid var(--rule)}
+.lead{font-size:19.5px; line-height:1.56; color:var(--ink-2)}
+.eyebrow{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--ink-3); margin:0 0 10px;
+}
+.srcref{
+  font-family:var(--f-mono); font-size:11px; color:var(--ink-3);
+  border:1px solid var(--rule); border-radius:2px; padding:2px 7px; display:inline-block;
+  background:var(--sheet-2); white-space:nowrap;
+}
+
+/* ============ SECTION ============ */
+section{padding-block:38px 0; scroll-margin-top:calc(env(safe-area-inset-top,0px) + 62px)}
+.sechead{display:flex; align-items:baseline; gap:13px; margin-bottom:6px; flex-wrap:wrap}
+.secnum{
+  font-family:var(--f-mono); font-size:12px; font-weight:600; color:var(--accent);
+  border:1px solid var(--accent); border-radius:2px; padding:2px 7px; flex:none;
+  background:var(--accent-soft);
+}
+.rule-h{border:0; border-top:1px solid var(--rule); margin:0 0 22px}
+.rule-d{border:0; border-top:1px dashed var(--rule-strong); margin:34px 0}
+
+/* ============ CALLOUTS ============ */
+.note{
+  border:1px solid var(--rule); border-left:3px solid var(--accent);
+  background:var(--sheet); border-radius:2px; padding:16px 18px; margin:22px 0;
+}
+/* Greek letters must never be uppercased: text-transform turns beta into
+   a capital Beta, which is the Latin letter B on screen -- likewise eta->H,
+   kappa->K, lambda->A-shape.  Any Greek inside an uppercased label wears .gk. */
+.gk{text-transform:none}
+.note.bridge{border-left-color:var(--bridge); background:var(--bridge-soft)}
+.note.brk{border-left-color:var(--brk); background:var(--brk-soft)}
+.note-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; margin-bottom:7px; display:flex; align-items:center; gap:8px;
+}
+.note.bridge .note-h{color:var(--bridge)}
+.note.brk .note-h{color:var(--brk)}
+.note .note-h{color:var(--accent)}
+.note p:last-child, .note ul:last-child{margin-bottom:0}
+.note-h .ic{
+  width:15px; height:15px; border-radius:50%; border:1.5px solid currentColor; flex:none;
+  display:grid; place-items:center; font-size:9.5px; font-weight:700; font-family:var(--f-mono);
+}
+ul,ol{margin:0 0 1.05em; padding-left:1.25em}
+li{margin-bottom:.4em}
+li::marker{color:var(--ink-3)}
+
+/* ============ DEFINITION BLOCK ============ */
+.defn{
+  background:var(--sheet); border:1px solid var(--rule); border-radius:3px;
+  padding:18px 20px; margin:22px 0; box-shadow:var(--shadow);
+}
+.defn-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:10px;
+  padding-bottom:8px; border-bottom:1px solid var(--rule);
+}
+.defn p:last-child{margin-bottom:0}
+
+/* ============ TABLES ============ */
+.tw{overflow-x:auto; margin:22px 0; border:1px solid var(--rule); border-radius:3px; background:var(--sheet)}
+table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:480px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule); vertical-align:top}
+thead th{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); background:var(--sheet-2); font-weight:700; white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:0}
+td.mono,th.mono{font-family:var(--f-mono); font-size:13px; font-variant-numeric:tabular-nums}
+.tw caption{
+  caption-side:bottom; text-align:left; padding:9px 14px; font-size:12.5px;
+  color:var(--ink-3); border-top:1px solid var(--rule); font-family:var(--f-disp);
+}
+
+/* ============ FIGURES ============ */
+figure{margin:24px 0}
+.paper{
+  background:var(--paper); border:1px solid var(--rule-strong); border-radius:3px;
+  padding:16px; display:flex; justify-content:center; box-shadow:var(--shadow);
+}
+.paper img{max-width:100%; height:auto; display:block}
+figcaption{
+  font-family:var(--f-disp); font-size:12.5px; color:var(--ink-3); margin-top:9px;
+  line-height:1.45; padding-left:2px;
+}
+figcaption b{color:var(--ink-2); font-weight:700; letter-spacing:.04em}
+
+/* ============ INTERACTIVE PANELS ============ */
+.lab{
+  background:var(--sheet); border:1px solid var(--rule-strong); border-radius:3px;
+  margin:26px 0; overflow:hidden; box-shadow:var(--shadow);
+}
+.lab-h{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:11px 16px; border-bottom:1px solid var(--rule); background:var(--sheet-2);
+}
+.lab-t{font-family:var(--f-disp); font-size:13px; font-weight:700; letter-spacing:.05em; text-transform:uppercase}
+.lab-tag{
+  font-family:var(--f-mono); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--accent); border:1px solid var(--accent); border-radius:2px; padding:2px 6px;
+  margin-left:auto; white-space:nowrap;
+}
+.lab-body{padding:16px}
+.lab-foot{
+  padding:11px 16px; border-top:1px solid var(--rule); background:var(--sheet-2);
+  font-size:13.5px; color:var(--ink-2); line-height:1.5;
+}
+.lab-foot b{color:var(--ink)}
+.stage{width:100%; max-width:560px; height:auto; display:block; margin-inline:auto; touch-action:none; cursor:grab}
+.stage.drag{cursor:grabbing}
+
+/* Dividers are drawn as cell borders rather than as 1px grid gaps over a grey
+   backdrop: when the item count does not fill the last row, a gap-based grid
+   leaves the backdrop showing as an empty grey block. */
+.readout{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr)); gap:0;
+  background:var(--sheet); border:1px solid var(--rule); border-radius:2px;
+  margin-top:14px; overflow:hidden;
+}
+.ro{background:var(--sheet); padding:8px 11px;
+  border-right:1px solid var(--rule); border-bottom:1px solid var(--rule)}
+.ro-k{
+  font-family:var(--f-disp); font-size:9px; letter-spacing:.13em; text-transform:uppercase;
+  color:var(--ink-3); margin-bottom:2px;
+  /* was white-space:nowrap, which clipped the longer keys instead of wrapping */
+  white-space:normal; overflow-wrap:break-word; line-height:1.3; min-height:2.6em;
+}
+.ro-v{
+  font-family:var(--f-mono); font-size:15px; font-weight:500; font-variant-numeric:tabular-nums;
+  color:var(--ink); line-height:1.25;
+}
+.ro-v.a{color:var(--s2)} .ro-v.b{color:var(--s1)} .ro-v.c{color:var(--s3)}
+
+.ctl{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:14px}
+.ctl label{
+  font-family:var(--f-disp); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-2); white-space:nowrap;
+}
+input[type=range]{
+  -webkit-appearance:none; appearance:none; height:22px; background:transparent;
+  flex:1 1 160px; min-width:130px; cursor:pointer;
+}
+input[type=range]:focus-visible{outline:2px solid var(--accent); outline-offset:3px}
+input[type=range]::-webkit-slider-runnable-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-moz-range-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:16px; height:16px; border-radius:50%;
+  background:var(--accent); border:2px solid var(--sheet); margin-top:-6.5px;
+}
+input[type=range]::-moz-range-thumb{
+  width:16px; height:16px; border-radius:50%; background:var(--accent);
+  border:2px solid var(--sheet);
+}
+.btn{
+  appearance:none; font-family:var(--f-disp); font-size:11px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:7px 13px; border-radius:2px;
+  border:1px solid var(--rule-strong); background:var(--sheet); color:var(--ink-2); cursor:pointer;
+}
+.btn:hover{border-color:var(--accent); color:var(--accent)}
+.btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.btn.on{background:var(--accent); border-color:var(--accent); color:var(--sheet)}
+
+.legend{display:flex; gap:16px; flex-wrap:wrap; margin-top:12px}
+.lg{display:flex; align-items:center; gap:7px; font-family:var(--f-disp); font-size:12px; color:var(--ink-2)}
+.lg i{width:15px; height:3px; border-radius:2px; flex:none; display:block}
+
+/* ============ MISC ============ */
+.mathbox{overflow-x:auto; overflow-y:hidden; margin:18px 0}
+mjx-container[display="true"]{margin:0 !important}
+.kv{display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:15px; margin:16px 0}
+.kv dt{font-family:var(--f-mono); font-size:13px; color:var(--accent); white-space:nowrap}
+.kv dd{margin:0; color:var(--ink-2)}
+
+details.q{
+  border:1px solid var(--rule); border-radius:3px; background:var(--sheet);
+  margin-bottom:9px; overflow:hidden;
+}
+details.q summary{
+  cursor:pointer; padding:12px 15px; font-weight:600; list-style:none;
+  display:flex; gap:11px; align-items:flex-start; font-size:15.5px;
+}
+details.q summary::-webkit-details-marker{display:none}
+details.q summary::after{
+  content:'+'; margin-left:auto; font-family:var(--f-mono); color:var(--accent);
+  font-size:17px; line-height:1; flex:none; padding-top:2px;
+}
+details.q[open] summary::after{content:'\2212'}
+details.q summary:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
+details.q summary .qn{
+  font-family:var(--f-mono); font-size:12px; color:var(--ink-3); flex:none; padding-top:3px;
+}
+details.q .ans{padding:0 15px 14px 41px; font-size:15.5px; color:var(--ink-2); border-top:1px solid var(--rule); padding-top:13px}
+details.q .ans p:last-child{margin-bottom:0}
+
+.endnote{
+  margin-top:44px; padding-top:20px; border-top:1px solid var(--rule-strong);
+  font-size:13.5px; color:var(--ink-3); font-family:var(--f-disp); line-height:1.55;
+}
+.endnote a{color:var(--accent)}
+
+.srcref{text-decoration:none}
+a.srcref{color:var(--ink-2); transition:none}
+
+</style>
+<style>
+.srcref{text-decoration:none}
+a.srcref{color:var(--ink-2)}
+a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(--accent-soft)}
+.srcref.nolink{opacity:.75; font-style:italic}
+.pv{font-family:var(--f-disp); font-size:9.5px; font-weight:700; letter-spacing:.1em;
+    text-transform:uppercase; padding:2px 7px; border-radius:2px; white-space:nowrap}
+.pv.ok{background:var(--bridge-soft); color:var(--bridge)}
+.pv.add{background:var(--accent-soft); color:var(--accent)}
+.pv.corr{background:var(--brk-soft); color:var(--brk)}
+.flag{display:inline-block; padding:1px 7px; border-radius:2px; font-family:var(--f-disp);
+      font-size:10px; letter-spacing:.1em; text-transform:uppercase; font-weight:700}
+.flag.ok{background:var(--bridge-soft); color:var(--bridge)}
+.flag.bad{background:var(--brk-soft); color:var(--brk)}
+.predict{border:1px solid var(--rule-strong); border-left:3px solid var(--brk);
+  background:var(--brk-soft); border-radius:2px; padding:13px 15px; margin:0 0 14px}
+.predict-h{font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--brk); margin-bottom:6px}
+.predict p{margin:0 0 10px; font-size:15px}
+.predict .opts{display:flex; gap:8px; flex-wrap:wrap}
+.pbtn{appearance:none; font-family:var(--f-disp); font-size:12px; font-weight:600;
+  padding:6px 12px; border-radius:2px; border:1px solid var(--rule-strong);
+  background:var(--sheet); color:var(--ink-2); cursor:pointer}
+.pbtn:hover{border-color:var(--brk); color:var(--brk)}
+.pbtn.picked{background:var(--brk); border-color:var(--brk); color:var(--sheet)}
+.pverdict{margin-top:10px; font-size:14.5px; color:var(--ink-2); display:none}
+.pverdict.show{display:block}
+.pverdict b{color:var(--ink)}
+.gap{border:1px solid var(--rule); border-left:3px solid var(--ink-3); background:var(--sheet-2);
+  border-radius:2px; padding:14px 16px; margin:18px 0}
+.gap-h{font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:7px}
+</style>
+
+<div class="sheet">
+
+<header class="titleblock">
+  <div class="tb-main">
+    <div class="tb-k">Sheet 13 of 20, part 2 of 3 &mdash; Operating Systems and Concurrency</div>
+    <h1>Sharing One Machine</h1>
+    <p class="tb-sub">
+      Part 1 promised that Amdahl&rsquo;s law is the theory of constraints written as an
+      equation. It is &mdash; and it is also the two-station line from part 1 &sect;13, with
+      one station that cannot be split. Along the way: shortest-job-first is the SPT
+      dispatching rule, a semaphore is a stack of kanban cards, and the time quantum is an
+      order quantity.
+    </p>
+  </div>
+  <div class="tb-meta">
+    <div class="tb-cell"><div class="tb-k">Reader</div><div class="tb-v">B.E. Mechanical</div></div>
+    <div class="tb-cell"><div class="tb-k">Prerequisite</div><div class="tb-v">Sheets 1&ndash;13 pt 1</div></div>
+    <button class="btn" id="themebtn" type="button">Theme</button>
+  </div>
+</header>
+
+<nav class="toc">
+  <a href="#bridge"><span class="n">00</span><span>The bridge</span></a>
+  <a href="#coordinator"><span class="n">01</span><span>The plant coordinator</span></a>
+  <a href="#process"><span class="n">02</span><span>A process, a changeover</span></a>
+  <a href="#threads"><span class="n">03</span><span>Shared tools, shared risk</span></a>
+  <a href="#scheduling"><span class="n">04</span><span>Scheduling is dispatching</span></a>
+  <a href="#quantum"><span class="n">05</span><span>The quantum is a batch</span></a>
+  <a href="#little"><span class="n">06</span><span>Little&rsquo;s law</span></a>
+  <a href="#memfile"><span class="n">07</span><span>The journal is a route card</span></a>
+  <a href="#syscall"><span class="n">08</span><span>Two modes, one gateway</span></a>
+  <a href="#network"><span class="n">09</span><span>Latency versus bandwidth</span></a>
+  <a href="#containers"><span class="n">10</span><span>Containers and cells</span></a>
+  <a href="#concurrency"><span class="n">11</span><span>Concurrent is not parallel</span></a>
+  <a href="#lostupdate"><span class="n">12</span><span>The lost update</span></a>
+  <a href="#semaphore"><span class="n">13</span><span>Semaphores are kanban</span></a>
+  <a href="#deadlock"><span class="n">14</span><span>Deadlock, and standard work</span></a>
+  <a href="#lockfree"><span class="n">15</span><span>Lock-free and CAS</span></a>
+  <a href="#amdahl"><span class="n">16</span><span>Amdahl is Goldratt</span></a>
+  <a href="#next"><span class="n">17</span><span>What part 3 carries</span></a>
+  <a href="#provenance"><span class="n">A</span><span>Provenance</span></a>
+</nav>
+
+<main>
+
+<section id="top" style="padding-top:44px">
+  <div class="col">
+    <p class="lede">
+      Part 1 built the machine. This part is about what happens when more than one thing wants
+      it &mdash; which is the problem a production manager has had since the first workshop
+      with two jobs and one lathe. The operating system is the coordinator, and almost every
+      decision it makes has a name you already use.
+    </p>
+    <p>
+      Part 1&rsquo;s &sect;18 left three explicit debts, and this part pays all three.
+      <b>&sect;05 of part 1</b> defined a partial order and observed that incomparable tasks are
+      concurrent &mdash; &sect;12 here turns that into a race condition and shows the lost
+      update happening. <b>&sect;16 of part 1</b> gave every process an isolated address space
+      without saying who enforces it &mdash; &sect;08 here names the mechanism. And
+      <b>&sect;13 of part 1</b> showed that a pipeline is governed entirely by its bottleneck
+      &mdash; &sect;16 here is that statement in its general form.
+    </p>
+    <p>
+      The headline is &sect;16. <b>Amdahl&rsquo;s law is not merely analogous to the theory of
+      constraints; it is the same statement</b>, and it is also exactly part 1&rsquo;s
+      line-balancing law applied to a two-station line where the first station cannot be
+      subdivided. Speedup is \(1/((1-p) + p/n)\); the un-splittable station is \(1-p\); and
+      once the parallel station drops below it, every further operator you add buys nothing.
+      Goldratt&rsquo;s "an hour saved at a non-bottleneck is a mirage" is that sentence in
+      English.
+    </p>
+    <p>
+      The second thing worth arriving for is &sect;04. Shortest-job-first in an operating
+      systems textbook is the <b>SPT dispatching rule</b> in a production scheduling textbook,
+      its optimality is the same theorem, and it fails for the same reason in both fields.
+    </p>
+    <div class="note brk" style="margin-top:22px">
+      <div class="note-h"><span class="ic">&#33;</span>Where this part sits</div>
+      <p style="margin-bottom:0">
+        Part 1 covered discrete maths and computer architecture and is
+        <a href="https://claude.ai/artifact/Cf6EDgFhPKoQduGnLRRxdV" target="_blank" rel="noopener">published separately</a>.
+        This part covers source files 03 and 04 &mdash; operating systems and concurrency.
+        <b>Part 3</b> takes programming languages and compilation, and carries the
+        chapter&rsquo;s worked example, its 24-question bank and its concept map. Each part has
+        its own provenance appendix.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="bridge">
+  <div class="col">
+    <div class="sechead"><span class="secnum">00</span><h2>The bridge</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/03.%20operating%20systems.md" target="_blank" rel="noopener">src 03. operating systems &#8599;</a>
+    </div>
+    <p>
+      This is the most industrial-engineering-shaped part of the series so far. Almost every
+      row is a production concept with a computing name, and the amber rows are the few places
+      where the shop-floor instinct actively misleads.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>What a GATE-prepared mechanical engineer already owns, and what an OS calls it.</caption>
+      <thead><tr><th>What you already know</th><th>What this part calls it</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td>Theory of constraints; the bottleneck sets the rate</td><td>Amdahl&rsquo;s law</td><td><b style="color:var(--bridge)">Identity.</b> A two-station line whose first station cannot be split. See &sect;16.</td></tr>
+        <tr><td>SPT dispatching minimises mean flow time</td><td>Shortest Job First scheduling</td><td><b style="color:var(--bridge)">The same theorem,</b> verified exhaustively. See &sect;04.</td></tr>
+        <tr><td>Economic order quantity; setup against holding cost</td><td>The scheduler&rsquo;s time quantum</td><td><b style="color:var(--bridge)">Same functional form,</b> \(q^\ast=\sqrt{A/B}\). See &sect;05.</td></tr>
+        <tr><td>Kanban card count; CONWIP</td><td>A counting semaphore</td><td><b style="color:var(--bridge)">The same device.</b> Cap the holders, cap the queue. See &sect;13.</td></tr>
+        <tr><td>Little&rsquo;s law \(L = \lambda W\)</td><td>Queue length in the run queue</td><td><b style="color:var(--bridge)">The same law,</b> assuming nothing. Not in the source. See &sect;06.</td></tr>
+        <tr><td>Blocking and starving on a line</td><td>Producer&ndash;consumer on a bounded buffer</td><td><b style="color:var(--bridge)">The same two words,</b> for the same two conditions. See &sect;13.</td></tr>
+        <tr><td>Changeover / setup time; SMED</td><td>Context switch</td><td><b style="color:var(--bridge)">The same cost,</b> and the same reason to minimise it. See &sect;02.</td></tr>
+        <tr><td>Standard work: draw tooling in the documented order</td><td>Lock ordering to prevent deadlock</td><td><b style="color:var(--bridge)">Identical fix,</b> identical justification. See &sect;14.</td></tr>
+        <tr><td>Two operators updating one stock card</td><td>A race condition on a shared counter</td><td><b style="color:var(--bridge)">The same failure.</b> One update silently vanishes. See &sect;12.</td></tr>
+        <tr><td>One operator tending several machines</td><td>An event loop with async/await</td><td><b style="color:var(--bridge)">The machine-interference problem,</b> renamed. See &sect;11.</td></tr>
+        <tr><td>A travelling route card filled in before the operation</td><td>A journaling file system</td><td><b style="color:var(--bridge)">The same protocol,</b> for the same crash. See &sect;07.</td></tr>
+        <tr><td>Weekly lorry against a daily milk-run</td><td>Bandwidth against latency</td><td><b style="color:var(--bridge)">The same trade.</b> A van of disks beats 10&nbsp;Gbit/s above 18&nbsp;TB. See &sect;09.</td></tr>
+        <tr><td>Dedicated plant against a partitioned shared one</td><td>Virtual machines against containers</td><td><b style="color:var(--bridge)">The same choice,</b> isolation against overhead. See &sect;10.</td></tr>
+        <tr><td>Machine-hour quotas per job</td><td>cgroups</td><td><b style="color:var(--bridge)">The same instrument.</b> See &sect;10.</td></tr>
+        <tr><td>&ldquo;More capacity at the busy station always helps&rdquo;</td><td>Adding cores to a program with a lock</td><td><b style="color:var(--brk)">False past a point.</b> A 1% critical section caps you at 100&times;. See &sect;16.</td></tr>
+        <tr><td>&ldquo;Capping WIP is nearly free&rdquo;</td><td>A semaphore sized too small</td><td><b style="color:var(--brk)">Only above the working queue length.</b> Measured cost below it. See &sect;13.</td></tr>
+        <tr><td>Interleaving two jobs on one machine is parallel work</td><td>Concurrency</td><td><b style="color:var(--brk)">It is not parallelism,</b> and the distinction is load-bearing. See &sect;11.</td></tr>
+        <tr><td>&ldquo;Run the shortest job first&rdquo; as practical advice</td><td>SJF in a real scheduler</td><td><b style="color:var(--brk)">Unimplementable.</b> Nobody knows the burst times. See &sect;04.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>How to use this part</div>
+      <p>
+        Fourteen of eighteen rows say <b>identity</b> or <b>the same</b>. Spend your time on
+        &sect;16 (the one law that governs everything else here), &sect;04 (the theorem you
+        already know, and why the OS cannot use it) and &sect;11 (the distinction that the
+        amber row calls load-bearing). The rest you can read at speed, because you have been
+        making these decisions on a shop floor for years.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="coordinator">
+  <div class="col">
+    <div class="sechead"><span class="secnum">01</span><h2>The plant coordinator</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/03.%20operating%20systems.md" target="_blank" rel="noopener">src 03. operating systems &#8599;</a>
+    </div>
+    <p>
+      The source opens with a kitchen: the ingredients are there, but nothing coordinates who
+      uses the stove. Substitute a machine shop and the three responsibilities it lists become
+      a job description you could advertise.
+    </p>
+    <p>
+      <b>Abstraction</b> &mdash; hide the hardware behind clean interfaces. A programmer writes
+      to "a file" without knowing whether it lands on an SSD or a network share, the way a
+      planner issues "a turning operation" without specifying which of four lathes.
+      <b>Resource management</b> &mdash; decide who gets the CPU, the memory, the disk, and for
+      how long. That is loading and dispatching. <b>Isolation and protection</b> &mdash; one
+      job must not damage another. That is a guarded cell and a permit-to-work.
+    </p>
+    <p>
+      The one that has no shop-floor equivalent is the strength of the isolation. A badly
+      written program genuinely <em>cannot</em> corrupt another program&rsquo;s memory, because
+      the hardware refuses, and &sect;08 explains how. No machine shop achieves anything like
+      that guarantee.
+    </p>
+  </div>
+</section>
+
+<section id="process">
+  <div class="col">
+    <div class="sechead"><span class="secnum">02</span><h2>A process, and the changeover it costs</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/03.%20operating%20systems.md" target="_blank" rel="noopener">src 03. operating systems &#8599;</a>
+    </div>
+    <p>
+      A <b>process</b> is a running program: its code, its data, its stack, and its state. The
+      OS tracks all of that in a <b>Process Control Block</b> &mdash; process ID, registers,
+      program counter, memory map, open files, priority. It is a job card.
+    </p>
+    <p>
+      To switch from one process to another the OS saves the current state into its PCB and
+      loads the next one&rsquo;s. That is a <b>context switch</b>, and the source is blunt
+      about the cost: saving and restoring registers, flushing caches, invalidating TLB
+      entries &mdash; microseconds each time.
+    </p>
+    <div class="defn">
+      <div class="defn-h">A context switch is a changeover</div>
+      <p style="margin-bottom:0">
+        Same structure, same economics. You stop, you put away the current setup, you fetch and
+        install the next one, you resume. The work of switching produces nothing. Part 1
+        &sect;14 made the same point about a mispredicted branch emptying a pipeline; this is
+        the coarser, slower version, and the response is the same one SMED gives you:
+        <b>either make the switch cheaper or switch less often</b>. &sect;05 is the arithmetic
+        of "less often", and threads (&sect;03) are the "cheaper" branch.
+      </p>
+    </div>
+    <p>
+      <b>Process creation</b> in Unix is a two-step that looks strange until you see the point.
+      <code>fork()</code> duplicates the current process; <code>exec()</code> replaces its code
+      with a new program. Splitting them means the child can adjust things between the two
+      &mdash; redirect its output, change environment, drop privileges. That is the difference
+      between "set up a new job" and "start the job", kept as separate operations so you can
+      intervene in between, which is exactly why a setup sheet and a work order are separate
+      documents.
+    </p>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/process_states.svg" alt="Process state transitions between new, ready, running, blocked and terminated" width="440"></div>
+    <figcaption><b>Fig. 13.5</b> &mdash; Ready is queued-and-waiting-for-a-machine; blocked is waiting-for-material. The distinction matters because only one of them is the scheduler&rsquo;s problem. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+
+  <div class="col">
+    <p>
+      The <b>state diagram</b> is worth reading carefully, because the two waiting states are
+      not the same thing. <b>Ready</b> means the job could run right now and is queued for a
+      core &mdash; that is a job waiting at a machine. <b>Blocked</b> means it cannot run even
+      if a core were free, because it is waiting for something else: I/O, a lock, a timer
+      &mdash; that is a job waiting for material. Giving a blocked process a core achieves
+      nothing, which is why the scheduler only ever picks from the ready queue.
+    </p>
+  </div>
+</section>
+
+<section id="threads">
+  <div class="col">
+    <div class="sechead"><span class="secnum">03</span><h2>Threads: shared tools, shared risk</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/03.%20operating%20systems.md" target="_blank" rel="noopener">src 03. operating systems &#8599;</a>
+    </div>
+    <p>
+      A <b>thread</b> is a strand of execution inside a process. Threads in one process share
+      code, data and heap; each has its own stack and registers.
+    </p>
+    <p>
+      The trade is one you have made when laying out a cell. <b>Separate processes</b> are
+      separate workcells with their own tool sets: safe, isolated, and expensive to coordinate
+      &mdash; anything they share has to be formally handed across. <b>Threads</b> are one cell
+      whose operators share a common tool board: coordination is instant, because everyone can
+      see the same board, and that is exactly what makes it dangerous. Two operators reaching
+      for the same tool at the same moment is &sect;12.
+    </p>
+    <p>
+      <b>Kernel threads</b> are scheduled by the OS. <b>User threads</b> (green threads,
+      goroutines) are scheduled by a library inside the process, so creating and switching them
+      costs no system call &mdash; much cheaper, but the OS cannot see them, so if one of them
+      blocks, the whole process blocks. Modern runtimes use a hybrid: many user threads mapped
+      onto fewer kernel threads.
+    </p>
+    <p>
+      A <b>thread pool</b> pre-creates workers that wait for tasks. That is a manned cell
+      standing ready rather than hiring for each job, and the justification is identical: the
+      setup cost of creating a worker is paid once instead of per task.
+    </p>
+  </div>
+</section>
+
+<section id="scheduling">
+  <div class="col">
+    <div class="sechead"><span class="secnum">04</span><h2>Scheduling is dispatching</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/03.%20operating%20systems.md" target="_blank" rel="noopener">src 03. operating systems &#8599;</a>
+    </div>
+    <p>
+      The scheduler decides which ready process runs next. The source lists the classic
+      algorithms. Every one of them is a dispatching rule you have been taught under a
+      different name.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Scheduling algorithms and the dispatching rules they are.</caption>
+      <thead><tr><th>Operating systems</th><th>Production scheduling</th><th>Same failure mode</th></tr></thead>
+      <tbody>
+        <tr><td>First Come First Served</td><td>FCFS dispatching</td><td>The convoy effect: one long job blocks everything behind it</td></tr>
+        <tr><td>Shortest Job First</td><td><b>SPT</b> (shortest processing time)</td><td>Needs the durations in advance; long jobs can starve</td></tr>
+        <tr><td>Shortest Remaining Time First</td><td>Pre-emptive SPT</td><td>As above, plus churn from constant pre-emption</td></tr>
+        <tr><td>Priority scheduling</td><td>Priority dispatching</td><td>Starvation of the low-priority queue</td></tr>
+        <tr><td>Aging</td><td>Slack-based / critical-ratio rules</td><td>Priority creeps upward with waiting time</td></tr>
+        <tr><td>Round Robin</td><td>Time-sliced loading</td><td>The quantum trade-off &mdash; &sect;05</td></tr>
+        <tr><td>Multilevel feedback queues</td><td>Adaptive dispatching by observed behaviour</td><td>Demotes jobs that use their whole slice</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <div class="defn">
+      <div class="defn-h">The theorem is the one you already have</div>
+      <p style="margin-bottom:0">
+        The source says SJF "provably minimises average waiting time". In production scheduling
+        that theorem is: <b>the SPT rule minimises mean flow time on a single machine</b>. Same
+        statement. Verified under <code>[Ch13 s04]</code> &mdash; on the source&rsquo;s own
+        example, FCFS gives a mean flow time of 19.20, SPT gives 14.00, and exhaustive search
+        over all 120 permutations finds 14.00. Over 300 random six-job instances, SPT was never
+        beaten once.
+      </p>
+    </div>
+    <p>
+      The convoy effect is the same result read backwards: on that instance FCFS is
+      <b>37.1% worse</b> than SPT purely because one ten-unit job sits at the front. You have
+      seen that queue.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks &mdash; the OS cannot use the rule you can</div>
+      <p>
+        SPT needs the processing times before you start. On a shop floor you usually have them:
+        routings carry standard times, and an estimate within 10% is normal. <b>An operating
+        system has nothing of the kind.</b> It cannot know whether a process will run for two
+        microseconds or two hours, and there is no routing to consult &mdash; part 1 &sect;08
+        explains why no analysis can supply it either, since deciding whether a program halts
+        at all is undecidable.
+      </p>
+      <p style="margin-bottom:0">
+        So the provably optimal rule is unimplementable, and what real schedulers do instead is
+        <em>infer</em> behaviour from history: multilevel feedback queues demote a process that
+        uses its whole quantum (it is probably CPU-bound) and keep one that blocks early
+        (probably interactive). That is dispatching by observed behaviour rather than by
+        standard time, and it is the right response to not having the data. The optimality
+        guarantee is gone, and the source does not say so.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Dispatch the queue</div><div class="lab-tag">Predict, then reorder</div></div>
+
+    <div class="predict">
+      <p style="margin-top:0">
+        Five jobs with burst times 10, 4, 6, 2, 8 arrive together. How much does running them
+        shortest-first improve the mean flow time against arrival order?
+      </p>
+      <button class="pbtn" data-p1="a" type="button">Not at all &mdash; same total work</button>
+      <button class="pbtn" data-p1="b" type="button">By about 10%</button>
+      <button class="pbtn" data-p1="c" type="button">By about 27%</button>
+      <button class="pbtn" data-p1="d" type="button">It depends on the quantum</button>
+      <div class="pverdict" id="pv1"></div>
+    </div>
+
+    <svg class="stage" id="sQ" viewBox="0 0 480 300" role="img"
+         aria-label="A Gantt chart of five jobs dispatched under the selected rule, with completion times and the mean flow time shown">
+      <g id="qGantt"></g>
+      <g id="qLab"></g>
+    </svg>
+
+    <div class="ctl">
+      <label for="qSl">Time quantum</label>
+      <input type="range" id="qSl" min="1" max="12" value="12" step="1">
+      <span class="ro-v" id="qVal" style="min-width:54px">no slicing</span>
+      <button class="btn" data-qp="fcfs" type="button">FCFS</button>
+      <button class="btn" data-qp="sjf" type="button">SJF / SPT</button>
+      <button class="btn" data-qp="rr" type="button">Round robin</button>
+    </div>
+
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Mean flow<br>time</div><div class="ro-v a" id="qF">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Exhaustive<br>optimum</div><div class="ro-v b" id="qO">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Context<br>switches</div><div class="ro-v c" id="qC">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Worst job&rsquo;s<br>wait</div><div class="ro-v" id="qW">&mdash;</div></div>
+    </div>
+  </div>
+
+  <div class="lab-foot col">
+    Each strip is one job; the bar is when it is on the machine and the number at the right is
+    its completion time. <b>FCFS</b> gives a mean flow time of 19.20, <b>SJF</b> gives 14.00,
+    and the exhaustive-optimum readout sits at 14.00 too &mdash; SPT is not merely better, it is
+    optimal. That is a <b>27%</b> improvement from reordering alone, which answers the
+    prediction, and the total work never changed. Now switch to <b>Round robin</b> and drag the
+    quantum down: the mean flow time gets <em>worse</em> than SJF and the switch count climbs,
+    but watch the last readout &mdash; the worst job&rsquo;s wait collapses. That is the whole
+    argument for time-slicing: you trade average throughput for the promise that no job waits
+    forever, which is exactly why you break a long run to let a hot order through.
+  </div>
+</section>
+
+<section id="quantum">
+  <div class="col">
+    <div class="sechead"><span class="secnum">05</span><h2>The quantum is an order quantity</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/03.%20operating%20systems.md" target="_blank" rel="noopener">src 03. operating systems &#8599;</a>
+    </div>
+    <p>
+      Round robin gives each process a fixed <b>time quantum</b>, then pre-empts it. The source
+      states the trade in one line: "too small means excessive context switching, too large
+      degrades to FCFS". That is a cost with two opposing terms, and you have optimised exactly
+      this shape before.
+    </p>
+    <p>
+      Switching overhead falls as the quantum grows, because the fixed switch cost is amortised
+      over more useful work &mdash; a term in \(A/q\). Waiting time rises as the quantum grows,
+      because everyone else&rsquo;s turn takes longer &mdash; a term in \(Bq\). Total cost:
+    </p>
+  </div>
+  <div class="mathbox col">$$C(q) = \frac{A}{q} + Bq \qquad\Longrightarrow\qquad q^{\ast} = \sqrt{A/B}$$</div>
+  <div class="col">
+    <p>
+      Set it beside the economic order quantity, which balances setup cost against holding
+      cost:
+    </p>
+  </div>
+  <div class="mathbox col">$$C(Q) = \frac{DS}{Q} + \frac{HQ}{2} \qquad\Longrightarrow\qquad Q^{\ast} = \sqrt{\frac{2DS}{H}}$$</div>
+  <div class="col">
+    <p>
+      The same functional form, and therefore the same optimum structure. Verified numerically
+      at three parameter pairs under <code>[Ch13 s05]</code>: the numerical argmin matches
+      \(\sqrt{A/B}\) every time.
+    </p>
+    <div class="defn">
+      <div class="defn-h">Which means the EOQ intuition transfers intact</div>
+      <p style="margin-bottom:0">
+        Including the most useful one: <b>the bottom is flat</b>. Being a factor of two away
+        from the optimal quantum costs only <b>25%</b> extra
+        (\(\tfrac{1}{2}+2 = 2.5\) against a minimum of \(2\)), exactly as being a factor of two
+        off the economic order quantity does. So do not agonise over the number; get within a
+        factor of two and stop. A Linux quantum of a few milliseconds against a context switch
+        of a few microseconds is comfortably in that band.
+      </p>
+    </div>
+    <p>
+      The vocabulary maps straight across: <b>the quantum is a batch size</b>, <b>the context
+      switch is a setup</b>, thrashing on tiny quanta is a line that spends its shift changing
+      over, and a quantum so long it degrades to FCFS is a monthly batch run.
+    </p>
+  </div>
+</section>
+
+<section id="little">
+  <div class="col">
+    <div class="sechead"><span class="secnum">06</span><h2>Little&rsquo;s law, which the source never mentions</h2>
+      <span class="srcref nolink" title="Added material, not in the source chapter">beyond the chapter</span>
+    </div>
+    <p>
+      The source discusses run queues, waiting times and throughput for three pages without
+      once writing down the relation that connects them. You already have it:
+    </p>
+  </div>
+  <div class="mathbox col">$$L = \lambda W$$</div>
+  <div class="col">
+    <p>
+      Jobs in the system equals arrival rate times time in the system. Simulated on an M/M/1
+      queue at 70% utilisation (<code>[Ch13 s06]</code>): \(L = 2.3240\),
+      \(\lambda = 0.7002\), \(W = 3.3191\), and \(\lambda W = 2.3240\) &mdash; agreement to
+      better than 0.01%, against the theoretical \(\rho/(1-\rho) = 2.3333\).
+    </p>
+    <p>
+      What makes it worth stating is how little it assumes. <b>No distribution, no scheduling
+      discipline, no independence.</b> It holds for the run queue, for the shop floor, for a
+      hospital, for money in a bank. Which means the WIP intuition you already have applies to
+      a computer without adjustment: if jobs arrive at 100 per second and each spends 50&nbsp;ms
+      in the system, there are five in there on average, and no clever scheduler changes that
+      arithmetic.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; and the utilisation trap</div>
+      <p>
+        The consequence that catches people in both fields is that \(W\) explodes as
+        utilisation approaches 1. At \(\rho = 0.7\) the queue holds 2.33 jobs; at
+        \(\rho = 0.9\) it holds 9; at \(\rho = 0.95\), 19. You know this as the reason a plant
+        loaded to 95% has terrible lead times while one at 70% flows &mdash; and it is exactly
+        why a server at 95% CPU has terrible latency. <b>Running a resource near capacity buys
+        throughput with queue time, at an accelerating exchange rate.</b> Same curve, same
+        trap, two industries.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Utilisation, queue length, and the wall</div><div class="lab-tag">Predict, then load it up</div></div>
+
+    <div class="predict">
+      <p style="margin-top:0">
+        A server runs at 70% utilisation with an average of 2.3 jobs in the system. You raise
+        utilisation to 90%. What happens to the average number in the system?
+      </p>
+      <button class="pbtn" data-p2="a" type="button">Rises to about 3 &mdash; proportionally</button>
+      <button class="pbtn" data-p2="b" type="button">Rises to about 9 &mdash; roughly 4&times;</button>
+      <button class="pbtn" data-p2="c" type="button">Rises to about 4.5 &mdash; doubles</button>
+      <button class="pbtn" data-p2="d" type="button">Unchanged &mdash; the server is faster</button>
+      <div class="pverdict" id="pv2"></div>
+    </div>
+
+    <svg class="stage" id="sL" viewBox="0 0 480 300" role="img"
+         aria-label="Queue length plotted against utilisation showing the curve rising steeply toward one, with the operating point marked">
+      <g id="lGrid"></g>
+      <g id="lCurve"></g>
+      <g id="lAx"></g>
+      <g id="lLab"></g>
+    </svg>
+
+    <div class="ctl">
+      <label for="lSl">Utilisation <span class="gk">&rho;</span></label>
+      <input type="range" id="lSl" min="10" max="97" value="70" step="1">
+      <span class="ro-v" id="lVal" style="min-width:48px">0.70</span>
+      <button class="btn" data-lp="70" type="button"><span class="gk">&rho;</span> = 0.70</button>
+      <button class="btn" data-lp="90" type="button"><span class="gk">&rho;</span> = 0.90</button>
+      <button class="btn" data-lp="95" type="button"><span class="gk">&rho;</span> = 0.95</button>
+    </div>
+
+    <div class="readout">
+      <div class="ro"><div class="ro-k">L, jobs in<br>the system</div><div class="ro-v a" id="lL">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">W, time in<br>the system</div><div class="ro-v b" id="lW">&mdash;</div></div>
+      <div class="ro"><div class="ro-k"><span class="gk">&lambda;</span>W, to check<br>Little&rsquo;s law</div><div class="ro-v c" id="lC">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Cost of<br>+1 point</div><div class="ro-v" id="lG">&mdash;</div></div>
+    </div>
+  </div>
+
+  <div class="lab-foot col">
+    The curve is \(L = \rho/(1-\rho)\) and the marker is your operating point. Drag from 0.70
+    to 0.90 and \(L\) goes from 2.33 to <b>9.00</b> &mdash; about four times, which answers the
+    prediction and is nothing like proportional. The third readout recomputes
+    \(\lambda W\) independently and tracks \(L\) exactly, which is Little&rsquo;s law holding
+    at every point on the curve. The readout that should change how you plan is the last one:
+    at \(\rho = 0.70\) one more point of utilisation adds 0.11 jobs to the queue; at
+    \(\rho = 0.95\) it adds 5. <b>The price of the last point of utilisation is not the price
+    of the first.</b> This is the argument against loading a plant, or a server, to the limit
+    &mdash; and it is why the answer to "we have spare capacity, put more through it" is
+    sometimes no.
+  </div>
+</section>
+
+<section id="memfile">
+  <div class="col">
+    <div class="sechead"><span class="secnum">07</span><h2>Memory, files, and the journal as a route card</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/03.%20operating%20systems.md" target="_blank" rel="noopener">src 03. operating systems &#8599;</a>
+    </div>
+    <p>
+      Part 1 &sect;16 covered paging and page replacement. Three additions here.
+    </p>
+    <p>
+      <b>Demand paging</b> loads a page only when first touched, so a 1&nbsp;GB program that
+      uses 50&nbsp;MB never loads the rest. That is issuing material against actual consumption
+      rather than against the bill of materials &mdash; pull, not push.
+    </p>
+    <p>
+      <b>Fragmentation</b> is why pages are fixed-size. Variable-size allocations leave unusable
+      gaps between them (external fragmentation), which is the offcut problem in bar stock and
+      sheet nesting. Fixed-size pages eliminate it completely, at the cost of wasting part of
+      the last page &mdash; standard stock lengths, with the same trade.
+    </p>
+    <p>
+      <b>File systems</b> store metadata in an <b>inode</b> (size, ownership, permissions,
+      block pointers) and the name separately in a directory. The separation is what allows one
+      file to have several names. A part number and its storage location are two different
+      records for the same reason.
+    </p>
+    <div class="defn">
+      <div class="defn-h">Journaling is a route card, filled in before the operation</div>
+      <p style="margin-bottom:0">
+        Before modifying its structures, a journaling file system writes what it is <em>about
+        to do</em> into a log. If the power fails mid-operation, the log is replayed on reboot
+        and the operation is completed or undone. Without it, a crash can leave a file&rsquo;s
+        data blocks written but its inode not &mdash; a part machined with no record that it
+        was. <b>That is why a traveller card is signed at the start of an operation and not the
+        end</b>, and why an interrupted job can be picked up by the next shift. Same protocol,
+        same failure it defends against.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="syscall">
+  <div class="col">
+    <div class="sechead"><span class="secnum">08</span><h2>Two modes, one gateway</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/03.%20operating%20systems.md" target="_blank" rel="noopener">src 03. operating systems &#8599;</a>
+    </div>
+    <p>
+      Part 1 &sect;16 said every process gets an isolated address space and did not say who
+      enforces it. Here is the answer, and it is hardware.
+    </p>
+    <p>
+      The CPU runs in one of two modes. In <b>user mode</b> a program may execute its own code
+      and touch its own memory, and nothing else &mdash; attempts to reach hardware or another
+      process&rsquo;s memory are refused by the processor itself. In <b>kernel mode</b> there
+      are no restrictions. A <b>system call</b> is the single controlled doorway between them:
+      the program puts its arguments in registers and triggers a <b>trap</b>, the CPU switches
+      mode and jumps to a fixed handler, the kernel validates the arguments and does the work,
+      then switches back.
+    </p>
+    <p>
+      The mechanism is the interrupt of part 1 &sect;17 &mdash; save state, jump to a handler
+      from a table, restore, resume &mdash; but triggered deliberately by the program rather
+      than by a device. In shop terms: a <b>permit-to-work</b>. You cannot enter the restricted
+      area yourself; you present a request at a single controlled point, someone authorised
+      does the work under supervision, and you are handed the result. The strength of the
+      guarantee comes from there being exactly one doorway and the hardware refusing every
+      other route.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; and why system calls are worth counting</div>
+      <p>
+        A system call is not a function call. It crosses a protection boundary, which means
+        mode switch, argument validation and cache effects &mdash; hundreds of cycles at best.
+        That is why high-performance code batches its I/O rather than making a call per byte,
+        and the reasoning is the changeover arithmetic of &sect;05 again: a fixed cost per
+        crossing means you want fewer, larger crossings. Every optimisation guide that says
+        "reduce syscalls" is saying "increase the batch size".
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="network">
+  <div class="col">
+    <div class="sechead"><span class="secnum">09</span><h2>Latency against bandwidth</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/03.%20operating%20systems.md" target="_blank" rel="noopener">src 03. operating systems &#8599;</a>
+    </div>
+    <p>
+      The network stack is layered: link, network (IP), transport (TCP/UDP), application. Each
+      layer offers a clean interface to the one above and adds its own header. That is a
+      routing sheet with operation-level detail hidden from the planner above it.
+    </p>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/tcp_ip_layers.svg" alt="The TCP/IP stack with application, transport, network and link layers each adding headers" width="430"></div>
+    <figcaption><b>Fig. 13.6</b> &mdash; Each layer wraps the one above and is opened only by its opposite number at the far end. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+
+  <div class="col">
+    <p>
+      <b>TCP</b> guarantees that everything arrives, in order, by numbering packets,
+      acknowledging them, retransmitting what is lost, and throttling to avoid congestion. It
+      pays a round trip up front for the handshake. <b>UDP</b> does none of this and is
+      correspondingly faster. That is despatch with proof of delivery against a straight
+      push, and the choice turns on the same question: what does a lost item cost?
+    </p>
+    <div class="defn">
+      <div class="defn-h">Bandwidth and latency are throughput and lead time</div>
+      <p style="margin-bottom:0">
+        <b>Bandwidth</b> is bytes per second &mdash; parts per hour. <b>Latency</b> is the time
+        for one item to arrive &mdash; lead time. They are independent, and a channel can be
+        superb at one and dreadful at the other. The extreme case is worth computing: a van of
+        hard drives has bandwidth measured in terabytes per hour and latency measured in hours.
+        Against a 10&nbsp;Gbit/s link and a four-hour drive, the crossover is at
+        <b>18&nbsp;TB</b> (<code>[Ch13 s10]</code>) &mdash; below that, send it over the wire;
+        above it, drive. That is the weekly lorry against the daily milk-run, and it is the
+        same calculation.
+      </p>
+    </div>
+    <p>
+      For anything distributed, the distinction decides the architecture. <b>Latency</b>
+      governs synchronisation, because everyone waits for the slowest &mdash; that is a
+      synchronised line where the station times must match. <b>Bandwidth</b> governs bulk
+      transfer. A design that is latency-bound and a design that is bandwidth-bound want
+      opposite things, exactly as a line balanced for takt and a line run for utilisation do.
+    </p>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Wire or van?</div><div class="lab-tag">Predict, then scale it</div></div>
+
+    <div class="predict">
+      <p style="margin-top:0">
+        You must move data to a site four hours&rsquo; drive away. You have a 10&nbsp;Gbit/s
+        link. Above roughly what volume does physically driving the disks become faster?
+      </p>
+      <button class="pbtn" data-p3="a" type="button">There is no such point</button>
+      <button class="pbtn" data-p3="b" type="button">About 18 TB</button>
+      <button class="pbtn" data-p3="c" type="button">About 2 TB</button>
+      <button class="pbtn" data-p3="d" type="button">About 500 TB</button>
+      <div class="pverdict" id="pv3"></div>
+    </div>
+
+    <svg class="stage" id="sN" viewBox="0 0 480 300" role="img"
+         aria-label="Transfer time against data volume for a network link and for physical transport, crossing at the break-even volume">
+      <g id="nGrid"></g>
+      <g id="nCurve"></g>
+      <g id="nAx"></g>
+      <g id="nLab"></g>
+    </svg>
+
+    <div class="ctl">
+      <label for="nSl">Data volume</label>
+      <input type="range" id="nSl" min="0" max="40" value="18" step="1">
+      <span class="ro-v" id="nVal" style="min-width:56px">18 TB</span>
+      <button class="btn" data-np="1" type="button">1 Gbit/s</button>
+      <button class="btn" data-np="10" type="button">10 Gbit/s</button>
+      <button class="btn" data-np="100" type="button">100 Gbit/s</button>
+    </div>
+
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Over the<br>link</div><div class="ro-v a" id="nT">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">By van<br>(4 h drive)</div><div class="ro-v b" id="nV">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Which<br>wins</div><div class="ro-v c" id="nWn">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Break-even<br>volume</div><div class="ro-v" id="nB">&mdash;</div></div>
+    </div>
+  </div>
+
+  <div class="lab-foot col">
+    The rising line is the link (time proportional to volume, slope set by bandwidth); the flat
+    line is the van (four hours regardless). They cross at <b>18&nbsp;TB</b> on a 10&nbsp;Gbit/s
+    link, which answers the prediction. The shapes are the point: the van is <em>pure
+    latency</em> with effectively unlimited bandwidth, the link is <em>pure bandwidth</em> with
+    negligible latency, and which wins depends entirely on how much you are moving. Switch to
+    1&nbsp;Gbit/s and the break-even drops to 1.8&nbsp;TB; at 100&nbsp;Gbit/s it rises to
+    180&nbsp;TB. That is the same curve you draw when choosing between a weekly full lorry and
+    a daily part-load, and the decision rule is identical: <b>batch transport wins on volume
+    and loses on responsiveness</b>.
+  </div>
+</section>
+
+<section id="containers">
+  <div class="col">
+    <div class="sechead"><span class="secnum">10</span><h2>Containers and cells</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/03.%20operating%20systems.md" target="_blank" rel="noopener">src 03. operating systems &#8599;</a>
+    </div>
+    <p>
+      A <b>virtual machine</b> simulates whole hardware, so each one runs a complete operating
+      system of its own. Strong isolation, heavy overhead &mdash; a separate plant with its own
+      utilities and its own management.
+    </p>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/container_vs_vm.svg" alt="Virtual machines each running a guest OS on virtual hardware, against containers sharing the host kernel" width="440"></div>
+    <figcaption><b>Fig. 13.7</b> &mdash; The whole difference is whether the guest brings its own kernel or shares the host&rsquo;s. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+
+  <div class="col">
+    <p>
+      A <b>container</b> shares the host kernel and isolates by two kernel mechanisms that are
+      worth naming separately, because they do different jobs:
+    </p>
+    <ul>
+      <li><b>Namespaces</b> control what a process can <em>see</em> &mdash; its own view of the
+        process list, network interfaces, file system mounts, hostname. That is a partitioned
+        bay: you can only see your own area.</li>
+      <li><b>Cgroups</b> control what a process can <em>use</em> &mdash; CPU time, memory, disk
+        and network bandwidth. That is a machine-hour quota, and it is what stops one job
+        starving the rest.</li>
+    </ul>
+    <p>
+      So a container is a work cell inside a shared plant: its own bay and its own tooling, but
+      the plant&rsquo;s compressed air, power and management. It starts in milliseconds because
+      there is no plant to commission, only a bay to mark out.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; reproducibility is the real argument</div>
+      <p>
+        The reason containers took over is not performance. It is that a container image
+        specifies its whole environment &mdash; versions, libraries, dependencies &mdash; so it
+        runs identically everywhere. That is a <b>controlled process specification</b>: the
+        reason you document feeds, speeds, tooling and fixture rather than trusting that the
+        next shift will set it up the same way. "It works on my machine" is "it worked on my
+        setup", and the answer in both fields is to make the setup part of the document.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="concurrency">
+  <div class="col">
+    <div class="sechead"><span class="secnum">11</span><h2>Concurrent is not parallel</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/04.%20concurrency%20and%20parallelism.md" target="_blank" rel="noopener">src 04. concurrency and parallelism &#8599;</a>
+    </div>
+    <p>
+      The source draws the distinction with a kitchen: concurrency is one chef alternating
+      between chopping and stirring; parallelism is two chefs. The distinction is load-bearing
+      and the shop-floor version is sharper.
+    </p>
+    <p>
+      <b>Concurrency</b> is <em>managing</em> several tasks that take turns. One operator
+      tending four semi-automatic machines is concurrent: they load machine 1, walk to machine
+      2 while 1 runs, and so on. Nothing is simultaneous about the <em>operator</em>.
+      <b>Parallelism</b> is <em>executing</em> several tasks at once, and it needs several
+      execution units &mdash; four operators.
+    </p>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/concurrency_vs_parallelism.svg" alt="Concurrency interleaving tasks on one core against parallelism running tasks simultaneously on several cores" width="440"></div>
+    <figcaption><b>Fig. 13.8</b> &mdash; Interleaved against simultaneous. A system can be either, both, or neither. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+
+  <div class="col">
+    <div class="defn">
+      <div class="defn-h">An event loop is the machine-interference problem</div>
+      <p style="margin-bottom:0">
+        Asynchronous programming handles thousands of connections on <em>one</em> thread with
+        an <b>event loop</b>: a task that must wait for I/O registers a callback and yields,
+        the loop runs the next ready task, and the first resumes when its data arrives. That is
+        precisely one operator tending \(n\) machines, and the classical analysis is the same
+        one &mdash; you are exploiting the fact that each machine is idle-waiting most of the
+        time, and the scheme collapses the moment the operator becomes the busy resource.
+        Async is ideal for <b>I/O-bound</b> work and useless for <b>CPU-bound</b> work, which
+        is the identical conclusion to "machine interference only pays while the operator has
+        slack".
+      </p>
+    </div>
+    <p>
+      <b>Cooperative against pre-emptive</b> is the other half. Coroutines yield voluntarily at
+      an <code>await</code>; OS threads are interrupted whether they like it or not. The
+      cooperative version is cheaper and has a failure mode you know well: <b>one task that
+      never yields stops everything</b>. An operator who will not leave machine 1 until it
+      finishes has starved the other three, and no amount of scheduling policy helps, because
+      the scheduler was never given control.
+    </p>
+    <p>
+      Python&rsquo;s <b>Global Interpreter Lock</b> is the limiting case. Only one thread may
+      execute Python bytecode at a time, so threads give concurrency and never parallelism for
+      CPU-bound work &mdash; a single permit that every operation must hold. &sect;16 puts a
+      number on what that costs.
+    </p>
+  </div>
+</section>
+
+<section id="lostupdate">
+  <div class="col">
+    <div class="sechead"><span class="secnum">12</span><h2>The lost update</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/04.%20concurrency%20and%20parallelism.md" target="_blank" rel="noopener">src 04. concurrency and parallelism &#8599;</a>
+    </div>
+    <p>
+      Part 1 &sect;05 said two tasks with no precedence arrow between them are <b>concurrent</b>
+      and may run in either order. Here is what that costs when they touch the same thing.
+    </p>
+    <p>
+      <code>counter += 1</code> looks like one operation. It is three: <b>read</b> the value,
+      <b>add</b> one, <b>write</b> it back. If two threads read 5, both add 1, and both write
+      6, the counter lands on 6 instead of 7 and one increment has vanished without trace.
+    </p>
+    <p>
+      Simulated over a random interleaving of four threads doing fifty increments each
+      (<code>[Ch13 s13]</code>): expected 200, actual <b>62</b>. Sixty-nine percent of the work
+      disappeared, and nothing crashed, nothing logged an error, and the number that came out
+      looks perfectly plausible.
+    </p>
+    <div class="defn">
+      <div class="defn-h">Two operators, one stock card</div>
+      <p style="margin-bottom:0">
+        Both read the count as 12. Both take a part. Both write 11. The card says 11, the shelf
+        holds 10, and the discrepancy surfaces weeks later at stocktake. <b>Identical failure,
+        identical cause</b> &mdash; a read-modify-write that was not atomic &mdash; and
+        identical fix: one hand on the card at a time. A <b>mutex</b> is the card being
+        physically held.
+      </p>
+    </div>
+    <p>
+      The cost of that fix is <b>contention</b>. While one thread holds the lock, every other
+      thread wanting it waits. That is a queue at a single shared tool, and &sect;16 shows it
+      is the thing that caps your whole system.
+    </p>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Watch an increment disappear</div><div class="lab-tag">Predict, then interleave</div></div>
+
+    <div class="predict">
+      <p style="margin-top:0">
+        Four threads each increment a shared counter 50 times with no lock. The expected total
+        is 200. What is a realistic actual result?
+      </p>
+      <button class="pbtn" data-p4="a" type="button">200 &mdash; increments do not vanish</button>
+      <button class="pbtn" data-p4="b" type="button">198 or so &mdash; a couple lost</button>
+      <button class="pbtn" data-p4="c" type="button">Anywhere from 50 to 200</button>
+      <button class="pbtn" data-p4="d" type="button">Over 200 &mdash; double counting</button>
+      <div class="pverdict" id="pv4"></div>
+    </div>
+
+    <svg class="stage" id="sR" viewBox="0 0 480 300" role="img"
+         aria-label="Four threads interleaving read, add and write steps on a shared counter, with lost updates highlighted">
+      <g id="rTrack"></g>
+      <g id="rLab"></g>
+    </svg>
+
+    <div class="ctl">
+      <label for="rSl">Threads</label>
+      <input type="range" id="rSl" min="2" max="8" value="4" step="1">
+      <span class="ro-v" id="rVal" style="min-width:44px">4</span>
+      <button class="btn" data-rp="race" type="button">No lock</button>
+      <button class="btn" data-rp="lock" type="button">With a mutex</button>
+      <button class="btn" data-rp="again" type="button">Run again</button>
+    </div>
+
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Expected</div><div class="ro-v a" id="rE">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Actual</div><div class="ro-v b" id="rA">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Updates<br>lost</div><div class="ro-v c" id="rLo">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Time under<br>the lock</div><div class="ro-v" id="rT">&mdash;</div></div>
+    </div>
+  </div>
+
+  <div class="lab-foot col">
+    Each row is a thread; the blocks are its read, add and write steps interleaved at random,
+    and a write that overwrites someone else&rsquo;s result is flagged. Press <b>Run again</b>
+    a few times on <b>No lock</b>: the answer is different every run and always short &mdash;
+    which is the answer to the prediction, <b>anywhere from 50 to 200</b>. The worst case is
+    exactly the thread count times nothing: if every thread reads before any writes, all but
+    one increment is lost. Switch to <b>With a mutex</b> and the blocks stop interleaving; the
+    count is exactly right, every time, and the last readout shows what you paid &mdash; the
+    fraction of total time spent inside the critical section, which is the number &sect;16
+    turns into a hard ceiling on your machine.
+  </div>
+</section>
+
+<section id="semaphore">
+  <div class="col">
+    <div class="sechead"><span class="secnum">13</span><h2>Semaphores are kanban cards</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/04.%20concurrency%20and%20parallelism.md" target="_blank" rel="noopener">src 04. concurrency and parallelism &#8599;</a>
+    </div>
+    <p>
+      A <b>mutex</b> admits one holder. A <b>counting semaphore</b> generalises it: initialise
+      it to \(n\), and \(n\) threads may hold it at once. <code>wait()</code> takes one,
+      <code>signal()</code> returns one, and a thread that finds none available blocks.
+    </p>
+    <div class="defn">
+      <div class="defn-h">That is a kanban loop with n cards</div>
+      <p style="margin-bottom:0">
+        Take a card to start work, return it when finished, and if there is no card you wait.
+        The count caps the work in process, which caps the queue. <b>CONWIP</b> is the same
+        device under a third name. The source describes a semaphore as useful "for resource
+        pools like database connections" &mdash; that is a tool crib with \(n\) sets of tooling
+        and a sign-out board.
+      </p>
+    </div>
+    <p>
+      Simulated (<code>[Ch13 s14]</code>) on a queue at 80% offered load: capping the count at
+      <b>10</b> cuts mean work-in-process by <b>26%</b> while giving up only <b>2.4%</b> of
+      throughput. That is the lean argument, measured.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks &mdash; capping WIP is only cheap above the working queue length</div>
+      <p>
+        The same simulation with the count set to <b>1</b> gives up <b>44%</b> of throughput.
+        A semaphore sized below the queue length the system naturally wants does not tidy the
+        queue, it throttles the line &mdash; arrivals are turned away and capacity sits idle.
+        The rule that transfers is the honest version of the lean one: <b>reducing WIP is
+        nearly free until the cap approaches the working queue length, and expensive
+        immediately after.</b> Sizing a connection pool and sizing a kanban loop are the same
+        problem with the same cliff, and both are usually set by measurement rather than
+        theory.
+      </p>
+    </div>
+    <h3>Producer&ndash;consumer, blocking and starving</h3>
+    <p>
+      The classic problem: producers put items in a fixed-size buffer, consumers take them out.
+      Producers must wait when it is full; consumers must wait when it is empty. The standard
+      solution uses two counting semaphores &mdash; one counting empty slots, one counting full
+      ones &mdash; plus a mutex for the buffer itself. <b>Two kanban loops running in
+      opposite directions.</b>
+    </p>
+    <p>
+      And the two failure conditions have the same names in both fields, which is not a
+      coincidence: a producer that cannot deposit is <b>blocked</b>, a consumer with nothing to
+      take is <b>starved</b>. Those are the two words in every line-design text, describing the
+      same two states of a station either side of a buffer.
+    </p>
+    <p>
+      <b>Read-write locks</b> allow many readers together but give a writer exclusive access
+      &mdash; many people may consult the drawing, only one may revise it, and nobody consults
+      it while it is being revised. The fairness problem is real in both: if readers keep
+      arriving, the writer may never get in.
+    </p>
+  </div>
+</section>
+
+<section id="deadlock">
+  <div class="col">
+    <div class="sechead"><span class="secnum">14</span><h2>Deadlock, and standard work</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/04.%20concurrency%20and%20parallelism.md" target="_blank" rel="noopener">src 04. concurrency and parallelism &#8599;</a>
+    </div>
+    <p>
+      <b>Deadlock</b> is a set of threads each holding something another needs, in a cycle.
+      Nobody can proceed and nobody will give way. You have seen it as two jobs each holding a
+      fixture the other needs, and as a gridlocked junction.
+    </p>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/deadlock_cycle.svg" alt="Thread A holds lock 1 and wants lock 2 while thread B holds lock 2 and wants lock 1, forming a circular wait" width="420"></div>
+    <figcaption><b>Fig. 13.9</b> &mdash; The smallest possible cycle. Two threads, two locks, opposite acquisition order. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+
+  <div class="col">
+    <p>
+      Four conditions must hold <em>simultaneously</em>, and the word necessary is doing real
+      work &mdash; break any one and deadlock is impossible:
+    </p>
+    <ol>
+      <li><b>Mutual exclusion</b> &mdash; the resource takes one holder at a time.</li>
+      <li><b>Hold and wait</b> &mdash; a thread keeps what it has while waiting for more.</li>
+      <li><b>No pre-emption</b> &mdash; you cannot take a resource back by force.</li>
+      <li><b>Circular wait</b> &mdash; a cycle exists in the waiting graph.</li>
+    </ol>
+    <div class="defn">
+      <div class="defn-h">The standard fix is standard work</div>
+      <p style="margin-bottom:0">
+        Impose a <b>total order</b> on resources and require every thread to acquire in that
+        order. A cycle then cannot form, because a cycle would need someone to acquire a
+        lower-numbered resource while holding a higher-numbered one. Verified under
+        <code>[Ch13 s15]</code>: five philosophers all reaching left first deadlock; five
+        philosophers obeying a total order on the forks never do, and the same holds at seven.
+      </p>
+      <p style="margin-bottom:0; margin-top:8px">
+        <b>"Every thread acquires locks in the same order" is "every operator draws tooling in
+        the documented sequence."</b> Same rule, same reason, and in both fields the discipline
+        is boring and the alternative is a stoppage nobody can diagnose.
+      </p>
+    </div>
+    <p>
+      The alternatives are worse. <b>Avoidance</b> &mdash; the Banker&rsquo;s algorithm
+      &mdash; checks before each grant whether the system stays in a state from which everyone
+      can finish. It needs each thread&rsquo;s maximum future demand declared up front and
+      costs \(O(n^2m)\) per request, which is why essentially nobody uses it; requiring every
+      job to declare its total tooling needs before starting is equally impractical on a shop
+      floor. <b>Detection</b> lets deadlock happen, finds the cycle, and breaks it by killing
+      something &mdash; which is what database systems do, aborting one transaction. In
+      practice: prevent by ordering where you can, detect and recover where you cannot.
+    </p>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Five philosophers, five forks</div><div class="lab-tag">Predict, then order them</div></div>
+
+    <div class="predict">
+      <p style="margin-top:0">
+        Five philosophers each need the fork on their left and the fork on their right. All
+        five reach for their left fork first. What happens?
+      </p>
+      <button class="pbtn" data-p5="a" type="button">Four eat, one waits</button>
+      <button class="pbtn" data-p5="b" type="button">All five hold one fork and nobody eats</button>
+      <button class="pbtn" data-p5="c" type="button">They take turns automatically</button>
+      <button class="pbtn" data-p5="d" type="button">It depends on the timing</button>
+      <div class="pverdict" id="pv5"></div>
+    </div>
+
+    <svg class="stage" id="sD" viewBox="0 0 480 310" role="img"
+         aria-label="Five philosophers around a table with forks between them, showing which forks are held and whether the system is deadlocked">
+      <g id="dTable"></g>
+      <g id="dLab"></g>
+    </svg>
+
+    <div class="ctl">
+      <label for="dSl">Philosophers</label>
+      <input type="range" id="dSl" min="3" max="8" value="5" step="1">
+      <span class="ro-v" id="dVal" style="min-width:40px">5</span>
+      <button class="btn" data-dp="left" type="button">All reach left first</button>
+      <button class="btn" data-dp="order" type="button">Total order on forks</button>
+      <button class="btn" data-dp="waiter" type="button">Waiter limits to n&minus;1</button>
+    </div>
+
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Forks<br>held</div><div class="ro-v a" id="dH">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Can anyone<br>proceed?</div><div class="ro-v b" id="dP">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Circular<br>wait?</div><div class="ro-v c" id="dC">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Condition<br>broken</div><div class="ro-v" id="dB">&mdash;</div></div>
+    </div>
+  </div>
+
+  <div class="lab-foot col">
+    Forks that have been picked up are shown filled, and an arrow runs from each philosopher to
+    the fork they are still waiting for. On <b>All reach left first</b> every fork is taken,
+    every arrow points to a neighbour, and the arrows close a ring &mdash; the answer to the
+    prediction is <b>all five hold one fork and nobody eats</b>, and it is not a timing
+    accident: it is guaranteed once they all reach the same way. Press <b>Total order</b> and
+    the ring breaks, because the highest-numbered philosopher now reaches for the lower fork
+    first and one of them ends up with both. The last readout names which of the four
+    conditions each fix destroys: ordering kills <em>circular wait</em>, the waiter kills
+    <em>hold and wait</em> by limiting how many may be seated. Drag the philosopher count
+    &mdash; the deadlock happens at every size, which is what "necessary and sufficient
+    conditions" buys you.
+  </div>
+</section>
+
+<section id="lockfree">
+  <div class="col">
+    <div class="sechead"><span class="secnum">15</span><h2>Lock-free, and the compare-and-swap</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/04.%20concurrency%20and%20parallelism.md" target="_blank" rel="noopener">src 04. concurrency and parallelism &#8599;</a>
+    </div>
+    <p>
+      Locks bring contention, priority inversion and the risk of deadlock. <b>Lock-free</b>
+      structures avoid them using a single hardware instruction: <b>compare-and-swap</b>.
+      CAS checks whether a location still holds the value you expect and, if so, replaces it
+      &mdash; atomically, in one indivisible step.
+    </p>
+    <p>
+      The usage pattern is a retry loop: read the current value, compute the new one, attempt
+      the swap; if someone else changed it in the meantime the swap fails and you start again.
+      This is <b>optimistic</b> rather than pessimistic control. You do not take the card out
+      of circulation while you think; you do your calculation, then check on writing that
+      nothing moved, and redo it if it did.
+    </p>
+    <p>
+      The guarantees are worth distinguishing, because the source states them precisely and
+      they are not the same. <b>Lock-free</b> means <em>some</em> thread always makes progress
+      &mdash; the system cannot deadlock, but an unlucky individual can retry indefinitely.
+      <b>Wait-free</b> means <em>every</em> thread finishes in a bounded number of steps. That
+      is throughput guaranteed against cycle time guaranteed, and the second is far harder to
+      build in both fields, for the same reason: bounding the worst case costs much more than
+      keeping the average good.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; and two things that do not</div>
+      <p>
+        Optimistic control is a familiar idea: run the job and inspect afterwards rather than
+        holding the line while you check. But two things about CAS have no mechanical
+        counterpart. First, it is <b>genuinely atomic in hardware</b> &mdash; there is no
+        interval during which the check has happened and the write has not, which is exactly
+        the interval every shop-floor procedure has to manage with discipline. Second, the
+        retry costs almost nothing, so re-doing work is cheap in a way it never is when the
+        work was cutting metal. <b>Optimistic control is cheap here precisely because rework
+        is free</b>, and that is the condition under which it is the right choice.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="amdahl">
+  <div class="col">
+    <div class="sechead"><span class="secnum">16</span><h2>Amdahl&rsquo;s law is Goldratt&rsquo;s</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2013%20-%20computing%20and%20OS/04.%20concurrency%20and%20parallelism.md" target="_blank" rel="noopener">src 04. concurrency and parallelism &#8599;</a>
+    </div>
+    <p>
+      This is the section part 1 promised. If a fraction \(p\) of a program can be
+      parallelised and the remaining \(1-p\) cannot, then with \(n\) processors:
+    </p>
+  </div>
+  <div class="mathbox col">$$\text{Speedup}(n) = \frac{1}{(1-p) + \dfrac{p}{n}} \qquad\xrightarrow[n\to\infty]{}\qquad \frac{1}{1-p}$$</div>
+  <div class="col">
+    <p>
+      Ninety-five percent parallel caps you at twenty times, whatever you spend. Verified to
+      the asymptote under <code>[Ch13 s17]</code>.
+    </p>
+    <div class="defn">
+      <div class="defn-h">Read it as a two-station line and it is part 1 &sect;13</div>
+      <p>
+        Take a line with total work 1. <b>Station A</b> does \(1-p\) of it and cannot be
+        subdivided &mdash; one operator, one machine, no way to split the task. <b>Station
+        B</b> does \(p\) and can be shared among \(n\) operators. Total time is
+        \((1-p) + p/n\), and the speedup over one operator is exactly Amdahl&rsquo;s formula
+        &mdash; checked to \(10^{-12}\).
+      </p>
+      <p style="margin-bottom:0">
+        Now the cycle time. Part 1 &sect;13 established that the line rate is set by the
+        slowest station alone. At \(p = 0.95\): with \(n=4\), station B takes 0.2375 against
+        A&rsquo;s 0.05, so B is the bottleneck and adding operators helps. At \(n=64\), B has
+        fallen to 0.0148 and <b>A is now the bottleneck</b> &mdash; and every further operator
+        you put on B buys nothing at all. That is <b>"an hour saved at a non-bottleneck is a
+        mirage"</b>, arrived at from the other direction.
+      </p>
+    </div>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/amdahl_serial_bottleneck.svg" alt="Amdahl's law curves showing speedup flattening as the serial fraction dominates" width="440"></div>
+    <figcaption><b>Fig. 13.10</b> &mdash; Every curve flattens. Where it flattens is set by the serial fraction and by nothing else. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+
+  <div class="col">
+    <h3>And &sect;12&rsquo;s mutex is where \(1-p\) comes from</h3>
+    <p>
+      This is the spine of the part. The fraction of time a thread spends holding a lock
+      <em>is</em> the serial fraction, because while one thread is inside the critical section
+      every other thread is stopped. So &sect;12 and this section are the same object seen
+      twice (<code>[Ch13 s17]</code>):
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>The critical section, read as Amdahl&rsquo;s serial fraction.</caption>
+      <thead><tr><th>Time holding the lock</th><th>p</th><th>Maximum speedup, ever</th><th>Speedup at 64 cores</th></tr></thead>
+      <tbody>
+        <tr><td>0.1%</td><td>0.999</td><td>1000&times;</td><td>60.2&times;</td></tr>
+        <tr><td>1%</td><td>0.990</td><td>100&times;</td><td>39.3&times;</td></tr>
+        <tr><td>5%</td><td>0.950</td><td>20&times;</td><td>15.4&times;</td></tr>
+        <tr><td>10%</td><td>0.900</td><td>10&times;</td><td>8.8&times;</td></tr>
+        <tr><td>25%</td><td>0.750</td><td>4&times;</td><td>3.8&times;</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      A <b>1% critical section caps a machine at 100&times;</b> no matter how many cores it
+      has. Python&rsquo;s GIL is the limiting case: for CPU-bound bytecode the whole interpreter
+      is the critical section, \(p \to 0\), and threads buy nothing.
+    </p>
+    <h3>Gustafson, and why it is not a rebuttal</h3>
+    <p>
+      <b>Gustafson&rsquo;s law</b> gives \(\text{Speedup}(n) = (1-p) + pn\), which is linear
+      and unbounded. Both laws are correct; they answer different questions
+      (<code>[Ch13 s18]</code>). Amdahl fixes the job and asks how much <em>faster</em>.
+      Gustafson fixes the time and asks how much <em>more</em>. At \(p = 0.95, n = 256\):
+      Amdahl says 18.6&times;, Gustafson says 243&times;.
+    </p>
+    <p>
+      You know these as <b>cycle-time reduction</b> against <b>capacity expansion</b>. Buying a
+      second machine to halve the lead time on one order is Amdahl&rsquo;s question, and the
+      un-splittable operation caps you. Buying a second machine to take twice the orders in the
+      same week is Gustafson&rsquo;s, and it scales. Neither is wrong; confusing them produces
+      a business case that does not survive contact with the shop floor.
+    </p>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Buy cores until it stops helping</div><div class="lab-tag">Predict, then add cores</div></div>
+
+    <div class="predict">
+      <p style="margin-top:0">
+        A program is 99% parallelisable. You run it on 1000 cores. What speedup do you get?
+      </p>
+      <button class="pbtn" data-p6="a" type="button">About 990&times;</button>
+      <button class="pbtn" data-p6="b" type="button">About 91&times;</button>
+      <button class="pbtn" data-p6="c" type="button">About 500&times;</button>
+      <button class="pbtn" data-p6="d" type="button">About 100&times;</button>
+      <div class="pverdict" id="pv6"></div>
+    </div>
+
+    <svg class="stage" id="sA" viewBox="0 0 480 310" role="img"
+         aria-label="Speedup against core count for the chosen parallel fraction, with the asymptote marked, plus a two-station bar showing which station is the bottleneck">
+      <g id="aGrid"></g>
+      <g id="aCurve"></g>
+      <g id="aBars"></g>
+      <g id="aLab"></g>
+    </svg>
+
+    <div class="ctl">
+      <label for="aSl">Cores n</label>
+      <input type="range" id="aSl" min="1" max="10" value="6" step="1">
+      <span class="ro-v" id="aVal" style="min-width:52px">64</span>
+      <button class="btn" data-ap="0.99" type="button">p = 0.99</button>
+      <button class="btn" data-ap="0.95" type="button">p = 0.95</button>
+      <button class="btn" data-ap="0.75" type="button">p = 0.75</button>
+    </div>
+
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Speedup<br>at n cores</div><div class="ro-v a" id="aS">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Ceiling<br>1/(1&minus;p)</div><div class="ro-v b" id="aM">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Gain from<br>doubling n</div><div class="ro-v c" id="aG">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Bottleneck<br>station</div><div class="ro-v" id="aB">&mdash;</div></div>
+    </div>
+  </div>
+
+  <div class="lab-foot col">
+    The curve is speedup against cores with the ceiling \(1/(1-p)\) dashed across it; the two
+    bars underneath are the un-splittable station A and the shared station B, drawn to scale.
+    At <b>p = 0.99</b> and 1000 cores the readout says <b>91&times;</b>, not 990 &mdash; which
+    answers the prediction, and the ceiling readout explains it: you can never exceed
+    100&times;, and at 1000 cores you are already most of the way there. Now watch the bars as
+    you add cores. While B is taller, doubling the cores nearly doubles the speedup. The moment
+    B drops below A the bottleneck readout flips to <b>station A</b>, the curve goes flat, and
+    the "gain from doubling" readout collapses toward 1.00. <b>Everything after that point is
+    money spent on a non-bottleneck.</b> That is the one piece of arithmetic that should
+    survive this entire sheet.
+  </div>
+</section>
+
+<section id="next">
+  <div class="col">
+    <div class="sechead"><span class="secnum">17</span><h2>What part 3 carries</h2>
+      <span class="srcref nolink" title="Added material, not in the source chapter">beyond the chapter</span>
+    </div>
+    <p>
+      Part 1 built the machine; this part shared it out. <b>Part 3</b> takes the last source
+      file &mdash; programming languages and compilation &mdash; and closes the chapter with
+      its worked example, its 24-question bank across three tiers, and the concept map for all
+      three parts.
+    </p>
+    <p>
+      One thread runs straight into it. Part 1 &sect;12 described the instruction set as the
+      contract between hardware and software; part 3 climbs the rest of that stack, from source
+      text through types and compilation to the machine code part 1 started from. Two things
+      from this part reappear there: the <b>GIL</b> of &sect;11 is a language design decision
+      with the concurrency consequences measured in &sect;16, and the <b>memory management</b>
+      of &sect;07 becomes the difference between manual allocation, reference counting and
+      garbage collection.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>If you take three things from this part</div>
+      <p>
+        <b>&sect;16:</b> the serial fraction is the bottleneck, a 1% critical section caps a
+        machine at 100&times;, and Amdahl is a two-station line where one station cannot be
+        split. <b>&sect;04:</b> shortest-job-first is the SPT rule and the optimality theorem is
+        the one you already know &mdash; but an OS cannot use it, because it never knows the
+        burst times. <b>&sect;06:</b> Little&rsquo;s law holds here too, so the price of the
+        last point of utilisation is not the price of the first, on a server exactly as on a
+        shop floor.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="provenance">
+  <div class="col">
+    <div class="sechead"><span class="secnum">A</span><h2>Provenance and changes</h2>
+      <span class="srcref nolink" title="Required by Apache-2.0 section 4(b)">licence notice</span>
+    </div>
+    <p>
+      This sheet is a derivative work of <b>chapter 13 &mdash; computing and OS</b> of the
+      <i>Mathematics, Computer Science and AI Compendium</i>, licensed under Apache&nbsp;2.0.
+      Section&nbsp;4(b) requires prominent notice of changes. The source is pinned at commit
+      <code>9850ee5</code>. <b>This appendix covers part 2 only</b>; parts 1 and 3 carry their
+      own.
+    </p>
+    <h3>Source material used in part 2</h3>
+    <ul>
+      <li><code>03. operating systems.md</code> (258 lines) &mdash; &sect;&sect;01&ndash;10</li>
+      <li><code>04. concurrency and parallelism.md</code> (226 lines) &mdash; &sect;&sect;11&ndash;16</li>
+      <li>Six figures reproduced unmodified from <code>images/</code>: <code>process_states</code>,
+        <code>tcp_ip_layers</code>, <code>container_vs_vm</code>,
+        <code>concurrency_vs_parallelism</code>, <code>deadlock_cycle</code>,
+        <code>amdahl_serial_bottleneck</code>.</li>
+    </ul>
+    <h3>Changes made</h3>
+    <ul>
+      <li><b>Re-narrated for one reader</b> &mdash; a GATE-prepared mechanical engineering
+        graduate, against production scheduling, lean manufacturing, queueing and inventory
+        theory rather than against a computing background.</li>
+      <li><b>Correspondences added that are not in the source:</b> Amdahl&rsquo;s law as a
+        two-station line and as the theory of constraints; SJF as the SPT dispatching rule with
+        its optimality verified exhaustively; the time quantum as an economic order quantity
+        with the same \(\sqrt{A/B}\) form; a counting semaphore as a kanban card count and
+        CONWIP; the critical section as the source of Amdahl&rsquo;s serial fraction; lock
+        ordering as standard work; a journaling file system as a route card; context switching
+        as changeover and the SMED response; blocking and starving as the same two words in
+        both fields; an event loop as the machine-interference problem; cgroups as machine-hour
+        quotas; the bandwidth/latency trade as the lorry against the milk-run, with the
+        break-even computed.</li>
+      <li><b>Little&rsquo;s law added</b> (&sect;06). The source discusses queues, waiting and
+        throughput without ever stating \(L = \lambda W\); it is verified here by simulation
+        and used for the utilisation-cliff argument.</li>
+      <li><b>One limit stated that the source does not:</b> &sect;04 notes that the provably
+        optimal scheduling rule is unimplementable in an OS, because burst times are unknown
+        and &mdash; by part 1 &sect;08 &mdash; not computable in general either.</li>
+      <li><b>One quantitative caveat added:</b> &sect;13 measures that capping work in process
+        is nearly free above the working queue length and expensive below it (2.4% of
+        throughput at a cap of 10, 44% at a cap of 1).</li>
+      <li><b>Six interactive labs</b> in plain SVG and vanilla JavaScript.</li>
+      <li><b>13 new numerical checks</b> added to
+        <code>study-companion/verify_claims.py</code>, bringing it to 435 checks with no
+        failures.</li>
+    </ul>
+    <h3>What is claimed, and what is reported</h3>
+    <p>
+      Statements tagged <code>[Ch13 sNN]</code> are computed. Latencies, bandwidths, protocol
+      details and named products (Kubernetes, Docker, CFS, jemalloc) are the source&rsquo;s and
+      are reported rather than derived. The queueing results are simulations of an M/M/1 system
+      and are stated as such. No internet research was used.
+    </p>
+    <p class="endnote">
+      Sheet 13 of 20, part 2 of 3. Source compendium &copy; its authors, Apache&nbsp;2.0. This
+      derivative sheet is offered under the same licence. Next: <b>part 3 &mdash; programming
+      languages</b>, plus the worked example, question bank and concept map for the chapter.
+    </p>
+  </div>
+</section>
+
+</main>
+</div>
+
+<style>
+:root{--c1:#BF5B00; --c2:#0F74C7; --c3:#1F8A4C; --c4:#7A4FBF; --c5:#C2185B}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --c1:#D9782B; --c2:#4A97D6; --c3:#35AC63; --c4:#9575D0; --c5:#D65A82}
+}
+:root[data-theme="dark"]{
+  --c1:#D9782B; --c2:#4A97D6; --c3:#35AC63; --c4:#9575D0; --c5:#D65A82}
+#lGrid line, #nGrid line, #aGrid line{stroke:var(--rule)}
+#lAx line, #nAx line{stroke:var(--rule-strong); stroke-width:1.25}
+#lCurve path, #nCurve path, #aCurve path{fill:none; stroke-width:2}
+#qGantt rect, #rTrack rect, #aBars rect{stroke:var(--sheet); stroke-width:1}
+#dTable line.arrow{stroke:var(--c1); stroke-width:1.6}
+.tk{fill:var(--ink-3); font-family:'IBM Plex Mono',monospace; font-size:10px}
+.tkb{fill:var(--ink-2); font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600}
+.tkn{fill:var(--sheet); font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:600}
+</style>
+
+<script>
+(function(){
+  'use strict';
+  var root=document.documentElement;
+  function dk(){var t=root.getAttribute('data-theme');
+    return t?t==='dark':(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);}
+  try{var sv=localStorage.getItem('ch13b-theme'); if(sv==='dark'||sv==='light') root.setAttribute('data-theme',sv);}catch(e){}
+  var tb=document.getElementById('themebtn');
+  if(tb) tb.addEventListener('click',function(){var n=dk()?'light':'dark';
+    root.setAttribute('data-theme',n); try{localStorage.setItem('ch13b-theme',n);}catch(e){}});
+  function $(id){return document.getElementById(id);}
+  function predict(attr,vid,ans){
+    document.querySelectorAll('['+attr+']').forEach(function(b){
+      b.addEventListener('click',function(){
+        document.querySelectorAll('['+attr+']').forEach(function(o){o.classList.remove('picked');});
+        b.classList.add('picked');
+        var v=$(vid); v.innerHTML=ans[b.getAttribute(attr)]; v.classList.add('show');
+      });
+    });
+  }
+  window.__c13b={$:$,predict:predict,PAL:['var(--c1)','var(--c2)','var(--c3)','var(--c4)','var(--c5)']};
+})();
+</script>
+
+<script>
+/* ===== LAB 1 -- dispatching ===== */
+(function(){
+  'use strict';
+  var H=window.__c13b, $=H.$, rule='fcfs', quantum=12;
+  var JOBS=[['P1',10],['P2',4],['P3',6],['P4',2],['P5',8]];
+  function schedule(){
+    var slices=[], t=0, order;
+    if(rule==='sjf') order=JOBS.slice().sort(function(a,b){return a[1]-b[1];});
+    else order=JOBS.slice();
+    if(rule==='rr'){
+      var rem=JOBS.map(function(j){return [j[0],j[1]];}), sw=0;
+      while(rem.some(function(r){return r[1]>0;})){
+        for(var i=0;i<rem.length;i++){
+          if(rem[i][1]<=0) continue;
+          var run=Math.min(quantum,rem[i][1]);
+          slices.push([rem[i][0],t,t+run]); t+=run; rem[i][1]-=run; sw++;
+        }
+      }
+      return {slices:slices, switches:sw};
+    }
+    order.forEach(function(j){ slices.push([j[0],t,t+j[1]]); t+=j[1]; });
+    return {slices:slices, switches:slices.length};
+  }
+  function stats(sl){
+    var done={}, names=JOBS.map(function(j){return j[0];});
+    sl.forEach(function(s){ done[s[0]]=s[2]; });
+    var flows=names.map(function(n){return done[n];});
+    var burst={}; JOBS.forEach(function(j){burst[j[0]]=j[1];});
+    var waits=names.map(function(n){return done[n]-burst[n];});
+    return {mean: flows.reduce(function(a,b){return a+b;},0)/flows.length,
+            worstWait: Math.max.apply(null,waits), done:done};
+  }
+  function bestMean(){
+    var best=Infinity;
+    function perm(arr,cur){
+      if(!arr.length){var t=0,tot=0; cur.forEach(function(j){t+=j[1]; tot+=t;});
+        best=Math.min(best,tot/cur.length); return;}
+      for(var i=0;i<arr.length;i++)
+        perm(arr.slice(0,i).concat(arr.slice(i+1)), cur.concat([arr[i]]));
+    }
+    perm(JOBS,[]); return best;
+  }
+  function draw(){
+    var r=schedule(), st=stats(r.slices);
+    var X0=56,X1=452,Y0=54,rowh=32, total=30, o='';
+    var names=JOBS.map(function(j){return j[0];});
+    names.forEach(function(n,i){
+      var y=Y0+i*rowh;
+      o+='<line x1="'+X0+'" y1="'+(y+11)+'" x2="'+X1+'" y2="'+(y+11)+
+         '" stroke="var(--rule)" stroke-width="1"/>'+
+         '<text class="tk" x="'+(X0-8)+'" y="'+(y+15)+'" text-anchor="end">'+n+'</text>';
+    });
+    r.slices.forEach(function(s){
+      var i=names.indexOf(s[0]), y=Y0+i*rowh;
+      var x=X0+(X1-X0)*s[1]/total, w=(X1-X0)*(s[2]-s[1])/total;
+      o+='<rect x="'+x.toFixed(1)+'" y="'+y+'" width="'+Math.max(w,2).toFixed(1)+
+         '" height="22" fill="'+H.PAL[i%5]+'"/>';
+    });
+    names.forEach(function(n,i){
+      var y=Y0+i*rowh;
+      var x=X0+(X1-X0)*st.done[n]/total;
+      o+='<text class="tk" x="'+(x+5).toFixed(1)+'" y="'+(y+15)+'">'+st.done[n]+'</text>';
+    });
+    $('qGantt').innerHTML=o;
+    var lab='';
+    for(var t=0;t<=30;t+=5)
+      lab+='<text class="tk" x="'+(X0+(X1-X0)*t/total).toFixed(1)+'" y="'+(Y0+5*rowh+10)+
+           '" text-anchor="middle">'+t+'</text>';
+    $('qLab').innerHTML=lab+
+      '<text class="tkb" x="240" y="30" text-anchor="middle">'+
+      (rule==='fcfs'?'first come first served — arrival order'
+       :rule==='sjf'?'shortest job first — the SPT rule'
+       :'round robin, quantum '+quantum)+'</text>'+
+      '<text class="tk" x="240" y="44" text-anchor="middle">bar = on the machine; number at the right = completion time</text>'+
+      '<text class="tk" x="240" y="'+(Y0+5*rowh+28)+'" text-anchor="middle">time</text>';
+    $('qF').textContent=st.mean.toFixed(2);
+    $('qO').textContent=bestMean().toFixed(2);
+    $('qC').textContent=r.switches;
+    $('qW').textContent=st.worstWait;
+    $('qVal').textContent=(rule==='rr'? quantum : 'no slicing');
+  }
+  $('qSl').addEventListener('input',function(){quantum=+this.value; if(rule!=='rr'){rule='rr';} draw();});
+  document.querySelectorAll('[data-qp]').forEach(function(b){
+    b.addEventListener('click',function(){rule=b.getAttribute('data-qp'); draw();});
+  });
+  H.predict('data-p1','pv1',{
+    a:'<b>The total work is the same; the average wait is not.</b> Reordering changes when each job finishes, and the mean of those finish times is what SPT minimises.',
+    b:'<b>Low.</b> Read the two mean-flow readouts: 19.20 under FCFS, 14.00 under SJF. That is 27%, and the exhaustive optimum confirms 14.00 cannot be beaten.',
+    c:'<b>Correct.</b> 19.20 → 14.00 is a 27% cut, from reordering alone. And the exhaustive-optimum readout sits at 14.00: SPT is not just better, it is provably optimal for mean flow time.',
+    d:'<b>Not for the non-pre-emptive rules.</b> FCFS and SJF here run each job to completion; the quantum only enters under round robin, where it trades mean flow time for a shorter worst-case wait.'
+  });
+  draw();
+})();
+
+/* ===== LAB 2 -- Little's law ===== */
+(function(){
+  'use strict';
+  var H=window.__c13b, $=H.$, rho=0.70;
+  function draw(){
+    var X0=56,X1=452,Y0=48,Y1=236,o='';
+    var Lmax=20;
+    function px(r){return X0+(X1-X0)*(r-0.1)/0.88;}
+    function py(L){return Y1-(Y1-Y0)*Math.min(L,Lmax)/Lmax;}
+    for(var g=0.2;g<=0.98;g+=0.2) o+='<line x1="'+px(g).toFixed(1)+'" y1="'+Y0+'" x2="'+px(g).toFixed(1)+'" y2="'+Y1+'"/>';
+    $('lGrid').innerHTML=o;
+    var d='M';
+    for(var r=0.1;r<=0.975;r+=0.002) d+=px(r).toFixed(1)+','+py(r/(1-r)).toFixed(1)+' L';
+    d=d.slice(0,-2);
+    var L=rho/(1-rho), W=1/(1-rho);
+    $('lCurve').innerHTML='<path d="'+d+'" stroke="var(--c2)"/>'+
+      '<circle cx="'+px(rho).toFixed(1)+'" cy="'+py(L).toFixed(1)+'" r="6" fill="var(--c1)"/>'+
+      '<line x1="'+px(rho).toFixed(1)+'" y1="'+py(L).toFixed(1)+'" x2="'+px(rho).toFixed(1)+'" y2="'+Y1+
+      '" stroke="var(--c1)" stroke-width="1" stroke-dasharray="3 3"/>';
+    $('lAx').innerHTML='<line x1="'+X0+'" y1="'+Y1+'" x2="'+X1+'" y2="'+Y1+'"/>'+
+      '<line x1="'+X0+'" y1="'+Y0+'" x2="'+X0+'" y2="'+Y1+'"/>';
+    var lab='';
+    for(var t=0.2;t<=0.98;t+=0.2)
+      lab+='<text class="tk" x="'+px(t).toFixed(1)+'" y="'+(Y1+15)+'" text-anchor="middle">'+t.toFixed(1)+'</text>';
+    var nextL=(rho+0.01)/(1-rho-0.01);
+    $('lLab').innerHTML=lab+
+      '<text class="tkb" x="240" y="28" text-anchor="middle">jobs in the system against utilisation, L = ρ/(1−ρ)</text>'+
+      '<text class="tk" x="240" y="'+(Y1+32)+'" text-anchor="middle">utilisation ρ</text>'+
+      '<text class="tk" x="240" y="'+(Y1+52)+'" text-anchor="middle">'+
+      'one more point of utilisation here costs '+(nextL-L).toFixed(2)+' more jobs in the queue</text>';
+    $('lL').textContent=L.toFixed(3);
+    $('lW').textContent=W.toFixed(3)+' svc';
+    $('lC').textContent=(rho*W).toFixed(3);
+    $('lG').textContent='+'+(nextL-L).toFixed(2)+' jobs';
+    $('lVal').textContent=rho.toFixed(2);
+  }
+  $('lSl').addEventListener('input',function(){rho=+this.value/100; draw();});
+  document.querySelectorAll('[data-lp]').forEach(function(b){
+    b.addEventListener('click',function(){rho=+b.getAttribute('data-lp')/100; $('lSl').value=b.getAttribute('data-lp'); draw();});
+  });
+  H.predict('data-p2','pv2',{
+    a:'<b>Nothing about this curve is proportional.</b> L = ρ/(1−ρ) blows up as ρ approaches 1. Drag the slider to 0.90 and read it.',
+    b:'<b>Correct.</b> 0.7/0.3 = 2.33; 0.9/0.1 = 9.00. Almost four times the queue for twenty points of utilisation — and at 0.95 it is 19. This is why a plant at 95% has terrible lead times.',
+    c:'<b>Under by half.</b> L goes 2.33 → 9.00, which is 3.9×, not 2×. The curve is a hyperbola, not a line.',
+    d:'<b>Utilisation is the load, not the speed.</b> Raising it means more work chasing the same capacity, so the queue must grow — and it grows faster than linearly.'
+  });
+  draw();
+})();
+</script>
+
+<script>
+/* ===== LAB 3 -- wire or van ===== */
+(function(){
+  'use strict';
+  var H=window.__c13b, $=H.$, vol=18, gbit=10;
+  function draw(){
+    var bps=gbit*1e9/8, drive=4;
+    var X0=56,X1=452,Y0=54,Y1=232, maxV=40, maxT=Math.max(8, maxV*1e12/bps/3600*1.1);
+    function px(v){return X0+(X1-X0)*v/maxV;}
+    function py(t){return Y1-(Y1-Y0)*Math.min(t,maxT)/maxT;}
+    var o='';
+    for(var g=10;g<=40;g+=10) o+='<line x1="'+px(g).toFixed(1)+'" y1="'+Y0+'" x2="'+px(g).toFixed(1)+'" y2="'+Y1+'"/>';
+    $('nGrid').innerHTML=o;
+    var d='M'+px(0)+','+py(0).toFixed(1);
+    for(var v=1;v<=maxV;v+=1) d+=' L'+px(v).toFixed(1)+','+py(v*1e12/bps/3600).toFixed(1);
+    var be=bps*3600*drive/1e12;
+    $('nCurve').innerHTML='<path d="'+d+'" stroke="var(--c2)"/>'+
+      '<path d="M'+px(0)+','+py(drive).toFixed(1)+' L'+px(maxV)+','+py(drive).toFixed(1)+
+      '" stroke="var(--c1)" stroke-dasharray="6 4"/>'+
+      (be<=maxV?'<circle cx="'+px(be).toFixed(1)+'" cy="'+py(drive).toFixed(1)+
+       '" r="6" fill="var(--c3)"/>':'')+
+      '<line x1="'+px(vol).toFixed(1)+'" y1="'+Y0+'" x2="'+px(vol).toFixed(1)+'" y2="'+Y1+
+      '" stroke="var(--ink-3)" stroke-width="1" stroke-dasharray="3 3"/>';
+    $('nAx').innerHTML='<line x1="'+X0+'" y1="'+Y1+'" x2="'+X1+'" y2="'+Y1+'"/>'+
+      '<line x1="'+X0+'" y1="'+Y0+'" x2="'+X0+'" y2="'+Y1+'"/>';
+    var lab='';
+    for(var t=0;t<=40;t+=10)
+      lab+='<text class="tk" x="'+px(t).toFixed(1)+'" y="'+(Y1+15)+'" text-anchor="middle">'+t+'</text>';
+    var tnet=vol*1e12/bps/3600;
+    $('nLab').innerHTML=lab+
+      '<text class="tkb" x="240" y="28" text-anchor="middle">transfer time against volume — '+
+      gbit+' Gbit/s link against a 4 h drive</text>'+
+      '<text class="tk" x="240" y="42" text-anchor="middle">rising line = the link; flat line = the van</text>'+
+      '<text class="tk" x="240" y="'+(Y1+32)+'" text-anchor="middle">data volume, TB</text>'+
+      '<text class="tk" x="'+(X0+6)+'" y="'+(py(drive)-6).toFixed(1)+'">van: 4 h, any volume</text>'+
+      '<text class="tk" x="240" y="'+(Y1+52)+'" text-anchor="middle">break-even '+
+      be.toFixed(1)+' TB — below it send the bits, above it send the van</text>';
+    $('nT').textContent=tnet<48? tnet.toFixed(2)+' h' : (tnet/24).toFixed(1)+' d';
+    $('nV').textContent='4.00 h';
+    $('nWn').textContent=(tnet<drive?'the link':'the van');
+    $('nB').textContent=be.toFixed(1)+' TB';
+    $('nVal').textContent=vol+' TB';
+  }
+  $('nSl').addEventListener('input',function(){vol=+this.value; draw();});
+  document.querySelectorAll('[data-np]').forEach(function(b){
+    b.addEventListener('click',function(){gbit=+b.getAttribute('data-np'); draw();});
+  });
+  H.predict('data-p3','pv3',{
+    a:'<b>There always is one.</b> The van takes four hours whatever you load it with; the link takes time proportional to volume. Two lines with different slopes must cross.',
+    b:'<b>Correct.</b> 10 Gbit/s is 1.25 GB/s, so four hours moves 18 TB. Below that the wire wins; above it, drive. Switch the link speed and the break-even moves proportionally.',
+    c:'<b>Too low.</b> 2 TB goes over a 10 Gbit/s link in under half an hour, comfortably beating a four-hour drive. Drag the volume slider and watch the two readouts swap.',
+    d:'<b>Too high by an order of magnitude.</b> 500 TB would take 111 hours on the wire — the van won long before that. The crossover is 18 TB.'
+  });
+  draw();
+})();
+
+/* ===== LAB 4 -- the lost update ===== */
+(function(){
+  'use strict';
+  var H=window.__c13b, $=H.$, nT=4, locked=false, seed=7;
+  function run(){
+    var incs=6, counter=0, regs=[], stage=[], todo=[], ev=[], t=0;
+    var s=seed;
+    function rnd(){s=(s*1103515245+12345)&0x7fffffff; return s/0x7fffffff;}
+    for(var i=0;i<nT;i++){regs.push(0); stage.push(0); todo.push(incs);}
+    var holder=-1, lockTime=0;
+    while(todo.some(function(x){return x>0;}) && t<4000){
+      var live=[];
+      for(i=0;i<nT;i++) if(todo[i]>0) live.push(i);
+      var k;
+      if(locked){
+        if(holder<0) holder=live[Math.floor(rnd()*live.length)];
+        k=holder;
+      } else k=live[Math.floor(rnd()*live.length)];
+      if(stage[k]===0){regs[k]=counter; stage[k]=1; ev.push([k,t,'r',counter]);}
+      else if(stage[k]===1){regs[k]+=1; stage[k]=2; ev.push([k,t,'a',regs[k]]);}
+      else{
+        var lost = regs[k]!==counter+0 && regs[k]<=counter;
+        counter=regs[k]; stage[k]=0; todo[k]-=1;
+        ev.push([k,t,'w',counter,lost]);
+        if(locked){holder=-1;}
+      }
+      if(locked) lockTime++;
+      t++;
+    }
+    return {counter:counter, ev:ev, steps:t, expected:nT*incs, lockTime:lockTime};
+  }
+  function draw(){
+    var r=run();
+    var X0=52,X1=456,Y0=58,rowh=30,o='';
+    var maxT=r.steps;
+    for(var i=0;i<nT;i++){
+      var y=Y0+i*rowh;
+      o+='<line x1="'+X0+'" y1="'+(y+10)+'" x2="'+X1+'" y2="'+(y+10)+
+         '" stroke="var(--rule)" stroke-width="1"/>'+
+         '<text class="tk" x="'+(X0-6)+'" y="'+(y+14)+'" text-anchor="end">T'+(i+1)+'</text>';
+    }
+    r.ev.forEach(function(e){
+      var y=Y0+e[0]*rowh, x=X0+(X1-X0)*e[1]/maxT, w=Math.max((X1-X0)/maxT-1,2);
+      var col=e[2]==='r'?'var(--c2)':(e[2]==='a'?'var(--c4)':(e[4]?'var(--c5)':'var(--c3)'));
+      o+='<rect x="'+x.toFixed(1)+'" y="'+y+'" width="'+w.toFixed(1)+'" height="20" fill="'+col+'"/>';
+    });
+    $('rTrack').innerHTML=o;
+    $('rLab').innerHTML=
+      '<text class="tkb" x="240" y="28" text-anchor="middle">'+
+      (locked?'with a mutex — one thread completes read-add-write before the next begins'
+             :'no lock — read, add and write from different threads interleave freely')+'</text>'+
+      '<text class="tk" x="240" y="42" text-anchor="middle">'+
+      'blue = read, purple = add, green = write, crimson = a write that destroyed another result</text>'+
+      '<text class="tkb" x="240" y="'+(Y0+nT*rowh+24)+'" text-anchor="middle">'+
+      'counter ended at '+r.counter+' of an expected '+r.expected+'</text>';
+    $('rE').textContent=r.expected;
+    $('rA').textContent=r.counter;
+    $('rLo').textContent=(r.expected-r.counter)+' ('+
+      Math.round(100*(r.expected-r.counter)/r.expected)+'%)';
+    $('rT').textContent=locked? '100%' : '0%';
+    $('rVal').textContent=nT;
+  }
+  $('rSl').addEventListener('input',function(){nT=+this.value; draw();});
+  document.querySelectorAll('[data-rp]').forEach(function(b){
+    b.addEventListener('click',function(){
+      var v=b.getAttribute('data-rp');
+      if(v==='again') seed=Math.floor(Math.random()*90000)+10; else locked=(v==='lock');
+      draw();
+    });
+  });
+  H.predict('data-p4','pv4',{
+    a:'<b>They vanish constantly.</b> counter += 1 is read, add, write. If two threads read the same value, one of the two writes is simply overwritten and that increment never happened.',
+    b:'<b>Far too optimistic.</b> Press <b>Run again</b> a few times — losses of 50 to 70% are routine, because every thread that reads a stale value destroys someone else’s work when it writes.',
+    c:'<b>Correct, and that is the horror of it.</b> The result is different every run, always short, and never flags an error. The floor is 50 — if every thread reads before any writes, all but one increment is lost.',
+    d:'<b>It cannot exceed the expected total.</b> Lost updates destroy work; they never create it. The failure is silent undercounting, which is exactly why it survives testing.'
+  });
+  draw();
+})();
+</script>
+
+<script>
+/* ===== LAB 5 -- dining philosophers ===== */
+(function(){
+  'use strict';
+  var H=window.__c13b, $=H.$, n=5, mode='left';
+  function state(){
+    var held=new Array(n).fill(null), want=[], seated=n;
+    if(mode==='waiter') seated=n-1;
+    for(var ph=0;ph<n;ph++){
+      var l=ph, r=(ph+1)%n;
+      want.push(mode==='order' ? [Math.min(l,r),Math.max(l,r)] : [l,r]);
+    }
+    for(ph=0;ph<seated;ph++){ if(held[want[ph][0]]===null) held[want[ph][0]]=ph; }
+    var progress=[];
+    for(ph=0;ph<seated;ph++){
+      if(held[want[ph][0]]!==ph) continue;
+      var second=want[ph][1];
+      if(held[second]===null||held[second]===ph) progress.push(ph);
+    }
+    return {held:held, want:want, progress:progress, seated:seated};
+  }
+  function draw(){
+    var s=state(), cx=240, cy=150, R=90, o='';
+    o+='<circle cx="'+cx+'" cy="'+cy+'" r="52" fill="var(--sheet-2)" stroke="var(--rule)"/>';
+    var pp=[], fp=[];
+    for(var i=0;i<n;i++){
+      var a=-Math.PI/2+i*2*Math.PI/n;
+      pp.push([cx+R*Math.cos(a), cy+R*Math.sin(a)]);
+      var af=a+Math.PI/n;
+      fp.push([cx+58*Math.cos(af), cy+58*Math.sin(af)]);
+    }
+    /* arrows: philosopher -> the fork they still want */
+    s.want.forEach(function(w,ph){
+      if(ph>=s.seated) return;
+      if(s.held[w[0]]!==ph) return;
+      if(s.progress.indexOf(ph)>=0) return;
+      var f=fp[w[1]];
+      o+='<line class="arrow" x1="'+pp[ph][0].toFixed(1)+'" y1="'+pp[ph][1].toFixed(1)+
+         '" x2="'+f[0].toFixed(1)+'" y2="'+f[1].toFixed(1)+'"/>';
+    });
+    for(i=0;i<n;i++){
+      var taken=s.held[i]!==null;
+      o+='<circle cx="'+fp[i][0].toFixed(1)+'" cy="'+fp[i][1].toFixed(1)+'" r="9.5" fill="'+
+         (taken?'var(--c1)':'var(--sheet)')+'" stroke="var(--rule-strong)" stroke-width="1.4"/>'+
+         '<text class="tk" x="'+fp[i][0].toFixed(1)+'" y="'+(fp[i][1]+3).toFixed(1)+
+         '" text-anchor="middle" fill="'+(taken?'var(--sheet)':'var(--ink-3)')+'">'+i+'</text>';
+    }
+    for(i=0;i<n;i++){
+      var eating=s.progress.indexOf(i)>=0, out=i>=s.seated;
+      o+='<circle cx="'+pp[i][0].toFixed(1)+'" cy="'+pp[i][1].toFixed(1)+'" r="16" fill="'+
+         (out?'var(--rule)':(eating?'var(--c3)':'var(--ink-2)'))+'"/>'+
+         '<text class="tkn" x="'+pp[i][0].toFixed(1)+'" y="'+(pp[i][1]+3.5).toFixed(1)+
+         '" text-anchor="middle">'+i+'</text>';
+    }
+    $('dTable').innerHTML=o;
+    var dead=s.progress.length===0;
+    $('dLab').innerHTML=
+      '<text class="tkb" x="240" y="26" text-anchor="middle">'+
+      (mode==='left'?'every philosopher reaches for their LEFT fork first'
+       :mode==='order'?'forks are numbered; everyone takes the lower number first'
+       :'a waiter seats only n−1 at a time')+'</text>'+
+      '<text class="tk" x="240" y="272" text-anchor="middle">'+
+      'filled fork = picked up; arrow = still waiting for that fork</text>'+
+      '<text class="tkb" x="240" y="294" text-anchor="middle" fill="'+
+      (dead?'var(--brk)':'var(--bridge)')+'">'+
+      (dead?'DEADLOCKED — every fork held, every philosopher waiting'
+           :s.progress.length+' philosopher'+(s.progress.length===1?'':'s')+' can pick up a second fork and eat')+
+      '</text>';
+    $('dH').textContent=s.held.filter(function(x){return x!==null;}).length+' of '+n;
+    $('dP').textContent=(dead?'no':'yes, '+s.progress.length);
+    $('dC').textContent=(dead?'yes':'no');
+    $('dB').textContent=(mode==='left'?'none':(mode==='order'?'circular wait':'hold and wait'));
+    $('dVal').textContent=n;
+  }
+  $('dSl').addEventListener('input',function(){n=+this.value; draw();});
+  document.querySelectorAll('[data-dp]').forEach(function(b){
+    b.addEventListener('click',function(){mode=b.getAttribute('data-dp'); draw();});
+  });
+  H.predict('data-p5','pv5',{
+    a:'<b>Not if all five reach the same way.</b> Each grabs one fork, and the fork each still needs is already in the hand of the neighbour. Nobody has two.',
+    b:'<b>Correct, and it is guaranteed rather than unlucky.</b> Reaching in the same direction makes the wait-graph a ring by construction. Press <b>Total order</b> and the ring breaks immediately.',
+    c:'<b>Nothing takes turns on its own.</b> There is no scheduler here — each philosopher holds what they have and waits. Taking turns is what the total order or the waiter imposes.',
+    d:'<b>Timing does not save you.</b> Drag the philosopher count from 3 to 8: the deadlock appears at every size, because all four necessary conditions hold whatever the timing.'
+  });
+  draw();
+})();
+
+/* ===== LAB 6 -- Amdahl ===== */
+(function(){
+  'use strict';
+  var H=window.__c13b, $=H.$, logn=6, p=0.95;
+  function draw(){
+    var n=Math.pow(2,logn);
+    var X0=58,X1=452,Y0=48,Y1=186,o='';
+    var ceil=1/(1-p), ymax=Math.min(ceil*1.15, 120);
+    function px(k){return X0+(X1-X0)*k/10;}
+    function py(s){return Y1-(Y1-Y0)*Math.min(s,ymax)/ymax;}
+    for(var g=2;g<=10;g+=2) o+='<line x1="'+px(g).toFixed(1)+'" y1="'+Y0+'" x2="'+px(g).toFixed(1)+'" y2="'+Y1+'"/>';
+    $('aGrid').innerHTML=o;
+    var d='M';
+    for(var k=0;k<=10;k+=0.05){
+      var nn=Math.pow(2,k);
+      d+=px(k).toFixed(1)+','+py(1/((1-p)+p/nn)).toFixed(1)+' L';
+    }
+    d=d.slice(0,-2);
+    var sp=1/((1-p)+p/n);
+    $('aCurve').innerHTML='<path d="'+d+'" stroke="var(--c2)"/>'+
+      '<path d="M'+X0+','+py(ceil).toFixed(1)+' L'+X1+','+py(ceil).toFixed(1)+
+      '" stroke="var(--c1)" stroke-dasharray="6 4"/>'+
+      '<circle cx="'+px(logn).toFixed(1)+'" cy="'+py(sp).toFixed(1)+'" r="6" fill="var(--c1)"/>';
+    /* two-station bars */
+    var A=1-p, B=p/n, mx=Math.max(A,B), BY=250, bw=150;
+    var o2='<text class="tk" x="'+X0+'" y="'+(BY-8)+'">station A (cannot be split): '+A.toFixed(4)+'</text>'+
+      '<rect x="'+X0+'" y="'+BY+'" width="'+(bw*A/mx).toFixed(1)+'" height="18" fill="'+
+      (A>=B?'var(--c1)':'var(--c2)')+'"/>'+
+      '<text class="tk" x="'+(X0+200)+'" y="'+(BY-8)+'">station B (shared by '+n+'): '+B.toFixed(4)+'</text>'+
+      '<rect x="'+(X0+200)+'" y="'+BY+'" width="'+Math.max(bw*B/mx,1).toFixed(1)+'" height="18" fill="'+
+      (B>A?'var(--c1)':'var(--c2)')+'"/>';
+    $('aBars').innerHTML=o2;
+    var lab='';
+    for(var t=0;t<=10;t+=2)
+      lab+='<text class="tk" x="'+px(t).toFixed(1)+'" y="'+(Y1+14)+'" text-anchor="middle">'+Math.pow(2,t)+'</text>';
+    var sp2=1/((1-p)+p/(2*n));
+    $('aLab').innerHTML=lab+
+      '<text class="tkb" x="240" y="28" text-anchor="middle">speedup against cores, p = '+p+'</text>'+
+      '<text class="tk" x="'+(X1-4)+'" y="'+(py(ceil)-6).toFixed(1)+'" text-anchor="end">ceiling 1/(1−p) = '+
+      ceil.toFixed(1)+'×</text>'+
+      '<text class="tk" x="240" y="'+(Y1+30)+'" text-anchor="middle">cores n (log scale)</text>'+
+      '<text class="tkb" x="240" y="292" text-anchor="middle">'+
+      (A>=B?'station A is the bottleneck — more cores now buy nothing'
+           :'station B is the bottleneck — more cores still help')+'</text>';
+    $('aS').textContent=sp.toFixed(2)+'×';
+    $('aM').textContent=ceil.toFixed(1)+'×';
+    $('aG').textContent=(sp2/sp).toFixed(3)+'×';
+    $('aB').textContent=(A>=B?'A, serial':'B, parallel');
+    $('aVal').textContent=n;
+  }
+  $('aSl').addEventListener('input',function(){logn=+this.value; draw();});
+  document.querySelectorAll('[data-ap]').forEach(function(b){
+    b.addEventListener('click',function(){p=+b.getAttribute('data-ap'); draw();});
+  });
+  H.predict('data-p6','pv6',{
+    a:'<b>That would need p = 1.</b> The 1% that cannot be parallelised does not get faster no matter how many cores run beside it, and it alone sets the ceiling at 100×.',
+    b:'<b>Correct.</b> 1/(0.01 + 0.99/1000) = 91.0. You are already at 91% of the 100× ceiling, so the next thousand cores would buy you about 9× more — ever.',
+    c:'<b>Above the ceiling.</b> 1/(1−p) = 100 is the absolute maximum at p = 0.99; 500× is unreachable with any number of cores.',
+    d:'<b>That is the ceiling, not the achieved speedup.</b> 100× is the limit as n → ∞. At n = 1000 you get 91×, which is close — and that closeness is precisely why more cores stop helping.'
+  });
+  draw();
+})();
+</script>
+
+</body>
+</html>
