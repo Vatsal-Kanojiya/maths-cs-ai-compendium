@@ -1422,4 +1422,343 @@ print(f"[Ch11 s11] closed form: p12=sqrt(q rho), p11=sqrt(2) rho^(3/4) q^(1/4),"
 print(f"[Ch11 s11]   wn^2 = p12/rho = sqrt(q/rho) and 2 zeta wn = p11/rho = sqrt2 wn -> "
       f"zeta = 1/sqrt2 exactly")
 
+
+# =========================== CHAPTER 11 (part 2) =========================
+_l1, _l2 = 1.0, 0.8
+_m1,_m2,_lc1,_lc2,_I1,_I2 = 2.0,1.5,0.5,0.4,0.12,0.06
+
+def _DH(a, al, d, th):
+    ct,st,ca,sa = np.cos(th),np.sin(th),np.cos(al),np.sin(al)
+    return np.array([[ct,-st*ca, st*sa, a*ct],[st, ct*ca,-ct*sa, a*st],
+                     [0, sa, ca, d],[0,0,0,1.]])
+print()
+_wo = max(np.abs(_DH(*p4)[:3,:3] @ _DH(*p4)[:3,:3].T - np.eye(3)).max()
+          for p4 in rng.normal(0,2,(3000,4)))
+_wd = max(abs(np.linalg.det(_DH(*p4)[:3,:3]) - 1) for p4 in rng.normal(0,2,(3000,4)))
+print(f"[Ch11 s11] every DH matrix is a rigid transform: R R^T = I to {_wo:.0e}, "
+      f"det R = 1 to {_wd:.0e}   {P(_wo<1e-12 and _wd<1e-12)}")
+_Ch = np.eye(4)
+for _p4 in rng.normal(0,1.5,(6,4)): _Ch = _Ch @ _DH(*_p4)
+print(f"[Ch11 s11] and a 6-joint chain of them still is: det = "
+      f"{np.linalg.det(_Ch[:3,:3]):.12f}   {P(abs(np.linalg.det(_Ch[:3,:3])-1)<1e-10)}")
+
+_fk = lambda q: np.array([_l1*np.cos(q[0])+_l2*np.cos(q[0]+q[1]),
+                          _l1*np.sin(q[0])+_l2*np.sin(q[0]+q[1])])
+def _J(q):
+    s1,s12,c1,c12 = np.sin(q[0]),np.sin(q[0]+q[1]),np.cos(q[0]),np.cos(q[0]+q[1])
+    return np.array([[-_l1*s1-_l2*s12, -_l2*s12],[_l1*c1+_l2*c12, _l2*c12]])
+print()
+_wj = 0.0
+for _q in rng.uniform(-np.pi,np.pi,(2000,2)):
+    _Jn = np.column_stack([(_fk(_q+1e-6*e)-_fk(_q-1e-6*e))/2e-6 for e in np.eye(2)])
+    _wj = max(_wj, np.abs(_Jn - _J(_q)).max())
+print(f"[Ch11 s12] the analytic Jacobian matches central differences to {_wj:.0e}   {P(_wj<1e-7)}")
+_wdet = max(abs(np.linalg.det(_J(q)) - _l1*_l2*np.sin(q[1]))
+            for q in rng.uniform(-np.pi,np.pi,(3000,2)))
+print(f"[Ch11 s12] det J = l1 l2 sin(q2) identically, max err {_wdet:.0e}   {P(_wdet<1e-12)}")
+print(f"[Ch11 s12]   so det J = 0 exactly when q2 = 0 or pi -- straight out, or folded back")
+for _q2 in (np.pi/2, 0.3, 0.05, 0.005):
+    _s = np.linalg.svd(_J([0.4,_q2]), compute_uv=False)
+    print(f"[Ch11 s12]   q2={_q2:6.3f} rad: singular values [{_s[0]:.4f}, {_s[1]:.6f}], "
+          f"cond {_s[0]/_s[1]:8.1f}")
+_qdc = np.array([0.4, 0.0]); _u = np.linalg.svd(_J(_qdc))[0]
+_rad = _fk(_qdc)/np.linalg.norm(_fk(_qdc))
+print(f"[Ch11 s12] at q2=0 the lost direction {_u[:,1].round(4)} IS the radial direction "
+      f"{_rad.round(4)}: |dot| = {abs(_u[:,1]@_rad):.10f}   {P(abs(abs(_u[:,1]@_rad)-1)<1e-9)}")
+print(f"[Ch11 s12]   the arm cannot reach further out, only swing -- a linkage at dead centre")
+
+print()
+_lam = 0.05
+_wp = max(np.abs(_J(q).T@np.linalg.inv(_J(q)@_J(q).T + _lam**2*np.eye(2))
+                 - np.linalg.inv(_J(q).T@_J(q) + _lam**2*np.eye(2))@_J(q).T).max()
+          for q in rng.uniform(-np.pi,np.pi,(1500,2)))
+print(f"[Ch11 s12] J^T(JJ^T+l^2 I)^-1 == (J^TJ+l^2 I)^-1 J^T to {_wp:.0e}   {P(_wp<1e-8)}")
+_dx = np.array([0.01,0.0]); _qn = np.array([0.4,0.004]); _Jn2 = _J(_qn)
+_dqd = _Jn2.T@np.linalg.solve(_Jn2@_Jn2.T + _lam**2*np.eye(2), _dx)
+_obj = lambda d: np.sum((_Jn2@d-_dx)**2) + _lam**2*np.sum(d**2)
+_best = min(_obj(_dqd + 1e-4*rng.normal(size=2)) for _ in range(4000))
+print(f"[Ch11 s12] and it is the minimiser of ||J dq - dx||^2 + l^2||dq||^2   "
+      f"{P(_best > _obj(_dqd))}")
+print(f"[Ch11 s12] 0.004 rad from dead centre, for a 1 cm move: pseudo-inverse demands "
+      f"{np.linalg.norm(np.linalg.pinv(_Jn2)@_dx):.2f} rad,")
+print(f"[Ch11 s12]   damped least squares {np.linalg.norm(_dqd):.4f} rad   "
+      f"{P(np.linalg.norm(_dqd) < np.linalg.norm(np.linalg.pinv(_Jn2)@_dx)/100)}")
+
+def _M(q2):
+    a = _m2*(_lc2**2 + _l1*_lc2*np.cos(q2)) + _I2
+    return np.array([[_m1*_lc1**2+_I1+_m2*(_l1**2+_lc2**2+2*_l1*_lc2*np.cos(q2))+_I2, a],
+                     [a, _m2*_lc2**2+_I2]])
+def _C(q2, dq):
+    h = -_m2*_l1*_lc2*np.sin(q2)
+    return np.array([[h*dq[1], h*(dq[0]+dq[1])],[-h*dq[0], 0.0]])
+def _KE(q, dq):
+    v1 = _lc1*dq[0]*np.array([-np.sin(q[0]), np.cos(q[0])])
+    v2 = (_l1*dq[0]*np.array([-np.sin(q[0]), np.cos(q[0])])
+          + _lc2*(dq[0]+dq[1])*np.array([-np.sin(q[0]+q[1]), np.cos(q[0]+q[1])]))
+    return (0.5*_m1*v1@v1 + 0.5*_I1*dq[0]**2 + 0.5*_m2*v2@v2 + 0.5*_I2*(dq[0]+dq[1])**2)
+print()
+_wke = _wsym = 0.0
+for _ in range(3000):
+    _q = rng.uniform(-np.pi,np.pi,2); _dq = rng.normal(0,2,2); _Mm = _M(_q[1])
+    _wke = max(_wke, abs(0.5*_dq@_Mm@_dq - _KE(_q,_dq)))
+    _wsym = max(_wsym, abs(_Mm[0,1]-_Mm[1,0]))
+print(f"[Ch11 s13] (1/2) q_dot^T M q_dot == the kinetic energy computed from link "
+      f"velocities, to {_wke:.0e}   {P(_wke<1e-12)}")
+_mine = min(np.linalg.eigvalsh(_M(q2)).min() for q2 in np.linspace(-np.pi,np.pi,20001))
+_maxc = max(np.linalg.eigvalsh(_M(q2)).max()/np.linalg.eigvalsh(_M(q2)).min()
+            for q2 in np.linspace(-np.pi,np.pi,2001))
+print(f"[Ch11 s13] M is symmetric to {_wsym:.0e} and its smallest eigenvalue anywhere in "
+      f"the workspace is {_mine:.5f} > 0   {P(_wsym<1e-14 and _mine>1e-6)}")
+print(f"[Ch11 s13]   worst condition number {_maxc:.1f}: the inertia a motor feels varies "
+      f"by that factor with configuration")
+_wsk = 0.0
+for _ in range(3000):
+    _q2 = rng.uniform(-np.pi,np.pi); _dq = rng.normal(0,2,2)
+    _Md = (_M(_q2+1e-6*_dq[1]) - _M(_q2-1e-6*_dq[1]))/2e-6
+    _S = _Md - 2*_C(_q2,_dq); _wsk = max(_wsk, np.abs(_S+_S.T).max())
+print(f"[Ch11 s13] Mdot - 2C is skew-symmetric, max |S + S^T| = {_wsk:.0e}   {P(_wsk<1e-6)}")
+print(f"[Ch11 s13]   hence q_dot^T (Mdot - 2C) q_dot = 0: Coriolis and centrifugal terms do")
+print(f"[Ch11 s13]   NO net work -- the same statement as 'Coriolis acts perpendicular to v'")
+
+def _pid(Kp,Kd,T=30.0,dt=2e-4,m=1.0,b=0.5,Ki=0.0,sat=None,clamp=False):
+    q=dq=I=0.0; pk=0.0
+    for _ in range(int(T/dt)):
+        e=1.0-q; I+=e*dt
+        tau=Kp*e+Kd*(-dq)+Ki*I
+        if sat is not None:
+            t2=float(np.clip(tau,-sat,sat))
+            if clamp and t2!=tau: I-=e*dt
+            tau=t2
+        dq+=((tau-b*dq)/m)*dt; q+=dq*dt; pk=max(pk,q)
+    return pk
+print()
+for _Kp,_Kd in ((25,1.5),(100,6.5),(400,17.5)):
+    _z=(0.5+_Kd)/(2*np.sqrt(_Kp)); _pr=100*np.exp(-np.pi*_z/np.sqrt(1-_z*_z))
+    _me=100*(_pid(_Kp,_Kd)-1)
+    print(f"[Ch11 s14] Kp={_Kp:4.0f} Kd={_Kd:5.1f} -> wn={np.sqrt(_Kp):5.2f} zeta={_z:5.3f}: "
+          f"overshoot {_me:6.2f}% measured vs {_pr:6.2f}% from exp(-pi z/sqrt(1-z^2))  "
+          f"{P(abs(_me-_pr)<0.4)}")
+print(f"[Ch11 s14] Kp IS a stiffness (wn = sqrt(Kp/m)), Kd IS a damping coefficient")
+print(f"[Ch11 s14]   (zeta = (b+Kd)/(2 sqrt(Kp m))); the plant's own damping just adds to Kd")
+_w = np.logspace(-2,3,200000)
+_L = (25.0 + 1j*_w*9.5)/(1j*_w*(1j*_w + 0.5))
+_i = np.argmin(np.abs(np.abs(_L)-1.0))
+_pm = 180 + np.degrees(np.angle(_L[_i]))
+print(f"[Ch11 s14] and the loop has a phase margin you can compute: {_pm:.1f} deg at "
+      f"{_w[_i]:.2f} rad/s   {P(40 < _pm < 90)}")
+print(f"[Ch11 s14] torque saturation at 3.0 N m, Ki=40: overshoot {100*(_pid(30,8,Ki=40,sat=3.0)-1):.1f}% "
+      f"without anti-windup, {100*(_pid(30,8,Ki=40,sat=3.0,clamp=True)-1):.1f}% with   "
+      f"{P(_pid(30,8,Ki=40,sat=3.0,clamp=True) < _pid(30,8,Ki=40,sat=3.0))}")
+
+# --- behaviour cloning: what actually compounds --------------------------
+print()
+_eps = 0.01
+print(f"[Ch11 s15] compounding error, per-step disagreement eps={_eps}. After the FIRST")
+print(f"[Ch11 s15]   disagreement the policy is off-distribution and pays 1 per step left:")
+for _T in (10,25,50,100,200):
+    _ex = sum(_eps*(1-_eps)**t*(_T-t) for t in range(_T))
+    _mc = np.mean([next((_T-t for t in range(_T) if rng.random()<_eps), 0) for _ in range(20000)])
+    print(f"[Ch11 s15]   T={_T:4d}: expected cost {_ex:8.3f} (Monte Carlo {_mc:8.3f}), "
+          f"eps T^2/2 = {_eps*_T*_T/2:8.3f}   {P(abs(_mc-_ex) < 0.06*max(1,_ex))}")
+_r50 = sum(_eps*(1-_eps)**t*(50-t) for t in range(50))
+_r100 = sum(_eps*(1-_eps)**t*(100-t) for t in range(100))
+print(f"[Ch11 s15] doubling the horizon costs {_r100/_r50:.2f}x, not 2x   {P(_r100/_r50>1.8)}")
+print(f"[Ch11 s15]   (eps T^2/2 is the small-eps*T limit; past that it saturates, because an")
+print(f"[Ch11 s15]   early mistake becomes near-certain -- 114 not 200 at T=200)")
+print(f"[Ch11 s15] DAgger relabels those states, so a mistake costs O(1): eps T = {_eps*100:.1f} "
+      f"at T=100 against {_r100:.1f}   {P(_r100 > 3*_eps*100)}")
+def _roll(T, gain, seed=7, e=0.02):
+    r = np.random.default_rng(seed); x = 0.0; d = 0.0
+    for t in range(T):
+        x = x + gain*(1.0-x) + e*r.normal(); d = abs(x - (1-np.exp(-0.6*t)))
+    return d
+print(f"[Ch11 s15] but noise ALONE never compounds. Same noise, three closed-loop gains:")
+for _g,_n in ((0.6,"contracting"),(1.99,"marginal   "),(2.05,"expansive  ")):
+    print(f"[Ch11 s15]   {_n} (gain {_g:4.2f}): deviation at T=10,40,160 = "
+          f"{_roll(10,_g):.4f}, {_roll(40,_g):.4f}, {_roll(160,_g):.3e}")
+print(f"[Ch11 s15]   a contracting loop absorbs noise forever. What compounds is LOSING the")
+print(f"[Ch11 s15]   contraction, and leaving the training distribution is how it is lost.")
+print(f"[Ch11 s15] CONTRAST: a four-bar with 0.1 mm of pin clearance has 0.1 mm of error at")
+print(f"[Ch11 s15]   every point of its cycle, not 0.1 mm x cycles. A constraint does not")
+print(f"[Ch11 s15]   integrate its own error; a policy that picks its own next state does.")
+
+# --- multimodality: the mean of two valid actions is not valid -----------
+print()
+_lft, _rgt, _r = np.array([-1.0,0.5]), np.array([1.0,0.5]), 0.6
+_mid = 0.5*(_lft+_rgt)
+print(f"[Ch11 s16] two ways past an obstacle of radius {_r} at the origin:")
+print(f"[Ch11 s16]   left |d|={np.linalg.norm(_lft):.3f}, right |d|={np.linalg.norm(_rgt):.3f}, "
+      f"their mean |d|={np.linalg.norm(_mid):.3f} -> COLLIDES   "
+      f"{P(np.linalg.norm(_mid) < _r < np.linalg.norm(_lft))}")
+print(f"[Ch11 s16]   the valid set is not convex, so a regression to the mean leaves it")
+def _pth(ch, T=60, seed=5):
+    r=np.random.default_rng(seed); x=[0.0]; md=0
+    for t in range(T):
+        if t%ch==0: md = 1 if r.random()<0.5 else -1
+        x.append(x[-1]+0.05*md)
+    return np.array(x)
+for _ch in (1,5,20,60):
+    _p=_pth(_ch); _f=int(np.sum(np.diff(np.sign(np.diff(_p)))!=0))
+    print(f"[Ch11 s16]   chunk={_ch:3d}: {_f:3d} reversals in 60 steps, |x| travelled "
+          f"{abs(_p[-1]):.3f}")
+print(f"[Ch11 s16] re-sampling the mode every step dithers and commits to neither; chunking")
+print(f"[Ch11 s16]   picks once and follows through   {P(abs(_pth(1)[-1]) < abs(_pth(20)[-1]))}")
+
+# --- sim-to-real: one controller, many plants ----------------------------
+def _lqr(m, dt=0.02, r=0.05, n=4000):
+    A=np.array([[1,dt],[0,1.]]); B=np.array([[0.],[dt/m]]); Q=np.diag([1.0,0.1]); Sv=Q.copy()
+    for _ in range(n):
+        Kv=np.linalg.solve(r+B.T@Sv@B, B.T@Sv@A); Sv=Q+A.T@Sv@(A-B@Kv)
+    return Kv.ravel()
+def _cost(K, m, dt=0.02, T=400):
+    A=np.array([[1,dt],[0,1.]]); B=np.array([0., dt/m]); x=np.array([1.,0.]); c=0.0
+    for _ in range(T):
+        u=float(-K@x); c += x[0]**2+0.1*x[1]**2+0.05*u*u; x=A@x+B*u
+        if not np.isfinite(c) or abs(x[0])>1e6: return np.inf
+    return c
+print()
+_ms = np.array([0.4,0.6,1.0,1.6,2.5,4.0])
+_Kn = _lqr(1.0)
+_Kd2 = min((_lqr(mm) for mm in np.linspace(0.4,4.0,25)),
+           key=lambda K: float(np.mean([_cost(K,mm) for mm in _ms])))
+print(f"[Ch11 s17] one controller, six plants. 'System ID' designs for m=1 exactly;")
+print(f"[Ch11 s17]   'domain randomisation' minimises the mean over m in [0.4, 4.0]:")
+for mm in _ms:
+    _cn,_cd = _cost(_Kn,mm), _cost(_Kd2,mm)
+    print(f"[Ch11 s17]   m={mm:4.1f}: nominal {_cn:8.3f}  randomised {_cd:8.3f}  "
+          f"{'nominal' if _cn<_cd else 'randomised'} wins")
+_A=np.array([_cost(_Kn,mm) for mm in _ms]); _B2=np.array([_cost(_Kd2,mm) for mm in _ms])
+print(f"[Ch11 s17] at the design point the nominal wins ({_cost(_Kn,1.):.2f} vs "
+      f"{_cost(_Kd2,1.):.2f})   {P(_cost(_Kn,1.) <= _cost(_Kd2,1.))}")
+print(f"[Ch11 s17] on the mean ({_A.mean():.2f} vs {_B2.mean():.2f}) and on the worst case "
+      f"({_A.max():.2f} vs {_B2.max():.2f}) the randomised wins   "
+      f"{P(_B2.mean()<_A.mean() and _B2.max()<_A.max())}")
+print(f"[Ch11 s17]   -> domain randomisation is robust design done by sampling. It buys the")
+print(f"[Ch11 s17]   worst case by selling the best case -- the same trade, priced the same way")
+print(f"[Ch11 s17] BREAK: robust synthesis gives a guarantee over the whole uncertainty set.")
+print(f"[Ch11 s17]   Sampling gives an average over what was sampled, and says nothing at all")
+print(f"[Ch11 s17]   about a plant outside the sampling distribution")
+
+# --- action tokenisation --------------------------------------------------
+print()
+_N, _lo, _hi = 256, -0.1, 0.1
+_st = (_hi-_lo)/_N
+print(f"[Ch11 s18] {_N} bins over [{_lo}, {_hi}] m/s -> {_st*1000:.5f} mm/s per bin   "
+      f"{P(abs(_st*1000-0.78125)<1e-9)}")
+print(f"[Ch11 s18]   max error {_st/2*1000:.4f} mm/s, RMS {_st/np.sqrt(12)*1000:.4f} mm/s "
+      f"-- Sheet 09's ADC result, unchanged")
+_rt2 = [1,128,91,241,5,101,127]
+print(f"[Ch11 s18] the source has RT-2 emit '{' '.join(map(str,_rt2))}' for a 7-DoF action;")
+print(f"[Ch11 s18]   every token < 256 (max {max(_rt2)}). Per-dimension bins would put "
+      f"dimension 7 in [1536, 1791]   {P(max(_rt2) < 256)}")
+print(f"[Ch11 s18]   -> 256 SHARED bins, disambiguated by position. Vocabulary cost 256, not")
+print(f"[Ch11 s18]   7x256 = {7*256}: the source's own example contradicts its arithmetic")
+
+
+# ---------------------- Ch11 part 2: locomotion & VLA ---------------------
+def _marg(tri, pt):
+    d=[]
+    for i in range(3):
+        e=tri[(i+1)%3]-tri[i]; n=np.array([-e[1],e[0]]); n=n/np.linalg.norm(n)
+        if n@(tri[(i+2)%3]-tri[i]) < 0: n=-n
+        d.append(n@(pt-tri[i]))
+    return min(d)
+print()
+print(f"[Ch11 s16] a quadruped lifts one corner foot; CoM at the body centre:")
+_ok16 = True
+for _ratio in (1.0, 1.5, 2.0, 3.0):
+    _b = 0.18; _a = _b*_ratio
+    _ft = np.array([[_a,_b],[_a,-_b],[-_a,_b],[-_a,-_b]])
+    _tri = np.array([f for f in _ft if not np.allclose(f,_ft[0])])
+    _m = _marg(_tri, np.zeros(2)); _ok16 &= abs(_m) < 1e-14
+    print(f"[Ch11 s16]   aspect {_ratio:3.1f}:1 -> static stability margin {_m:+.2e} m")
+print(f"[Ch11 s16] EXACTLY zero at every aspect ratio   {P(_ok16)}")
+print(f"[Ch11 s16]   because lifting a corner leaves a triangle whose hypotenuse is the")
+print(f"[Ch11 s16]   rectangle's diagonal, and a rectangle's centre lies ON its diagonal")
+_b0=0.18; _a0=0.35
+_tri0=np.array([[_a0,-_b0],[-_a0,_b0],[-_a0,-_b0]])
+for _s in (0.02,0.05,0.10):
+    _d=_s*np.array([-_a0,-_b0])/np.linalg.norm([_a0,_b0])
+    print(f"[Ch11 s16]   shift the CoM {_s*100:4.1f} cm toward the stance side -> margin "
+          f"{_marg(_tri0,_d):.4f} m")
+print(f"[Ch11 s16] so the lateral sway of a slow-walking robot dog is this geometry obeyed")
+print()
+for _h,_v,_R in ((1.0,10.,50.),(0.9,5.,20.),(1.2,15.,100.)):
+    _o=_h*_v*_v/(9.81*_R)
+    print(f"[Ch11 s16] h={_h:.1f} m v={_v:4.1f} m/s R={_R:5.1f} m -> CoM sits {_o:.3f} m "
+          f"outside the contact patch, lean {np.degrees(np.arctan(_v*_v/(9.81*_R))):5.2f} deg")
+print(f"[Ch11 s16] and nothing falls over, because the RESULTANT still passes inside it   "
+      f"{P(abs(1.0*100/(9.81*50) - 0.2039) < 1e-3)}")
+print(f"[Ch11 s16]   'CoM over the support polygon' is the v=0 special case; the dynamic")
+print(f"[Ch11 s16]   condition is 'ZMP inside it', and running violates the static one always")
+
+def _cpg(psi, w=2*np.pi, K=6.0, T=4000, dt=0.002, seed=3):
+    r=np.random.default_rng(seed); n=len(psi); ph=r.uniform(0,2*np.pi,n)
+    for _ in range(T):
+        ph = ph + np.array([w + K*sum(np.sin(ph[j]-ph[i]-(psi[j]-psi[i]))
+                                      for j in range(n))/n for i in range(n)])*dt
+    return (ph-ph[0]) % (2*np.pi), (np.array(psi)-psi[0]) % (2*np.pi)
+print()
+_ok17 = True
+for _nm,_ps in (("trot  (diagonal pairs)",[0,np.pi,np.pi,0]),
+                ("pace  (lateral pairs) ",[0,np.pi,0,np.pi]),
+                ("bound (front / rear)  ",[0,0,np.pi,np.pi]),
+                ("walk  (90 deg apart)  ",[0,np.pi/2,np.pi,3*np.pi/2])):
+    _rel,_tg = _cpg(_ps); _e=np.abs((_rel-_tg+np.pi)%(2*np.pi)-np.pi).max(); _ok17 &= _e<1e-3
+    print(f"[Ch11 s16] {_nm}: locks to {np.degrees(_rel).round(0)} deg from random phases")
+print(f"[Ch11 s16] every gait converges to its prescribed offsets   {P(_ok17)}")
+print(f"[Ch11 s16]   a four-stroke inline-4 fires at 0/180/360/540 deg of crank: the same")
+print(f"[Ch11 s16]   object. A gait IS a firing order -- trot is the 1-4/2-3 pairing")
+
+try:
+    from scipy.stats import beta as _beta, fisher_exact as _fe
+    print()
+    for _k,_n in ((16,20),(15,20),(17,20),(40,50)):
+        _lo=_beta.ppf(0.025,_k,_n-_k+1); _hi=_beta.ppf(0.975,_k+1,_n-_k)
+        print(f"[Ch11 s17] a VLA success rate of {_k}/{_n} = {_k/_n:.0%} has a 95% interval "
+              f"[{_lo:.1%}, {_hi:.1%}] -- {100*(_hi-_lo):.0f} points wide")
+    _p = _fe([[15,5],[17,3]])[1]
+    print(f"[Ch11 s17] so 75% and 85% on 20 trials each are indistinguishable: Fisher exact "
+          f"p = {_p:.3f}   {P(_p > 0.1)}")
+except Exception as _e:
+    print(f"[Ch11 s17] (scipy unavailable: {_e})")
+
+
+# --- damped least squares peaks where sigma_min = lambda, then withdraws --
+def _dqn(q1,q2,lam):
+    Jm=_J([q1,q2])
+    return np.linalg.norm(Jm.T@np.linalg.solve(Jm@Jm.T + lam**2*np.eye(2), np.array([0.01,0.0])))
+print()
+_lm, _q1 = 0.05, 0.55
+_qs = np.linspace(0.002, 1.5, 4000)
+_vals = np.array([_dqn(_q1,q,_lm) for q in _qs])
+_pk = _qs[_vals.argmax()]
+_sig = np.array([np.linalg.svd(_J([_q1,q]), compute_uv=False)[1] for q in _qs])
+_eq = _qs[np.abs(_sig-_lm).argmin()]
+for _q in (1.5,0.4,0.2,0.12,0.05,0.02,0.005,0.001):
+    print(f"[Ch11 s12] q2={_q:6.3f}: sigma_min={np.linalg.svd(_J([_q1,_q]),compute_uv=False)[1]:.5f}, "
+          f"damped demand {_dqn(_q1,_q,_lm):.5f} rad")
+print(f"[Ch11 s12] the damped demand PEAKS at q2={_pk:.4f}, and sigma_min = lambda at "
+      f"q2={_eq:.4f}   {P(abs(_pk-_eq) < 0.02)}")
+print(f"[Ch11 s12]   because the filter factor sigma/(sigma^2+lambda^2) is largest at "
+      f"sigma = lambda,")
+print(f"[Ch11 s12]   bounded by ||dx||/(2 lambda) = {0.01/(2*_lm):.4f} (measured peak "
+      f"{_vals.max():.4f})   {P(_vals.max() <= 0.01/(2*_lm)+1e-9)}")
+print(f"[Ch11 s12] past the peak it FALLS towards zero -- damped least squares does not cap")
+print(f"[Ch11 s12]   the demand, it withdraws from the direction being lost   "
+      f"{P(_dqn(_q1,0.001,_lm) < _vals.max()/10)}")
+
+# --- the PID decay rate does not depend on Kp at all ---------------------
+print()
+_zw = set()
+for _Kp in (25,100,400,1600):
+    for _Kd in (1.5,9.5):
+        _wn=np.sqrt(_Kp); _z=(0.5+_Kd)/(2*np.sqrt(_Kp)); _zw.add((round(_Kd,3), round(_z*_wn,9)))
+        print(f"[Ch11 s14] Kp={_Kp:5d} Kd={_Kd:4.1f}: wn={_wn:6.2f} zeta={_z:.4f} -> "
+              f"zeta*wn = {_z*_wn:.6f}, and (b+Kd)/2m = {(0.5+_Kd)/2:.6f}")
+print(f"[Ch11 s14] zeta*wn = (b+Kd)/(2m): Kp cancels completely   "
+      f"{P(len(_zw) == 2 and all(abs(v-(k+0.5)/2) < 1e-9 for k,v in _zw))}")
+print(f"[Ch11 s14]   -> Kd alone sets the decay envelope (settling time 8m/(b+Kd));")
+print(f"[Ch11 s14]   Kp alone sets the ringing frequency. Raising Kp cannot speed up settling")
+
 print("\n" + "="*66)

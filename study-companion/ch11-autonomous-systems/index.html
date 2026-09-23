@@ -416,6 +416,13 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
   <a href="#occ"><span class="n">08</span><span>The evidence accumulator</span></a>
   <a href="#kalman"><span class="n">09</span><span>The Kalman filter, at last</span></a>
   <a href="#servo"><span class="n">10</span><span>A 0.707 servo</span></a>
+  <a href="#chain"><span class="n">11</span><span>The chain</span></a>
+  <a href="#jacobian"><span class="n">12</span><span>Jacobian, dead centre</span></a>
+  <a href="#dynamics"><span class="n">13</span><span>Manipulator equation</span></a>
+  <a href="#pid"><span class="n">14</span><span>A spring and a dashpot</span></a>
+  <a href="#learning"><span class="n">15</span><span>Learning, and the gap</span></a>
+  <a href="#locomotion"><span class="n">16</span><span>Standing up and walking</span></a>
+  <a href="#vla"><span class="n">17</span><span>Language in, torque out</span></a>
 </nav>
 
 <main>
@@ -1367,18 +1374,900 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
   </div>
 </section>
 
+
+<section id="chain">
+  <div class="col">
+    <div class="sechead"><span class="secnum">11</span><h2>The chain</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2011%20-%20autonomous%20systems/02.%20robot%20learning.md" target="_blank" rel="noopener">src 02. robot learning &#8599;</a>
+    </div>
+    <p>
+      A robot arm is a kinematic chain: rigid links joined by revolute or prismatic pairs. You
+      have analysed these since second year. The <b>configuration</b> \(\mathbf{q}\) is the
+      vector of joint variables, and <b>forward kinematics</b> is the map from that vector to
+      the pose of the end effector. Nothing here is new; only the notation is.
+    </p>
+    <p>
+      The <b>Denavit&ndash;Hartenberg</b> convention assigns four numbers to each joint
+      &mdash; link length \(a\), twist \(\alpha\), offset \(d\), joint angle \(\theta\) &mdash;
+      and packs the relative pose of consecutive links into one 4&times;4 matrix:
+    </p>
+  </div>
+  <div class="mathbox col">$$T_i = \begin{bmatrix} \cos\theta_i & -\sin\theta_i \cos\alpha_i & \sin\theta_i \sin\alpha_i & a_i \cos\theta_i \\ \sin\theta_i & \cos\theta_i \cos\alpha_i & -\cos\theta_i \sin\alpha_i & a_i \sin\theta_i \\ 0 & \sin\alpha_i & \cos\alpha_i & d_i \\ 0 & 0 & 0 & 1 \end{bmatrix}$$</div>
+  <div class="col">
+    <p>
+      The whole chain is the product \(T_{0\to n} = T_1 T_2 \cdots T_n\). That is the
+      <b>loop-closure equation</b> from your kinematics course, written with matrices instead
+      of vector polygons or complex numbers. It carries exactly the same information and
+      obeys the same algebra &mdash; sampling random DH parameters, the upper-left 3&times;3
+      block satisfies \(RR^T = I\) and \(\det R = 1\) to machine precision, and a six-joint
+      product still does. Rigidity is preserved under composition, which is precisely why you
+      are allowed to chain link transforms in the first place.
+    </p>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/robot_arm_fk.svg" alt="A two-link planar arm with joint angles q1 and q2 determining the end-effector position" width="400"></div>
+    <figcaption><b>Fig. 11.5</b> &mdash; Two links, two joints, two degrees of freedom. Everything in &sect;11&ndash;&sect;13 can be shown on this. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+
+  <div class="col">
+    <p>
+      <b>Inverse kinematics</b> is the hard direction: given a pose, find \(\mathbf{q}\). It
+      is nonlinear, may have several solutions (elbow up, elbow down), and may have none
+      (outside the workspace). Closed-form answers exist only for particular geometries
+      &mdash; which is why industrial arms are <em>designed</em> to have them, usually by
+      making the last three axes intersect at a point so that position and orientation
+      decouple. That is a design decision made to keep the mathematics tractable, the same
+      way a mechanism is designed to have a Grashof condition rather than being analysed after
+      the fact.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; all of it</div>
+      <p>
+        Degrees of freedom, joint space versus task space, workspace boundaries, multiple
+        assembly configurations, the reach envelope. This is Theory of Machines with a
+        different symbol set. If a robotics paper's kinematics section feels unfamiliar, it is
+        the notation, not the content &mdash; read \(T_i\) as &ldquo;the transform across
+        joint \(i\)&rdquo; and the rest follows.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="jacobian">
+  <div class="col">
+    <div class="sechead"><span class="secnum">12</span><h2>The Jacobian, and the dead centre</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2011%20-%20autonomous%20systems/02.%20robot%20learning.md" target="_blank" rel="noopener">src 02. robot learning &#8599;</a>
+    </div>
+    <p>
+      Differentiate the forward kinematics and you get the map from joint rates to
+      end-effector velocity:
+    </p>
+  </div>
+  <div class="mathbox col">$$\dot{\mathbf{x}} = J(\mathbf{q})\,\dot{\mathbf{q}}$$</div>
+  <div class="col">
+    <p>
+      This is the <b>velocity analysis</b> you did with instantaneous centres and velocity
+      polygons. Same physical content, same linear relationship &mdash; the polygon is a
+      graphical method for evaluating this matrix product on a particular mechanism at a
+      particular instant. For the two-link planar arm, and verified against central
+      differences to 3&times;10<sup>&minus;10</sup>:
+    </p>
+  </div>
+  <div class="mathbox col">$$J = \begin{bmatrix} -l_1 s_1 - l_2 s_{12} & -l_2 s_{12} \\ l_1 c_1 + l_2 c_{12} & l_2 c_{12}\end{bmatrix}, \qquad \det J = l_1 l_2 \sin q_2$$</div>
+  <div class="col">
+    <p>
+      That determinant is the whole of &sect;12. It vanishes when \(q_2 = 0\) or
+      \(q_2 = \pi\) &mdash; arm straight out, or folded back on itself. Those are the
+      <b>singularities</b>, and they are the <b>dead-centre</b> or <b>toggle</b> positions of
+      a linkage. Not an analogy: the same configuration, detected by the same vanishing
+      determinant, with the same physical consequence.
+    </p>
+    <p>
+      And the consequence is specific. Computing the left singular vector belonging to the
+      vanishing singular value at \(q_2 = 0\) gives \([0.9211,\ 0.3894]\); the radial unit
+      vector at that configuration is \([0.9211,\ 0.3894]\). They agree to ten decimals. The
+      direction the arm cannot move is exactly <em>radially outward</em> &mdash; it is already
+      as far out as it reaches, and however fast the joints turn, the hand can only swing.
+      That is what a four-bar at dead centre does, stated in linear algebra.
+    </p>
+
+    <h3>Why the pseudo-inverse is dangerous near one</h3>
+    <p>
+      Iterative IK moves the joints by \(\Delta\mathbf{q} = J^{+}\Delta\mathbf{x}\). Near a
+      singularity \(J^{+}\) blows up, because it is dividing by a singular value approaching
+      zero. Concretely, at 0.004&nbsp;rad from dead centre, asking for a 1&nbsp;cm move demands
+      <b>5.66 rad</b> of joint motion &mdash; 324 degrees, to move the hand ten millimetres.
+      On a real arm that is a joint slamming into its limit.
+    </p>
+    <p>
+      <b>Damped least squares</b> fixes it by refusing to pay any price for accuracy:
+    </p>
+  </div>
+  <div class="mathbox col">$$\Delta\mathbf{q} = J^T(JJ^T + \lambda^2 I)^{-1}\Delta\mathbf{x} = \arg\min_{\Delta\mathbf{q}} \; \|J\Delta\mathbf{q} - \Delta\mathbf{x}\|^2 + \lambda^2\|\Delta\mathbf{q}\|^2$$</div>
+  <div class="col">
+    <p>
+      Both forms were checked: the matrix identity holds to 7&times;10<sup>&minus;13</sup>
+      (it is the push-through identity, so \(J^T(JJ^T+\lambda^2 I)^{-1} = (J^TJ+\lambda^2
+      I)^{-1}J^T\) exactly), and no random perturbation of the result ever lowers that
+      objective. At the same near-singular configuration it asks for <b>0.0063 rad</b> instead
+      of 5.66 &mdash; nine hundred times less &mdash; at the cost of not quite reaching the
+      target this step.
+    </p>
+    <p>
+      You have met \(\lambda^2\|\Delta\mathbf{q}\|^2\) before. It is Tikhonov
+      regularisation from Sheet 04, and it is ridge regression from Sheet 06. Here it has a
+      mechanical reading: it is a <em>compliance</em>. The controller is being told the arm is
+      allowed to fall short rather than tear itself apart, which is the same instinct as
+      putting a shear pin in a drive train.
+    </p>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Walking an arm into its dead centre</div><div class="lab-tag">Predict, then drag</div></div>
+
+    <div class="predict">
+      <p style="margin-top:0">
+        You drive the elbow angle \(q_2\) towards zero &mdash; the arm straightening out. What
+        happens to the joint rates an exact inverse-kinematics step demands for a fixed
+        1&nbsp;cm move of the hand?
+      </p>
+      <button class="pbtn" data-p4="a" type="button">Fall &mdash; the arm has more reach</button>
+      <button class="pbtn" data-p4="b" type="button">Unchanged &mdash; same hand motion</button>
+      <button class="pbtn" data-p4="c" type="button">Diverge, as 1/sin&nbsp;q&#8322;</button>
+      <button class="pbtn" data-p4="d" type="button">Diverge, but only for q&#8322; &lt; 0</button>
+      <div class="pverdict" id="pv4"></div>
+    </div>
+
+    <svg class="stage" id="sA" viewBox="0 0 480 300" role="img"
+         aria-label="Left, a two-link arm drawn at the chosen elbow angle with its manipulability ellipse; right, the joint motion demanded by the pseudo-inverse and by damped least squares against elbow angle">
+      <g id="aGrid"></g>
+      <g id="aArm"></g>
+      <g id="aEll"></g>
+      <g id="aPlot"></g>
+      <g id="aLab"></g>
+    </svg>
+
+    <div class="ctl">
+      <label for="q2Sl">Elbow \(q_2\)</label>
+      <input type="range" id="q2Sl" min="2" max="3142" value="1571" step="1">
+      <span class="ro-v" id="q2Val" style="min-width:72px">1.571 rad</span>
+      <label for="lamSl">Damping \(\lambda\)</label>
+      <input type="range" id="lamSl" min="0" max="200" value="50" step="1">
+      <span class="ro-v" id="lamVal" style="min-width:56px">0.050</span>
+      <button class="btn on" data-ap="1571" type="button">Mid-range</button>
+      <button class="btn" data-ap="30" type="button">At dead centre</button>
+    </div>
+
+    <div class="readout">
+      <div class="ro"><div class="ro-k">det \(J\)<br>\(=l_1 l_2 \sin q_2\)</div><div class="ro-v a" id="oDet">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Condition<br>number of \(J\)</div><div class="ro-v b" id="oCond">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Pseudo-inverse<br>asks for</div><div class="ro-v c" id="oPinv">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Damped least<br>squares asks for</div><div class="ro-v" id="oDls">&mdash;</div></div>
+    </div>
+  </div>
+
+  <div class="lab-foot col">
+    On the left is the arm, with its <b>manipulability ellipse</b> &mdash; the set of hand
+    velocities reachable from unit joint rates. At mid-range it is nearly round: the hand moves
+    about equally well in every direction. Drive \(q_2\) towards zero and the ellipse flattens
+    into a line, and that line is <em>tangential</em>: the hand can still swing, and cannot
+    move outward at all. That is the dead centre, drawn. On the right, the joint motion demanded
+    for a fixed 1&nbsp;cm hand move against elbow angle, on a log scale. The pseudo-inverse
+    curve goes to infinity as \(1/\sin q_2\), so the answer to the prediction is <b>diverge, as
+    1/sin q&#8322;</b> &mdash; and it does so from <em>both</em> sides, because
+    \(\sin q_2\) vanishes at zero regardless of approach direction. The damped curve does something
+    more interesting than flattening: it rises to a peak and then <em>falls back towards
+    zero</em>. The peak sits exactly where the smallest singular value of \(J\) equals
+    \(\lambda\) &mdash; measured at \(q_2 = 0.120\), predicted at \(0.123\) &mdash; because
+    the damped filter factor \(\sigma/(\sigma^2+\lambda^2)\) is largest at
+    \(\sigma = \lambda\). Past that, damped least squares does not merely cap the demand; it
+    <em>withdraws</em> from the direction that is being lost, asking for less and less motion
+    and accepting that the hand will not get there. That is the honest behaviour at a dead
+    centre, and it is what you want: a drive that gives up is better than one that destroys
+    itself. Raise \(\lambda\) and the peak drops while the tracking error at ordinary
+    configurations rises &mdash; the damping is a compliance, and you are choosing how much of
+    it to fit. The condition number is the honest
+    early-warning signal &mdash; it is climbing long before the determinant looks alarming,
+    which is exactly the lesson from Sheet 02.
+  </div>
+</section>
+
+<section id="dynamics">
+  <div class="col">
+    <div class="sechead"><span class="secnum">13</span><h2>The manipulator equation</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2011%20-%20autonomous%20systems/02.%20robot%20learning.md" target="_blank" rel="noopener">src 02. robot learning &#8599;</a>
+    </div>
+    <p>
+      Add forces and you get the equation of motion. Robotics writes it as
+    </p>
+  </div>
+  <div class="mathbox col">$$M(\mathbf{q})\ddot{\mathbf{q}} + C(\mathbf{q},\dot{\mathbf{q}})\dot{\mathbf{q}} + \mathbf{g}(\mathbf{q}) = \boldsymbol{\tau}$$</div>
+  <div class="col">
+    <p>
+      and you get it by writing \(T - V\) and turning the Euler&ndash;Lagrange handle, exactly
+      as for any multi-body system. \(M\) is the inertia matrix, \(C\) collects the Coriolis
+      and centrifugal terms, \(\mathbf{g}\) is gravity, \(\boldsymbol\tau\) is joint torque.
+    </p>
+    <p>
+      Two properties are worth stating carefully, because both are things you already believe
+      about mechanisms and both turn out to be the load-bearing facts in robot control theory.
+    </p>
+
+    <h3>\(M\) is the kinetic-energy form</h3>
+    <p>
+      \(M\) is symmetric and positive definite, and the reason is not algebraic convenience:
+      \(\tfrac12\dot{\mathbf{q}}^TM\dot{\mathbf{q}}\) <em>is</em> the kinetic energy. Computed
+      both ways for the two-link arm &mdash; the quadratic form, and the sum of
+      \(\tfrac12 m v^2 + \tfrac12 I\omega^2\) over the links from their actual velocities
+      &mdash; the two agree to 2&times;10<sup>&minus;14</sup>. Positive definiteness is then
+      just the statement that a moving arm has positive kinetic energy.
+    </p>
+    <p>
+      Its eigenvalues are the principal effective inertias, and their spread matters
+      practically. Over the whole workspace the smallest eigenvalue never falls below 0.0717,
+      but the condition number reaches <b>53.7</b> at \(q_2 = 0\), against 6.2 at
+      \(q_2 = \pi\). The motor feels an inertia that changes by a factor of fifty depending on
+      which way it is pushing and where the arm is folded. That is why a fixed-gain PID on a
+      robot arm is always a compromise, and why gain scheduling and computed-torque control
+      exist.
+    </p>
+
+    <h3>The Coriolis terms do no work</h3>
+    <p>
+      This is the elegant one. Choose \(C\) in the standard way and \(\dot{M} - 2C\) is
+      <b>skew-symmetric</b> &mdash; verified to 8&times;10<sup>&minus;10</sup> over three
+      thousand random configurations and velocities. Skew-symmetric means
+      \(\dot{\mathbf{q}}^T(\dot{M}-2C)\dot{\mathbf{q}} = 0\) for every \(\dot{\mathbf{q}}\),
+      which rearranges to
+    </p>
+  </div>
+  <div class="mathbox col">$$\dot{\mathbf{q}}^T C(\mathbf{q},\dot{\mathbf{q}})\,\dot{\mathbf{q}} = \tfrac{1}{2}\dot{\mathbf{q}}^T\dot{M}\dot{\mathbf{q}}$$</div>
+  <div class="col">
+    <p>
+      &mdash; the Coriolis and centrifugal terms contribute <em>no net power</em>. They move
+      energy between joints and never create or destroy it.
+    </p>
+    <p>
+      You already knew this. A Coriolis force in a rotating frame is
+      \(-2m\,\boldsymbol\omega\times\mathbf{v}\), which is perpendicular to \(\mathbf{v}\), and
+      a force perpendicular to velocity does no work. The skew-symmetry property is that
+      statement generalised to a whole articulated chain, and it is the reason a simple
+      PD-plus-gravity-compensation controller is provably stable on any robot arm: the
+      Lyapunov function is total energy, and the Coriolis terms drop out of its derivative
+      because they cannot change the energy. Every stability proof in manipulator control
+      leans on this one line.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; this is a passivity argument</div>
+      <p>
+        The pattern is one you use whenever you reason about a machine by energy rather than by
+        forces: identify what stores energy, identify what dissipates it, show that everything
+        else only shuttles it around, and conclude that the system cannot run away. That is the
+        whole proof. It works here for the same reason it works on a gear train, and it is
+        the single most important thing separating classical robot control from a learned
+        policy &mdash; which has no energy function, no passivity property, and therefore no
+        proof.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="pid">
+  <div class="col">
+    <div class="sechead"><span class="secnum">14</span><h2>PID is a spring and a dashpot</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2011%20-%20autonomous%20systems/02.%20robot%20learning.md" target="_blank" rel="noopener">src 02. robot learning &#8599;</a>
+    </div>
+    <p>
+      The most-deployed controller in the world:
+    </p>
+  </div>
+  <div class="mathbox col">$$\tau(t) = K_p e(t) + K_i \int_0^t e(s)\,ds + K_d \dot{e}(t)$$</div>
+  <div class="col">
+    <p>
+      The robotics literature explains the three terms with intuitions &mdash; proportional
+      pushes harder when further away, derivative damps, integral kills steady-state error.
+      All true, and all weaker than what you can say. Put the controller on a plant
+      \(m\ddot{q} + b\dot{q} = \tau\) and close the loop:
+    </p>
+  </div>
+  <div class="mathbox col">$$m\ddot{q} + (b + K_d)\dot{q} + K_p q = K_p q_{\text{des}}$$</div>
+  <div class="col">
+    <p>
+      That is a spring&ndash;mass&ndash;damper. Not <em>like</em> one &mdash; it is one, with
+    </p>
+  </div>
+  <div class="mathbox col">$$\omega_n = \sqrt{\frac{K_p}{m}}, \qquad \zeta = \frac{b + K_d}{2\sqrt{K_p m}}$$</div>
+  <div class="col">
+    <p>
+      \(K_p\) is a stiffness, in N&middot;m/rad. \(K_d\) is a damping coefficient, in
+      N&middot;m&middot;s/rad, and the plant's own damping \(b\) simply adds to it. Every
+      formula from your vibrations course applies unchanged &mdash; and does, numerically:
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Simulated step overshoot against \(e^{-\pi\zeta/\sqrt{1-\zeta^2}}\), for \(m=1\), \(b=0.5\).</caption>
+      <thead><tr><th>\(K_p\)</th><th>\(K_d\)</th><th>\(\omega_n\)</th><th>\(\zeta\)</th><th>Simulated overshoot</th><th>Formula</th></tr></thead>
+      <tbody>
+        <tr><td>25</td><td>1.5</td><td>5.00</td><td>0.200</td><td>52.66%</td><td>52.66%</td></tr>
+        <tr><td>100</td><td>6.5</td><td>10.00</td><td>0.350</td><td>30.90%</td><td>30.92%</td></tr>
+        <tr><td>400</td><td>17.5</td><td>20.00</td><td>0.450</td><td>20.50%</td><td>20.53%</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <h3>The gains do not do what their names suggest</h3>
+    <p>
+      Multiply the two definitions together and something falls out that is more useful than
+      either on its own. The real part of the closed-loop pole &mdash; the rate at which the
+      response envelope decays &mdash; is
+    </p>
+  </div>
+  <div class="mathbox col">$$\zeta\omega_n = \frac{b + K_d}{2m}$$</div>
+  <div class="col">
+    <p>
+      \(K_p\) has <b>cancelled</b>. Checked across eight gain combinations spanning
+      \(K_p\) from 25 to 1600: \(\zeta\omega_n\) is 1.000000 for every one of them at
+      \(K_d = 1.5\), and 5.000000 for every one at \(K_d = 9.5\). So:
+    </p>
+    <ul>
+      <li><b>\(K_d\) alone sets how fast the response decays.</b> Settling time is
+        \(\approx 4/\zeta\omega_n = 8m/(b+K_d)\), and no amount of \(K_p\) changes it.</li>
+      <li><b>\(K_p\) alone sets how much it rings on the way.</b> It moves the poles
+        vertically &mdash; higher \(\omega_d\), same decay.</li>
+    </ul>
+    <p>
+      That is a sharper design rule than &ldquo;tune all three and see&rdquo;, and it is the
+      one to carry into a lab: if a joint is settling too slowly, raising \(K_p\) cannot
+      help and will make it ring. Raise \(K_d\).
+    </p>
+  </div>
+  <div class="col">
+    <p>
+      So &ldquo;tuning a PID&rdquo; is not a dark art you have to learn. It is choosing
+      \(\omega_n\) and \(\zeta\), which you have done on a design chart since third year.
+      Sluggish means \(\zeta\) too high; ringing means \(\zeta\) too low; slow but
+      well-damped means \(\omega_n\) too low, and the fix is more \(K_p\) <em>and</em>
+      proportionally more \(K_d\) &mdash; because \(\zeta\) has \(\sqrt{K_p}\) underneath it,
+      raising \(K_p\) alone always costs damping.
+    </p>
+
+    <h3>Integral windup is actuator saturation</h3>
+    <p>
+      The integral term has one classic failure and it is a mechanical one. If the torque
+      saturates, the joint stops responding but the error keeps integrating, so \(K_i\int e\)
+      grows into a large stored command that must be unwound before the output can reverse.
+      With a 3&nbsp;N&middot;m limit and \(K_i = 40\), the simulated overshoot is
+      <b>86.6%</b>. Freeze the integrator whenever the output is saturated and it falls to
+      <b>11.8%</b>. Same gains, same plant &mdash; one line of logic.
+    </p>
+    <p>
+      That is the control equivalent of a mechanism being driven into a hard stop while the
+      input keeps turning. Something has to absorb the mismatch, and if you do not decide
+      what, the integrator does.
+    </p>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Tuning a PID is choosing <span class="gk">&zeta;</span> and <span class="gk">&omega;</span><sub>n</sub></div><div class="lab-tag">Predict, then drag</div></div>
+
+    <div class="predict">
+      <p style="margin-top:0">
+        A joint is well damped but too slow. You double \(K_p\) to speed it up and leave
+        \(K_d\) alone. What happens to the damping ratio?
+      </p>
+      <button class="pbtn" data-p5="a" type="button">Unchanged &mdash; K&#8332; sets damping</button>
+      <button class="pbtn" data-p5="b" type="button">Falls by &radic;2</button>
+      <button class="pbtn" data-p5="c" type="button">Halves</button>
+      <button class="pbtn" data-p5="d" type="button">Doubles</button>
+      <div class="pverdict" id="pv5"></div>
+    </div>
+
+    <svg class="stage" id="sP" viewBox="0 0 480 300" role="img"
+         aria-label="Left, the closed-loop poles in the s-plane; right, the step response with overshoot marked">
+      <g id="pGrid"></g>
+      <g id="pPoles"></g>
+      <g id="pStep"></g>
+      <g id="pLab"></g>
+    </svg>
+
+    <div class="ctl">
+      <label for="kpSl">\(K_p\)</label>
+      <input type="range" id="kpSl" min="4" max="400" value="25" step="1">
+      <span class="ro-v" id="kpVal" style="min-width:44px">25</span>
+      <label for="kdSl">\(K_d\)</label>
+      <input type="range" id="kdSl" min="0" max="400" value="15" step="1">
+      <span class="ro-v" id="kdVal" style="min-width:46px">1.5</span>
+      <button class="btn" data-pp="25,15" type="button">Ringing</button>
+      <button class="btn" data-pp="25,95" type="button">Critical</button>
+      <button class="btn" data-pp="100,195" type="button">Fast + critical</button>
+    </div>
+
+    <div class="readout">
+      <div class="ro"><div class="ro-k">\(\omega_n=\sqrt{K_p/m}\)</div><div class="ro-v a" id="oWn">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">\(\zeta=(b+K_d)/2\sqrt{K_p m}\)</div><div class="ro-v b" id="oZe">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Overshoot</div><div class="ro-v c" id="oOv">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">2% settling<br>time &asymp; 4/<span class="gk">&zeta;&omega;</span><sub>n</sub></div><div class="ro-v" id="oTs">&mdash;</div></div>
+    </div>
+  </div>
+
+  <div class="lab-foot col">
+    Left, the closed-loop poles; right, the step response. Press <b>Ringing</b>, then drag
+    \(K_p\) alone and watch what happens: the poles swing round towards the imaginary axis,
+    \(\zeta\) falls, and the overshoot grows &mdash; because \(\zeta\) carries
+    \(\sqrt{K_p}\) in its denominator, so doubling \(K_p\) divides \(\zeta\) by \(\sqrt{2}\).
+    That is the answer to the prediction: <b>falls by &radic;2</b>. To go faster
+    <em>and</em> keep the damping you must raise \(K_d\) as \(\sqrt{K_p}\) too, which is what
+    the <b>Fast + critical</b> preset does &mdash; four times the stiffness, twice the
+    damping, identical shape and half the settling time. This is why a single scalar
+    &ldquo;gain&rdquo; knob on a servo drive is never enough, and why the useful mental model
+    is not three independent terms but two numbers you already think in.
+    <br><br>
+    Watch the settling-time readout while you drag \(K_p\) with \(K_d\) held: it does not
+    move. At \(K_d = 1.5\) it reads 4.000&nbsp;s at \(K_p = 25\) and 4.000&nbsp;s at
+    \(K_p = 400\), because \(\zeta\omega_n = (b+K_d)/2m\) has no \(K_p\) in it. The poles
+    slide straight up the same vertical line. All the extra stiffness buys is ringing.
+    <br><br>
+    One thing to notice in passing, because &sect;15 will need it: this loop has a
+    <b>phase margin</b>, and it is 77.9&deg; at 9.82&nbsp;rad/s for \(K_p=25\),
+    \(K_d=9.5\). You can compute it, print it, and put it in a design review. Hold on to
+    that, because the next section is about a class of controller for which no such number
+    exists.
+  </div>
+</section>
+
+<section id="learning">
+  <div class="col">
+    <div class="sechead"><span class="secnum">15</span><h2>Learning to act, and the reality gap</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2011%20-%20autonomous%20systems/02.%20robot%20learning.md" target="_blank" rel="noopener">src 02. robot learning &#8599;</a>
+    </div>
+    <p>
+      Everything so far has been designed. The alternative is to learn: demonstrate the task,
+      fit a policy \(\pi_\theta(\mathbf{a}\mid\mathbf{o})\) to the demonstrations, deploy.
+      <b>Behavioural cloning</b> is exactly supervised learning from Sheet 06, with
+      observations as inputs and expert actions as labels.
+    </p>
+    <p>
+      It has one failure mode, it is severe, and it is the most important amber row in this
+      sheet.
+    </p>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/distribution_shift_bc.svg" alt="A cloned policy drifting progressively further from the expert trajectory as small errors compound" width="440"></div>
+    <figcaption><b>Fig. 11.6</b> &mdash; The drift is not the problem. What the drift leads to is. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+
+  <div class="col">
+    <h3>What actually compounds</h3>
+    <p>
+      The usual explanation is that small errors accumulate. That explanation is wrong, and
+      checking it is what makes the real mechanism clear. Take the same policy noise and run
+      it in three closed loops of different gain:
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Deviation from the reference after \(T\) steps, with identical injected noise.</caption>
+      <thead><tr><th>Closed loop</th><th>\(T=10\)</th><th>\(T=40\)</th><th>\(T=160\)</th></tr></thead>
+      <tbody>
+        <tr><td>Contracting (gain 0.60)</td><td>0.0082</td><td>0.0044</td><td>0.0048</td></tr>
+        <tr><td>Marginal (gain 1.99)</td><td>0.8940</td><td>0.5496</td><td>0.2364</td></tr>
+        <tr><td>Expansive (gain 2.05)</td><td>1.6182</td><td>6.7179</td><td>2355</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      A contracting loop absorbs noise <em>forever</em> &mdash; the deviation at \(T=160\) is
+      smaller than at \(T=10\). Noise alone never compounds. What compounds is <b>losing the
+      contraction</b>, and leaving the training distribution is precisely how it is lost: off
+      the demonstrated states the policy's output is no longer the stabilising action, because
+      nothing ever told it what the stabilising action there was.
+    </p>
+    <p>
+      Quantified: suppose the policy disagrees with the expert with probability \(\epsilon\)
+      per step, and that after the first disagreement it is off-distribution and costs 1 per
+      remaining step. Expected total cost is then
+      \(\sum_t \epsilon(1-\epsilon)^t (T-t)\):
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Expected cost of behavioural cloning at \(\epsilon = 0.01\), exact and by Monte Carlo over 20,000 rollouts.</caption>
+      <thead><tr><th>Horizon \(T\)</th><th>10</th><th>25</th><th>50</th><th>100</th><th>200</th></tr></thead>
+      <tbody>
+        <tr><td>Expected cost</td><td>0.53</td><td>3.00</td><td>10.90</td><td>37.24</td><td>114.26</td></tr>
+        <tr><td>\(\epsilon T^2/2\)</td><td>0.50</td><td>3.13</td><td>12.50</td><td>50.00</td><td>200.00</td></tr>
+        <tr><td>If recovery were possible (\(\epsilon T\))</td><td>0.10</td><td>0.25</td><td>0.50</td><td>1.00</td><td>2.00</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      Doubling the horizon costs <b>3.4&times;</b>, not 2&times;. The cost is quadratic in the
+      horizon, not linear &mdash; and at \(T=100\) it is 37&times; what it would be if the
+      policy could recover from its own mistakes. (The \(\epsilon T^2/2\) row is the
+      small-\(\epsilon T\) limit; past that it saturates, because by \(T=200\) an early
+      mistake is near-certain and there is nothing left to lose.)
+    </p>
+    <p>
+      <b>DAgger</b> is the fix and it is obvious once the mechanism is clear: run the learned
+      policy, collect the states it actually visits, ask the expert what to do there, add that
+      to the dataset, retrain. It buys the \(\epsilon T\) row by making the off-distribution
+      states on-distribution. It costs an expert who is available to label, which is often the
+      thing you do not have.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks &mdash; a mechanism does not do this</div>
+      <p>
+        This is the sharpest difference in the sheet, so it is worth stating without hedging.
+        A four-bar with 0.1&nbsp;mm of pin clearance has 0.1&nbsp;mm of error at every point of
+        its cycle. Not 0.1&nbsp;mm times the number of cycles &mdash; 0.1&nbsp;mm, forever,
+        because a linkage is a <em>constraint</em>, and a constraint does not integrate its
+        own error. A policy in closed loop is not a constraint. It chooses its own next state,
+        and therefore chooses the distribution it will next be asked about. Every intuition you
+        have about manufacturing tolerance propagating through an assembly is built on the
+        constraint case, and it does not transfer.
+      </p>
+    </div>
+
+    <h3>Sim-to-real is robust design, priced the same way</h3>
+    <p>
+      Training on hardware is slow and expensive, so policies are trained in simulation. The
+      simulator is wrong, so the policy fails on the robot. Two standard answers:
+      <b>system identification</b> measures the real plant and tunes the simulator to match;
+      <b>domain randomisation</b> trains across a wide distribution of simulator parameters so
+      the real plant is just another draw.
+    </p>
+    <p>
+      That second one has a name in your field. Take a mass whose true value is uncertain over
+      \([0.4, 4.0]\), design one LQR gain for \(m=1\) exactly, and design a second gain that
+      minimises the average cost over the range. Then evaluate both on six plants:
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>One controller, six plants. Lower is better; the design point is \(m=1\).</caption>
+      <thead><tr><th>\(m\)</th><th>0.4</th><th>0.6</th><th>1.0</th><th>1.6</th><th>2.5</th><th>4.0</th><th>mean</th><th>worst</th></tr></thead>
+      <tbody>
+        <tr><td>Designed for \(m=1\)</td><td>28.94</td><td>31.95</td><td><b>38.00</b></td><td>47.06</td><td>60.67</td><td>83.24</td><td>48.31</td><td>83.24</td></tr>
+        <tr><td>Designed over the range</td><td>31.94</td><td>34.31</td><td>39.06</td><td><b>46.20</b></td><td><b>56.91</b></td><td><b>74.74</b></td><td><b>47.19</b></td><td><b>74.74</b></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      The nominal design wins at its design point and loses everywhere else; the randomised
+      design wins on the mean <em>and</em> on the worst case. That is the robustness trade,
+      exactly as you know it: <b>domain randomisation is robust control, done by sampling
+      instead of by synthesis.</b> It buys the worst case by selling the best case. Combining
+      both &mdash; identify first to centre the distribution, then randomise to cover what is
+      left &mdash; is the same advice as centring a tolerance band before widening it.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks &mdash; a sample is not a set</div>
+      <p>
+        Robust synthesis gives you a <em>guarantee</em>: the closed loop is stable for every
+        plant in the stated uncertainty set, proven, with a margin you can quote. Domain
+        randomisation gives you an <em>average over the parameters you happened to sample</em>,
+        and says nothing whatever about a plant outside the sampling distribution. Since the
+        real robot's friction, backlash and compliance are usually outside it &mdash; that is
+        what &ldquo;the simulator is wrong&rdquo; means &mdash; this is not a small caveat.
+        And recall the end of &sect;14: the designed loop had a phase margin of 77.9&deg;.
+        For the learned policy there is no margin to compute, because there is no loop transfer
+        function, no energy function and no passivity property. The honest statement is that
+        you have an empirical success rate, and a success rate is not a margin.
+      </p>
+    </div>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/sim_to_real.svg" alt="Training across many randomised simulations so that the real world falls inside the training distribution" width="440"></div>
+    <figcaption><b>Fig. 11.7</b> &mdash; The hope is that reality is inside the box. Nothing checks that it is. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="locomotion">
+  <div class="col">
+    <div class="sechead"><span class="secnum">16</span><h2>Standing up and walking</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2011%20-%20autonomous%20systems/02.%20robot%20learning.md" target="_blank" rel="noopener">src 02. robot learning &#8599;</a>
+    </div>
+    <p>
+      Locomotion differs from manipulation in one respect that changes everything: the robot
+      must not fall over, and the set of points it is pushing against keeps changing. Both
+      halves of that are statics and dynamics problems you can already do, and the standard
+      robotics explanation of the first one is slightly wrong in a way worth fixing.
+    </p>
+
+    <h3>The support polygon, and the claim that four legs are stable</h3>
+    <p>
+      The <b>support polygon</b> is the convex hull of the feet in contact. The usual
+      statement is that a quadruped is inherently stable because three legs always form a
+      supporting tripod while the fourth moves. Test it. Put the feet at the corners of a
+      rectangle, the centre of mass at the centre, and lift one corner foot. The remaining
+      three feet form a triangle. Where is the centre of mass relative to it?
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Static stability margin with one corner foot lifted, centre of mass at the body centre.</caption>
+      <thead><tr><th>Body aspect ratio</th><th>1:1</th><th>1.5:1</th><th>2:1</th><th>3:1</th></tr></thead>
+      <tbody>
+        <tr><td>Stability margin</td><td>&minus;1&times;10<sup>&minus;17</sup> m</td><td>3&times;10<sup>&minus;17</sup> m</td><td>3&times;10<sup>&minus;18</sup> m</td><td>4&times;10<sup>&minus;18</sup> m</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      <b>Exactly zero</b>, at every aspect ratio, to floating-point noise. And the reason is a
+      one-line geometric fact: lifting a corner leaves a triangle whose hypotenuse is the
+      rectangle's own diagonal, and a rectangle's centre lies <em>on</em> its diagonal. The
+      margin is not small, it is nil.
+    </p>
+    <p>
+      So a quadruped is not statically stable by virtue of having four legs. It has to
+      <em>move its weight first</em> &mdash; shifting the centre of mass 5&nbsp;cm towards the
+      stance side buys 4.1&nbsp;cm of margin. That lateral sway you see in a slowly walking
+      robot dog is not a quirk of the gait; it is the geometry above, being obeyed.
+    </p>
+
+    <h3>ZMP: the dynamic version of the condition you know</h3>
+    <p>
+      &ldquo;Centre of mass over the support polygon&rdquo; is the <em>static</em> tipping
+      condition &mdash; the one you use for a block on an incline, and it assumes nothing is
+      accelerating. The dynamic condition replaces the centre of mass with the
+      <b>Zero Moment Point</b>: the point where the resultant of gravity and inertial forces
+      pierces the ground. Put the ZMP inside the support polygon and the foot cannot tip.
+    </p>
+    <p>
+      You know this one too, because you have leaned a motorcycle into a corner. The ground
+      projection of the centre of mass is displaced from the contact patch by
+      \(h v^2/(gR)\):
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>How far outside the contact patch the centre of mass sits, and the corresponding lean.</caption>
+      <thead><tr><th>CoM height \(h\)</th><th>Speed \(v\)</th><th>Radius \(R\)</th><th>Offset \(hv^2/gR\)</th><th>Lean angle</th></tr></thead>
+      <tbody>
+        <tr><td>1.0 m</td><td>10 m/s</td><td>50 m</td><td>0.204 m</td><td>11.5&deg;</td></tr>
+        <tr><td>0.9 m</td><td>5 m/s</td><td>20 m</td><td>0.115 m</td><td>7.3&deg;</td></tr>
+        <tr><td>1.2 m</td><td>15 m/s</td><td>100 m</td><td>0.275 m</td><td>12.9&deg;</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      Twenty centimetres outside the contact patch, and nothing falls over, because the
+      <em>resultant</em> still passes through it. A running robot violates the static condition
+      on every single stride, deliberately. Any controller built on &ldquo;keep the centre of
+      mass over the feet&rdquo; is therefore restricted to walking slowly, which is exactly
+      what the first generation of humanoid robots did and exactly why they looked the way
+      they did.
+    </p>
+
+    <h3>A gait is a firing order</h3>
+    <p>
+      <b>Central pattern generators</b> produce rhythm with coupled oscillators, one per leg:
+    </p>
+  </div>
+  <div class="mathbox col">$$\dot{\phi}_i = \omega_i + \sum_j w_{ij}\sin(\phi_j - \phi_i - \psi_{ij})$$</div>
+  <div class="col">
+    <p>
+      \(\psi_{ij}\) is the desired phase offset between legs \(i\) and \(j\). Started from
+      random phases, the network locks onto whatever offsets you prescribe &mdash; all four
+      gaits below converge to their targets to better than 10<sup>&minus;4</sup> degrees:
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Locked leg phases from random initial conditions, four legs, coupling \(K=6\).</caption>
+      <thead><tr><th>Gait</th><th>Pairing</th><th>Locked phases</th></tr></thead>
+      <tbody>
+        <tr><td>Trot</td><td>diagonal pairs</td><td>0&deg;, 180&deg;, 180&deg;, 0&deg;</td></tr>
+        <tr><td>Pace</td><td>lateral pairs</td><td>0&deg;, 180&deg;, 0&deg;, 180&deg;</td></tr>
+        <tr><td>Bound</td><td>front / rear</td><td>0&deg;, 0&deg;, 180&deg;, 180&deg;</td></tr>
+        <tr><td>Walk</td><td>sequential</td><td>0&deg;, 90&deg;, 180&deg;, 270&deg;</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      Look at that table as a mechanical engineer and it is a <b>firing order</b>. A
+      four-stroke inline-four fires at crank angles 0&deg;, 180&deg;, 360&deg;, 540&deg;
+      &mdash; a fixed phase offset per cylinder around one cycle, chosen so that the power
+      strokes are evenly spaced and the inertia forces balance. A quadruped gait is the same
+      object with the same bookkeeping: which limbs act together, which are in antiphase, and
+      how the load is distributed around the cycle. Trot is a 1&ndash;4 / 2&ndash;3 pairing;
+      bound is front-pair against rear-pair.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; and where the analogy stops</div>
+      <p>
+        The phase algebra is identical and so is the reason for caring: even load distribution
+        around the cycle, and balanced inertia forces. What is <em>not</em> identical is
+        the physics of the coupling. Crankshaft phasing is enforced by a rigid shaft; CPG
+        phasing is an attractor of a nonlinear differential equation, which means it can be
+        pulled off by a disturbance and will re-converge, and which also means a gait
+        transition is a change of attractor rather than a mechanical reconfiguration. Treat
+        the table as the shared structure, not as a shared mechanism.
+      </p>
+    </div>
+    <p>
+      In practice, reinforcement learning has largely displaced both ZMP planning and
+      hand-tuned CPGs for agile quadrupeds, because a learned policy recovers from pushes and
+      terrain changes that no one enumerated in advance. The honest accounting is &sect;15's:
+      it works better, and it comes with no stability proof, no margin, and no way to certify
+      it. For a robot dog that is an acceptable trade. &sect;18 onwards is about the
+      applications where it may not be.
+    </p>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/pid_response.svg" alt="Step responses for high proportional gain, high derivative gain and a well-tuned controller" width="440"></div>
+    <figcaption><b>Fig. 11.8</b> &mdash; The three shapes of &sect;14, and the only three there are for a second-order system. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="vla">
+  <div class="col">
+    <div class="sechead"><span class="secnum">17</span><h2>Language in, torque out</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2011%20-%20autonomous%20systems/03.%20vision-language-action%20models.md" target="_blank" rel="noopener">src 03. vision-language-action &#8599;</a>
+    </div>
+    <p>
+      A <b>vision-language-action</b> model takes camera images and an instruction in English
+      and emits motor commands. One network, no perception module, no planner. It is the
+      architecture of Sheet 10's vision-language models with the output modality swapped from
+      text to action.
+    </p>
+    <p>
+      The trick that makes it possible is that <b>actions can be tokens</b>. A transformer
+      predicting the next token does not care whether the token means &ldquo;cup&rdquo; or
+      &ldquo;move the gripper 2&nbsp;mm forward&rdquo;. So: discretise each action dimension
+      into bins, and let the language model emit bin indices.
+    </p>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/vla_architecture.svg" alt="Camera image and language instruction encoded to tokens, processed by a language model backbone, decoded to robot actions" width="450"></div>
+    <figcaption><b>Fig. 11.9</b> &mdash; Sheet 10's architecture with the output head changed. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+
+  <div class="col">
+    <h3>How coarse is the quantisation, really?</h3>
+    <p>
+      256 bins across &plusmn;0.1&nbsp;m/s gives a step of <b>0.781&nbsp;mm/s</b>, a maximum
+      error of 0.391&nbsp;mm/s and an RMS error of 0.226&nbsp;mm/s &mdash; the ADC
+      quantisation result from Sheet 09, unchanged, because it is the same calculation. At a
+      10&nbsp;Hz control loop that is 0.078&nbsp;mm of commanded position per step. For
+      manipulation at millimetre tolerance, quantisation is not the binding constraint. It is
+      worth knowing which of your worries are real.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>A correction to the source</div>
+      <p>
+        The source states that with 7 action dimensions and 256 bins each, &ldquo;the action
+        vocabulary has \(7\times256 = 1792\) tokens&rdquo;. The arithmetic is right for a
+        per-dimension design, but the source's own example contradicts it: it quotes RT-2
+        emitting <span class="mono">1 128 91 241 5 101 127</span> for a 7-DoF action, and
+        every one of those is below 256 &mdash; the largest is 241. If each dimension had its
+        own bin set, dimension 7 would occupy indices 1536&ndash;1791. It does not. So the
+        design is <b>256 shared bins</b>, disambiguated by position in the sequence, and the
+        vocabulary cost is 256 embedding rows, not 1792. Seven times fewer, which is why it is
+        done that way.
+      </p>
+    </div>
+
+    <h3>Why regression fails, and it is a convexity argument</h3>
+    <p>
+      There are usually several correct ways to do a task. Reach around an obstacle to the
+      left, or to the right. A policy trained by least squares learns the <em>mean</em> of its
+      training targets, and the mean of two valid actions need not be valid:
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Two demonstrated paths past an obstacle of radius 0.6 at the origin, and their average.</caption>
+      <thead><tr><th>Waypoint</th><th>Position</th><th>Distance from obstacle</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td>Go left</td><td>(&minus;1.0, 0.5)</td><td>1.118</td><td><b style="color:var(--bridge)">clear</b></td></tr>
+        <tr><td>Go right</td><td>(1.0, 0.5)</td><td>1.118</td><td><b style="color:var(--bridge)">clear</b></td></tr>
+        <tr><td>Their mean</td><td>(0.0, 0.5)</td><td>0.500</td><td><b style="color:var(--brk)">collides</b></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      The set of valid actions is <b>not convex</b>, so averaging leaves it. That single
+      sentence is the entire justification for diffusion and flow-matching action heads: they
+      model the whole distribution and <em>sample</em> from it, rather than collapsing it to a
+      mean. Sheet 10 made the same argument about generative image models; here the
+      consequence is a robot arm driving into a table leg.
+    </p>
+    <p>
+      But sampling creates a second problem, and <b>action chunking</b> is the answer to it. If
+      the policy re-samples which mode it is in at every timestep, it dithers:
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Re-sampling a bimodal action every \(H\) steps, 60 steps total.</caption>
+      <thead><tr><th>Chunk length \(H\)</th><th>1</th><th>5</th><th>20</th><th>60</th></tr></thead>
+      <tbody>
+        <tr><td>Direction reversals</td><td>36</td><td>3</td><td>0</td><td>0</td></tr>
+        <tr><td>Distance actually travelled</td><td>0.000</td><td>0.500</td><td>3.000</td><td>3.000</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      Thirty-six reversals in sixty steps and a net displacement of zero. The policy is
+      correct at every instant and useless over the trajectory, because it keeps changing its
+      mind about which valid plan it is executing. Committing to a chunk fixes it, and the
+      fix is <em>decisiveness</em>, not accuracy. This is the same failure as an
+      over-responsive controller chattering between two set-points, and the same cure:
+      commit for a while.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What does transfer &mdash; &sect;19 will need this too</div>
+      <p>
+        Hold on to the non-convexity argument, because it comes back. Shared autonomy blends
+        a human command and a robot command as
+        \(\mathbf{u} = \alpha\mathbf{u}_h + (1-\alpha)\mathbf{u}_r\), which is a convex
+        combination of two actions &mdash; so if the human steers left around an obstacle and
+        the robot steers right, \(\alpha = 0.5\) drives straight into it. The multimodality
+        failure and the shared-autonomy failure are the same theorem, and the chapter source
+        treats them as unrelated topics in separate files.
+      </p>
+    </div>
+  </div>
+
+  <figure class="col">
+    <div class="paper"><img src="img/multimodal_action_distribution.svg" alt="Two valid paths around an obstacle, with a regression policy averaging them into an invalid path through it" width="440"></div>
+    <figcaption><b>Fig. 11.10</b> &mdash; Both modes are right. Their average is not. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+
+  <div class="col">
+    <p>
+      The remaining VLA content is architecture and provenance: <b>RT-2</b> fine-tunes a large
+      vision-language model on robot demonstrations and inherits its world knowledge;
+      <b>Octo</b> and <b>OpenVLA</b> are open, cross-embodiment models trained on pooled data
+      from many robot platforms; <b>&pi;<sub>0</sub></b> uses a flow-matching action head.
+      The recurring finding is that the language and vision understanding transfers from web
+      pretraining essentially for free, and only the action mapping has to be learned from
+      robot data &mdash; which matters, because robot datasets are millions of frames against
+      billions of images. Data scarcity is the reason the pretrained backbone is not optional.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks &mdash; the evaluation is not what you are used to</div>
+      <p>
+        A VLA's headline number is a <em>success rate</em> over 10&ndash;50 physical trials
+        per task. At 20 trials, a measured 80% has a 95% confidence interval of roughly
+        56&ndash;94% &mdash; Sheet 04's binomial interval, applied honestly. Two systems
+        quoted at 75% and 85% on 20 trials each are not distinguishable. That is not a
+        criticism of the field, which knows this; it is a warning about reading the tables.
+        Compare it with the acceptance test you would write for a machine, where you would
+        specify the number of cycles in advance to hit a stated confidence, and you can see
+        what is missing.
+      </p>
+    </div>
+  </div>
+</section>
+
 <section id="partial">
   <div class="col">
     <div class="note">
       <div class="note-h">Where this sheet stands</div>
       <p>
-        Sheet 11 is being built in three passes. This first pass covers perception and state
-        estimation &mdash; &sect;01 to &sect;10. The second adds robot kinematics and dynamics
-        (&sect;11&ndash;&sect;16), where the Jacobian, the dead centre, the PID loop and the
-        Zero Moment Point are picked up properly, and vision-language-action models. The third
-        adds self-driving, space and extreme robotics, the swarm consensus result promised in
-        the bridge table at &sect;19, the question bank and the provenance appendix. Section
-        numbers referenced in the bridge table above point to their final positions.
+        Sheet 11 is being built in three passes. The first two are here: perception and state
+        estimation (&sect;01&ndash;&sect;10), then kinematics, dynamics, control, learned
+        policies and vision-language-action models (&sect;11&ndash;&sect;17). The third pass
+        adds the driving stack, swarm consensus &mdash; where the source&rsquo;s claim about
+        converging to the average turns out to be wrong &mdash; space and extreme robotics,
+        the worked example, the 24-question bank and the provenance appendix. Section numbers
+        in the bridge table at &sect;00 point to their final positions.
       </p>
     </div>
   </div>
@@ -1599,6 +2488,167 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     b:'<b>No &mdash; and the direction is a red herring.</b> ζ does not move at all. Only ωₙ does, as (q/ρ)^(1/4), so 100× the process noise buys 3.16× the bandwidth and nothing else.',
     c:'<b>Correct.</b> ζ = 1/√2 falls out of the Riccati solution independently of q and ρ. 100× in q gives √√100 = 3.16× in bandwidth; the step response compresses in time and keeps its shape, overshoot pinned at 4.32%.',
     d:'<b>Checked, and it does not.</b> The same ζ = 0.707107 comes out at Δt = 0.1 and Δt = 0.01, and for both standard discretisations of Q. Δt appears only in ωₙ = (q/rΔt)^(1/4).'
+  });
+
+  /* =========== LAB 4 : the arm, its ellipse, and the dead centre ========= */
+  /* Mirrors verify_claims.py [Ch11 s12]: det J = l1 l2 sin(q2), and the joint
+     motion the pseudo-inverse demands for a fixed 1 cm hand move. */
+  var L1=1.0, L2=0.8, BX=118, BY=232, SC=88, DXMOVE=0.01;
+  function Jm(q1,q2){
+    var s1=Math.sin(q1), s12=Math.sin(q1+q2), c1=Math.cos(q1), c12=Math.cos(q1+q2);
+    return [[-L1*s1-L2*s12, -L2*s12],[L1*c1+L2*c12, L2*c12]];
+  }
+  function svd2(J){                       /* singular values of a 2x2, in closed form */
+    var a=J[0][0],b=J[0][1],c=J[1][0],d=J[1][1];
+    var e=(a+d)/2, f=(a-d)/2, g=(c+b)/2, h=(c-b)/2;
+    var q=Math.hypot(e,h), r=Math.hypot(f,g);
+    return [q+r, Math.abs(q-r)];
+  }
+  function solve2(M,v){var D=M[0][0]*M[1][1]-M[0][1]*M[1][0];
+    /* at q2 = 0 or pi with no damping this is exactly singular; clamp rather
+       than emit Infinity, which would put NaN into an SVG path */
+    if(!isFinite(D) || Math.abs(D) < 1e-14) D = (D<0?-1:1)*1e-14;
+    return [(v[0]*M[1][1]-M[0][1]*v[1])/D, (M[0][0]*v[1]-v[0]*M[1][0])/D];}
+  function dqNorm(q1,q2,lam){   /* returns +Infinity, never NaN, at a singularity */
+    var J=Jm(q1,q2), dx=[DXMOVE,0];
+    var A=[[J[0][0]*J[0][0]+J[0][1]*J[0][1] + lam*lam, J[0][0]*J[1][0]+J[0][1]*J[1][1]],
+           [J[0][0]*J[1][0]+J[0][1]*J[1][1], J[1][0]*J[1][0]+J[1][1]*J[1][1] + lam*lam]];
+    var y=solve2(A,dx);                    /* (JJ^T + l^2 I)^-1 dx */
+    var dq=[J[0][0]*y[0]+J[1][0]*y[1], J[0][1]*y[0]+J[1][1]*y[1]];
+    var n=Math.hypot(dq[0],dq[1]);
+    return isFinite(n) ? n : Infinity;
+  }
+  function drawA(){
+    var q2=+$('q2Sl').value/1000, lam=+$('lamSl').value/1000, q1=0.55;
+    $('q2Val').textContent=fmt(q2,3)+' rad'; $('lamVal').textContent=fmt(lam,3);
+    grid($('aGrid'),14,26,228,244,38);
+    /* the arm */
+    var jx=BX+SC*L1*Math.cos(q1), jy=BY-SC*L1*Math.sin(q1);
+    var ex=jx+SC*L2*Math.cos(q1+q2), ey=jy-SC*L2*Math.sin(q1+q2);
+    $('aArm').innerHTML=
+      '<line x1="'+BX+'" y1="'+BY+'" x2="'+jx.toFixed(1)+'" y2="'+jy.toFixed(1)+'" stroke="var(--ink-2)" stroke-width="5" stroke-linecap="round"/>'
+     +'<line x1="'+jx.toFixed(1)+'" y1="'+jy.toFixed(1)+'" x2="'+ex.toFixed(1)+'" y2="'+ey.toFixed(1)+'" stroke="var(--ink-2)" stroke-width="5" stroke-linecap="round"/>'
+     +'<circle cx="'+BX+'" cy="'+BY+'" r="5" fill="var(--ink-3)"/>'
+     +'<circle cx="'+jx.toFixed(1)+'" cy="'+jy.toFixed(1)+'" r="4.5" fill="var(--s3)"/>'
+     +'<circle cx="'+ex.toFixed(1)+'" cy="'+ey.toFixed(1)+'" r="4.5" fill="var(--s1)"/>';
+    /* manipulability ellipse: image of the unit q-dot circle under J */
+    var J=Jm(q1,q2), pts=[], i;
+    for(i=0;i<=72;i++){var t=i/72*2*Math.PI, u=Math.cos(t), v=Math.sin(t);
+      pts.push([ex+38*(J[0][0]*u+J[0][1]*v), ey-38*(J[1][0]*u+J[1][1]*v)]);}
+    $('aEll').innerHTML='<path d="M'+pts.map(function(p){return p[0].toFixed(1)+' '+p[1].toFixed(1);}).join('L')
+      +'Z" fill="var(--s1)" fill-opacity=".16" stroke="var(--s1)" stroke-width="1.3"/>';
+    /* right panel: |dq| against q2, log scale */
+    var X0=280, Y0=44, W=182, H=196;
+    function px(q){return X0 + q/Math.PI*W;}
+    function py(val){var lg=Math.log(Math.max(val,1e-4))/Math.LN10;   /* -4 .. +2 */
+      return Y0 + H - (lg+4)/6*H;}
+    var pp='', dd='', k;
+    for(k=1;k<=360;k++){var qq=k/360*Math.PI;
+      var yp=py(Math.min(dqNorm(q1,qq,0),1e6)), yd=py(Math.min(dqNorm(q1,qq,lam),1e6));
+      pp+=(k===1?'M':'L')+px(qq).toFixed(1)+' '+Math.max(Y0-4,Math.min(Y0+H,yp)).toFixed(1);
+      dd+=(k===1?'M':'L')+px(qq).toFixed(1)+' '+Math.max(Y0-4,Math.min(Y0+H,yd)).toFixed(1);}
+    $('aPlot').innerHTML=
+      '<line x1="'+X0+'" y1="'+(Y0+H)+'" x2="'+(X0+W)+'" y2="'+(Y0+H)+'" stroke="var(--rule-strong)"/>'
+     +'<line x1="'+X0+'" y1="'+Y0+'" x2="'+X0+'" y2="'+(Y0+H)+'" stroke="var(--rule-strong)"/>'
+     +'<path d="'+pp+'" fill="none" stroke="var(--s3)" stroke-width="1.6"/>'
+     +'<path d="'+dd+'" fill="none" stroke="var(--s1)" stroke-width="1.9"/>'
+     +'<line x1="'+px(q2).toFixed(1)+'" y1="'+Y0+'" x2="'+px(q2).toFixed(1)+'" y2="'+(Y0+H)
+     +'" stroke="var(--ink-3)" stroke-dasharray="3 3"/>';
+    var lab='<text class="tkb" x="'+BX+'" y="20" text-anchor="middle">two-link arm + manipulability ellipse</text>'
+      +'<text class="tkb" x="'+(X0+W/2)+'" y="20" text-anchor="middle">joint motion for a 1 cm hand move</text>'
+      +'<text class="tk" x="'+X0+'" y="'+(Y0+H+15)+'">q2 = 0</text>'
+      +'<text class="tk" x="'+(X0+W)+'" y="'+(Y0+H+15)+'" text-anchor="end">&#960;</text>'
+      +'<text class="tk" x="'+(X0-4)+'" y="'+(py(100)+3)+'" text-anchor="end">100</text>'
+      +'<text class="tk" x="'+(X0-4)+'" y="'+(py(1)+3)+'" text-anchor="end">1</text>'
+      +'<text class="tk" x="'+(X0-4)+'" y="'+(py(0.01)+3)+'" text-anchor="end">.01</text>'
+      +'<text class="tk" x="'+(X0+6)+'" y="'+(Y0+12)+'" fill="var(--s3)">pseudo-inverse</text>'
+      +'<text class="tk" x="'+(X0+6)+'" y="'+(Y0+26)+'" fill="var(--s1)">damped</text>';
+    $('aLab').innerHTML=lab;
+    var s=svd2(J);
+    $('oDet').textContent=fmt(L1*L2*Math.sin(q2),5);
+    $('oCond').textContent=(s[1]>1e-9? fmt(s[0]/s[1], s[0]/s[1]>1000?0:1) : '∞');
+    $('oPinv').textContent=fmt(dqNorm(q1,q2,0), 3)+' rad';
+    $('oDls').textContent=fmt(dqNorm(q1,q2,lam), 4)+' rad';
+  }
+  ['q2Sl','lamSl'].forEach(function(id){$(id).addEventListener('input',function(){
+    document.querySelectorAll('[data-ap]').forEach(function(o){o.classList.remove('on');}); drawA();});});
+  document.querySelectorAll('[data-ap]').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      $('q2Sl').value=btn.getAttribute('data-ap');
+      document.querySelectorAll('[data-ap]').forEach(function(o){o.classList.remove('on');});
+      btn.classList.add('on'); drawA();});
+  });
+  drawA();
+  predict('data-p4','pv4',{
+    a:'<b>The reach grows, but the ability to USE it does not.</b> A straight arm is at maximum extension and cannot go further out at all &mdash; so the joint rates needed to move the hand outward go up, not down.',
+    b:'<b>No &mdash; the hand motion is fixed, the joint motion is not.</b> That is the whole point of the Jacobian: the same 1 cm of hand travel costs different joint motion at different configurations, and the cost is 1/det J.',
+    c:'<b>Correct.</b> det J = l₁l₂ sin q₂, so the inverse carries 1/sin q₂ and diverges as the arm straightens. At 0.004 rad from dead centre a 1 cm move asks for 5.66 rad &mdash; 324 degrees of joint motion. Damped least squares caps it at 0.0063 rad.',
+    d:'<b>Both sides.</b> sin q₂ vanishes at zero from above and below alike, so the arm is equally singular whichever way the elbow is bent. Drag through and watch the curve rise on both approaches.'
+  });
+
+  /* ============ LAB 5 : PID as a second-order system ==================== */
+  /* Mirrors verify_claims.py [Ch11 s14]: wn = sqrt(Kp/m), zeta = (b+Kd)/2sqrt(Kp m),
+     overshoot = exp(-pi z / sqrt(1-z^2)). m = 1, b = 0.5 throughout. */
+  var MP=1.0, BP=0.5, POX=126, POY=150;
+  function drawP(){
+    var Kp=+$('kpSl').value, Kd=+$('kdSl').value/10;
+    var wn=Math.sqrt(Kp/MP), z=(BP+Kd)/(2*Math.sqrt(Kp*MP));
+    $('kpVal').textContent=Kp; $('kdVal').textContent=fmt(Kd,1);
+    grid($('pGrid'),16,30,222,240,37);
+    $('pGrid').innerHTML+='<line x1="16" y1="'+POY+'" x2="238" y2="'+POY+'" stroke="var(--rule-strong)" stroke-width="1.25"/>'
+      +'<line x1="'+POX+'" y1="30" x2="'+POX+'" y2="270" stroke="var(--rule-strong)" stroke-width="1.25"/>';
+    var SPL=4.6;                              /* px per rad/s */
+    function cross(x,y){var s=5;return '<path d="M'+(x-s)+' '+(y-s)+'L'+(x+s)+' '+(y+s)
+      +'M'+(x-s)+' '+(y+s)+'L'+(x+s)+' '+(y-s)+'" stroke="var(--s1)" stroke-width="2.2" fill="none"/>';}
+    var ph='';
+    if(z<1){ var sg=z*wn, wd=wn*Math.sqrt(1-z*z);
+      ph=cross(POX-sg*SPL, POY-wd*SPL)+cross(POX-sg*SPL, POY+wd*SPL);
+      ph+='<path d="M'+POX+' '+POY+'L'+(POX-115*z)+' '+(POY-115*Math.sqrt(1-z*z))
+        +'" stroke="var(--s3)" stroke-width="1.1" stroke-dasharray="4 4"/>';
+    } else { var rt=Math.sqrt(z*z-1);
+      ph=cross(POX-(z-rt)*wn*SPL, POY)+cross(POX-(z+rt)*wn*SPL, POY); }
+    $('pPoles').innerHTML=ph;
+    /* step response, fixed 3 s window, integrated from the actual ODE */
+    var X0=272, Y0=42, W=190, H=200, T=3.0, N=600, dt=T/N;
+    var q=0, dq=0, pk=0, pts=[], i, ts=T;
+    for(i=0;i<=N;i++){
+      pts.push([X0+i/N*W, Y0+H-Math.max(0,Math.min(1.6,q))/1.6*H]);
+      if(Math.abs(q-1)>0.02) ts=(i/N)*T;
+      var tau=Kp*(1-q)+Kd*(-dq);
+      dq+=((tau-BP*dq)/MP)*dt; q+=dq*dt; pk=Math.max(pk,q);
+    }
+    $('pStep').innerHTML=
+      '<path d="M'+X0+' '+(Y0+H-1/1.6*H)+'L'+(X0+W)+' '+(Y0+H-1/1.6*H)+'" stroke="var(--ink-3)" stroke-width="1" stroke-dasharray="3 3" fill="none"/>'
+     +'<path d="M'+pts.map(function(p){return p[0].toFixed(1)+' '+p[1].toFixed(1);}).join('L')
+     +'" fill="none" stroke="var(--s1)" stroke-width="1.9"/>'
+     +'<line x1="'+X0+'" y1="'+(Y0+H)+'" x2="'+(X0+W)+'" y2="'+(Y0+H)+'" stroke="var(--rule-strong)"/>';
+    $('pLab').innerHTML='<text class="tkb" x="'+POX+'" y="22" text-anchor="middle">closed-loop poles</text>'
+      +'<text class="tkb" x="'+(X0+W/2)+'" y="22" text-anchor="middle">step response, 3 s</text>'
+      +'<text class="tk" x="236" y="'+(POY-6)+'" text-anchor="end">Re</text>'
+      +'<text class="tk" x="'+(POX+5)+'" y="42">Im</text>'
+      +'<text class="tk" x="'+X0+'" y="'+(Y0+H+15)+'">0</text>'
+      +'<text class="tk" x="'+(X0+W)+'" y="'+(Y0+H+15)+'" text-anchor="end">3 s</text>'
+      +'<text class="tk" x="'+(X0+4)+'" y="'+(Y0+H-1/1.6*H-5)+'">target</text>';
+    $('oWn').textContent=fmt(wn,2)+' rad/s';
+    $('oZe').textContent=fmt(z,3);
+    $('oOv').textContent=(z<1? fmt(100*Math.exp(-Math.PI*z/Math.sqrt(1-z*z)),2)+'%' : '0.00%');
+    $('oTs').textContent=fmt(4/(z*wn),3)+' s';
+  }
+  ['kpSl','kdSl'].forEach(function(id){$(id).addEventListener('input',function(){
+    document.querySelectorAll('[data-pp]').forEach(function(o){o.classList.remove('on');}); drawP();});});
+  document.querySelectorAll('[data-pp]').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var v=btn.getAttribute('data-pp').split(',');
+      $('kpSl').value=v[0]; $('kdSl').value=v[1];
+      document.querySelectorAll('[data-pp]').forEach(function(o){o.classList.remove('on');});
+      btn.classList.add('on'); drawP();});
+  });
+  drawP();
+  predict('data-p5','pv5',{
+    a:'<b>Kₔ sets the damping COEFFICIENT, not the damping RATIO.</b> The ratio is ζ = (b+Kₔ)/(2√(Kₚ m)), so it depends on both gains. Hold Kₔ and drag Kₚ: ζ moves.',
+    b:'<b>Correct.</b> ζ carries √Kₚ in its denominator, so doubling Kₚ divides ζ by √2 ≈ 1.41. The poles swing towards the imaginary axis and the overshoot grows. To go faster and keep the shape you must raise Kₔ as √Kₚ as well.',
+    c:'<b>Too pessimistic.</b> It would halve if ζ went as 1/Kₚ, but it goes as 1/√Kₚ. Watch the ζ readout: 0.200 at Kₚ=25 becomes 0.141 at Kₚ=50, not 0.100.',
+    d:'<b>The wrong direction.</b> More stiffness for the same damping coefficient is always LESS damped &mdash; the same reason a stiffer spring on an unchanged dashpot rings more.'
   });
 })();
 </script>
