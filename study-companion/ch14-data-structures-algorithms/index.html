@@ -1,0 +1,3063 @@
+<title>Data Structures and Algorithms</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(', '\\)']], displayMath: [['$$', '$$']], processEscapes: true },
+  svg: { fontCache: 'global', scale: 1.0 },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-svg.js" id="MathJax-script" async></script>
+
+<style>
+/* ============ TOKENS: light is complete and authoritative ============ */
+:root{
+  --ground:#F0F2F1;
+  --sheet:#FBFCFB;
+  --sheet-2:#F4F6F5;
+  --ink:#14181A;
+  --ink-2:#4E575B;
+  --ink-3:#77838A;
+  --rule:#D3DAD7;
+  --rule-strong:#A8B4B0;
+  --accent:#12507E;
+  --accent-ink:#0E4267;
+  --accent-soft:#E4EEF6;
+  --bridge:#1F8A4C;
+  --bridge-soft:#E4F2EA;
+  --brk:#A8500F;
+  --brk-soft:#FAEBDF;
+  --s1:#BF5B00;
+  --s2:#0F74C7;
+  --s3:#1F8A4C;
+  --paper:#FFFFFF;            /* pasted-drawing ground, both themes */
+  --paper-ink:#1b1b1b;
+  --shadow:0 1px 2px rgba(20,24,26,.06), 0 6px 18px rgba(20,24,26,.05);
+  --f-disp:'Archivo Narrow', 'Arial Narrow', Helvetica, sans-serif;
+  --f-body:'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --f-mono:'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+    --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+    --rule:#293134; --rule-strong:#3F494C;
+    --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+    --bridge:#35AC63; --bridge-soft:#11281B;
+    --brk:#E0913F; --brk-soft:#2E2012;
+    --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+  --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+  --rule:#293134; --rule-strong:#3F494C;
+  --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+  --bridge:#35AC63; --bridge-soft:#11281B;
+  --brk:#E0913F; --brk-soft:#2E2012;
+  --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:var(--f-body); font-size:17px; line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ============ TITLE BLOCK (engineering drawing header) ============ */
+.titleblock{
+  position:sticky; top:env(safe-area-inset-top,0px); z-index:40;
+  background:var(--sheet); border-bottom:1px solid var(--rule-strong);
+}
+.tb-in{
+  max-width:1240px; margin:0 auto; padding:0 16px;
+  display:flex; align-items:stretch; gap:0; min-height:46px;
+}
+.tb-cell{
+  display:flex; flex-direction:column; justify-content:center;
+  padding:5px 14px; border-right:1px solid var(--rule);
+  font-family:var(--f-disp);
+}
+.tb-cell:first-child{padding-left:0}
+.tb-cell:last-child{border-right:0; margin-left:auto; padding-right:0}
+.tb-k{
+  font-size:8.5px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); line-height:1.4;
+}
+.tb-v{font-size:13px; font-weight:700; letter-spacing:.02em; color:var(--ink); line-height:1.3}
+.tb-v.accent{color:var(--accent)}
+.tb-hide{display:none}
+@media (min-width:680px){ .tb-hide{display:flex} }
+
+.themebtn{
+  appearance:none; background:transparent; border:1px solid var(--rule-strong);
+  color:var(--ink-2); font-family:var(--f-disp); font-size:10px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:6px 10px; border-radius:2px;
+  cursor:pointer; align-self:center; white-space:nowrap;
+}
+.themebtn:hover{border-color:var(--accent); color:var(--accent)}
+.themebtn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+/* ============ SHELL ============ */
+.shell{max-width:1240px; margin:0 auto; padding:0 16px; padding-block:0 64px}
+@media (min-width:1080px){
+  .shell{display:grid; grid-template-columns:212px minmax(0,1fr); gap:44px; align-items:start}
+}
+.rail{display:none}
+@media (min-width:1080px){
+  .rail{
+    display:block; position:sticky; top:calc(env(safe-area-inset-top,0px) + 70px);
+    padding-block:28px; font-family:var(--f-disp); font-size:12.5px;
+  }
+}
+.rail-h{
+  font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-3);
+  padding-bottom:8px; border-bottom:1px solid var(--rule); margin-bottom:10px;
+}
+.rail a{
+  display:flex; gap:9px; padding:4px 0; color:var(--ink-2); text-decoration:none;
+  border-left:2px solid transparent; padding-left:9px; margin-left:-11px; line-height:1.35;
+}
+.rail a:hover{color:var(--accent)}
+.rail a.on{color:var(--accent); border-left-color:var(--accent); font-weight:700}
+.rail a .n{font-family:var(--f-mono); font-size:10.5px; color:var(--ink-3); flex:none; padding-top:1px}
+.rail a.on .n{color:var(--accent)}
+
+main{min-width:0; padding-block:0 0}
+.col{max-width:70ch}
+
+/* ============ TYPE ============ */
+h1,h2,h3,h4{font-family:var(--f-disp); text-wrap:balance; margin:0; line-height:1.14}
+h1{font-size:clamp(34px,7vw,58px); font-weight:700; letter-spacing:-.015em}
+h2{font-size:clamp(25px,4.2vw,34px); font-weight:700; letter-spacing:-.01em}
+h3{font-size:19px; font-weight:700; letter-spacing:.005em; margin-top:2px}
+h4{font-size:14px; font-weight:700; letter-spacing:.06em; text-transform:uppercase}
+p{margin:0 0 1.05em}
+a{color:var(--accent-ink)}
+strong{font-weight:600}
+em{font-style:italic}
+code{font-family:var(--f-mono); font-size:.87em; background:var(--sheet-2); padding:1px 5px; border-radius:2px; border:1px solid var(--rule)}
+.lead{font-size:19.5px; line-height:1.56; color:var(--ink-2)}
+.eyebrow{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--ink-3); margin:0 0 10px;
+}
+.srcref{
+  font-family:var(--f-mono); font-size:11px; color:var(--ink-3);
+  border:1px solid var(--rule); border-radius:2px; padding:2px 7px; display:inline-block;
+  background:var(--sheet-2); white-space:nowrap;
+}
+
+/* ============ SECTION ============ */
+section{padding-block:38px 0; scroll-margin-top:calc(env(safe-area-inset-top,0px) + 62px)}
+.sechead{display:flex; align-items:baseline; gap:13px; margin-bottom:6px; flex-wrap:wrap}
+.secnum{
+  font-family:var(--f-mono); font-size:12px; font-weight:600; color:var(--accent);
+  border:1px solid var(--accent); border-radius:2px; padding:2px 7px; flex:none;
+  background:var(--accent-soft);
+}
+.rule-h{border:0; border-top:1px solid var(--rule); margin:0 0 22px}
+.rule-d{border:0; border-top:1px dashed var(--rule-strong); margin:34px 0}
+
+/* ============ CALLOUTS ============ */
+.note{
+  border:1px solid var(--rule); border-left:3px solid var(--accent);
+  background:var(--sheet); border-radius:2px; padding:16px 18px; margin:22px 0;
+}
+/* Greek letters must never be uppercased: text-transform turns beta into
+   a capital Beta, which is the Latin letter B on screen -- likewise eta->H,
+   kappa->K, lambda->A-shape.  Any Greek inside an uppercased label wears .gk. */
+.gk{text-transform:none}
+.note.bridge{border-left-color:var(--bridge); background:var(--bridge-soft)}
+.note.brk{border-left-color:var(--brk); background:var(--brk-soft)}
+.note-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; margin-bottom:7px; display:flex; align-items:center; gap:8px;
+}
+.note.bridge .note-h{color:var(--bridge)}
+.note.brk .note-h{color:var(--brk)}
+.note .note-h{color:var(--accent)}
+.note p:last-child, .note ul:last-child{margin-bottom:0}
+.note-h .ic{
+  width:15px; height:15px; border-radius:50%; border:1.5px solid currentColor; flex:none;
+  display:grid; place-items:center; font-size:9.5px; font-weight:700; font-family:var(--f-mono);
+}
+ul,ol{margin:0 0 1.05em; padding-left:1.25em}
+li{margin-bottom:.4em}
+li::marker{color:var(--ink-3)}
+
+/* ============ DEFINITION BLOCK ============ */
+.defn{
+  background:var(--sheet); border:1px solid var(--rule); border-radius:3px;
+  padding:18px 20px; margin:22px 0; box-shadow:var(--shadow);
+}
+.defn-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:10px;
+  padding-bottom:8px; border-bottom:1px solid var(--rule);
+}
+.defn p:last-child{margin-bottom:0}
+
+/* ============ TABLES ============ */
+.tw{overflow-x:auto; margin:22px 0; border:1px solid var(--rule); border-radius:3px; background:var(--sheet)}
+table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:480px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule); vertical-align:top}
+thead th{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); background:var(--sheet-2); font-weight:700; white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:0}
+td.mono,th.mono{font-family:var(--f-mono); font-size:13px; font-variant-numeric:tabular-nums}
+.tw caption{
+  caption-side:bottom; text-align:left; padding:9px 14px; font-size:12.5px;
+  color:var(--ink-3); border-top:1px solid var(--rule); font-family:var(--f-disp);
+}
+
+/* ============ FIGURES ============ */
+figure{margin:24px 0}
+.paper{
+  background:var(--paper); border:1px solid var(--rule-strong); border-radius:3px;
+  padding:16px; display:flex; justify-content:center; box-shadow:var(--shadow);
+}
+.paper img{max-width:100%; height:auto; display:block}
+figcaption{
+  font-family:var(--f-disp); font-size:12.5px; color:var(--ink-3); margin-top:9px;
+  line-height:1.45; padding-left:2px;
+}
+figcaption b{color:var(--ink-2); font-weight:700; letter-spacing:.04em}
+
+/* ============ INTERACTIVE PANELS ============ */
+.lab{
+  background:var(--sheet); border:1px solid var(--rule-strong); border-radius:3px;
+  margin:26px 0; overflow:hidden; box-shadow:var(--shadow);
+}
+.lab-h{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:11px 16px; border-bottom:1px solid var(--rule); background:var(--sheet-2);
+}
+.lab-t{font-family:var(--f-disp); font-size:13px; font-weight:700; letter-spacing:.05em; text-transform:uppercase}
+.lab-tag{
+  font-family:var(--f-mono); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--accent); border:1px solid var(--accent); border-radius:2px; padding:2px 6px;
+  margin-left:auto; white-space:nowrap;
+}
+.lab-body{padding:16px}
+.lab-foot{
+  padding:11px 16px; border-top:1px solid var(--rule); background:var(--sheet-2);
+  font-size:13.5px; color:var(--ink-2); line-height:1.5;
+}
+.lab-foot b{color:var(--ink)}
+.stage{width:100%; max-width:560px; height:auto; display:block; margin-inline:auto; touch-action:none; cursor:grab}
+.stage.drag{cursor:grabbing}
+
+/* Dividers are drawn as cell borders rather than as 1px grid gaps over a grey
+   backdrop: when the item count does not fill the last row, a gap-based grid
+   leaves the backdrop showing as an empty grey block. */
+.readout{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr)); gap:0;
+  background:var(--sheet); border:1px solid var(--rule); border-radius:2px;
+  margin-top:14px; overflow:hidden;
+}
+.ro{background:var(--sheet); padding:8px 11px;
+  border-right:1px solid var(--rule); border-bottom:1px solid var(--rule)}
+.ro-k{
+  font-family:var(--f-disp); font-size:9px; letter-spacing:.13em; text-transform:uppercase;
+  color:var(--ink-3); margin-bottom:2px;
+  /* was white-space:nowrap, which clipped the longer keys instead of wrapping */
+  white-space:normal; overflow-wrap:break-word; line-height:1.3; min-height:2.6em;
+}
+.ro-v{
+  font-family:var(--f-mono); font-size:15px; font-weight:500; font-variant-numeric:tabular-nums;
+  color:var(--ink); line-height:1.25;
+}
+.ro-v.a{color:var(--s2)} .ro-v.b{color:var(--s1)} .ro-v.c{color:var(--s3)}
+
+.ctl{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:14px}
+.ctl label{
+  font-family:var(--f-disp); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-2); white-space:nowrap;
+}
+input[type=range]{
+  -webkit-appearance:none; appearance:none; height:22px; background:transparent;
+  flex:1 1 160px; min-width:130px; cursor:pointer;
+}
+input[type=range]:focus-visible{outline:2px solid var(--accent); outline-offset:3px}
+input[type=range]::-webkit-slider-runnable-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-moz-range-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:16px; height:16px; border-radius:50%;
+  background:var(--accent); border:2px solid var(--sheet); margin-top:-6.5px;
+}
+input[type=range]::-moz-range-thumb{
+  width:16px; height:16px; border-radius:50%; background:var(--accent);
+  border:2px solid var(--sheet);
+}
+.btn{
+  appearance:none; font-family:var(--f-disp); font-size:11px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:7px 13px; border-radius:2px;
+  border:1px solid var(--rule-strong); background:var(--sheet); color:var(--ink-2); cursor:pointer;
+}
+.btn:hover{border-color:var(--accent); color:var(--accent)}
+.btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.btn.on{background:var(--accent); border-color:var(--accent); color:var(--sheet)}
+
+.legend{display:flex; gap:16px; flex-wrap:wrap; margin-top:12px}
+.lg{display:flex; align-items:center; gap:7px; font-family:var(--f-disp); font-size:12px; color:var(--ink-2)}
+.lg i{width:15px; height:3px; border-radius:2px; flex:none; display:block}
+
+/* ============ MISC ============ */
+.mathbox{overflow-x:auto; overflow-y:hidden; margin:18px 0}
+mjx-container[display="true"]{margin:0 !important}
+.kv{display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:15px; margin:16px 0}
+.kv dt{font-family:var(--f-mono); font-size:13px; color:var(--accent); white-space:nowrap}
+.kv dd{margin:0; color:var(--ink-2)}
+
+details.q{
+  border:1px solid var(--rule); border-radius:3px; background:var(--sheet);
+  margin-bottom:9px; overflow:hidden;
+}
+details.q summary{
+  cursor:pointer; padding:12px 15px; font-weight:600; list-style:none;
+  display:flex; gap:11px; align-items:flex-start; font-size:15.5px;
+}
+details.q summary::-webkit-details-marker{display:none}
+details.q summary::after{
+  content:'+'; margin-left:auto; font-family:var(--f-mono); color:var(--accent);
+  font-size:17px; line-height:1; flex:none; padding-top:2px;
+}
+details.q[open] summary::after{content:'\2212'}
+details.q summary:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
+details.q summary .qn{
+  font-family:var(--f-mono); font-size:12px; color:var(--ink-3); flex:none; padding-top:3px;
+}
+details.q .ans{padding:0 15px 14px 41px; font-size:15.5px; color:var(--ink-2); border-top:1px solid var(--rule); padding-top:13px}
+details.q .ans p:last-child{margin-bottom:0}
+
+.endnote{
+  margin-top:44px; padding-top:20px; border-top:1px solid var(--rule-strong);
+  font-size:13.5px; color:var(--ink-3); font-family:var(--f-disp); line-height:1.55;
+}
+.endnote a{color:var(--accent)}
+
+.srcref{text-decoration:none}
+a.srcref{color:var(--ink-2); transition:none}
+
+</style>
+<style>
+.srcref{text-decoration:none}
+a.srcref{color:var(--ink-2)}
+a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(--accent-soft)}
+.srcref.nolink{opacity:.75; font-style:italic}
+.pv{font-family:var(--f-disp); font-size:9.5px; font-weight:700; letter-spacing:.1em;
+    text-transform:uppercase; padding:2px 7px; border-radius:2px; white-space:nowrap}
+.pv.ok{background:var(--bridge-soft); color:var(--bridge)}
+.pv.add{background:var(--accent-soft); color:var(--accent)}
+.pv.corr{background:var(--brk-soft); color:var(--brk)}
+.flag{display:inline-block; padding:1px 7px; border-radius:2px; font-family:var(--f-disp);
+      font-size:10px; letter-spacing:.1em; text-transform:uppercase; font-weight:700}
+.flag.ok{background:var(--bridge-soft); color:var(--bridge)}
+.flag.bad{background:var(--brk-soft); color:var(--brk)}
+.predict{border:1px solid var(--rule-strong); border-left:3px solid var(--brk);
+  background:var(--brk-soft); border-radius:2px; padding:13px 15px; margin:0 0 14px}
+.predict-h{font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--brk); margin-bottom:6px}
+.predict p{margin:0 0 10px; font-size:15px}
+.predict .opts{display:flex; gap:8px; flex-wrap:wrap}
+.pbtn{appearance:none; font-family:var(--f-disp); font-size:12px; font-weight:600;
+  padding:6px 12px; border-radius:2px; border:1px solid var(--rule-strong);
+  background:var(--sheet); color:var(--ink-2); cursor:pointer}
+.pbtn:hover{border-color:var(--brk); color:var(--brk)}
+.pbtn.picked{background:var(--brk); border-color:var(--brk); color:var(--sheet)}
+.pverdict{margin-top:10px; font-size:14.5px; color:var(--ink-2); display:none}
+.pverdict.show{display:block}
+.pverdict b{color:var(--ink)}
+.gap{border:1px solid var(--rule); border-left:3px solid var(--ink-3); background:var(--sheet-2);
+  border-radius:2px; padding:14px 16px; margin:18px 0}
+.gap-h{font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:7px}
+</style>
+
+<header class="titleblock">
+  <div class="tb-in">
+    <div class="tb-cell"><div class="tb-k">Chapter</div><div class="tb-v accent">14 &middot; Data Structures and Algorithms</div></div>
+    <div class="tb-cell tb-hide"><div class="tb-k">Sheet</div><div class="tb-v">14 of 20, part 1 of 2</div></div>
+    <div class="tb-cell tb-hide"><div class="tb-k">Reader</div><div class="tb-v">B.E. Mechanical</div></div>
+    <div class="tb-cell tb-hide"><div class="tb-k">Prerequisite</div><div class="tb-v">Sheets 1&ndash;13</div></div>
+    <div class="tb-cell"><button class="themebtn" id="themebtn" type="button" aria-label="Switch colour theme">Theme</button></div>
+  </div>
+</header>
+
+<div class="shell">
+
+<nav class="rail" aria-label="Chapter contents">
+  <div class="rail-h">Contents</div>
+  <a href="#bridge" class="on"><span class="n">00</span><span>The bridge</span></a>
+  <a href="#patterns"><span class="n">01</span><span>What a pattern is</span></a>
+  <a href="#bigo"><span class="n">02</span><span>Order of magnitude</span></a>
+  <a href="#hidden"><span class="n">03</span><span>Hidden copies</span></a>
+  <a href="#amortised"><span class="n">04</span><span>Setup over a lot</span></a>
+  <a href="#space"><span class="n">05</span><span>The stack you do not see</span></a>
+  <a href="#recursion"><span class="n">06</span><span>Recursion is induction</span></a>
+  <a href="#fib"><span class="n">07</span><span>Fibonacci, counted</span></a>
+  <a href="#backtrack"><span class="n">08</span><span>What pruning buys</span></a>
+  <a href="#dp"><span class="n">09</span><span>CPM is DP</span></a>
+  <a href="#memo"><span class="n">10</span><span>The MRP low-level code</span></a>
+  <a href="#knapsack"><span class="n">11</span><span>NP-hard, solved anyway</span></a>
+  <a href="#arrays"><span class="n">12</span><span>A fixed pitch</span></a>
+  <a href="#hashing"><span class="n">13</span><span>The utilisation cliff</span></a>
+  <a href="#bloom"><span class="n">14</span><span>A GO gauge</span></a>
+  <a href="#twoptr"><span class="n">15</span><span>Two pointers</span></a>
+  <a href="#rain"><span class="n">16</span><span>A spillway</span></a>
+  <a href="#window"><span class="n">17</span><span>Monotone windows</span></a>
+  <a href="#prefix"><span class="n">18</span><span>Shear force</span></a>
+  <a href="#floyd"><span class="n">19</span><span>Tortoise and hare</span></a>
+  <a href="#stacks"><span class="n">20</span><span>Stacks</span></a>
+  <a href="#heaps"><span class="n">21</span><span>Heaps and dispatch</span></a>
+  <a href="#next"><span class="n">22</span><span>What part 2 carries</span></a>
+  <a href="#provenance"><span class="n">A</span><span>Provenance</span></a>
+</nav>
+
+<main>
+
+<section id="top" style="padding-top:44px">
+  <div class="col">
+    <p class="eyebrow">Maths, CS &amp; AI Compendium &middot; Chapter 14, part 1 of 2</p>
+    <h1>Counting the Work</h1>
+    <p class="lead" style="margin-top:18px">
+      Big O is an order-of-magnitude estimate, and you have made thousands of those. The CPM
+      forward pass you drew for GATE is dynamic programming, line for line. A shear-force
+      diagram is a prefix sum. And a hash table at 90% full hits the same cliff as a machine
+      at 90% utilisation.
+    </p>
+    <p>
+      Sheet 13 left two debts for this one. Part 1 &sect;06 stated recurrences and the Master
+      Theorem and promised they would be done properly here. Part 1 &sect;09 said the
+      heuristics in your industrial engineering syllabus exist because the exact problems are
+      NP-hard, and promised the algorithms behind them. This part pays both: &sect;07 solves a
+      recurrence exactly and finds the source&rsquo;s own number off by a factor of 27,643, and
+      &sect;11 shows an NP-hard problem that is solved routinely, and why that does not rescue
+      line balancing.
+    </p>
+    <p>
+      The headline is in &sect;09. Dynamic programming is usually taught as a clever trick for
+      interview puzzles. You learned it years ago under another name. The CPM forward pass,
+      \(TE_j = \max_i (TE_i + t_{ij})\), taken in precedence order, <em>is</em> dynamic
+      programming: the same recurrence, the same iteration order, the same backtracking to
+      recover the answer. A project network with 40 parallel stages has more than a trillion
+      paths, and the forward pass adds 160 numbers. That gap is the entire subject.
+    </p>
+    <p>
+      Three more correspondences are exact rather than decorative. A shear-force diagram is a
+      prefix sum, and a range query is the difference of two shears (&sect;18). The water
+      trapped between bars is set by the lower spill point, and in two dimensions that becomes
+      a minimax path problem the source&rsquo;s method cannot see (&sect;16). A hash table
+      filling up behaves like a machine loading up: fine at 50%, bad at 90%, with a cliff whose
+      shape you already know from queueing (&sect;13).
+    </p>
+    <div class="note brk" style="margin-top:22px">
+      <div class="note-h"><span class="ic">&#33;</span>This is part 1 of 2, and what each part holds</div>
+      <p style="margin-bottom:8px">
+        Chapter 14&rsquo;s source is 2,695 lines across six files. Splitting at the natural seam:
+      </p>
+      <ul style="margin:0 0 8px 18px; padding:0">
+        <li><b>Part 1 (this sheet)</b> &mdash; files 00&ndash;02: the four foundations (Big O,
+          recursion, backtracking, dynamic programming), then arrays and hashing, then linked
+          lists, stacks, queues and heaps. Everything that is a line.</li>
+        <li><b>Part 2</b> &mdash; files 03&ndash;05: trees, graphs, sorting and searching.
+          Everything that branches. Plus the chapter&rsquo;s worked example, its 24-question
+          bank and its concept map.</li>
+      </ul>
+      <p style="margin-bottom:0">
+        This part carries its own provenance appendix, so nothing is deferred and then lost.
+      </p>
+    </div>
+  </div>
+
+  <div class="tw col">
+    <table>
+      <caption>Corrections to the source in this part. Every one was found by running code, and each is recomputed by <code>verify_claims.py</code>.</caption>
+      <thead><tr><th>Source says</th><th>Computed</th><th>Where</th></tr></thead>
+      <tbody>
+        <tr><td>Naive <code>fib(50)</code> takes &ldquo;over \(10^{15}\) operations&rdquo;</td><td>40,730,022,147 calls, about \(4.07\times10^{10}\). The source used the loose \(2^n\) bound; the growth is \(\varphi^n\).</td><td>&sect;07</td></tr>
+        <tr><td>Floyd&rsquo;s cycle start: &ldquo;the difference is one full cycle: \(a+b=c\)&rdquo;</td><td>\(a + b = kc\). With a tail of 10 and a loop of 3, \(k = 4\). The conclusion survives; the derivation does not.</td><td>&sect;19</td></tr>
+        <tr><td>N-Queens: column and diagonal checks cut \(n^n\) to &ldquo;roughly \(n!\)&rdquo;</td><td>\(n!\) is what the column check alone gives. With diagonals, 2,057 nodes for \(n = 8\), against 40,320.</td><td>&sect;08</td></tr>
+        <tr><td>Python&rsquo;s list grows by &ldquo;amortised doubling&rdquo;</td><td>CPython grows by about 1.125&times;. Still \(O(1)\) amortised, at 8 copies per append instead of 1.</td><td>&sect;04</td></tr>
+        <tr><td>&ldquo;Quicksort is \(O(\log n)\) space&rdquo;</td><td>Only if it recurses into the smaller side first. Written plainly, on sorted input, it recurses 1,999 deep for \(n = 2{,}000\).</td><td>&sect;05</td></tr>
+        <tr><td><code>s += c</code> in a loop &ldquo;copies the entire string each time&rdquo;, \(O(n^2)\)</td><td>Measured linear in CPython, which extends the string in place. Quadratic the moment a second name refers to it. The advice stands, for a different reason.</td><td>&sect;03</td></tr>
+        <tr><td>Kth largest: heapify-then-pop is &ldquo;slower: \(O(n + k\log n)\)&rdquo;; the size-\(k\) heap is &ldquo;optimal&rdquo;</td><td>The Big O comparison is backwards. On random input the size-\(k\) heap still wins; on ascending input it loses by 3&times;. Neither is optimal.</td><td>&sect;21</td></tr>
+        <tr><td>Three Sum: \(O(n^2)\) &ldquo;is optimal (you must consider all pairs)&rdquo;</td><td>Unproven. That is the 3SUM conjecture, and slightly faster algorithms are known.</td><td>&sect;15</td></tr>
+        <tr><td>Rain water: confusing <code>&gt;=</code> with <code>&gt;</code> causes off-by-one water</td><td>In the source&rsquo;s code the swap changes 0 answers in 2,000 random profiles.</td><td>&sect;16</td></tr>
+        <tr><td><code>fib_memo(n, memo={})</code>, beside a pitfall table that forbids exactly that</td><td>Harmless for <code>fib</code>. The same idiom on a two-input function returns 89 where the answer is 8.</td><td>&sect;10</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="bridge">
+  <div class="col">
+    <div class="sechead"><span class="secnum">00</span><h2>The bridge</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2014%20-%20data%20structures%20and%20algorithms/00.%20foundations.md" target="_blank" rel="noopener">src 00. foundations &#8599;</a>
+    </div>
+    <p>
+      Read the verdict column. <b>Identity</b> means the two sides are the same formula or the
+      same algorithm, checked numerically. <b>No counterpart</b> means there is genuinely
+      nothing in your training to hang it on, and those are the parts to learn cold.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>What a GATE-prepared mechanical engineer already owns, and what this chapter calls it.</caption>
+      <thead><tr><th>What you already know</th><th>What this chapter calls it</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td>Order-of-magnitude analysis; the square&ndash;cube law</td><td>Big O</td><td><b style="color:var(--bridge)">Same idea,</b> with one difference: Big O is an upper bound only. The scaling law is \(\Theta\). See &sect;02.</td></tr>
+        <tr><td>Fitting \(Nu = C\,Re^m\) on log&ndash;log paper</td><td>Measuring an algorithm&rsquo;s exponent</td><td><b style="color:var(--bridge)">Same method.</b> Except \(n\log n\) has no constant slope. See &sect;02.</td></tr>
+        <tr><td>Setup cost spread over a lot</td><td>Amortised \(O(1)\) append</td><td><b style="color:var(--bridge)">Same accounting.</b> Needs lots that grow geometrically. See &sect;04.</td></tr>
+        <tr><td>Proof by induction; the simple truss of Sheet 13 &sect;04</td><td>Recursion: &ldquo;trust the recursion&rdquo;</td><td><b style="color:var(--bridge)">Identity.</b> The recursive call is the inductive hypothesis. See &sect;06.</td></tr>
+        <tr><td>A linear difference equation and its characteristic root</td><td>The cost of naive recursive Fibonacci</td><td><b style="color:var(--bridge)">Identity.</b> Exactly \(2F_{n+1} - 1\) calls, growing as \(\varphi^n\). See &sect;07.</td></tr>
+        <tr><td>The CPM forward pass</td><td>Dynamic programming</td><td><b style="color:var(--bridge)">Identity.</b> Same recurrence, same order, same backtracking. See &sect;09.</td></tr>
+        <tr><td>PERT expected project duration</td><td>DP over random durations</td><td><b style="color:var(--brk)">Breaks.</b> \(E[\max] &gt; \max E\), so the forward pass on means is optimistic. See &sect;09.</td></tr>
+        <tr><td>MRP explosion by low-level code</td><td>Memoisation; tabulation in topological order</td><td><b style="color:var(--bridge)">Same move,</b> for the same reason. See &sect;10.</td></tr>
+        <tr><td>Line balancing, one station at a time</td><td>Knapsack DP, pseudo-polynomial time</td><td><b style="color:var(--bridge)">New, and it explains Sheet 13:</b> filling one station is easy; the line is not. See &sect;11.</td></tr>
+        <tr><td>A fixed pitch: lead screw, rack, bolt circle</td><td>Array address arithmetic</td><td><b style="color:var(--bridge)">Identity</b> for addressing. The cache means equal Big O is not equal cost. See &sect;12.</td></tr>
+        <tr><td>A queue&rsquo;s utilisation cliff, Sheet 13 part 2 &sect;06</td><td>A hash table&rsquo;s load factor</td><td><b style="color:var(--bridge)">Same cliff,</b> a steeper power. See &sect;13.</td></tr>
+        <tr><td>A GO gauge before a CMM</td><td>A Bloom filter before a disk read</td><td><b style="color:var(--bridge)">Same economics,</b> different mechanism. See &sect;14.</td></tr>
+        <tr><td>A pond&rsquo;s level is set by its lowest spill point</td><td>Trapping rain water</td><td><b style="color:var(--bridge)">Identity in 1-D.</b> In 2-D it is a minimax path. See &sect;16.</td></tr>
+        <tr><td>The shear-force diagram</td><td>A prefix sum</td><td><b style="color:var(--bridge)">Identity</b> for point loads, with one numerical trap. See &sect;18.</td></tr>
+        <tr><td>Relative velocity; the hands of a clock</td><td>Floyd&rsquo;s cycle detection</td><td><b style="color:var(--bridge)">Right kinematics.</b> The cycle-start trick needs speed exactly 2. See &sect;19.</td></tr>
+        <tr><td>The SPT dispatching rule, Sheet 13 part 2 &sect;04</td><td>A priority queue (heap)</td><td><b style="color:var(--bridge)">The heap implements the rule.</b> Arrivals break its optimality. See &sect;21.</td></tr>
+        <tr><td>&mdash;</td><td>Hash functions; the monotonic stack</td><td><b style="color:var(--brk)">No counterpart.</b> Learn these cold. See &sect;&sect;13, 20.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="patterns">
+  <div class="col">
+    <div class="sechead"><span class="secnum">01</span><h2>What a pattern is, and what it is not</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2014%20-%20data%20structures%20and%20algorithms/00.%20foundations.md" target="_blank" rel="noopener">src 00. foundations &#8599;</a>
+    </div>
+    <p>
+      The source opens with advice about interviews: learn about fifteen to twenty patterns
+      (two pointers, sliding window, depth-first search, dynamic programming and so on), and
+      learn to strip the story off a problem until the pattern shows. Its example is good. Two
+      numbers summing to a target, two molecules whose energies sum to a threshold, two
+      accounts that cover a debt: one problem, which is &ldquo;look up a complement&rdquo;.
+    </p>
+    <p>
+      You already work this way. A GATE question about a flywheel, a punch press and an
+      engine cylinder can all be the same energy balance. Recognising the governing equation
+      under the story is most of the skill, and the source is right that memorising solutions
+      does not transfer while understanding why a method works does.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where the claim overreaches</div>
+      <p>
+        The source says every problem, &ldquo;no matter how novel it looks&rdquo;, reduces to
+        one or a combination of these patterns. That is a useful heuristic for interview
+        questions, which are written to be solvable in 45 minutes. It is not a theorem, and it
+        is false for problems in general. Sheet 13 part 1 &sect;08 showed problems no algorithm
+        solves at all, and its &sect;09 a large class nobody knows how to solve efficiently. Treat
+        the pattern list as the common cases of a catalogue, the way a design handbook covers
+        common joints without claiming every joint is in it.
+      </p>
+      <p style="margin-bottom:0">
+        The &ldquo;~40% of interview problems&rdquo; figure for arrays and hash maps (file 01)
+        is the source&rsquo;s estimate. Nothing here measures it.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="bigo">
+  <div class="col">
+    <div class="sechead"><span class="secnum">02</span><h2>Big O is an order-of-magnitude statement</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2014%20-%20data%20structures%20and%20algorithms/00.%20foundations.md" target="_blank" rel="noopener">src 00. foundations &#8599;</a>
+    </div>
+    <p>
+      An algorithm&rsquo;s cost is a function of its input size \(n\): the number of basic
+      steps it takes. Big O keeps the fastest-growing term of that function and throws away
+      its constant. You have done exactly this in fluid mechanics, when a boundary-layer
+      equation keeps the terms of order one and drops the terms of order
+      \(\delta/L\). The formal definition:
+    </p>
+  </div>
+  <div class="mathbox col">$$\begin{aligned} f(n) = O\big(g(n)\big) \iff\ &\exists\, c &gt; 0,\ n_0 \ \text{such that} \\ &f(n) \le c\,g(n)\ \text{for all}\ n \ge n_0 \end{aligned}$$</div>
+  <div class="col">
+    <p>
+      Read it carefully, because it says less than people use it for. It is an
+      <b>upper bound</b> only. An algorithm that takes \(3n\) steps is \(O(n)\), and it is
+      also, truthfully, \(O(n^2)\) and \(O(2^n)\). When the source writes that merge sort
+      &ldquo;is \(O(n\log n)\)&rdquo; it means the bound is tight, which has its own symbol:
+    </p>
+  </div>
+  <div class="mathbox col">$$f(n) = \Theta\big(g(n)\big) \iff c_1\,g(n) \le f(n) \le c_2\,g(n)\ \text{for all}\ n \ge n_0$$</div>
+  <div class="col">
+    <p>
+      \(\Theta\) is the scaling law. The square&ndash;cube law says a beam&rsquo;s self-weight
+      stress grows as \(\Theta(L)\) when every dimension scales with \(L\): bounded above
+      <em>and</em> below by a multiple of \(L\). That is the statement engineers mean, and it
+      is usually what programmers mean when they write \(O\). The distinction matters in
+      &sect;07, where the source uses a correct upper bound as if it were the growth rate and
+      overstates a cost by four orders of magnitude.
+    </p>
+  </div>
+  <div class="tw col">
+      <table>
+        <caption>The source&rsquo;s growth table at \(n = 10^6\), recomputed (<code>[Ch14 s02]</code>).</caption>
+        <thead><tr><th>Growth</th><th>Example</th><th>Steps at \(n = 10^6\)</th></tr></thead>
+        <tbody>
+          <tr><td>\(O(1)\)</td><td>Array index, hash lookup</td><td>1</td></tr>
+          <tr><td>\(O(\log n)\)</td><td>Binary search (bisection, Sheet 13 &sect;06)</td><td>19.93, the source&rsquo;s 20</td></tr>
+          <tr><td>\(O(n)\)</td><td>One pass over the data</td><td>\(10^6\)</td></tr>
+          <tr><td>\(O(n\log n)\)</td><td>Merge sort, the FFT</td><td>\(1.99\times10^7\), the source&rsquo;s \(2\times10^7\)</td></tr>
+          <tr><td>\(O(n^2)\)</td><td>All pairs</td><td>\(10^{12}\)</td></tr>
+          <tr><td>\(O(2^n)\)</td><td>All subsets</td><td>\(10^{301029.996}\), the source&rsquo;s \(10^{301030}\)</td></tr>
+        </tbody>
+      </table>
+  </div>
+  <div class="col">
+    <p>
+      Every figure in the table checks out. So does the rule of thumb beside it: at
+      \(10^8\) simple steps per second, \(n^2\) is comfortable to \(n = 10^4\) and \(2^n\) to
+      about \(n = 25\).
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>An algorithm&rsquo;s cost is not a problem&rsquo;s difficulty</div>
+      <p style="margin-bottom:0">
+        The source says Big O captures &ldquo;the intrinsic difficulty of the problem&rdquo;.
+        It captures the cost of one <em>algorithm</em>. Sorting has an \(O(n^2)\) algorithm and
+        an \(O(n\log n)\) one; the problem did not change between them. The difficulty of a
+        problem is the cost of the best possible algorithm, a lower bound, and lower bounds are
+        much harder to prove. &sect;15 meets one the source asserts and nobody has proved.
+      </p>
+    </div>
+    <h3>Constants lose, exponents win</h3>
+    <p>
+      Dropping the constant is justified by what happens at large \(n\), and only there. Suppose
+      a clever \(n\log_2 n\) method costs \(c\) times more per step than a simple \(n^2\)
+      one. The clever method wins once \(n^2 &gt; c\,n\log_2 n\), that is, once
+      \(n &gt; c\log_2 n\). The crossover grows barely faster than \(c\) itself: at \(c = 10\)
+      it is \(n^* = 59\), at \(c = 100\) it is 996, at \(c = 1000\) it is 13,747
+      (<code>[Ch14 s02]</code>). A hundredfold handicap costs about a thousand in input size,
+      and after that the higher exponent loses forever. This is the square&ndash;cube argument:
+      no constant saves the larger exponent.
+    </p>
+    <p>
+      The same fact has a practical face. Below the crossover the simple method is faster, and
+      real libraries use it there: several standard sorting routines switch to insertion sort,
+      an \(n^2\) method, for short runs.
+    </p>
+    <h3>Reading an exponent off a log&ndash;log plot</h3>
+    <p>
+      You find the exponent of a heat-transfer correlation by plotting \(\log Nu\) against
+      \(\log Re\) and reading the slope. You can find an algorithm&rsquo;s exponent the same
+      way: time it at \(n\) and \(2n\), and the slope is
+      \(\log_2\!\big(T(2n)/T(n)\big)\). For \(n^k\) this is exactly \(k\). For \(n\log n\) it is
+      not 1:
+    </p>
+  </div>
+  <div class="mathbox col">$$\text{slope} = \log_2\frac{2n\log_2 2n}{n\log_2 n} = 1 + \log_2\!\left(1 + \frac{1}{\log_2 n}\right)$$</div>
+  <div class="col">
+    <p>
+      That is 1.138 at \(n = 10^3\), 1.071 at \(10^6\) and still 1.047 at \(10^9\)
+      (<code>[Ch14 s02]</code>). A log&ndash;log fit to an \(n\log n\) algorithm reports an
+      exponent a little above 1 and drifting slowly down. If you did not know better you would
+      call it \(n^{1.1}\), and you would be fitting the wrong model, the way a single power law
+      fitted across laminar and turbulent data gives an exponent that belongs to neither.
+      Exponential growth does worse: \(T(2n)/T(n) = 2^n\) is not constant at all, so
+      \(2^n\) bends upward on log&ndash;log paper and is straight only on semi-log.
+    </p>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Constants lose, exponents win</div><div class="lab-tag">Predict, then drag</div></div>
+    <div class="predict">
+      <p style="margin-top:0">
+        A clever \(n\log n\) method carries a constant 100 times larger than a simple \(n^2\)
+        one. From roughly what input size does the clever method win?
+      </p>
+      <button class="pbtn" data-p1="a" type="button">About 100</button>
+      <button class="pbtn" data-p1="b" type="button">About 1,000</button>
+      <button class="pbtn" data-p1="c" type="button">About 1,000,000</button>
+      <button class="pbtn" data-p1="d" type="button">Never: the constant is too big</button>
+      <div class="pverdict" id="pv1"></div>
+    </div>
+    <svg class="stage" id="gS" viewBox="0 0 480 300" role="img"
+         aria-label="Log-log plot of c times n log n against n squared, with the crossover marked">
+      <g id="gGrid"></g><g id="gCurve"></g><g id="gLab"></g>
+    </svg>
+    <div class="ctl">
+      <label for="gSl">Constant penalty c</label>
+      <input type="range" id="gSl" min="50" max="400" value="200" step="1">
+      <span class="ro-v" id="gVal" style="min-width:64px">100</span>
+      <button class="btn" data-gp="100" type="button">c = 10</button>
+      <button class="btn" data-gp="200" type="button">c = 100</button>
+      <button class="btn" data-gp="300" type="button">c = 1000</button>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Crossover<br>n*</div><div class="ro-v a" id="gX">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Simple &divide; clever<br>at n = 10&#8310;</div><div class="ro-v b" id="gR">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Slope of n log n<br>at n*</div><div class="ro-v c" id="gM">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Slope of n&sup2;<br>anywhere</div><div class="ro-v" id="gQ">&mdash;</div></div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    Both axes are logarithmic, so a power law is a straight line and its slope is the exponent.
+    The orange curve is \(c\,n\log_2 n\); the blue line is \(n^2\). Raising \(c\) slides the
+    orange curve straight up, and the crossover moves right, but only slowly: the first readout
+    is the solution of \(n = c\log_2 n\) and reads 59, 996 and 13,747 at the three presets,
+    matching the verification script. The prediction&rsquo;s answer is <b>about 1,000</b>. The
+    third readout is the local slope of \(n\log n\) at the crossover, always a little above
+    1, which is the log&ndash;log trap described above. The second readout is how many times
+    slower the simple method is at a million items, even after spotting the clever one a
+    hundredfold handicap.
+  </div>
+</section>
+
+<section id="hidden">
+  <div class="col">
+    <div class="sechead"><span class="secnum">03</span><h2>Hidden loops and hidden copies</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2014%20-%20data%20structures%20and%20algorithms/00.%20foundations.md" target="_blank" rel="noopener">src 00. foundations &#8599;</a>
+    </div>
+    <p>
+      Counting steps goes wrong when one line of code hides a loop. The source&rsquo;s first
+      example is correct and worth remembering: <code>x in some_list</code> walks the list
+      element by element, so it costs \(O(n)\), and putting it inside a loop over \(n\) items
+      gives \(O(n^2)\). <code>x in some_set</code> is a hash lookup (&sect;13) and costs
+      \(O(1)\) on average. Converting the list to a set once, before the loop, turns an
+      \(O(n^2)\) program into an \(O(n)\) one without changing a single result.
+    </p>
+    <p>
+      Its second example is the one to be careful with. Files 00 and 01 both say that building
+      a string with <code>s += c</code> in a loop &ldquo;copies the entire string each
+      time&rdquo;, so \(n\) additions cost \(1 + 2 + \dots + n = O(n^2)\). Measured, it does
+      not (<code>[Ch14 s03]</code>):
+    </p>
+    <ul>
+      <li>A plain loop appending one character at a time: four times the length took
+        <b>4.12&times;</b> the time. That is linear. Quadratic would be 16&times;.</li>
+      <li>The same loop with one extra line, <code>t = s</code>, so that a second name refers
+        to the string: four times the length took <b>23.96&times;</b> the time. That is
+        quadratic, plus some cache penalty.</li>
+    </ul>
+    <p>
+      The difference is an optimisation inside CPython, the standard Python interpreter. When
+      nothing else refers to <code>s</code>, it extends the string in place instead of copying
+      it, because nobody could observe the difference. The moment a second reference exists,
+      it must copy, and the source&rsquo;s arithmetic becomes exactly right. The timings above
+      come from the machine that ran the verification script and move a little from run to
+      run; the gap between 4&times; and 16&times; does not.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>The advice survives, for a different reason</div>
+      <p style="margin-bottom:0">
+        Collecting pieces in a list and calling <code>"".join(parts)</code> once is still the
+        right habit. Python&rsquo;s own style guide, PEP 8, tells programmers not to rely on
+        this in-place optimisation, because it is fragile even in CPython and absent from
+        other Python implementations (reported from the guide, not measured here). So the
+        source reaches the right rule with the wrong mechanism, and a reader who times it will
+        think the rule is a myth. It is not. The fast path is an accident of one interpreter,
+        and one extra reference switches it off.
+      </p>
+    </div>
+    <p>
+      The third trap in the source is sound: if a program sorts, \(O(n\log n)\), and then
+      scans, \(O(n)\), the total is \(O(n\log n)\). The largest term governs a sum, which is
+      the same judgement as ignoring the kinetic-energy term in a pipe-flow energy balance when
+      the velocity is small.
+    </p>
+  </div>
+</section>
+
+<section id="amortised">
+  <div class="col">
+    <div class="sechead"><span class="secnum">04</span><h2>Amortised cost is a setup spread over a lot</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2014%20-%20data%20structures%20and%20algorithms/01.%20arrays%20and%20hashing.md" target="_blank" rel="noopener">src 01. arrays and hashing &#8599;</a>
+    </div>
+    <p>
+      A <b>dynamic array</b> is a list that can grow: Python&rsquo;s <code>list</code>, C++&rsquo;s
+      <code>vector</code>. Underneath it is a fixed block of memory with some spare slots. An
+      append drops the new item into the next spare slot, which costs one step. When there are
+      no spare slots, the array allocates a bigger block and copies every item across, which
+      costs as many steps as there are items. Then appends are cheap again until the new block
+      fills.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>This is setup cost amortised over a lot</div>
+      <p style="margin-bottom:0">
+        A press that needs a two-hour die change and then runs a lot of 100 parts carries 1.2
+        minutes of setup per part. Nobody says the press &ldquo;takes two hours per
+        part&rdquo;. The copy is the die change; the cheap appends are the run. <b>Amortised
+        cost</b> is the total cost of a sequence of operations divided by their number, and
+        that is precisely how a setup cost is loaded onto each part.
+      </p>
+    </div>
+    <p>
+      The source says the array doubles its size when full, so a resize happens at 1, 2, 4,
+      8, &hellip; items, and the copies up to \(n\) items total at most \(1 + 2 + 4 + \dots\)
+      \(&lt; 2n\). Two copies per append at worst, whatever \(n\) is: \(O(1)\) amortised. For
+      any growth factor \(g &gt; 1\) the same geometric sum gives</p>
+  </div>
+  <div class="mathbox col">$$\frac{\text{copies}}{\text{appends}} \;\le\; \frac{g}{g-1}$$</div>
+  <div class="col">
+    <p>
+      and the simulation reaches that bound exactly: a worst-ever ratio of 9.00, 3.00 and 2.00
+      for \(g = 1.125, 1.5, 2\) (<code>[Ch14 s04]</code>).
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Python does not double</div>
+      <p style="margin-bottom:0">
+        The source names Python&rsquo;s <code>list</code> as an example of doubling. Watching
+        CPython&rsquo;s actual memory use as a list grows, its capacity steps through 4, 8,
+        16, 24, 32, 40, 52, 64, 76, 92, &hellip; and at large sizes each step is
+        <b>1.125 to 1.131 times</b> the last (<code>[Ch14 s04]</code>). It over-allocates by
+        about an eighth. That is still geometric, so append is still \(O(1)\) amortised; the
+        price is about 8 copies per append over a long run instead of 1. The claim the source
+        needs is true. The example it gives is not.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where the setup analogy breaks, and why the lots must grow</div>
+      <p style="margin-bottom:0">
+        A die change costs the same two hours whether the next lot is 100 parts or 1,000. This
+        &ldquo;setup&rdquo; does not: it copies everything already on hand, so it gets dearer
+        as the array grows. That is why the lots must grow geometrically. Grow by a fixed 100
+        slots each time and doubling \(n\) multiplies the total copies by 4.00
+        (<code>[Ch14 s04]</code>): the cost is quadratic and each append costs \(O(n)\). A fixed
+        lot size amortises a fixed setup. A setup that grows with stock needs a lot that grows
+        with it.
+      </p>
+    </div>
+    <p>
+      Bigger lots mean fewer setups and more idle capacity, which is the inventory trade-off.
+      Averaged over sizes from 100 to about 300,000, the fraction of allocated slots standing
+      empty is 5.7% at \(g = 1.125\), 17.7% at 1.5, 27.8% at 2 and 39.6% at 3
+      (<code>[Ch14 s04]</code>). The curve has the shape of an EOQ cost curve. It does not have
+      an EOQ optimum, because nobody has put a price on a copy against an idle slot; libraries
+      pick different factors because they weigh memory and time differently.
+    </p>
+    <p>
+      One more distinction the source makes correctly: <b>amortised is not worst case</b>. The
+      single append that triggers a copy of 260,000 items takes 260,000 steps. Amortised
+      \(O(1)\) is a guarantee about the total of any sequence of appends, not about each one.
+      A 1&nbsp;kHz control loop that must finish every cycle in one millisecond cares about the
+      worst single step, and a dynamic array growing inside it will eventually miss a
+      deadline.
+    </p>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Growth factor as lot size</div><div class="lab-tag">Predict, then resize</div></div>
+    <div class="predict">
+      <p style="margin-top:0">
+        CPython&rsquo;s list grows by about 1.125&times; instead of doubling. Over a long run of
+        appends, how many element copies does it spend per append, compared with about 1 for
+        doubling?
+      </p>
+      <button class="pbtn" data-p2="a" type="button">About 1, the same</button>
+      <button class="pbtn" data-p2="b" type="button">About 8, but still constant</button>
+      <button class="pbtn" data-p2="c" type="button">It grows with n, so append is no longer O(1)</button>
+      <button class="pbtn" data-p2="d" type="button">Fewer, because each resize is smaller</button>
+      <div class="pverdict" id="pv2"></div>
+    </div>
+    <svg class="stage" id="aS" viewBox="0 0 480 310" role="img"
+         aria-label="Cumulative element copies and allocated capacity as a dynamic array grows, for a chosen growth factor">
+      <g id="aGrid"></g><g id="aCurve"></g><g id="aLab"></g>
+    </svg>
+    <div class="ctl">
+      <label for="aSl">Growth factor g</label>
+      <input type="range" id="aSl" min="1050" max="3000" value="2000" step="5">
+      <span class="ro-v" id="aVal" style="min-width:64px">&times;2.000</span>
+      <button class="btn" data-ap="1125" type="button">&times;1.125</button>
+      <button class="btn" data-ap="1500" type="button">&times;1.5</button>
+      <button class="btn" data-ap="2000" type="button">&times;2</button>
+      <button class="btn" data-ap="3000" type="button">&times;3</button>
+      <button class="btn" data-ap="add" type="button">+16 slots</button>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Copies per append<br>at n = 262,144</div><div class="ro-v a" id="aC">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Bound<br>g/(g&minus;1)</div><div class="ro-v b" id="aB">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Mean idle<br>capacity</div><div class="ro-v c" id="aI">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Resizes to reach<br>262,144</div><div class="ro-v" id="aN">&mdash;</div></div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    The top panel is the running total of element copies over the first 600 appends; each
+    vertical step is one resize, and the dashed line is the bound \(g\,n/(g-1)\). The bottom
+    panel is allocated capacity against the number of items stored; the shaded gap between
+    them is idle memory. The readouts come from a full simulation to 262,144 appends and match
+    the verification script: 8.06 copies per append at &times;1.125, 2.37 at &times;1.5, 1.00
+    at &times;2. So the answer is <b>about 8, but still constant</b>: more copying than
+    doubling, never growing with \(n\). Press <b>+16 slots</b> to see the arithmetic schedule:
+    the copy curve bends upward, the copies per append run into the thousands, and the bound
+    readout has nothing to say because there is no bound.
+  </div>
+</section>
+
+<section id="space">
+  <div class="col">
+    <div class="sechead"><span class="secnum">05</span><h2>Space, and the stack you do not see</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2014%20-%20data%20structures%20and%20algorithms/00.%20foundations.md" target="_blank" rel="noopener">src 00. foundations &#8599;</a>
+    </div>
+    <p>
+      Memory is counted the same way as time. The part that is easy to miss is the
+      <b>call stack</b>: every function call that has started and not yet returned keeps a
+      small record of where it was and what its variables held. Sheet 13 part 3 &sect;03
+      called this the bench, where half-finished jobs sit until they are picked up again. A
+      recursion that goes \(d\) calls deep keeps \(d\) records on the bench at once, so it uses
+      \(O(d)\) memory even if each call allocates nothing else.
+    </p>
+    <p>
+      That makes the depth of a recursion a memory cost, and it is where the source&rsquo;s
+      one-line statement &ldquo;Quicksort is \(O(\log n)\) space&rdquo; needs a condition.
+      Quicksort picks a pivot, splits the data into the items below it and the items above it,
+      and sorts each side by calling itself (part 2 of this sheet builds it properly). Its
+      depth depends on how evenly the pivot splits (<code>[Ch14 s05]</code>):
+    </p>
+    <ul>
+      <li>Written the plain way, with the last item as the pivot, on <b>already sorted</b>
+        input of 2,000 items: every split is 1,999 against 0, and the recursion goes
+        <b>1,999</b> calls deep. That is \(O(n)\) space.</li>
+      <li>The same code on shuffled input: <b>23</b> deep, about \(2\log_2 n\).</li>
+      <li>Written to recurse into the <em>smaller</em> side and loop over the larger one: never
+        deeper than \(\log_2 n\), because each recursive call at least halves the size. On the
+        sorted input it stayed at depth 1.</li>
+    </ul>
+    <p>
+      So the \(O(\log n)\) is a property of the careful implementation, or an expectation for
+      random input, not a guarantee for the algorithm as usually first written. It has a very
+      practical consequence here. CPython refuses to go more than <b>1,000</b> calls deep by
+      default (<code>[Ch14 s05]</code>), so the plain recursive quicksort, handed the easiest
+      input there is (a list already in order), crashes with a <code>RecursionError</code>.
+    </p>
+  </div>
+</section>
+
+<section id="recursion">
+  <div class="col">
+    <div class="sechead"><span class="secnum">06</span><h2>Recursion is induction, run as a program</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2014%20-%20data%20structures%20and%20algorithms/00.%20foundations.md" target="_blank" rel="noopener">src 00. foundations &#8599;</a>
+    </div>
+    <p>
+      A <b>recursive</b> function solves a problem by calling itself on a smaller copy of it.
+      It has two parts: a <b>base case</b> small enough to answer directly, and a
+      <b>recursive case</b> that builds the answer for size \(n\) from answers for smaller
+      sizes. The source&rsquo;s advice for writing one is to &ldquo;trust the recursion&rdquo;:
+      assume the smaller call returns the right answer, and check only that your combining step
+      is right.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>&ldquo;Trust the recursion&rdquo; is the inductive hypothesis</div>
+      <p>
+        That advice is proof by induction, stated as a coding tip. To prove a statement \(P(n)\)
+        for every \(n\), you prove \(P(0)\), then prove that \(P(n-1)\) implies \(P(n)\). To
+        write a correct recursive function you make the base case right, then make the
+        recursive case right <em>assuming</em> the smaller call is. It is one argument, used
+        once to establish a fact and once to compute it.
+      </p>
+      <p style="margin-bottom:0">
+        Sheet 13 part 1 &sect;04 found the same argument in the simple truss: start from a
+        triangle, add two members and a joint at a time, and \(m = 2j - 3\) holds at every
+        stage. The source&rsquo;s recursive list reversal has exactly that shape. Reversing an
+        empty or one-node list is trivial; reversing the rest and hooking the first node onto
+        the end reverses the whole. The rule in the pitfall table, &ldquo;ensure the subproblem
+        is strictly smaller&rdquo;, is the requirement that the induction actually descends to
+        the base case.
+      </p>
+    </div>
+    <p>
+      Every recursive program can be rewritten as a loop that keeps its own explicit stack of
+      pending work. Recursion is clearer when the problem is shaped like a tree (part 2 of
+      this sheet is full of them). A loop is safer when the depth could be large, since each
+      level costs a stack record (&sect;05).
+    </p>
+    <p>
+      A <b>tail call</b> is a recursive call that is the very last thing a function does, so
+      nothing is left to finish afterwards. Some languages spot this and reuse the same stack
+      record, turning the recursion into a loop automatically. Python does not, as the source
+      says: a tail-recursive function called 5,000 deep still raises <code>RecursionError</code>
+      (<code>[Ch14 s06]</code>).
+    </p>
+  </div>
+</section>
+
+<section id="fib">
+  <div class="col">
+    <div class="sechead"><span class="secnum">07</span><h2>Counting Fibonacci&rsquo;s calls, properly</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2014%20-%20data%20structures%20and%20algorithms/00.%20foundations.md" target="_blank" rel="noopener">src 00. foundations &#8599;</a>
+    </div>
+    <p>
+      The source motivates dynamic programming with the Fibonacci numbers, \(F_n = F_{n-1} +
+      F_{n-2}\), computed by a function that calls itself twice. It notes, correctly, that
+      <code>fib(5)</code> computes <code>fib(3)</code> twice and <code>fib(2)</code> three times
+      (<code>[Ch14 s07]</code>). Then it says the cost is \(O(2^n)\) and that <code>fib(50)</code>
+      &ldquo;takes over \(10^{15}\) operations&rdquo;.
+    </p>
+    <p>
+      Sheet 13 part 1 &sect;06 promised recurrences done properly, and this is a good one to
+      do, because it can be solved exactly. Let \(C(n)\) be the number of calls made by
+      <code>fib(n)</code>. One call for itself, plus everything its two sub-calls make:
+    </p>
+  </div>
+  <div class="mathbox col">$$C(n) = 1 + C(n-1) + C(n-2), \qquad C(0) = C(1) = 1$$</div>
+  <div class="col">
+    <p>
+      Add 1 to both sides and write \(D(n) = C(n) + 1\). The stray 1 disappears and
+      \(D(n) = D(n-1) + D(n-2)\) with \(D(0) = D(1) = 2\). That is twice the Fibonacci
+      recurrence, started from \(2F_1\) and \(2F_2\), so
+    </p>
+  </div>
+  <div class="mathbox col">$$C(n) = 2F_{n+1} - 1$$</div>
+  <div class="col">
+    <p>
+      Instrumenting the code confirms it for every \(n\) from 0 to 22
+      (<code>[Ch14 s07]</code>). Now the growth rate. Guess \(D(n) = r^n\), the same guess you
+      make for \(m\ddot{x} + c\dot{x} + kx = 0\) when you try \(x = e^{rt}\). The recurrence
+      becomes \(r^2 = r + 1\), whose larger root is the golden ratio
+      \(\varphi = (1+\sqrt5)/2 = 1.618\). The ratio of successive call counts at \(n = 40\) is
+      1.618034, equal to \(\varphi\) to six places. The cost is \(\Theta(\varphi^n)\).
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>The source&rsquo;s number is 27,643 times too large</div>
+      <p>
+        \(C(50) = 2F_{51} - 1 = 40{,}730{,}022{,}147\), about \(4.07\times10^{10}\). The
+        source&rsquo;s &ldquo;over \(10^{15}\)&rdquo; is \(2^{50} = 1.13\times10^{15}\): it
+        took the upper bound \(O(2^n)\) and used it as the count. \(O(2^n)\) is a true
+        statement, since \(\varphi &lt; 2\), but it is not tight, and over 50 levels the gap
+        between \(1.618^n\) and \(2^n\) compounds to a factor of 27,643. This is &sect;02&rsquo;s
+        warning about \(O\) and \(\Theta\), with a number attached.
+      </p>
+      <p style="margin-bottom:0">
+        It changes the practical verdict too. At the 73&nbsp;ns per call measured on the
+        verification machine, naive <code>fib(50)</code> takes about <b>0.8 hours</b>. Slow and
+        silly, but not the &ldquo;infeasible&rdquo; the source calls it. Each extra 10 in
+        \(n\) multiplies the time by \(\varphi^{10} \approx 123\), so <code>fib(60)</code> is
+        about four days and <code>fib(100)</code> is out of reach. The source&rsquo;s
+        conclusion, that you must stop recomputing, survives. Its number does not.
+      </p>
+    </div>
+    <p>
+      The fix is to remember answers. Store each <code>fib(k)</code> the first time it is
+      computed and look it up after that; now each value is computed once, and the cost falls
+      to \(O(n)\). That is memoisation, the subject of &sect;10, and the source&rsquo;s version
+      returns the correct 12,586,269,025 for <code>fib(50)</code>. Or fill a table from
+      \(F_0\) upward in a loop, which is tabulation. Both are dynamic programming, and the next
+      three sections are about what that is.
+    </p>
+  </div>
+</section>
+
+<section id="backtrack">
+  <div class="col">
+    <div class="sechead"><span class="secnum">08</span><h2>Backtracking, and what pruning actually buys</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2014%20-%20data%20structures%20and%20algorithms/00.%20foundations.md" target="_blank" rel="noopener">src 00. foundations &#8599;</a>
+    </div>
+    <p>
+      <b>Backtracking</b> builds a solution one decision at a time. At each step it makes a
+      choice, goes on to the next decision, and when it comes back it undoes the choice and
+      tries the next one. The source&rsquo;s three steps, choose, explore, unchoose, are the
+      whole method. It enumerates a tree of partial solutions depth first, and without further
+      help it visits every node of that tree, which is exponential.
+    </p>
+    <p>
+      <b>Pruning</b> is the help: test a partial solution as soon as a decision is made, and if
+      it already breaks a rule, abandon everything below it. You do this in design without
+      calling it anything. When a gear pair is being chosen, the tooth count is checked for
+      interference the moment it is picked; nobody works out the centre distance, the bearing
+      loads and the housing for a 12-tooth pinion that was never going to mesh. The value of a
+      check depends on how early it can fire.
+    </p>
+    <p>
+      The source&rsquo;s example is <b>N-Queens</b>: place \(n\) queens on an \(n\times n\)
+      board so that no two share a row, a column or a diagonal. Place one queen per row, and
+      the decision at each row is which column. Counting nodes visited for \(n = 8\)
+      (<code>[Ch14 s08]</code>):
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>The 8-queens search tree under three levels of checking.</caption>
+      <thead><tr><th>Checks made on each placement</th><th>Complete boards reached</th><th>Nodes visited</th></tr></thead>
+      <tbody>
+        <tr><td>None</td><td>\(8^8 = 16{,}777{,}216\)</td><td>19,173,961</td></tr>
+        <tr><td>Column only</td><td>\(8! = 40{,}320\)</td><td>109,601</td></tr>
+        <tr><td>Column and both diagonals</td><td>92 (every one a solution)</td><td>2,057</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>The source credits the wrong check</div>
+      <p style="margin-bottom:0">
+        It says that checking columns and diagonals cuts the tree &ldquo;from \(n^n\) to
+        roughly \(n!\)&rdquo;, 16 million to 40,000. The numbers are right; the attribution is
+        not. Forbidding a repeated column alone turns the choices into permutations, which is
+        exactly \(n!\). The diagonal check then cuts the search a further 53-fold, to 2,057
+        nodes, because it fires one row after the queen that causes it, near the root of the
+        tree where each cut removes a large subtree.
+      </p>
+    </div>
+    <p>
+      Pruning does not change the class of the problem. The search is still exponential: 17
+      nodes at \(n = 4\), 153 at 6, 2,057 at 8 and 35,539 at 10 (<code>[Ch14 s08]</code>).
+      What it changes is how far you can go before the exponential catches you, which in
+      practice is the question you care about.
+    </p>
+    <p>
+      Two counts from the source are worth keeping: a set of \(n\) items has \(2^n\) subsets,
+      and there are \(n!\) orderings of \(n\) items. Building each ordering costs \(O(n)\), so
+      listing all of them is \(O(n\cdot n!)\). Sheet 13 &sect;09 used the same \(n!\) to show
+      why a 20-hole drill path cannot be optimised by listing tours.
+    </p>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">What each check prunes</div><div class="lab-tag">Predict, then search</div></div>
+    <div class="predict">
+      <p style="margin-top:0">
+        For eight queens, forbidding a repeated column reduces 16.8 million complete boards to
+        40,320. Adding the diagonal check, roughly how many nodes does the search visit in
+        total?
+      </p>
+      <button class="pbtn" data-p3="a" type="button">About 40,000: diagonals barely help</button>
+      <button class="pbtn" data-p3="b" type="button">About 10,000</button>
+      <button class="pbtn" data-p3="c" type="button">About 2,000</button>
+      <button class="pbtn" data-p3="d" type="button">92, only the solutions</button>
+      <div class="pverdict" id="pv3"></div>
+    </div>
+    <svg class="stage" id="qS" viewBox="0 0 480 300" role="img"
+         aria-label="A board showing the first N-Queens solution found, and nodes visited at each depth under three pruning rules">
+      <g id="qBoard"></g><g id="qGrid"></g><g id="qCurve"></g><g id="qLab"></g>
+    </svg>
+    <div class="ctl">
+      <label for="qSl">Board size n</label>
+      <input type="range" id="qSl" min="4" max="10" value="8" step="1">
+      <span class="ro-v" id="qVal" style="min-width:40px">8</span>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">No checks<br>nodes</div><div class="ro-v b" id="qA">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Column check<br>nodes</div><div class="ro-v a" id="qB">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Column + diagonal<br>nodes</div><div class="ro-v c" id="qC">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Solutions<br>found</div><div class="ro-v" id="qD">&mdash;</div></div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    The board shows the first solution the full search finds. The chart plots nodes visited at
+    each depth (queens placed so far) on a logarithmic scale. With no checks the count
+    multiplies by \(n\) at every row. With the column check alone it multiplies by \(n\),
+    then \(n-1\), and so on down to 1. With the diagonal check it rises, peaks in the middle
+    rows and falls to the number of solutions, because dead branches are cut before they
+    reach the bottom. At \(n = 8\) the answer is <b>about 2,000</b> (2,057 exactly). The
+    readouts agree with the verification script at \(n = 4, 6, 8, 10\).
+  </div>
+</section>
+
+<section id="dp">
+  <div class="col">
+    <div class="sechead"><span class="secnum">09</span><h2>The critical path you computed was dynamic programming</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2014%20-%20data%20structures%20and%20algorithms/00.%20foundations.md" target="_blank" rel="noopener">src 00. foundations &#8599;</a>
+    </div>
+    <p>
+      The source defines <b>dynamic programming</b> by two properties. <b>Optimal
+      substructure</b>: the best answer to the whole problem is built from best answers to
+      smaller problems. <b>Overlapping subproblems</b>: the same smaller problems come up again
+      and again, so each should be solved once and remembered. It then gives a five-step recipe:
+      define the state, write the recurrence, fix the base case, choose an order that computes
+      each state after the states it depends on, and discard what is no longer needed.
+    </p>
+    <p>
+      Here is the forward pass of the critical path method, as you drew it for GATE. Events
+      are numbered so that every activity runs from a lower number to a higher one. The start
+      event has \(TE_1 = 0\). Every other event takes the latest of its incoming arrivals:
+    </p>
+  </div>
+  <div class="mathbox col">$$TE_j = \max_{\text{arrows } i \to j} \big(TE_i + t_{ij}\big)$$</div>
+  <div class="col">
+    <p>
+      Put the two side by side and there is nothing left to translate.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>The source&rsquo;s DP recipe, and the forward pass you already know.</caption>
+      <thead><tr><th>DP recipe step</th><th>CPM forward pass</th></tr></thead>
+      <tbody>
+        <tr><td>1. Define the state</td><td>\(TE_j\): the earliest time event \(j\) can occur, which is the length of the longest path from the start to \(j\)</td></tr>
+        <tr><td>2. Write the recurrence</td><td>\(TE_j = \max_i (TE_i + t_{ij})\) over the arrows entering \(j\)</td></tr>
+        <tr><td>3. Base case</td><td>\(TE_1 = 0\)</td></tr>
+        <tr><td>4. Iteration order</td><td>Event numbering with every arrow from low to high (Fulkerson&rsquo;s rule): each \(TE_i\) is ready before it is needed</td></tr>
+        <tr><td>5. Recover the answer</td><td>Walk back along the arrows that achieved each maximum: the critical path</td></tr>
+        <tr><td>A second DP</td><td>The backward pass, \(TL_i = \min_j (TL_j - t_{ij})\), run in reverse order. Slack is \(TL - TE\).</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: the forward pass is DP on a directed acyclic graph</div>
+      <p>
+        Both properties hold, and you have relied on them without naming them. Optimal
+        substructure: the longest path to event \(j\) ends with some arrow \(i \to j\), and the
+        part before that arrow must itself be a longest path to \(i\), or it could be swapped
+        for a longer one. Overlapping subproblems: every path through event \(i\) needs
+        \(TE_i\), and the forward pass computes it once.
+      </p>
+      <p style="margin-bottom:0">
+        Checked: on 300 random project networks, the forward pass equals the longest path
+        found by listing every path, and walking back along the maximising arrows recovers a
+        path of that length (<code>[Ch14 s09]</code>). Nothing here is an analogy. It is one
+        algorithm that operations research and computer science named separately.
+      </p>
+    </div>
+    <p>
+      The saving is the whole point. A network of \(k\) stages, each splitting into two
+      parallel activities and rejoining, has \(2^k\) start-to-finish paths. The forward pass
+      makes four additions per stage. At \(k = 20\) that is 1,048,576 paths against 80
+      additions; at \(k = 40\), 1,099,511,627,776 paths against 160 (<code>[Ch14 s09]</code>).
+      Enumerating paths is exponential, and the forward pass is linear in the number of
+      arrows. That gap is what the word &ldquo;dynamic programming&rdquo; buys.
+    </p>
+    <p>
+      The source&rsquo;s worked example, House Robber, is the same idea on a line: take the
+      largest sum of numbers from a row with no two neighbours taken. The state is the best
+      total using the first \(i\) numbers, and the recurrence chooses between skipping item
+      \(i\) and taking it:
+    </p>
+  </div>
+  <div class="mathbox col">$$dp_i = \max\big(dp_{i-1},\; dp_{i-2} + x_i\big)$$</div>
+  <div class="col">
+    <p>
+      It matches a brute-force search over every allowed subset on 300 random rows
+      (<code>[Ch14 s09]</code>). It is a forward pass over a network whose events are the
+      positions in the row.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks: PERT, because expectation does not pass through max</div>
+      <p>
+        PERT runs the same forward pass on expected durations and reports the result as the
+        expected project length. That step is not valid. Two parallel paths, each taking a
+        random time with mean 10 and standard deviation 2, merge at one event. The forward pass
+        on means says the merge happens at 10. The expected merge time is
+        \(E[\max(X_1, X_2)] = 10 + 2/\sqrt{\pi} = 11.128\); simulation gives 11.125. With five
+        parallel paths it is 12.33 (<code>[Ch14 s09]</code>).
+      </p>
+      <p style="margin-bottom:0">
+        DP works because \(\max\) and \(+\) can be applied one stage at a time. The expected
+        value of a maximum is always at least the maximum of the expected values, and
+        strictly more whenever the paths are uncertain. So PERT&rsquo;s single-critical-path
+        estimate is optimistic, and more so the more near-critical paths the network has. The
+        recurrence is exact for fixed durations and biased for random ones.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks: the network must have no loops</div>
+      <p style="margin-bottom:0">
+        Step 4 of the recipe needs an order in which every state is computed after the states
+        it uses. A precedence loop (A before B, B before A) has no such order: the forward pass
+        cannot start, and a recursive version would never reach its base case. That is why
+        CPM software rejects a loop as an error. It is also why &ldquo;longest path&rdquo; is
+        easy here and hard in general: on a graph with loops, the longest path that never
+        repeats a node is NP-hard (reported), and no forward pass finds it.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">The forward pass, and the paths it never lists</div><div class="lab-tag">Predict, then step</div></div>
+    <div class="predict">
+      <p style="margin-top:0">
+        At 10 stages this network has 1,024 different start-to-finish paths. How many additions
+        does the forward pass need to find the longest one?
+      </p>
+      <button class="pbtn" data-p4="a" type="button">1,024: it must try every path</button>
+      <button class="pbtn" data-p4="b" type="button">40</button>
+      <button class="pbtn" data-p4="c" type="button">10</button>
+      <button class="pbtn" data-p4="d" type="button">About 10,000</button>
+      <div class="pverdict" id="pv4"></div>
+    </div>
+    <svg class="stage" id="cS" viewBox="0 0 480 262" role="img"
+         aria-label="An activity-on-arrow project network of repeated two-path stages, with earliest event times filled in by the forward pass and the critical path highlighted">
+      <g id="cArr"></g><g id="cNode"></g><g id="cLab"></g>
+    </svg>
+    <div class="ctl">
+      <label for="cSl">Stages k</label>
+      <input type="range" id="cSl" min="1" max="10" value="4" step="1">
+      <span class="ro-v" id="cVal" style="min-width:40px">4</span>
+      <button class="btn" id="cStep" type="button">Step</button>
+      <button class="btn" id="cRun" type="button">Run all</button>
+      <button class="btn" id="cNew" type="button">New durations</button>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Paths<br>start to finish</div><div class="ro-v b" id="cP">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Additions in<br>forward pass</div><div class="ro-v a" id="cA">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Duration by<br>forward pass</div><div class="ro-v c" id="cF">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Longest path by<br>listing all</div><div class="ro-v" id="cE">&mdash;</div></div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    Each stage is an event that splits into two parallel activities, which rejoin at the next
+    event, drawn activity-on-arrow as in a GATE problem. <b>Step</b> processes one event in
+    number order and writes its \(TE\) above it; <b>Run all</b> finishes the pass and marks
+    the critical path by walking back along the arrows that set each maximum. The last two
+    readouts are computed independently, one by the recurrence and one by listing every path,
+    and they agree for every network the <b>New durations</b> button draws. The prediction:
+    <b>40</b>. Four additions per stage, however many paths there are. Activity durations are
+    printed on the arrows up to six stages and hidden beyond that to keep the figure legible.
+  </div>
+</section>
+
+<section id="memo">
+  <div class="col">
+    <div class="sechead"><span class="secnum">10</span><h2>Memoisation, and the MRP low-level code</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2014%20-%20data%20structures%20and%20algorithms/00.%20foundations.md" target="_blank" rel="noopener">src 00. foundations &#8599;</a>
+    </div>
+    <p>
+      DP comes in two forms. <b>Top-down</b>, or memoisation: write the plain recursion, and
+      keep a table of answers already computed so that a repeated call becomes a lookup.
+      <b>Bottom-up</b>, or tabulation: work out an order in which every subproblem&rsquo;s
+      inputs are ready before it, and fill the table in that order with a loop. The
+      source&rsquo;s comparison table is right on each point. Top-down computes only the
+      subproblems that are actually reached and risks a deep call stack; bottom-up computes
+      everything up to the target and makes it easy to throw away rows no longer needed.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>An MRP explosion is tabulation in topological order</div>
+      <p>
+        Explode a bill of materials recursively: for each item, multiply the requirement by
+        the quantity per parent, and recurse into its components. That gives the right totals,
+        but it visits a shared component once for every <em>path</em> by which the product
+        reaches it. On a nine-item product structure where one fastener appears through eight
+        different sub-assembly paths, the recursive explosion visits 27 item-nodes to process 9
+        items; the totals match (<code>[Ch14 s10]</code>).
+      </p>
+      <p style="margin-bottom:0">
+        MRP avoids this with the <b>low-level code</b>: each item is coded with the lowest
+        level at which it appears in any bill, and items are processed level by level, so that
+        every parent&rsquo;s demand has been posted before the item itself is exploded, once.
+        That is DP recipe step 4, an order in which each state is computed after everything it
+        depends on, and the saving is the same as in &sect;09. MRP has a second reason the
+        computer science version does not: an item&rsquo;s requirements must all be in before
+        it is netted against stock and lot-sized, or it would be ordered in fragments.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>The source&rsquo;s memoised Fibonacci breaks its own rule</div>
+      <p>
+        The source writes <code>def fib_memo(n, memo={}):</code>. A few pages later its DP
+        pitfall table lists &ldquo;mutable default argument: <code>def f(memo={})</code> shares
+        the cache across calls&rdquo; and says not to do it. Python creates that default
+        <code>{}</code> once, when the function is defined, and every call that does not pass
+        its own shares it.
+      </p>
+      <p style="margin-bottom:0">
+        For <code>fib</code> this is harmless: <code>fib(30)</code> means the same thing on
+        every call, so a stale entry is still correct (and the source&rsquo;s function returns
+        the right <code>fib(50)</code>). Put the same idiom on a function with a second input
+        and it gives wrong answers. Counting ordered ways to make 10 from coins of 1 and 2
+        gives 89, correctly; called next with coins of 1 and 5, it returns 89 again, and the
+        answer is 8 (<code>[Ch14 s07]</code>). A cache is valid only for the inputs it is keyed
+        on. Reading a steam table at the right temperature and the wrong pressure is the same
+        mistake.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="knapsack">
+  <div class="col">
+    <div class="sechead"><span class="secnum">11</span><h2>NP-hard, and solved anyway</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2014%20-%20data%20structures%20and%20algorithms/00.%20foundations.md" target="_blank" rel="noopener">src 00. foundations &#8599;</a>
+    </div>
+    <p>
+      The source lists <b>knapsack DP</b> among its categories without working one. It is
+      worth working, because it settles a puzzle Sheet 13 left open. Sheet 13 part 1 &sect;09
+      said line balancing is bin packing, which is NP-hard, and that this is why you were given
+      heuristics. Knapsack is also NP-hard. Yet here is an exact method for a knapsack problem
+      that runs in moments.
+    </p>
+    <p>
+      Take one station with cycle time \(C\) and a set of task times. Load the station as full
+      as possible without exceeding \(C\), ignoring precedence as Sheet 13 &sect;09 did. That
+      is the <b>subset-sum</b> problem, the simplest knapsack. Keep a table of which total
+      loads are reachable: start with 0, and for each task add every total that task can
+      extend. The table has \(n\) rows and \(C + 1\) columns, and it agrees with brute force
+      over all \(2^n\) subsets on 200 random stations (<code>[Ch14 s11]</code>). With task
+      times in whole seconds and a 60-second cycle, that is 61 columns. Trivial.
+    </p>
+    <h3>Pseudo-polynomial: fast in the value, slow in the digits</h3>
+    <p>
+      The catch is what &ldquo;\(n \times (C+1)\)&rdquo; is polynomial <em>in</em>. Complexity
+      is measured against the length of the input, and a number \(C\) takes only about
+      \(\log_2 C\) bits to write. Every extra bit doubles \(C\) and so doubles the table: for
+      40 tasks, an 8-bit capacity needs 10,280 cells, a 16-bit one 2,621,480, a 24-bit one
+      671,088,680 (<code>[Ch14 s11]</code>). The method is polynomial in the <em>value</em>
+      of \(C\) and exponential in its <em>length</em>. That is called pseudo-polynomial time,
+      and it is how an NP-hard problem can be routine in practice: its hardness lives in large
+      numbers, and shop-floor numbers are small. The standard term for such problems is
+      <b>weakly</b> NP-hard (reported).
+    </p>
+    <h3>So why does this not rescue line balancing?</h3>
+    <p>
+      Because filling one station was never the hard part. Bin packing is NP-hard even when all
+      the numbers are small (<b>strongly</b> NP-hard, reported), and the difficulty is in how
+      stations interact. A concrete line: tasks of 7, 7, 6, 4, 4 and 4 seconds, cycle time 12.
+    </p>
+    <ul>
+      <li>The only way to load one station to exactly 12 seconds, 100% utilisation, is the
+        three 4-second tasks.</li>
+      <li>Take it, and 7, 7 and 6 are left. No two of them fit together under 12, so they need
+        three more stations: <b>4</b> in total.</li>
+      <li>The optimum is <b>3</b>: {7, 4}, {7, 4}, {6, 4}. No station is full, and one fewer
+        station is needed (<code>[Ch14 s11]</code>).</li>
+    </ul>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>What transfers to the shop floor</div>
+      <p style="margin-bottom:0">
+        Maximising each station&rsquo;s utilisation in turn is a natural rule, and the exact
+        method for it is easy, and it still costs a station here. The three short tasks were
+        the fillers the long tasks needed. This is Sheet 13&rsquo;s point from the other side:
+        the heuristics exist because the global problem is hard, and even a locally
+        <em>perfect</em> step can be globally wrong. Precedence constraints, which this example
+        ignores, can only add stations, never remove them.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="arrays">
+  <div class="col">
+    <div class="sechead"><span class="secnum">12</span><h2>An array is a fixed pitch</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2014%20-%20data%20structures%20and%20algorithms/01.%20arrays%20and%20hashing.md" target="_blank" rel="noopener">src 01. arrays and hashing &#8599;</a>
+    </div>
+    <p>
+      An <b>array</b> stores its items side by side in one block of memory, each taking the
+      same number of bytes. So the address of item \(i\) is a calculation, not a search:
+    </p>
+  </div>
+  <div class="mathbox col">$$\text{address}(i) = \text{base} + i \times \text{size}$$</div>
+  <div class="col">
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: this is a fixed pitch</div>
+      <p style="margin-bottom:0">
+        Holes drilled along a rail at pitch \(p\) from a datum put hole 57 at \(x_0 + 57p\);
+        nobody counts the first 56 to find it. A lead screw converts turns to travel the same
+        way. That is why reading item \(i\) costs \(O(1)\) whatever \(i\) is. A 2-D array is
+        stored row after row, like a tube sheet laid out by rows, so item \([i, j]\) of a
+        \(3\times5\) array of 8-byte numbers sits at \(\text{base} + 40i + 8j\): the pitch
+        between rows is five items. NumPy reports exactly those strides, (40, 8)
+        (<code>[Ch14 s12]</code>).
+      </p>
+    </div>
+    <p>
+      The same rigidity is the cost. Inserting an item in the middle means every later item
+      must shift one place, which is \(O(n)\), exactly as inserting a new fixture into a line
+      bolted at fixed pitch moves everything downstream. Searching an unsorted array is also
+      \(O(n)\): the pitch tells you where item 57 is, not where the value 57 is.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where \(O(1)\) stops meaning &ldquo;the same cost&rdquo;</div>
+      <p>
+        Big O counts steps. It does not price them, and memory makes some steps dearer than
+        others. Sheet 13 part 1 &sect;15 showed that the processor fetches memory in blocks and
+        keeps recently used blocks close. Reading items in order uses every byte of each block
+        fetched; jumping around wastes most of each fetch.
+      </p>
+      <p style="margin-bottom:0">
+        Measured: summing 8.4 million numbers read in order took 31&nbsp;ms, and the same
+        numbers read in shuffled order took 141&nbsp;ms, <b>4.5&times;</b> slower
+        (<code>[Ch14 s12]</code>). Same count of steps, same Big O. The source puts the gap
+        between arrays and linked lists at 10&ndash;100&times; in practice; that is plausible
+        for following pointers in compiled code, but this sheet measured one machine and one
+        access pattern, and 4.5&times; is what it found.
+      </p>
+    </div>
+    <p>
+      A <b>string</b> is an array of characters, with one wrinkle the source gets right. In
+      UTF-8, the usual text encoding, characters take different numbers of bytes: 1 for
+      <code>a</code>, 2 for <code>&eacute;</code>, 3 for a Chinese character, 4 for an emoji
+      (<code>[Ch14 s12]</code>). So &ldquo;the \(i\)-th character&rdquo; is no longer at a
+      fixed pitch in the bytes. When a problem promises only lowercase English letters, a
+      26-slot array indexed by letter replaces a hash map, and the pitch is back.
+    </p>
+  </div>
+</section>
+
+<section id="hashing">
+  <div class="col">
+    <div class="sechead"><span class="secnum">13</span><h2>Hashing, and the utilisation cliff</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2014%20-%20data%20structures%20and%20algorithms/01.%20arrays%20and%20hashing.md" target="_blank" rel="noopener">src 01. arrays and hashing &#8599;</a>
+    </div>
+    <p>
+      An array finds item number 57 instantly. A <b>hash table</b> extends that to items
+      identified by anything: a name, a part number, a coordinate. A <b>hash function</b>
+      \(h\) turns the key into a slot number, and the item is stored in that slot of an array.
+      Looking it up again means computing \(h\) again and going straight there, \(O(1)\) on
+      average.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Filing parts by the last two digits of the part number</div>
+      <p style="margin-bottom:0">
+        A store that files part 4417-2083 in bin 83 is using the hash function
+        \(h(k) = k \bmod 100\). Anyone can find the part again without a catalogue. When two
+        parts land in the same bin, the store either keeps both in it (the hash-table term is
+        <b>chaining</b>) or puts the newcomer in the next bin along that has room (<b>linear
+        probing</b>). Both are exactly the storekeeper&rsquo;s options.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks: real keys are not random</div>
+      <p style="margin-bottom:0">
+        Part numbers cluster. If every sub-assembly ends in -00, bin 00 overflows while others
+        sit empty. A hash function exists to prevent exactly this: it must scramble the key so
+        that similar keys land far apart and every slot is equally likely. Designing one that
+        does, quickly, is a subject with no counterpart in your training; the bridge table
+        lists it as one to learn cold. Everything below assumes the scrambling works. If an
+        adversary picks keys that all hash to one slot, every operation degrades to \(O(n)\),
+        which is the worst case in the source&rsquo;s table.
+      </p>
+    </div>
+    <p>
+      Collisions are not an occasional nuisance. They are certain, and early. This is the
+      birthday problem from your probability syllabus: among 23 people the chance that two share
+      a birthday is 0.5073. In a table of 65,536 slots filled at random, the first collision
+      arrives on average at insert 327, when the table is <b>0.50% full</b>; theory,
+      \(\sqrt{\pi m/2} + 2/3\), says 322 (<code>[Ch14 s13]</code>). Every hash table needs a
+      collision policy from its first few hundred entries.
+    </p>
+    <h3>How full is too full</h3>
+    <p>
+      The <b>load factor</b> is \(\alpha = n/m\), items per slot. How much a lookup costs
+      depends on \(\alpha\) and on the policy. For linear probing, the expected number of slots
+      inspected is given by Knuth&rsquo;s formulas, one for finding a key that is present and
+      one for establishing that a key is absent:
+    </p>
+  </div>
+  <div class="mathbox col">$$\text{hit: } \tfrac12\left(1 + \frac{1}{1-\alpha}\right) \qquad \text{miss: } \tfrac12\left(1 + \frac{1}{(1-\alpha)^2}\right)$$</div>
+  <div class="col">
+    <p>
+      Simulated, at \(\alpha = 0.5\): 1.49 and 2.47 against 1.50 and 2.50. At 0.75: 2.50 and
+      8.50, exactly. At 0.9: 5.33 and 51.25 against 5.50 and 50.50 (<code>[Ch14 s13]</code>).
+      With chaining, a hit costs \(1 + \alpha/2\) and a miss scans a chain of average length
+      \(\alpha\), which degrades gently and still works past \(\alpha = 1\): at 1.5 the
+      simulation gives 1.750 and 1.500, matching both.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>The cliff you know from queueing</div>
+      <p>
+        Sheet 13 part 2 &sect;06 put an M/M/1 queue in front of you: the number waiting is
+        \(\rho/(1-\rho)\), harmless at 50% utilisation and exploding as \(\rho \to 1\). Linear
+        probing has the same cliff for a related reason. Occupied slots form runs, and a new key
+        whose home is anywhere inside a run is placed at its end, making it longer. Long runs
+        catch more newcomers and grow faster, as a long queue at a machine grows once arrivals
+        come close to its capacity.
+      </p>
+      <p style="margin-bottom:0">
+        So the practical rule is the planner&rsquo;s rule. Nobody loads a machine to 95% and
+        expects short queues, and hash tables are resized well before they fill. Java&rsquo;s
+        <code>HashMap</code> resizes at 0.75, the figure the source quotes; Python&rsquo;s
+        dict uses about two thirds (reported). At 0.75 a miss costs 8.5 inspections under
+        linear probing. At 0.9 it costs 50.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Same shape, different law</div>
+      <p style="margin-bottom:0">
+        The miss cost grows as \(1/(1-\alpha)^2\), a steeper power than the queue&rsquo;s
+        \(1/(1-\rho)\), and the mechanism is geometry, not randomness in time: nothing in a
+        hash table waits. Carry the shape across and the lesson that follows from it (keep
+        slack in the system), not the formula.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">A table filling up</div><div class="lab-tag">Predict, then load</div></div>
+    <div class="predict">
+      <p style="margin-top:0">
+        A linear-probing table is 75% full. Looking up a key that is not there, how many slots
+        does the search inspect on average?
+      </p>
+      <button class="pbtn" data-p5="a" type="button">About 1.3</button>
+      <button class="pbtn" data-p5="b" type="button">About 4</button>
+      <button class="pbtn" data-p5="c" type="button">About 8.5</button>
+      <button class="pbtn" data-p5="d" type="button">About 75</button>
+      <div class="pverdict" id="pv5"></div>
+    </div>
+    <svg class="stage" id="hS" viewBox="0 0 480 290" role="img"
+         aria-label="A hash table's occupied slots drawn as a grid showing clusters, beside a chart of lookup cost against load factor">
+      <g id="hTab"></g><g id="hGrid"></g><g id="hCurve"></g><g id="hLab"></g>
+    </svg>
+    <div class="ctl">
+      <label for="hSl">Load factor</label>
+      <input type="range" id="hSl" min="5" max="95" value="75" step="1">
+      <span class="ro-v" id="hVal" style="min-width:48px">0.75</span>
+      <button class="btn" id="hNew" type="button">New table</button>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Miss, simulated</div><div class="ro-v b" id="hMs">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Miss, Knuth</div><div class="ro-v b" id="hMk">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Hit, simulated</div><div class="ro-v a" id="hHs">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Hit, Knuth</div><div class="ro-v a" id="hHk">&mdash;</div></div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    The grid on the left is the first 4,096 slots of a 16,384-slot linear-probing table
+    filled with random keys; each filled cell is occupied. Watch the runs merge into long bands
+    as the load factor passes about 0.7. On the right, the orange curve is the miss cost, the
+    blue curve the hit cost, green is chaining&rsquo;s miss cost \(\alpha\), and the dashed
+    purple curve is the M/M/1 queue length \(\rho/(1-\rho)\) for comparison; the markers are
+    the simulated values at the current load. The readouts put the simulation, averaged over
+    four tables, beside Knuth&rsquo;s formulas. Up to about 0.8 they agree within a few per
+    cent. Above that a handful of very long runs dominate the average, so a single set of four
+    tables can land well away from the formula: at 0.9, eight separate sets ranged from 40.1 to
+    56.9 around Knuth&rsquo;s 50.5 (<code>[Ch14 s13]</code>). Press <b>New table</b> at 0.95 and
+    watch the simulated miss cost jump around 200 while the formula stays put. The formula is
+    an average, and near the cliff the average is all you can promise. The prediction:
+    <b>about 8.5</b>. Most people guess a number near 1/(1&minus;0.75) = 4, which is the
+    wrong power.
+  </div>
+</section>
+
+<section id="bloom">
+  <div class="col">
+    <div class="sechead"><span class="secnum">14</span><h2>The Bloom filter is a GO gauge</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2014%20-%20data%20structures%20and%20algorithms/01.%20arrays%20and%20hashing.md" target="_blank" rel="noopener">src 01. arrays and hashing &#8599;</a>
+    </div>
+    <p>
+      The source mentions <b>Bloom filters</b> in one paragraph. They deserve a little more,
+      because their error structure is one you use every day. A Bloom filter is an array of
+      \(m\) bits, all starting at 0, and \(k\) different hash functions. To add a key, set the
+      \(k\) bits it hashes to. To ask whether a key is present, look at its \(k\) bits: if any
+      is 0 the key was <b>definitely never added</b>; if all are 1 it <b>probably was</b>,
+      because other keys may have set those bits.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>A cheap one-sided screen before an expensive exact test</div>
+      <p style="margin-bottom:0">
+        A GO plug gauge answers one question in a second. If it will not enter, the hole is
+        definitely undersized, and no measurement is needed to reject it. If it enters, the
+        hole may be good or oversized, and you go on to the NO-GO gauge or the CMM. A Bloom
+        filter sits in front of a database the same way: &ldquo;definitely absent&rdquo; saves
+        the slow disk read outright, and &ldquo;maybe present&rdquo; costs you only the read
+        you would have made anyway. Neither ever gives a wrong final answer. Each only
+        decides when the expensive test can be skipped.
+      </p>
+    </div>
+    <p>
+      The false-positive rate, for \(n\) keys in \(m\) bits, and the number of hash functions
+      that minimises it:
+    </p>
+  </div>
+  <div class="mathbox col">$$p \approx \left(1 - e^{-kn/m}\right)^k, \qquad k^* = \frac{m}{n}\ln 2$$</div>
+  <div class="col">
+    <p>
+      With 10 bits per key, \(k^* = 6.93\), and the best whole number is 7. Simulated with
+      20,000 keys: 0.854% false positives against 0.819% from the formula, and zero false
+      negatives. With a single hash function the rate is 9.50% against 9.52%
+      (<code>[Ch14 s14]</code>). At the optimum, each extra bit per key multiplies the
+      false-positive rate by \(0.6185\), so every 4.8 bits per key buys another factor of ten.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where the gauge analogy breaks</div>
+      <p style="margin-bottom:0">
+        The gauge is one-sided by design: it tests one limit. The filter is one-sided because
+        bits collide, and that brings two behaviours a gauge does not have. Its error rate
+        rises with every key added, so a filter is sized for a planned number of keys and
+        silently degrades past it. And a key cannot be removed, because clearing its bits
+        could erase evidence of other keys that share them.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="twoptr">
+  <div class="col">
+    <div class="sechead"><span class="secnum">15</span><h2>Two pointers: discarding a row at a time</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2014%20-%20data%20structures%20and%20algorithms/01.%20arrays%20and%20hashing.md" target="_blank" rel="noopener">src 01. arrays and hashing &#8599;</a>
+    </div>
+    <p>
+      Given a <em>sorted</em> list, find two entries that add to a target. Put a pointer \(i\)
+      at the smallest entry and \(j\) at the largest. If \(a_i + a_j\) is too small, move
+      \(i\) up; if too large, move \(j\) down; stop when they meet or the sum is found. The
+      source explains why this works in words. Here is the reason as a picture.
+    </p>
+    <p>
+      Lay out every pair as a grid, rows \(i\) and columns \(j\). Sorting makes the sums
+      increase along each row and down each column. If \(a_i + a_j\) is too small, then \(a_i\)
+      plus <em>anything</em> in the columns still in play, all \(\le a_j\), is too small as
+      well, so the whole of row \(i\) is eliminated in one comparison. Too large eliminates
+      column \(j\) the same way. Each step discards a row or a column, so at most \(n - 1\)
+      steps cover all \(n^2/2\) pairs. On 500 random cases the method agreed with brute force
+      and never took more than \(n - 1\) steps (<code>[Ch14 s15]</code>).
+    </p>
+    <p>
+      <b>Three Sum</b> (find every triple summing to zero) fixes one entry and runs two
+      pointers on the rest, for \(O(n^2)\) in total. Its hard part, as the source says, is not
+      returning the same triple twice, and its duplicate-skipping code is correct: it matched a
+      brute-force search on 300 small lists full of repeated values (<code>[Ch14 s15]</code>).
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>&ldquo;Optimal&rdquo; is a conjecture, not a fact</div>
+      <p style="margin-bottom:0">
+        The source says \(O(n^2)\) is optimal for Three Sum &ldquo;(you must consider all
+        pairs)&rdquo;. The parenthesis is not an argument: the two-pointer method just shown
+        does not consider all pairs individually, it discards them by the row. And the claim
+        itself is open. That no algorithm beats \(n^2\) by a polynomial factor is the
+        <b>3SUM conjecture</b>, widely believed and unproven, and algorithms faster than
+        \(n^2\) by logarithmic factors are known (Gr&oslash;nlund and Pettie, 2014; reported,
+        not reproduced here). This is &sect;02&rsquo;s point about lower bounds: proving that a
+        problem is hard is much harder than proving an algorithm is fast.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="rain">
+  <div class="col">
+    <div class="sechead"><span class="secnum">16</span><h2>Trapping rain water is a spillway</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2014%20-%20data%20structures%20and%20algorithms/01.%20arrays%20and%20hashing.md" target="_blank" rel="noopener">src 01. arrays and hashing &#8599;</a>
+    </div>
+    <p>
+      A row of bars of given heights is rained on; how much water stays? The source&rsquo;s
+      rule: the water level above each bar is the smaller of the tallest bar to its left and the
+      tallest bar to its right, both counting the bar itself.
+    </p>
+  </div>
+  <div class="mathbox col">$$\text{level}_i = \min\Big(\max_{j \le i} h_j,\; \max_{j \ge i} h_j\Big), \qquad \text{water} = \sum_i \big(\text{level}_i - h_i\big)$$</div>
+  <div class="col">
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: a pond&rsquo;s level is set by its lower spill point</div>
+      <p style="margin-bottom:0">
+        A pond between two ridges fills until it overflows the lower ridge, and its surface is
+        then flat at that height. The higher ridge does nothing. That is the formula exactly:
+        the water can escape left over the highest bar on the left, or right over the highest
+        bar on the right, and it settles at the lower of those two spill heights. It follows
+        that raising the tallest bar in the source&rsquo;s example from 3 to 8 traps no extra
+        water at all: 6 units before and after (<code>[Ch14 s16]</code>). A higher weir on the
+        side that does not spill changes nothing.
+      </p>
+    </div>
+    <p>
+      The source&rsquo;s two-pointer code finds this in one pass with no extra arrays: work
+      inward from both ends, always advancing the side whose bar is lower, because that side
+      is the one whose spill height is already known. It agrees with the brute-force formula
+      on 2,000 random profiles (<code>[Ch14 s16]</code>).
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>A pitfall that is not one</div>
+      <p style="margin-bottom:0">
+        The source warns that &ldquo;confusing <code>&gt;=</code> with <code>&gt;</code> in the
+        max updates can cause off-by-one water calculations&rdquo;. In its own code the swap
+        changes <b>0</b> of 2,000 random answers, and so does swapping <code>&lt;</code> for
+        <code>&lt;=</code> in the side test (<code>[Ch14 s16]</code>). When a bar equals the
+        running maximum, one version updates the maximum to the same value and the other adds
+        \(\max - h = 0\) water. Both do nothing.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks: in two dimensions water finds a winding path</div>
+      <p>
+        Real terrain is two-dimensional, and the obvious extension (take the lowest of the
+        tallest heights looking north, south, east and west) is wrong. In a 6&times;6 grid
+        verified here, a low cell is walled by height-9 ground in all four straight directions,
+        so that rule holds water 8 deep over it. The true level is 1: the water drains down a
+        channel that turns two corners before reaching the edge (<code>[Ch14 s16]</code>).
+      </p>
+      <p style="margin-bottom:0">
+        The correct statement is the one a hydrologist would give. A lake&rsquo;s level is the
+        lowest saddle on <em>any</em> route to the sea: over every path from the cell to the
+        edge, take the highest point on the path, and the level is the lowest such value. That
+        is a <b>minimax path</b>, and two independent methods for it agree on 150 random grids
+        (<code>[Ch14 s16]</code>). In one dimension there are only two routes out, left and
+        right, so the minimax collapses to the source&rsquo;s \(\min(\max_L, \max_R)\). The 2-D
+        method is a priority-queue search from the edges inward, and it belongs to the graph
+        algorithms of part 2.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Water finds the lower spill point</div><div class="lab-tag">Predict, then pour</div></div>
+    <div class="predict">
+      <p style="margin-top:0">
+        In the profile below, raise the tallest bar from 3 to 8. How much more water is
+        trapped?
+      </p>
+      <button class="pbtn" data-p6="a" type="button">None</button>
+      <button class="pbtn" data-p6="b" type="button">5 more units beside it</button>
+      <button class="pbtn" data-p6="c" type="button">Roughly double</button>
+      <button class="pbtn" data-p6="d" type="button">Depends where the bar is</button>
+      <div class="pverdict" id="pv6"></div>
+    </div>
+    <svg class="stage" id="wS" viewBox="0 0 480 280" role="img"
+         aria-label="A bar profile with trapped water drawn at the level of the lower spill point, and two pointers moving inward. Click or drag to change bar heights.">
+      <g id="wGrid"></g><g id="wBars"></g><g id="wLab"></g>
+    </svg>
+    <div class="ctl">
+      <button class="btn" data-wp="src" type="button">Source profile</button>
+      <button class="btn" data-wp="raise" type="button">Tallest +5</button>
+      <button class="btn" data-wp="rand" type="button">Random</button>
+      <button class="btn" id="wStep" type="button">Step</button>
+      <button class="btn" id="wRun" type="button">Run</button>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Water,<br>two pointers</div><div class="ro-v a" id="wT">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Water,<br>min(max L, max R)</div><div class="ro-v c" id="wB">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Pointer steps<br>taken</div><div class="ro-v b" id="wS2">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Tallest<br>bar</div><div class="ro-v" id="wH">&mdash;</div></div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    Click or drag on the chart to set any bar&rsquo;s height. Blue is trapped water, drawn at
+    each column&rsquo;s spill level. <b>Step</b> moves the source&rsquo;s two pointers one
+    column at a time: the arrowheads mark the left and right pointers, water they have
+    already counted is solid, and water still to be counted is pale. The two water readouts
+    come from different methods and agree on every profile you can draw. Press <b>Tallest
+    +5</b>: the tallest bar grows from 3 to 8 and the water stays at 6, the answer to the
+    prediction (<b>none</b>). Each pool is held by the lower of its two walls, and the tall
+    bar was never the lower wall of anything.
+  </div>
+</section>
+
+<section id="window">
+  <div class="col">
+    <div class="sechead"><span class="secnum">17</span><h2>A sliding window needs a monotone constraint</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2014%20-%20data%20structures%20and%20algorithms/01.%20arrays%20and%20hashing.md" target="_blank" rel="noopener">src 01. arrays and hashing &#8599;</a>
+    </div>
+    <p>
+      A <b>sliding window</b> is a stretch of consecutive items, from index \(l\) to \(r\).
+      Move \(r\) forward to take in a new item; while the window breaks the rule, move \(l\)
+      forward to shed items. Each index enters once and leaves once, so the whole scan is
+      \(O(n)\) instead of the \(O(n^2)\) of trying every stretch.
+    </p>
+    <p>
+      The fixed-width version you already know: a moving-average filter on a sensor signal
+      adds the newest sample to a running sum and subtracts the oldest, one step per sample
+      however wide the window. The variable-width version is the new part, and it rests on a
+      condition the source states once and then leaves in the background: the rule must be
+      <b>monotone</b>. Adding an item may only ever push the window toward breaking the rule,
+      and removing one only ever toward satisfying it.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks: negative numbers</div>
+      <p style="margin-bottom:0">
+        Find the shortest stretch whose sum is at least \(K\). With all values \(\ge 0\) the
+        window method matches brute force on 1,000 random cases. Allow negatives and it fails
+        on the list \([-5, 9]\) with \(K = 9\): the window takes in \(-5\), then \(9\), sums to
+        4, never reaches 9, and reports no answer. The answer is the single item \([9]\)
+        (<code>[Ch14 s17]</code>). With a negative number in the window, shedding an item from
+        the left can <em>raise</em> the sum, so &ldquo;shrink until the rule holds&rdquo; no
+        longer has a direction. Problems with negative values need a different method: prefix
+        sums, the subject of the next section.
+      </p>
+    </div>
+    <p>
+      The source&rsquo;s two worked windows are correct. <b>Longest substring without a
+      repeated character</b>, which jumps \(l\) straight past the earlier copy of a repeated
+      character, matched brute force on 500 random strings (<code>[Ch14 s17]</code>). In
+      <b>minimum window substring</b>, the counter <code>have</code> tracks how many required
+      characters are present in sufficient number, and its test is <code>==</code> rather than
+      <code>&gt;=</code> so that each character is counted once, on the step it first becomes
+      sufficient. With <code>&gt;=</code> the count runs past the requirement and the window
+      is declared valid too early (<code>[Ch14 s17]</code>).
+    </p>
+  </div>
+</section>
+
+<section id="prefix">
+  <div class="col">
+    <div class="sechead"><span class="secnum">18</span><h2>A prefix sum is a shear-force diagram</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2014%20-%20data%20structures%20and%20algorithms/01.%20arrays%20and%20hashing.md" target="_blank" rel="noopener">src 01. arrays and hashing &#8599;</a>
+    </div>
+    <p>
+      A <b>prefix sum</b> array stores running totals: \(P_0 = 0\) and \(P_{i+1} = P_i + x_i\).
+      Built once in \(O(n)\), it answers &ldquo;what is the sum of items \(l\) to \(r-1\)?&rdquo;
+      in one subtraction, \(P_r - P_l\), however long the stretch.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: you have drawn thousands of these</div>
+      <p style="margin-bottom:0">
+        Walk along a beam from the left end adding up the forces as you pass them, and the
+        running total is the shear force. For point loads the shear-force diagram <em>is</em> a
+        prefix sum of the loads, reactions included, and the net load between two sections is
+        the difference of the shears there. The bending-moment diagram is in turn the running
+        area under the shear diagram, a second prefix sum. And your habitual check, that the
+        diagrams close to zero at the far support, is the check that the prefix sums are
+        right: \(\sum F = 0\) and \(\sum M = 0\).
+      </p>
+    </div>
+  </div>
+  <figure class="col">
+    <svg viewBox="0 0 480 300" role="img" style="width:100%; max-width:560px; height:auto; display:block; margin-inline:auto; background:var(--sheet); border:1px solid var(--rule); border-radius:3px"
+         aria-label="A simply supported beam with three point loads, and its shear-force diagram drawn as a running sum">
+      <g id="figSfd"></g>
+    </svg>
+    <figcaption><b>Fig. 14.1</b> &mdash; A 10&nbsp;m simply supported beam with loads of 20, 35 and 15&nbsp;kN at 2, 5 and 7.5&nbsp;m. The shear diagram below is the running sum of the forces met walking from the left: 37.25, 17.25, &minus;17.75, &minus;32.75 and finally 0&nbsp;kN. The net load between \(x = 1\) and \(x = 6\) is \(V(6) - V(1) = -55\)&nbsp;kN, the 20 and 35&nbsp;kN loads, read with one subtraction (<code>[Ch14 s18]</code>).</figcaption>
+  </figure>
+  <div class="col">
+    <p>
+      The source&rsquo;s medium problem uses the subtraction backwards. To count the stretches
+      that sum to exactly \(k\), note that a stretch from \(l\) to \(r\) sums to \(k\) when
+      \(P_r - P_l = k\), that is, when an <em>earlier</em> running total equals \(P_r - k\).
+      So walk once, keep a count of every running total seen so far in a hash map (&sect;13),
+      and at each step add the count of \(P_r - k\). One pass, \(O(n)\), and unlike the sliding
+      window of &sect;17 it does not care about negative values: it matched brute force on 800
+      random lists that included them (<code>[Ch14 s18]</code>).
+    </p>
+    <p>
+      The map must start holding one running total of zero, the empty prefix, as the source
+      warns. Without it, stretches that begin at the very first item are missed: for
+      \([3, 1, 2]\) with \(k = 3\) the count comes out 1 instead of 2. That zero is the
+      reaction at the left support. Leave it off and the shear diagram starts from the wrong
+      datum.
+    </p>
+    <p>
+      <b>Product of array except self</b> is the same construction with multiplication: a
+      running product from the left and another from the right, multiplied together at each
+      position. It uses no division, so it handles zeros, and it matched brute force on 500
+      lists containing them (<code>[Ch14 s18]</code>).
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks: the difference of two large numbers</div>
+      <p style="margin-bottom:0">
+        On paper \(V(6) - V(1)\) is exact. In a computer the running totals are floating-point
+        numbers, and Sheet 13 part 1 &sect;&sect;10&ndash;11 showed they carry constant
+        <em>relative</em> error. Four million random values summed in 32-bit floating point
+        reach about two million, where the spacing between representable numbers is 0.25. A
+        range of ten values, about 5 in total, read as \(P_r - P_l\) came out <b>3% wrong</b>;
+        adding the same ten values directly is exact to one part in \(10^7\)
+        (<code>[Ch14 s18]</code>). This is catastrophic cancellation, the reason a strain gauge
+        measures the change in length directly rather than subtracting two measured lengths.
+        With integers there is no problem at all. With floats, the prefix-sum trick trades
+        speed for accuracy on short ranges far from the origin.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="floyd">
+  <div class="col">
+    <div class="sechead"><span class="secnum">19</span><h2>The tortoise, the hare, and a derivation that skips a case</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2014%20-%20data%20structures%20and%20algorithms/02.%20linked%20lists%2C%20stacks%2C%20and%20queues.md" target="_blank" rel="noopener">src 02. linked lists, stacks, and queues &#8599;</a>
+    </div>
+    <p>
+      A <b>linked list</b> gives up the fixed pitch. Each item is stored wherever there was
+      room, together with the address of the next item, like a route card that names the next
+      work centre. Inserting or removing an item next to one you already hold means rewriting
+      one or two addresses, \(O(1)\), with nothing shifted. Finding the 57th item means
+      following 56 addresses, \(O(n)\), and each one is a jump through memory of exactly the
+      kind &sect;12 measured as slow. A <b>doubly linked</b> list also stores the previous
+      item&rsquo;s address, so it can be walked both ways. A <b>sentinel</b> is a dummy first
+      node that removes the special case of changing the head, as a datum removes the special
+      case of the first dimension.
+    </p>
+    <p>
+      If a bug makes some node point back to an earlier one, following the list never ends: it
+      has a tail of length \(a\) leading into a loop of length \(c\), shaped like the letter
+      \(\rho\). <b>Floyd&rsquo;s method</b> detects this with two pointers, a tortoise that
+      moves one node per step and a hare that moves two.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Two runners on a track: relative velocity</div>
+      <p style="margin-bottom:0">
+        Once both are in the loop, the hare gains one node per step on the tortoise, so the
+        gap closes by one each step and they must meet within \(c\) steps of the tortoise
+        entering, the source&rsquo;s argument. It is the kinematics of two runners on a
+        circular track, or the hour and minute hands meeting every \(12/11\) hours, done in
+        whole steps. Checked on every list with \(a &lt; 25\) and \(c &lt; 25\): they always
+        meet, and within \(c\) steps (<code>[Ch14 s19]</code>).
+      </p>
+    </div>
+    <p>
+      The harder question is where the loop <em>starts</em>. The source&rsquo;s method: after
+      the meeting, send one pointer back to the head, move both one node per step, and they
+      meet at the loop&rsquo;s first node. Its justification: let the tortoise have walked
+      \(a + b\), \(a\) along the tail and \(b\) into the loop. The hare has walked \(2(a+b)\).
+      &ldquo;The difference is one full cycle: \(a + b = c\).&rdquo;
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>The difference is a whole number of cycles</div>
+      <p>
+        When they meet, the hare is ahead by exactly \(a + b\) nodes and at the same place, so
+        \(a + b\) is a <em>multiple</em> of the loop length:
+      </p>
+      <div class="mathbox">$$a + b = kc, \qquad k \ge 1$$</div>
+      <p>
+        With a tail of 10 and a loop of 3 they meet after 12 steps, \(b = 2\), and
+        \(a + b = 12 = 4 \times 3\): the hare lapped four times, not once
+        (<code>[Ch14 s19]</code>). The source&rsquo;s \(a + b = c\) holds only when the tail is
+        shorter than the loop. The conclusion survives anyway, because only the remainder
+        matters: \(a \equiv -b \pmod{c}\), so walking \(a\) steps from the meeting point lands
+        on the loop&rsquo;s start, as does walking \(a\) steps from the head. The method is
+        right for every list checked. The derivation proves it only for short tails.
+      </p>
+      <p style="margin-bottom:0">
+        It can be said more sharply. At any step \(T\) that is a multiple of \(c\) and at least
+        \(a\), both pointers are in the loop at the same offset, so the first meeting is at the
+        first multiple of \(c\) not less than \(a\). That holds on all 600 lists checked
+        (<code>[Ch14 s19]</code>).
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where the runners analogy breaks: the speed must be exactly two</div>
+      <p style="margin-bottom:0">
+        Continuous runners meet at any speed ratio. The first draft of this sheet expected a hare
+        moving three nodes per step to jump over the tortoise sometimes and never meet. It does
+        not: from a common
+        start it always meets (<code>[Ch14 s19]</code>). What fails is the second half. With
+        speed \(v\) the meeting step satisfies \((v-1)T \equiv 0 \pmod{c}\), and only for
+        \(v = 2\) does that force \(T\) to be a multiple of \(c\). At speed 3, the
+        restart-from-head trick fails on 36 of 132 small lists, every one with an even loop;
+        with no tail and a loop of 2, the two pointers circle forever without meeting. The
+        detection is kinematics and survives any speed. The location trick is arithmetic and
+        needs exactly 2.
+      </p>
+    </div>
+    <p>
+      The same pair of pointers finds the middle of a list: when the hare reaches the end,
+      the tortoise is halfway, at the second of the two middle nodes when the length is even.
+    </p>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Tortoise and hare on a loop</div><div class="lab-tag">Predict, then run</div></div>
+    <div class="predict">
+      <p style="margin-top:0">
+        A list has a tail of 10 nodes and a loop of 3. The source&rsquo;s derivation says the
+        tortoise has walked \(a + b = c\) steps when the two meet. How far has it actually
+        walked?
+      </p>
+      <button class="pbtn" data-p7="a" type="button">3 steps</button>
+      <button class="pbtn" data-p7="b" type="button">12 steps</button>
+      <button class="pbtn" data-p7="c" type="button">10 steps</button>
+      <button class="pbtn" data-p7="d" type="button">13 steps</button>
+      <div class="pverdict" id="pv7"></div>
+    </div>
+    <svg class="stage" id="fS" viewBox="0 0 480 250" role="img"
+         aria-label="A rho-shaped linked list with a tail and a loop, and tortoise and hare pointers moving along it">
+      <g id="fEdge"></g><g id="fNode"></g><g id="fPtr"></g><g id="fLab"></g>
+    </svg>
+    <div class="ctl">
+      <label for="fA">Tail a</label>
+      <input type="range" id="fA" min="0" max="14" value="10" step="1">
+      <span class="ro-v" id="fAv" style="min-width:28px">10</span>
+      <label for="fC">Loop c</label>
+      <input type="range" id="fC" min="2" max="16" value="3" step="1">
+      <span class="ro-v" id="fCv" style="min-width:28px">3</span>
+    </div>
+    <div class="ctl">
+      <button class="btn" data-fv="2" type="button">Hare speed 2</button>
+      <button class="btn" data-fv="3" type="button">Hare speed 3</button>
+      <button class="btn" id="fStep" type="button">Step</button>
+      <button class="btn" id="fRun" type="button">Run</button>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Meeting step T<br>(= a + b)</div><div class="ro-v a" id="fT">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Steps b<br>into the loop</div><div class="ro-v b" id="fB">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">(a + b) &divide; c</div><div class="ro-v c" id="fK">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Restart from head<br>finds</div><div class="ro-v" id="fR">&mdash;</div></div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    The tail runs left to right into the loop; the loop&rsquo;s first node is ringed. The
+    green marker is the tortoise and the orange one the hare. <b>Step</b> advances one step;
+    <b>Run</b> plays out the meeting and then the second phase, in which one pointer restarts
+    from the head and both move one node at a time. At the default tail 10, loop 3, they meet
+    at step 12, so \((a+b)/c = 4\): the answer is <b>12 steps</b>, and the source&rsquo;s
+    \(a + b = c\) would have said 3. Now choose <b>Hare speed 3</b> and set the tail to 0 and
+    the loop to 2, or the tail to 10 and the loop to 4: the pointers still meet, but the
+    restart phase never lands on the start, and the last readout says so. Odd loops, and
+    many even ones, still work at speed 3, which is why the flaw is easy to miss.
+  </div>
+</section>
+
+<section id="stacks">
+  <div class="col">
+    <div class="sechead"><span class="secnum">20</span><h2>Stacks, and the monotonic stack</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2014%20-%20data%20structures%20and%20algorithms/02.%20linked%20lists%2C%20stacks%2C%20and%20queues.md" target="_blank" rel="noopener">src 02. linked lists, stacks, and queues &#8599;</a>
+    </div>
+    <p>
+      A <b>stack</b> allows only two operations: put an item on top, and take the top item off.
+      Last in, first out, like plates. The restriction is the point, because it matches
+      anything that must be undone in reverse order: the call stack of &sect;05, an editor&rsquo;s
+      undo history, and nested brackets. Checking that <code>([]{})</code> is balanced means
+      pushing each opener and, at each closer, checking that the top of the stack is its
+      partner. The source&rsquo;s reminder to check that the stack is empty at the end is the
+      whole of the <code>(((</code> case.
+    </p>
+    <p>
+      A <b>monotonic stack</b> keeps its contents in increasing (or decreasing) order by
+      popping everything that the new item would violate before pushing it. It answers
+      &ldquo;for each item, where is the next larger one?&rdquo; in a single pass. For daily
+      temperatures, each day&rsquo;s index waits on the stack until a warmer day arrives and
+      pops it, recording the gap. Each index is pushed once and popped at most once, so the
+      total work is \(O(n)\) however the pops cluster. It matched brute force on 500 random
+      series, with never more than \(n\) pops (<code>[Ch14 s20]</code>).
+    </p>
+    <p>
+      The source&rsquo;s hard problem, the <b>largest rectangle under a histogram</b>, uses the
+      same stack in increasing order. When a bar is popped because a shorter one has arrived,
+      the popped bar&rsquo;s rectangle is complete: it extends right up to the newcomer. The
+      source&rsquo;s code matched brute force on 1,000 random histograms
+      (<code>[Ch14 s20]</code>), and its warning about the line <code>start = idx</code> is
+      right. That line lets the shorter newcomer inherit the left edge of the taller bars it
+      displaced; delete it and the histogram \([6, 4]\) returns 6 instead of 8, because the
+      4-high rectangle is no longer allowed to extend under the 6.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>No counterpart</div>
+      <p style="margin-bottom:0">
+        The plain stack maps onto your world easily. The monotonic stack does not, and an
+        analogy would only blur it. What makes it work is a counting argument: each item is
+        pushed once and popped at most once, so however unevenly the pops fall, the total is at
+        most \(2n\). It is the same argument as the amortised append of &sect;04, and that is
+        the thing to carry away.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="heaps">
+  <div class="col">
+    <div class="sechead"><span class="secnum">21</span><h2>Queues, heaps, and the dispatch rule</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2014%20-%20data%20structures%20and%20algorithms/02.%20linked%20lists%2C%20stacks%2C%20and%20queues.md" target="_blank" rel="noopener">src 02. linked lists, stacks, and queues &#8599;</a>
+    </div>
+    <p>
+      A <b>queue</b> is first in, first out: add at the back, remove from the front. A
+      <b>deque</b> allows both at both ends. The source&rsquo;s exercise builds a queue from two
+      stacks: push onto one, and when the other is empty to pop from, pour the first into it,
+      which reverses the order. One pop can move hundreds of items, and in a run of 5,000 random
+      operations one pop moved 467. Yet each item is poured at most once, so 2,752 pushes
+      caused only 2,578 moves in total (<code>[Ch14 s21]</code>). Amortised \(O(1)\) again, by
+      the same accounting as &sect;04.
+    </p>
+    <p>
+      A <b>priority queue</b> always hands out the smallest item, whatever order items arrived
+      in. The standard implementation is a <b>binary heap</b>: a tree stored in an array, the
+      children of slot \(i\) in slots \(2i+1\) and \(2i+2\) (a fixed pitch again), with every
+      parent no larger than its children. Adding or removing an item repairs the order along
+      one root-to-leaf path, \(O(\log n)\).
+    </p>
+    <p>
+      Building a heap from \(n\) items at once costs only \(O(n)\), which surprises most people.
+      Half the items are leaves and need no work, a quarter can sink at most one level, an
+      eighth at most two, and the sum \(\sum_h h/2^{h+1}\) converges. Measured: 164,904
+      comparisons to build a heap of 100,000 items, 1.65 per item (<code>[Ch14 s21]</code>).
+    </p>
+    <h3>Kth largest: the source&rsquo;s reasoning is backwards, and its conclusion half right</h3>
+    <p>
+      To find the \(k\)-th largest of \(n\) numbers, the source keeps a heap of the \(k\)
+      largest seen so far and calls this &ldquo;the optimal approach&rdquo; at \(O(n\log k)\). It
+      calls the alternative, heapify everything and pop \(k\) times, &ldquo;slower:
+      \(O(n + k\log n)\)&rdquo;. But \(n + k\log n\) is never worse than \(n\log k\), and for
+      small \(k\) it is better. So the Big O argument points the other way. Counting
+      comparisons on 100,000 numbers (<code>[Ch14 s21]</code>):
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Comparisons to find the kth largest of 100,000 numbers.</caption>
+      <thead><tr><th>Input order</th><th>k</th><th>Size-k heap (source)</th><th>Heapify + k pops</th></tr></thead>
+      <tbody>
+        <tr><td>Random</td><td>10</td><td><b>100,374</b></td><td>165,150</td></tr>
+        <tr><td>Random</td><td>1,000</td><td><b>150,460</b></td><td>181,897</td></tr>
+        <tr><td>Ascending</td><td>10</td><td>439,971</td><td><b>150,158</b></td></tr>
+        <tr><td>Ascending</td><td>1,000</td><td>1,088,573</td><td><b>166,872</b></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      On random input the source&rsquo;s method wins after all, for a reason it never gives. A
+      new number only enters the size-\(k\) heap if it beats the current \(k\)-th largest, and
+      for the \(i\)-th number that chance is \(k/i\). Summed, only about \(k\ln(n/k)\) numbers
+      ever get in: 90 against a predicted 92 at \(k = 10\), 4,530 against 4,605 at \(k = 1000\).
+      The rest cost one comparison each. On ascending input every number gets in, the
+      \(O(n\log k)\) bound is reached, and the method loses by a factor of three. The first
+      draft of this correction said the heapify method always wins; the count on random
+      input refuted it. The honest summary: neither method is &ldquo;optimal&rdquo;, the winner
+      depends on the order of the data, and the size-\(k\) heap&rsquo;s solid advantage is
+      memory, since it needs room for \(k\) items rather than \(n\) and can process a stream too
+      large to store.
+    </p>
+    <p>
+      <b>Merging \(k\) sorted lists</b> keeps the \(k\) current front items in a heap and
+      repeatedly takes the smallest, \(O(n\log k)\) for \(n\) items in all. The source&rsquo;s
+      tie-breaker is necessary: without the index in each heap entry, two equal values make
+      Python compare the list nodes themselves, which raises a <code>TypeError</code>
+      (<code>[Ch14 s21]</code>).
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>A heap is how a dispatcher applies SPT</div>
+      <p style="margin-bottom:0">
+        Sheet 13 part 2 &sect;04 showed that shortest-job-first is the SPT dispatching rule,
+        optimal for mean flow time on one machine, and checked it exhaustively. A heap keyed on
+        processing time is how you run SPT when jobs keep arriving: each arrival is an insert,
+        each dispatch removes the minimum, both \(O(\log n)\), where re-sorting the whole queue
+        at every dispatch would cost \(O(n\log n)\).
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks: a fast rule is not a right rule</div>
+      <p style="margin-bottom:0">
+        SPT&rsquo;s optimality assumes every job is waiting at time zero. Let job A (10
+        minutes) be ready at 0 and job B (1 minute) arrive at minute 1. A dispatcher that never
+        idles starts A, the only job waiting, and the completion times are 10 and 11, total 21.
+        Leaving the machine idle for one minute to run B first gives 2 and 12, total 14
+        (<code>[Ch14 s21]</code>). With arrival times the single-machine problem is NP-hard
+        (reported). The heap makes the rule fast. It cannot make the rule right.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="next">
+  <div class="col">
+    <div class="sechead"><span class="secnum">22</span><h2>What part 2 carries</h2>
+      <span class="srcref nolink">beyond this part</span>
+    </div>
+    <p>
+      Everything in this part was a line: arrays, lists, stacks, queues, and a heap that is a
+      tree stored in a line. Part 2 lets the structures branch, and several promises made above
+      fall due there.
+    </p>
+    <ul>
+      <li><b>Trees</b> (file 03). The bill of materials of &sect;10 is a tree with shared
+        parts, and the heap of &sect;21 is a tree stored at fixed pitch. Part 2 treats binary
+        search trees, balancing, and traversal orders, and returns to recursion as induction
+        (&sect;06) on its natural ground.</li>
+      <li><b>Graphs</b> (file 04). Sheet 12 used the graph Laplacian; part 2 does the
+        algorithms. The CPM event numbering of &sect;09 is a topological sort. The 2-D rain-water
+        fill of &sect;16 is a priority-queue search of the kind Dijkstra&rsquo;s shortest-path
+        method uses. Breadth-first search runs on the queue of &sect;21.</li>
+      <li><b>Sorting and searching</b> (file 05). Quicksort is built properly, including the
+        pivot choice behind &sect;05&rsquo;s space bound. Binary search is the bisection method
+        of Sheet 13 &sect;06. And the \(n\log n\) that &sect;02 treated as a speed turns out to
+        be a lower bound for sorting by comparisons, the kind of fact &sect;15 said is hard to
+        prove.</li>
+      <li>The chapter&rsquo;s <b>worked example</b>, its <b>24-question bank</b> covering both
+        parts, and its <b>concept map</b>.</li>
+    </ul>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>If you take three things from this part</div>
+      <p style="margin-bottom:0">
+        <b>&sect;09:</b> the CPM forward pass is dynamic programming, and PERT is where it stops
+        being exact. <b>&sect;11:</b> an NP-hard problem can be easy when its numbers are
+        small, and line balancing is not one of those, because the difficulty is how the
+        stations interact. <b>&sect;&sect;04, 13:</b> load and growth follow the rules you
+        already use for plant: spread a setup over a lot that grows as fast as the setup, and
+        keep slack, because every system with interference has a cliff near full.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="provenance">
+  <div class="col">
+    <div class="sechead"><span class="secnum">A</span><h2>Provenance and changes</h2>
+      <span class="srcref nolink" title="Required by Apache-2.0 section 4(b)">licence notice</span>
+    </div>
+    <p>
+      This sheet is a derivative work of <b>chapter 14 &mdash; data structures and
+      algorithms</b> of the <i>Mathematics, Computer Science and AI Compendium</i>, licensed
+      under Apache&nbsp;2.0. Section&nbsp;4(b) of that licence requires prominent notice of
+      changes. The source is pinned at commit <code>9850ee5</code>; every section chip above
+      links to the file it draws on. <b>This appendix covers part 1 only</b>; part 2 carries
+      its own.
+    </p>
+    <h3>Source material used in part 1</h3>
+    <ul>
+      <li><code>00. foundations.md</code> (502 lines) &mdash; &sect;&sect;01&ndash;11, with &sect;&sect;03&ndash;04 also drawing on file 01</li>
+      <li><code>01. arrays and hashing.md</code> (526 lines) &mdash; &sect;&sect;12&ndash;18</li>
+      <li><code>02. linked lists, stacks, and queues.md</code> (410 lines) &mdash;
+        &sect;&sect;19&ndash;21</li>
+      <li>The source files contain no figures. Fig. 14.1 was drawn for this sheet.</li>
+      <li>Files <code>03</code>, <code>04</code> and <code>05</code> (1,257 lines) are not
+        used here and are the material for part 2.</li>
+    </ul>
+    <h3>Changes made</h3>
+    <ul>
+      <li><b>Re-narrated for one reader</b> &mdash; a GATE-prepared mechanical engineering
+        graduate with no computing background. Written against operations research, production
+        planning, strength of materials, metrology and fluid mechanics rather than against a
+        computing background. The source&rsquo;s interview framing and its NeetCode practice
+        lists are not reproduced.</li>
+      <li><b>Corrections to the source, ten,</b> each stated with the computation and listed
+        in the table at the top of the sheet: the <code>fib(50)</code> count (&sect;07); the
+        \(a + b = c\) cycle derivation (&sect;19); the attribution of N-Queens pruning
+        (&sect;08); Python&rsquo;s growth factor (&sect;04); quicksort&rsquo;s space
+        (&sect;05); the cost of <code>s += c</code> in CPython (&sect;03); the kth-largest
+        comparison and &ldquo;optimal&rdquo; (&sect;21); Three Sum&rsquo;s optimality
+        (&sect;15); the <code>&gt;=</code> pitfall in rain water (&sect;16); and the
+        mutable-default memo that contradicts the source&rsquo;s own pitfall table
+        (&sect;10). Also a typo: the arrays pitfall table writes <code>"".join"</code> for
+        <code>"".join</code>.</li>
+      <li><b>Correspondences added that are not in the source</b> &mdash; the CPM forward and
+        backward passes as dynamic programming, and PERT&rsquo;s merge bias as the place it
+        fails; the MRP low-level code as tabulation in topological order; recursion as proof by
+        induction; the Fibonacci call count solved as a linear recurrence with a
+        characteristic root; Big O against order-of-magnitude analysis and \(\Theta\) against a
+        scaling law; log&ndash;log exponent fitting and why \(n\log n\) defeats it; amortised
+        cost as a setup spread over a lot, and why the lot must grow geometrically; the array as
+        a fixed pitch; hashing as filing by part-number digits; the load-factor cliff against
+        the M/M/1 queue; the Bloom filter as a GO gauge; the shear-force diagram as a prefix
+        sum; trapping rain water as a spillway, with its 2-D generalisation as a minimax path;
+        Floyd&rsquo;s method as relative velocity; the heap as the SPT dispatcher, and release
+        times as the limit of SPT.</li>
+      <li><b>Material added that the source does not have</b> &mdash; the \(O\)/\(\Theta\)
+        distinction; the constant-versus-exponent crossover; pseudo-polynomial time and weak
+        versus strong NP-hardness, with a six-task line on which perfect station filling loses a
+        station; the birthday bound for first collisions; Knuth&rsquo;s linear-probing formulas;
+        the Bloom filter&rsquo;s false-positive formula and optimal \(k\); the monotone
+        condition that sliding windows need, with a two-element counterexample; floating-point
+        cancellation in prefix sums; the speed-3 hare; the \(k\ln(n/k)\) replacement count.</li>
+      <li><b>Seven interactive labs</b> written for this sheet in plain SVG and vanilla
+        JavaScript, and one drawn figure.</li>
+      <li><b>102 new numerical checks</b> added to
+        <code>study-companion/verify_claims.py</code>, bringing it to 546 checks with no
+        failures. Every quantitative statement on this page is reproducible by running that
+        one script.</li>
+    </ul>
+    <h3>What is claimed, and what is reported</h3>
+    <p>
+      Statements tagged <code>[Ch14 sNN]</code> are computed, and the tag names the block of
+      the verification script that computes them. Timings (the string, cache and Fibonacci
+      measurements) come from the machine that ran the script and vary between runs and
+      machines; the conclusions drawn from them are ratios chosen to be robust to that. Marked
+      as <b>reported</b>, and not derived here: PEP 8&rsquo;s advice on string concatenation;
+      the load factors at which Java and Python resize; the 3SUM conjecture and the result of
+      Gr&oslash;nlund and Pettie; the NP-hardness of longest simple path, of single-machine
+      scheduling with release times, and the weak/strong classification of knapsack and bin
+      packing. No internet research was used.
+    </p>
+    <p class="endnote">
+      Sheet 14 of 20, part 1 of 2. Source compendium &copy; its authors, Apache&nbsp;2.0. This
+      derivative sheet is offered under the same licence. Next: <b>part 2 &mdash; trees,
+      graphs, sorting and searching</b>, where the event numbering of &sect;09 becomes a
+      topological sort and the rain of &sect;16 falls on two dimensions.
+    </p>
+  </div>
+</section>
+
+</main>
+</div>
+
+<style>
+:root{--c1:#BF5B00; --c2:#0F74C7; --c3:#1F8A4C; --c4:#7A4FBF; --c5:#C2185B}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --c1:#D9782B; --c2:#4A97D6; --c3:#35AC63; --c4:#9575D0; --c5:#D65A82}
+}
+:root[data-theme="dark"]{
+  --c1:#D9782B; --c2:#4A97D6; --c3:#35AC63; --c4:#9575D0; --c5:#D65A82}
+.tk{fill:var(--ink-3); font-family:'IBM Plex Mono',monospace; font-size:10px}
+.tkb{fill:var(--ink-2); font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600}
+.tkn{fill:var(--sheet); font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:600}
+#gGrid line, #aGrid line, #qGrid line, #hGrid line, #wGrid line{stroke:var(--rule)}
+#gCurve path, #aCurve path, #qCurve path, #hCurve path{fill:none; stroke-width:2}
+#wS, #fS, #cS{cursor:default}
+#wS{cursor:crosshair}
+</style>
+
+<script>
+(function(){
+  'use strict';
+  var root=document.documentElement;
+  function dk(){var t=root.getAttribute('data-theme');
+    return t?t==='dark':(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);}
+  try{var sv=localStorage.getItem('ch14-theme'); if(sv==='dark'||sv==='light') root.setAttribute('data-theme',sv);}catch(e){}
+  var tb=document.getElementById('themebtn');
+  if(tb) tb.addEventListener('click',function(){var n=dk()?'light':'dark';
+    root.setAttribute('data-theme',n); try{localStorage.setItem('ch14-theme',n);}catch(e){}});
+  function $(id){return document.getElementById(id);}
+  function comma(n){return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,',');}
+  function predict(attr,vid,ans){
+    document.querySelectorAll('['+attr+']').forEach(function(b){
+      b.addEventListener('click',function(){
+        document.querySelectorAll('['+attr+']').forEach(function(o){o.classList.remove('picked');});
+        b.classList.add('picked');
+        var v=$(vid); v.innerHTML=ans[b.getAttribute(attr)]; v.classList.add('show');
+      });
+    });
+  }
+  function rng(seed){var s=seed>>>0; return function(){s=(s+0x6D2B79F5)>>>0; var t=s;
+    t=Math.imul(t^(t>>>15),t|1); t^=t+Math.imul(t^(t>>>7),t|61); return ((t^(t>>>14))>>>0)/4294967296;};}
+  function txt(cls,x,y,s,anchor,extra){return '<text class="'+cls+'" x="'+(+x).toFixed(1)+'" y="'+(+y).toFixed(1)+'"'+
+    (anchor?' text-anchor="'+anchor+'"':'')+(extra||'')+'>'+s+'</text>';}
+  function ln(x1,y1,x2,y2,st){return '<line x1="'+x1.toFixed(1)+'" y1="'+y1.toFixed(1)+'" x2="'+x2.toFixed(1)+'" y2="'+y2.toFixed(1)+'"'+(st||'')+'/>';}
+  window.__ch14={$:$,comma:comma,predict:predict,rng:rng,txt:txt,ln:ln};
+})();
+</script>
+
+<script>
+/* ===== FIG 14.1 -- the shear-force diagram as a prefix sum ===== */
+(function(){
+  'use strict';
+  var H=window.__ch14, $=H.$, T=H.txt, L=H.ln;
+  var X=function(m){return 40+40*m;}, o='';
+  var loads=[[2,20],[5,35],[7.5,15]], RA=37.25, RB=32.75;
+  o+='<rect x="40" y="70" width="400" height="8" fill="var(--ink-3)" fill-opacity="0.35" stroke="var(--ink-2)"/>';
+  o+='<path d="M40,78 L32,92 L48,92 Z M440,78 L432,92 L448,92 Z" fill="var(--sheet-2)" stroke="var(--ink-2)"/>';
+  loads.forEach(function(p){
+    var x=X(p[0]);
+    o+=L(x,24,x,66,' stroke="var(--c1)" stroke-width="2"')+
+       '<path d="M'+(x-4)+',60 L'+x+',68 L'+(x+4)+',60" fill="none" stroke="var(--c1)" stroke-width="2"/>'+
+       T('tkb',x,17,p[1]+' kN','middle')+T('tk',x,106,p[0]+' m','middle');
+  });
+  [[0,RA],[10,RB]].forEach(function(r){
+    var x=X(r[0]);
+    o+=L(x,126,x,96,' stroke="var(--c2)" stroke-width="2"')+
+       '<path d="M'+(x-4)+',102 L'+x+',94 L'+(x+4)+',102" fill="none" stroke="var(--c2)" stroke-width="2"/>'+
+       T('tkb',x+(r[0]?-8:8),122,r[1].toFixed(2)+' kN',r[0]?'end':'start');
+  });
+  var base=214, sc=1.25, seg=[[0,2,37.25,1.62],[2,5,17.25,3.5],[5,7.5,-17.75,6.7],[7.5,10,-32.75,8.75]];
+  o+=T('tkb',40,150,'shear V(x): the running sum of the forces met from the left','start');
+  seg.forEach(function(sg){
+    var y=base-sg[2]*sc, col=sg[2]>0?'var(--c2)':'var(--c1)', mid=X(sg[3]);
+    o+='<rect x="'+X(sg[0])+'" y="'+Math.min(y,base).toFixed(1)+'" width="'+(X(sg[1])-X(sg[0]))+
+       '" height="'+Math.abs(sg[2]*sc).toFixed(1)+'" fill="'+col+'" fill-opacity="0.16" stroke="'+col+'" stroke-width="1.5"/>';
+    o+=T('tk',mid,sg[2]>0?y+13:y-5,(sg[2]>0?'+':'\u2212')+Math.abs(sg[2]).toFixed(2),'middle');
+  });
+  o+=L(40,base,440,base,' stroke="var(--rule-strong)"');
+  [1,6].forEach(function(m){o+=L(X(m),160,X(m),262,' stroke="var(--ink-3)" stroke-dasharray="3 3"')+
+    T('tk',X(m)+4,274,'x = '+m,'start');});
+  o+=T('tk',446,292,'V(6) \u2212 V(1) = \u221217.75 \u2212 37.25 = \u221255 kN','end');
+  $('figSfd').innerHTML=o;
+})();
+</script>
+
+<script>
+/* ===== LAB 1 -- constants lose, exponents win ===== */
+(function(){
+  'use strict';
+  var H=window.__ch14, $=H.$, T=H.txt, L=H.ln, v=200;
+  var X0=62,X1=462,YT=26,YB=250, LX0=1,LX1=6, LY0=0,LY1=13;
+  function sx(lg){return X0+(lg-LX0)/(LX1-LX0)*(X1-X0);}
+  function sy(lg){return YB-(lg-LY0)/(LY1-LY0)*(YB-YT);}
+  function cross(c){var lo=2,hi=1e12;for(var i=0;i<200;i++){var m=Math.sqrt(lo*hi);
+    if(m>c*Math.log2(m)) hi=m; else lo=m;} return hi;}
+  function draw(){
+    var c=Math.pow(10,v/100), g='', p='', q='', i, lg, n;
+    for(i=LX0;i<=LX1;i++) g+=L(sx(i),YT,sx(i),YB)+T('tk',sx(i),YB+14,'10'+['','','²','³','⁴','⁵','⁶'][i],'middle');
+    for(i=LY0;i<=12;i+=3) g+=L(X0,sy(i),X1,sy(i))+T('tk',X0-6,sy(i)+3.5,i===0?'1':'10'+
+      ({3:'³',6:'⁶',9:'⁹',12:'¹²'})[i],'end');
+    g+=T('tk',(X0+X1)/2,YB+28,'input size n (log scale)','middle');
+    g+=T('tk',16,(YT+YB)/2,'steps (log)','middle',' transform="rotate(-90 16 '+((YT+YB)/2)+')"');
+    $('gGrid').innerHTML=g;
+    for(i=0;i<=120;i++){lg=LX0+(LX1-LX0)*i/120; n=Math.pow(10,lg);
+      p+=(i?'L':'M')+sx(lg).toFixed(1)+','+sy(Math.log10(c*n*Math.log2(n))).toFixed(1);
+      q+=(i?'L':'M')+sx(lg).toFixed(1)+','+sy(2*lg).toFixed(1);}
+    var ns=cross(c), xs=sx(Math.log10(ns));
+    $('gCurve').innerHTML='<path d="'+q+'" stroke="var(--c2)"/><path d="'+p+'" stroke="var(--c1)"/>'+
+      L(xs,YT,xs,YB,' stroke="var(--ink-2)" stroke-dasharray="4 3"');
+    var lab=T('tkb',X0+8,YT+14,'n²  (simple)','start',' style="fill:var(--c2)"')+
+      T('tkb',X0+8,YT+28,c.toFixed(c<10?1:0)+' · n log₂n  (clever)','start',' style="fill:var(--c1)"');
+    lab+=T('tk',xs+(xs>380?-6:6),YB-8,'n* = '+H.comma(ns),xs>380?'end':'start');
+    $('gLab').innerHTML=lab;
+    $('gX').textContent=H.comma(ns);
+    $('gR').textContent=H.comma(1e6/(c*Math.log2(1e6)))+'×';
+    $('gM').textContent=(1+Math.log2(1+1/Math.log2(ns))).toFixed(3);
+    $('gQ').textContent='2.000';
+    $('gVal').textContent=c<10?c.toFixed(1):H.comma(c);
+  }
+  $('gSl').addEventListener('input',function(){v=+this.value; draw();});
+  document.querySelectorAll('[data-gp]').forEach(function(b){
+    b.addEventListener('click',function(){v=+b.getAttribute('data-gp'); $('gSl').value=v; draw();});});
+  H.predict('data-p1','pv1',{
+    a:'<b>Too early.</b> At n = 100 the clever method is still paying its handicap: 100 · 100 · log₂100 is 66,000 steps against 10,000. The crossover solves n = 100 log₂ n.',
+    b:'<b>Correct: n* = 996.</b> A hundredfold constant costs only about a thousand in input size, because log₂ n grows so slowly. Beyond that the exponent wins, and at a million items the simple method is 502× slower.',
+    c:'<b>Much too late.</b> That would be true if the clever method were only slightly better in exponent. Here the exponent gap is n against log n, and it closes a factor of 100 by n ≈ 1,000.',
+    d:'<b>No constant can save the larger exponent.</b> That is the square–cube argument. Drag c up to 10,000 and the crossover moves out to about 174,000, but it never disappears.'
+  });
+  draw();
+})();
+
+/* ===== LAB 2 -- growth factor as lot size ===== */
+(function(){
+  'use strict';
+  var H=window.__ch14, $=H.$, T=H.txt, L=H.ln, g=2.0, add=false, N=600;
+  var X0=58,X1=462;
+  function grow(cap){return add?cap+16:Math.max(cap+1,Math.ceil(cap*g));}
+  function longrun(){
+    var cap=add?16:1,size=0,cp=0,rs=0,k;
+    for(k=1;k<=262144;k++){ if(size===cap){cp+=size; cap=grow(cap); rs++;} size++; }
+    var marks={}, cnt=0, sum=0;
+    for(var i=0;i<4000;i++){ marks[Math.round(Math.pow(10,2+3.5*i/3999))]=1; }
+    cap=add?16:1; size=0; var top=Math.round(Math.pow(10,5.5));
+    for(k=1;k<=top;k++){ if(size===cap) cap=grow(cap); size++; if(marks[k]){sum+=1-size/cap; cnt++;} }
+    return {cpa:cp/262144, rs:rs, idle:sum/cnt};
+  }
+  function draw(){
+    var cap=add?16:1,size=0,cp=0,CP=[0],CAP=[cap],k,o='',gr='';
+    for(k=1;k<=N;k++){ if(size===cap){cp+=size; cap=grow(cap);} size++; CP.push(cp); CAP.push(cap); }
+    var bnd=add?0:g/(g-1), ymax1=Math.max(CP[N],bnd*N,N)*1.05, ymax2=Math.max(CAP[N],N)*1.05;
+    var t1=26,b1=138,t2=176,b2=288;
+    function sx(n){return X0+n/N*(X1-X0);}
+    function y1(v){return b1-v/ymax1*(b1-t1);} function y2(v){return b2-v/ymax2*(b2-t2);}
+    [0,200,400,600].forEach(function(n){gr+=L(sx(n),t1,sx(n),b1)+L(sx(n),t2,sx(n),b2);});
+    gr+=L(X0,b1,X1,b1)+L(X0,b2,X1,b2);
+    gr+=T('tk',X0-6,y1(0)+3,'0','end')+T('tk',X0-6,y1(Math.round(ymax1/1.05))+3,H.comma(ymax1/1.05),'end');
+    gr+=T('tk',X0-6,y2(0)+3,'0','end')+T('tk',X0-6,y2(Math.round(ymax2/1.05))+3,H.comma(ymax2/1.05),'end');
+    [0,200,400,600].forEach(function(n){gr+=T('tk',sx(n),b1+12,n,'middle');});
+    $('aGrid').innerHTML=gr;
+    var p='M'+sx(0)+','+y1(0), q='M'+sx(0)+','+y2(CAP[0]), s='M'+sx(0)+','+y2(0);
+    for(k=1;k<=N;k++){ p+='L'+sx(k).toFixed(1)+','+y1(CP[k-1]).toFixed(1)+'L'+sx(k).toFixed(1)+','+y1(CP[k]).toFixed(1);
+      q+='L'+sx(k).toFixed(1)+','+y2(CAP[k-1]).toFixed(1)+'L'+sx(k).toFixed(1)+','+y2(CAP[k]).toFixed(1); }
+    s+='L'+sx(N)+','+y2(N);
+    var fillp=q+'L'+sx(N)+','+y2(N)+'L'+sx(0)+','+y2(0)+'Z';
+    o+='<path d="'+fillp+'" style="fill:var(--c2);fill-opacity:0.14;stroke:none"/>';
+    if(!add) o+='<path d="M'+sx(0)+','+y1(0)+'L'+sx(N)+','+y1(bnd*N).toFixed(1)+'" stroke="var(--ink-3)" stroke-dasharray="5 4" stroke-width="1.4"/>';
+    o+='<path d="M'+sx(0)+','+y1(0)+'L'+sx(N)+','+y1(N).toFixed(1)+'" stroke="var(--rule-strong)" stroke-dasharray="2 3" stroke-width="1.2"/>';
+    o+='<path d="'+p+'" stroke="var(--c1)"/><path d="'+q+'" stroke="var(--c2)"/><path d="'+s+'" stroke="var(--ink-2)" stroke-width="1.4"/>';
+    $('aCurve').innerHTML=o;
+    var lab=T('tkb',X0+6,t1-8,'copies so far'+(add?'':'  (dashed: bound g·n/(g−1))'),'start')+
+      T('tk',sx(N)-4,y1(N)-5,'1 per append','end')+
+      T('tkb',X0+6,t2-8,'capacity (blue) and items stored (grey); shaded = idle','start')+
+      T('tk',X1,b2+14,'appends n','end');
+    $('aLab').innerHTML=lab;
+    var r=longrun();
+    $('aC').textContent=r.cpa<100?r.cpa.toFixed(2):H.comma(r.cpa);
+    $('aB').textContent=add?'none':(g/(g-1)).toFixed(2);
+    $('aI').textContent=(100*r.idle).toFixed(1)+'%';
+    $('aN').textContent=H.comma(r.rs);
+    $('aVal').textContent=add?'+16':'×'+g.toFixed(3);
+  }
+  $('aSl').addEventListener('input',function(){g=+this.value/1000; add=false; draw();});
+  document.querySelectorAll('[data-ap]').forEach(function(b){
+    b.addEventListener('click',function(){var a=b.getAttribute('data-ap');
+      if(a==='add'){add=true;} else {add=false; g=+a/1000; $('aSl').value=a;} draw();});});
+  H.predict('data-p2','pv2',{
+    a:'<b>No.</b> A smaller growth factor means more frequent resizes, and each copies everything on hand. Press ×1.125 and read 8.06 copies per append.',
+    b:'<b>Correct.</b> 8.06 copies per append against 1.00 for doubling, and never more than g/(g−1) = 9. It is more copying, but a constant: append stays O(1) amortised. The pay-off is idle memory of 5.7% instead of 27.8%.',
+    c:'<b>Not while growth is geometric.</b> Any factor above 1 keeps copies per append below g/(g−1). What makes it grow with n is a fixed increment: press +16 slots.',
+    d:'<b>Each resize is smaller, but there are many more of them,</b> and they come closer together. The total works out to about 1/(g−1) = 8 copies per append.'
+  });
+  draw();
+})();
+</script>
+
+<script>
+/* ===== LAB 3 -- what each check prunes (N-Queens) ===== */
+(function(){
+  'use strict';
+  var H=window.__ch14, $=H.$, T=H.txt, L=H.ln, n=8;
+  function full(n){
+    var per=new Array(n+1).fill(0), sols=0, first=null, cols=[], used={}, d1={}, d2={};
+    function go(r){
+      per[r]++;
+      if(r===n){ sols++; if(!first) first=cols.slice(); return; }
+      for(var c=0;c<n;c++){
+        if(used[c]||d1[r-c]||d2[r+c]) continue;
+        used[c]=d1[r-c]=d2[r+c]=1; cols.push(c);
+        go(r+1);
+        cols.pop(); used[c]=d1[r-c]=d2[r+c]=0;
+      }
+    }
+    go(0); return {per:per, sols:sols, first:first};
+  }
+  function draw(){
+    var F=full(n), none=[], colc=[], d, sumN=0, sumC=0, sumF=0, fp=1;
+    for(d=0;d<=n;d++){ none.push(Math.pow(n,d)); colc.push(fp); fp*=(n-d); }
+    for(d=0;d<=n;d++){ sumN+=none[d]; sumC+=colc[d]; sumF+=F.per[d]; }
+    /* board */
+    var B0x=16,B0y=62,S=180,cs=S/n,o='';
+    for(var r=0;r<n;r++) for(var c=0;c<n;c++)
+      o+='<rect x="'+(B0x+c*cs).toFixed(1)+'" y="'+(B0y+r*cs).toFixed(1)+'" width="'+cs.toFixed(1)+'" height="'+cs.toFixed(1)+
+         '" fill="'+((r+c)%2?'var(--rule)':'var(--sheet-2)')+'"/>';
+    o+='<rect x="'+B0x+'" y="'+B0y+'" width="'+S+'" height="'+S+'" fill="none" stroke="var(--rule-strong)"/>';
+    F.first.forEach(function(c,r){o+='<circle cx="'+(B0x+(c+0.5)*cs).toFixed(1)+'" cy="'+(B0y+(r+0.5)*cs).toFixed(1)+
+      '" r="'+(cs*0.3).toFixed(1)+'" fill="var(--c3)" stroke="var(--sheet)" stroke-width="1.5"/>';});
+    o+=T('tkb',B0x+S/2,B0y-10,'first solution found','middle');
+    $('qBoard').innerHTML=o;
+    /* chart */
+    var X0=250,X1=462,YT=40,YB=242, LYM=10, g='';
+    function sx(d){return X0+d/n*(X1-X0);} function sy(v){return YB-Math.log10(Math.max(v,1))/LYM*(YB-YT);}
+    for(var e=0;e<=LYM;e+=2) g+=L(X0,sy(Math.pow(10,e)),X1,sy(Math.pow(10,e)))+
+      T('tk',X0-5,sy(Math.pow(10,e))+3.5,e===0?'1':'10'+['','','²','','⁴','','⁶','','⁸','','¹⁰'][e],'end');
+    for(d=0;d<=n;d++) g+=T('tk',sx(d),YB+13,d,'middle');
+    g+=T('tk',(X0+X1)/2,YB+27,'queens placed (depth)','middle');
+    $('qGrid').innerHTML=g;
+    function poly(arr,col){var p='',dots='';arr.forEach(function(v,i){if(v<=0) return;
+      p+=(p?'L':'M')+sx(i).toFixed(1)+','+sy(v).toFixed(1);
+      dots+='<circle cx="'+sx(i).toFixed(1)+'" cy="'+sy(v).toFixed(1)+'" r="2.6" fill="'+col+'"/>';});
+      return '<path d="'+p+'" stroke="'+col+'"/>'+dots;}
+    $('qCurve').innerHTML=poly(none,'var(--c1)')+poly(colc,'var(--c2)')+poly(F.per,'var(--c3)');
+    $('qLab').innerHTML=T('tkb',X0,20,'nodes visited per depth (log)','start')+
+      T('tk',X0,32,'● no checks','start',' style="fill:var(--c1)"')+
+      T('tk',X0+76,32,'● column','start',' style="fill:var(--c2)"')+
+      T('tk',X0+134,32,'● + diagonals','start',' style="fill:var(--c3)"');
+    $('qA').textContent=H.comma(sumN); $('qB').textContent=H.comma(sumC);
+    $('qC').textContent=H.comma(sumF); $('qD').textContent=F.sols;
+    $('qVal').textContent=n;
+  }
+  $('qSl').addEventListener('input',function(){n=+this.value; draw();});
+  H.predict('data-p3','pv3',{
+    a:'<b>Diagonals help far more than that.</b> The column check alone reaches 40,320 complete boards and visits 109,601 nodes; adding diagonals cuts the visits 53-fold.',
+    b:'<b>Closer, but still five times too many.</b> The diagonal check fires one row after the queen that causes it, near the root, where each cut removes a large subtree.',
+    c:'<b>Correct: 2,057 nodes.</b> The column check gives the n! = 40,320 the source credits to both checks; the diagonals do the rest. Watch the green curve peak in the middle rows and fall to the 92 solutions.',
+    d:'<b>The search cannot know a branch is dead until it tries it.</b> 92 is the number of complete boards reached; getting there still takes 2,057 visits.'
+  });
+  draw();
+})();
+</script>
+
+<script>
+/* ===== LAB 4 -- the forward pass is dynamic programming ===== */
+(function(){
+  'use strict';
+  var H=window.__ch14, $=H.$, T=H.txt, L=H.ln, k=4, seed=14, p=-1, dur=[];
+  function durations(){var r=H.rng(seed); dur=[]; for(var i=0;i<40;i++) dur.push(1+Math.floor(r()*9));}
+  /* events in topological order: J0, U0, D0, J1, U1, D1, ... Jk */
+  function model(){
+    var ev=[], arr=[], s;
+    for(s=0;s<=k;s++){ ev.push({t:'J',s:s}); if(s<k){ev.push({t:'U',s:s}); ev.push({t:'D',s:s});} }
+    function id(t,s){return t==='J'?3*s:(t==='U'?3*s+1:3*s+2);}
+    for(s=0;s<k;s++){
+      arr.push({a:id('J',s),b:id('U',s),d:dur[4*s]}); arr.push({a:id('J',s),b:id('D',s),d:dur[4*s+1]});
+      arr.push({a:id('U',s),b:id('J',s+1),d:dur[4*s+2]}); arr.push({a:id('D',s),b:id('J',s+1),d:dur[4*s+3]});
+    }
+    return {ev:ev, arr:arr};
+  }
+  function pos(e){var w=420/k, x=30+e.s*w; if(e.t==='J') return [x,122]; return [x+w/2, e.t==='U'?62:182];}
+  function draw(){
+    var M=model(), ne=M.ev.length, TE=new Array(ne).fill(null), best=new Array(ne).fill(-1), i, j;
+    if(p<0||p>ne) p=ne;
+    for(j=0;j<p;j++){
+      if(j===0){TE[0]=0; continue;}
+      M.arr.forEach(function(a,ai){ if(a.b===j){ var v=TE[a.a]+a.d; if(TE[j]===null||v>TE[j]){TE[j]=v; best[j]=ai;} } });
+    }
+    var crit={};
+    if(p===ne){ var cur=ne-1; while(cur>0){ var ai=best[cur]; crit[ai]=1; cur=M.arr[ai].a; } }
+    var o='';
+    M.arr.forEach(function(a,ai){
+      var P=pos(M.ev[a.a]), Q=pos(M.ev[a.b]), dx=Q[0]-P[0], dy=Q[1]-P[1], len=Math.sqrt(dx*dx+dy*dy), ux=dx/len, uy=dy/len;
+      var x1=P[0]+ux*9, y1=P[1]+uy*9, x2=Q[0]-ux*10, y2=Q[1]-uy*10, col=crit[ai]?'var(--c1)':'var(--rule-strong)';
+      o+=L(x1,y1,x2,y2,' stroke="'+col+'" stroke-width="'+(crit[ai]?2.6:1.4)+'"');
+      o+='<path d="M'+(x2-ux*7-uy*3.5).toFixed(1)+','+(y2-uy*7+ux*3.5).toFixed(1)+' L'+x2.toFixed(1)+','+y2.toFixed(1)+
+         ' L'+(x2-ux*7+uy*3.5).toFixed(1)+','+(y2-uy*7-ux*3.5).toFixed(1)+'" fill="none" stroke="'+col+'" stroke-width="1.6"/>';
+      if(k<=6) o+=T('tk',(P[0]+Q[0])/2+(dy<0?-4:4)*(a.b%3===0?-1:1),(P[1]+Q[1])/2+(dy<0?-3:9),a.d,'middle');
+    });
+    $('cArr').innerHTML=o;
+    var nd='';
+    M.ev.forEach(function(e,ix){
+      var P=pos(e), done=TE[ix]!==null, col=done?'var(--c2)':'var(--sheet)';
+      nd+='<circle cx="'+P[0].toFixed(1)+'" cy="'+P[1].toFixed(1)+'" r="'+(k>7?6:8)+'" fill="'+col+'" stroke="var(--ink-2)" stroke-width="1.2"/>';
+      if(done){
+        if(e.t==='J'&&k>6){
+          nd+=L(P[0],P[1]+8,P[0],226,' stroke="var(--rule)" stroke-dasharray="1 3"')+T('tkb',P[0],238,TE[ix],'middle');
+        } else {
+          var ty=e.t==='U'?P[1]-14:(e.t==='D'?P[1]+22:P[1]-14);
+          nd+=T('tkb',P[0],ty,TE[ix],'middle');
+        }
+      }
+    });
+    $('cNode').innerHTML=nd;
+    /* enumerate every path, independently */
+    var longest=0, paths=0;
+    (function walk(s,acc){ if(s===k){paths++; if(acc>longest) longest=acc; return;}
+      walk(s+1,acc+dur[4*s]+dur[4*s+2]); walk(s+1,acc+dur[4*s+1]+dur[4*s+3]); })(0,0);
+    $('cLab').innerHTML=T('tk',240,256,p===ne?(k>6?'critical path in orange; TE at each join in the bottom row':'critical path in orange; TE beside each event'):
+      'forward pass: '+p+' of '+ne+' events processed','middle');
+    $('cP').textContent=H.comma(paths);
+    $('cA').textContent=4*k;
+    $('cF').textContent=p===ne?TE[ne-1]:'…';
+    $('cE').textContent=longest;
+    $('cVal').textContent=k;
+  }
+  $('cSl').addEventListener('input',function(){k=+this.value; p=-1; draw();});
+  $('cStep').addEventListener('click',function(){var ne=3*k+1; p=(p>=ne)?1:p+1; draw();});
+  $('cRun').addEventListener('click',function(){p=-1; draw();});
+  $('cNew').addEventListener('click',function(){seed=(seed*48271+11)%2147483647; durations(); p=-1; draw();});
+  H.predict('data-p4','pv4',{
+    a:'<b>That is enumeration, and it is what DP avoids.</b> Every path through an event shares the longest path to that event, so the forward pass computes it once and never lists paths.',
+    b:'<b>Correct.</b> Four additions per stage (one per arrow) and one comparison at each join. At 40 stages it would be 160 additions against 1.1 trillion paths.',
+    c:'<b>One per stage is too few.</b> Each stage has four arrows, and each arrow contributes one addition TEᵢ + tᵢⱼ. The count is the number of arrows: 40.',
+    d:'<b>That would be listing paths and adding along each.</b> The forward pass touches each arrow once, so its cost is the number of arrows, 40.'
+  });
+  durations(); draw();
+})();
+</script>
+
+<script>
+/* ===== LAB 5 -- a hash table filling up ===== */
+(function(){
+  'use strict';
+  var H=window.__ch14, $=H.$, T=H.txt, L=H.ln, al=0.75, seed=1403, M=16384;
+  function table(r,alpha){
+    var tab=new Int32Array(M).fill(-1), nk=Math.floor(alpha*M), disp=0, i, h, d;
+    for(i=0;i<nk;i++){ h=Math.floor(r()*M); d=0; while(tab[(h+d)%M]!==-1) d++; tab[(h+d)%M]=i; disp+=d; }
+    var e0=-1; for(i=0;i<M;i++) if(tab[i]===-1){e0=i;break;}
+    var dist=new Int32Array(M), sum=0, j, idx;
+    for(j=0;j<M;j++){ idx=(e0-j+M)%M; dist[idx]=(tab[idx]===-1)?0:dist[(idx+1)%M]+1; }
+    for(i=0;i<M;i++) sum+=dist[i]+1;
+    return {tab:tab, hit:nk?disp/nk+1:1, miss:sum/M};
+  }
+  function draw(){
+    var r=H.rng(seed), res=[], i;
+    for(i=0;i<4;i++) res.push(table(r,al));
+    var hit=0, miss=0; res.forEach(function(t){hit+=t.hit/4; miss+=t.miss/4;});
+    var kh=0.5*(1+1/(1-al)), km=0.5*(1+1/((1-al)*(1-al)));
+    /* grid of the first 4096 slots, drawn as runs per row */
+    var tab=res[0].tab, G0x=14, G0y=44, cs=3, o='', row, c, st;
+    o+='<rect x="'+G0x+'" y="'+G0y+'" width="192" height="192" fill="var(--sheet-2)" stroke="var(--rule-strong)"/>';
+    for(row=0;row<64;row++){ c=0; while(c<64){ if(tab[row*64+c]!==-1){ st=c; while(c<64&&tab[row*64+c]!==-1) c++;
+      o+='<rect x="'+(G0x+st*cs)+'" y="'+(G0y+row*cs)+'" width="'+((c-st)*cs)+'" height="'+cs+'" fill="var(--ink-2)"/>'; } else c++; } }
+    $('hTab').innerHTML=o;
+    var X0=252,X1=462,YT=44,YB=236, YM=60, g='';
+    function sx(a){return X0+a*(X1-X0);} function sy(v){return YB-Math.min(v,YM)/YM*(YB-YT);}
+    [0,0.25,0.5,0.75,1].forEach(function(a){g+=L(sx(a),YT,sx(a),YB)+T('tk',sx(a),YB+13,a===0?'0':(a===1?'1':a.toString().replace('0.','.')),'middle');});
+    [0,20,40,60].forEach(function(v){g+=L(X0,sy(v),X1,sy(v))+T('tk',X0-5,sy(v)+3.5,v,'end');});
+    g+=T('tk',(X0+X1)/2,YB+27,'load factor','middle');
+    $('hGrid').innerHTML=g;
+    function curve(f,col,dash){var p='',a,v;for(i=0;i<=190;i++){a=i/200; v=f(a); if(v>YM*1.02) break;
+      p+=(p?'L':'M')+sx(a).toFixed(1)+','+sy(v).toFixed(1);}
+      return '<path d="'+p+'" stroke="'+col+'"'+(dash?' stroke-dasharray="5 4"':'')+'/>';}
+    var cv=curve(function(a){return 0.5*(1+1/((1-a)*(1-a)));},'var(--c1)')+
+      curve(function(a){return 0.5*(1+1/(1-a));},'var(--c2)')+
+      curve(function(a){return a;},'var(--c3)')+
+      curve(function(a){return a/(1-a);},'var(--c4)',true);
+    cv+=L(sx(al),YT,sx(al),YB,' stroke="var(--ink-3)" stroke-dasharray="2 3"');
+    if(miss<=YM) cv+='<circle cx="'+sx(al).toFixed(1)+'" cy="'+sy(miss).toFixed(1)+'" r="4" fill="var(--c1)" stroke="var(--sheet)" stroke-width="1.5"/>';
+    cv+='<circle cx="'+sx(al).toFixed(1)+'" cy="'+sy(hit).toFixed(1)+'" r="4" fill="var(--c2)" stroke="var(--sheet)" stroke-width="1.5"/>';
+    $('hCurve').innerHTML=cv;
+    $('hLab').innerHTML=T('tkb',G0x,30,'first 4,096 slots','start')+
+      T('tkb',X0,18,'slots inspected per lookup','start')+
+      T('tk',X0,31,'● miss','start',' style="fill:var(--c1)"')+T('tk',X0+46,31,'● hit','start',' style="fill:var(--c2)"')+
+      T('tk',X0+84,31,'● chain miss','start',' style="fill:var(--c3)"')+T('tk',X0+160,31,'- - M/M/1','start',' style="fill:var(--c4)"')+
+      (miss>YM?T('tk',sx(al)-4,YT+10,'miss off scale','end'):'');
+    $('hMs').textContent=miss.toFixed(2); $('hMk').textContent=km.toFixed(2);
+    $('hHs').textContent=hit.toFixed(2);  $('hHk').textContent=kh.toFixed(2);
+    $('hVal').textContent=al.toFixed(2);
+  }
+  $('hSl').addEventListener('input',function(){al=+this.value/100; draw();});
+  $('hNew').addEventListener('click',function(){seed=(seed*48271+7)%2147483647; draw();});
+  H.predict('data-p5','pv5',{
+    a:'<b>That is roughly the cost of a hit in a lightly loaded table.</b> A miss has to walk to the end of whatever run of occupied slots it lands in, and at 75% those runs are long.',
+    b:'<b>That is the queueing intuition, 1/(1−α) = 4,</b> and it is the wrong power. Linear probing’s miss cost goes as 1/(1−α)², because long runs attract more keys and grow faster.',
+    c:'<b>Correct: ½(1 + 1/(1−0.75)²) = 8.5.</b> The simulation lands on 8.50. At 0.9 it is 50.5, which is why tables are resized well before they fill.',
+    d:'<b>Far too pessimistic.</b> The search only walks the run it lands in, not the table. But push the slider to 0.95 and the miss cost passes 200.'
+  });
+  draw();
+})();
+</script>
+
+<script>
+/* ===== LAB 6 -- water finds the lower spill point ===== */
+(function(){
+  'use strict';
+  var H=window.__ch14, $=H.$, T=H.txt, L=H.ln;
+  var SRC=[0,1,0,2,1,0,1,3,2,1,2,1], h=SRC.slice(), n=12, st=null;
+  var X0=40, CW=35, BASE=236, U=19;
+  function levels(){var lv=[],i,ml,mr;for(i=0;i<n;i++){ml=Math.max.apply(null,h.slice(0,i+1)); mr=Math.max.apply(null,h.slice(i));
+    lv.push(Math.min(ml,mr));} return lv;}
+  function reset(){st={l:0,r:n-1,lm:0,rm:0,w:0,steps:0,done:n<2,counted:new Array(n).fill(false)};}
+  function step(){
+    if(st.done) return;
+    if(h[st.l]<h[st.r]){ if(h[st.l]>=st.lm) st.lm=h[st.l]; else st.w+=st.lm-h[st.l]; st.counted[st.l]=true; st.l++; }
+    else { if(h[st.r]>=st.rm) st.rm=h[st.r]; else st.w+=st.rm-h[st.r]; st.counted[st.r]=true; st.r--; }
+    st.steps++; if(st.l>=st.r){ st.done=true; }
+  }
+  function runAll(){reset(); while(!st.done) step();}
+  function draw(){
+    var lv=levels(), brute=0, i, o='', g='';
+    for(i=0;i<n;i++) brute+=lv[i]-h[i];
+    for(i=0;i<=10;i+=2) g+=L(X0,BASE-i*U,X0+n*CW,BASE-i*U)+T('tk',X0-6,BASE-i*U+3.5,i,'end');
+    $('wGrid').innerHTML=g;
+    for(i=0;i<n;i++){
+      var x=X0+i*CW;
+      if(lv[i]>h[i]){ var fin=st.done||st.counted[i];
+        o+='<rect x="'+(x+1)+'" y="'+(BASE-lv[i]*U)+'" width="'+(CW-2)+'" height="'+((lv[i]-h[i])*U)+
+           '" fill="var(--c2)" fill-opacity="'+(fin?0.55:0.16)+'"/>'; }
+      if(h[i]>0) o+='<rect x="'+(x+1)+'" y="'+(BASE-h[i]*U)+'" width="'+(CW-2)+'" height="'+(h[i]*U)+'" fill="var(--ink-3)"/>';
+    }
+    o+=L(X0,BASE,X0+n*CW,BASE,' stroke="var(--ink-2)" stroke-width="1.5"');
+    if(!st.done){
+      [[st.l,'L','var(--c1)'],[st.r,'R','var(--c4)']].forEach(function(q){var cx=X0+q[0]*CW+CW/2;
+        o+='<path d="M'+(cx-6)+','+(BASE+20)+' L'+cx+','+(BASE+8)+' L'+(cx+6)+','+(BASE+20)+' Z" fill="'+q[2]+'"/>'+
+           T('tkb',cx,BASE+32,q[1],'middle');});
+      if(st.lm>0) o+=L(X0,BASE-st.lm*U,X0+(st.l+1)*CW,BASE-st.lm*U,' stroke="var(--c1)" stroke-dasharray="4 3" stroke-width="1.3"');
+      if(st.rm>0) o+=L(X0+st.r*CW,BASE-st.rm*U,X0+n*CW,BASE-st.rm*U,' stroke="var(--c4)" stroke-dasharray="4 3" stroke-width="1.3"');
+    }
+    $('wBars').innerHTML=o;
+    $('wLab').innerHTML=T('tk',X0+n*CW,24,st.done?'click or drag to set a bar’s height':
+      'left max '+st.lm+', right max '+st.rm+'; advancing the lower side','end');
+    $('wT').textContent=st.w; $('wB').textContent=brute; $('wS2').textContent=st.steps;
+    $('wH').textContent=Math.max.apply(null,h);
+  }
+  function setFrom(ev){
+    var svg=$('wS'), pt=svg.createSVGPoint(); pt.x=ev.clientX; pt.y=ev.clientY;
+    var m=svg.getScreenCTM(); if(!m) return; var q=pt.matrixTransform(m.inverse());
+    var i=Math.floor((q.x-X0)/CW); if(i<0||i>=n) return;
+    h[i]=Math.max(0,Math.min(10,Math.round((BASE-q.y)/U))); runAll(); draw();
+  }
+  var dragging=false;
+  $('wS').addEventListener('pointerdown',function(e){dragging=true; try{this.setPointerCapture(e.pointerId);}catch(x){} setFrom(e);});
+  $('wS').addEventListener('pointermove',function(e){if(dragging) setFrom(e);});
+  ['pointerup','pointercancel'].forEach(function(t){$('wS').addEventListener(t,function(){dragging=false;});});
+  document.querySelectorAll('[data-wp]').forEach(function(b){
+    b.addEventListener('click',function(){var a=b.getAttribute('data-wp');
+      if(a==='src') h=SRC.slice();
+      else if(a==='raise'){ var mx=Math.max.apply(null,h), ix=h.indexOf(mx); h[ix]=Math.min(10,mx+5); }
+      else { h=[]; for(var i=0;i<n;i++) h.push(Math.floor(Math.random()*9)); }
+      runAll(); draw();});});
+  $('wStep').addEventListener('click',function(){ if(st.done) reset(); step(); draw(); });
+  $('wRun').addEventListener('click',function(){ runAll(); draw(); });
+  H.predict('data-p6','pv6',{
+    a:'<b>Correct: none.</b> Every pool is held by the lower of its two walls. The 3-high bar was never the lower wall of anything, so raising it to 8 leaves the water at 6 units. Press Tallest +5 to see it.',
+    b:'<b>The water beside a tall bar is set by the wall on its other side,</b> which is lower. Raising the tall bar is raising the higher weir: the pond spills over the lower one either way.',
+    c:'<b>Nothing doubles.</b> The spill levels are min(max left, max right), and the tallest bar only ever appears as a max on one side, where the other side’s max is the smaller.',
+    d:'<b>For the tallest bar it never matters.</b> Wherever it is, each column’s level takes the smaller of its two side maxima, and the tallest bar is never the smaller one.'
+  });
+  runAll(); draw();
+})();
+</script>
+
+<script>
+/* ===== LAB 7 -- tortoise and hare on a loop ===== */
+(function(){
+  'use strict';
+  var H=window.__ch14, $=H.$, T=H.txt, L=H.ln, a=10, c=3, v=2, S=null;
+  var CX=372, CY=128, R=82;
+  function next(p){return p<a+c-1?p+1:a;}
+  function reset(){S={phase:1,t:0,sl:0,hr:0,T:null,meet:null,p:null,q:null,ph2:0,res:null};}
+  function step(){
+    if(S.res) return;
+    if(S.phase===1){
+      S.sl=next(S.sl); for(var i=0;i<v;i++) S.hr=next(S.hr); S.t++;
+      if(S.sl===S.hr){ S.T=S.t; S.meet=S.sl; S.phase=2; S.p=0; S.q=S.meet;
+        if(S.p===S.q) S.res=(S.p===a)?'ok':'wrong'; }
+      return;
+    }
+    S.p=next(S.p); S.q=next(S.q); S.ph2++;
+    if(S.p===S.q) S.res=(S.p===a)?'ok':'wrong';
+    else if(S.ph2>2*(a+c)+4) S.res='never';
+  }
+  function runAll(){reset(); var g=0; while(!S.res&&g<10000){step(); g++;}}
+  function xy(ix){
+    if(ix<a){ var sp=Math.min(24,250/Math.max(a,1)); return [CX-R-(a-ix)*sp, CY]; }
+    var j=ix-a, th=Math.PI+2*Math.PI*j/c; return [CX+R*Math.cos(th), CY+R*Math.sin(th)];
+  }
+  function draw(){
+    var e='', nd='', pt='', i, P, Q, N=a+c;
+    for(i=0;i<N;i++){ P=xy(i); Q=xy(next(i));
+      e+=L(P[0],P[1],Q[0],Q[1],' stroke="var(--rule-strong)" stroke-width="1.4"'); }
+    e+='<circle cx="'+CX+'" cy="'+CY+'" r="'+R+'" fill="none" stroke="var(--rule)" stroke-dasharray="2 4"/>';
+    $('fEdge').innerHTML=e;
+    for(i=0;i<N;i++){ P=xy(i);
+      nd+='<circle cx="'+P[0].toFixed(1)+'" cy="'+P[1].toFixed(1)+'" r="6" fill="var(--sheet)" stroke="var(--ink-2)" stroke-width="1.2"/>';
+      if(i===a) nd+='<circle cx="'+P[0].toFixed(1)+'" cy="'+P[1].toFixed(1)+'" r="10" fill="none" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="2 2"/>';
+    }
+    if(a>0){ P=xy(0); nd+=T('tk',P[0],CY+26,'head','middle'); P=xy(a); nd+=T('tk',P[0]-4,CY-16,'loop start','end'); }
+    else { P=xy(0); nd+=T('tk',P[0]-16,CY+4,'head = loop start','end'); }
+    $('fNode').innerHTML=nd;
+    var sl=S.phase===1?S.sl:S.p, hr=S.phase===1?S.hr:S.q;
+    P=xy(hr); pt+='<circle cx="'+P[0].toFixed(1)+'" cy="'+P[1].toFixed(1)+'" r="13" fill="none" stroke="var(--c1)" stroke-width="3"/>';
+    P=xy(sl); pt+='<circle cx="'+P[0].toFixed(1)+'" cy="'+P[1].toFixed(1)+'" r="8.5" fill="var(--c3)" fill-opacity="0.85"/>';
+    $('fPtr').innerHTML=pt;
+    var msg=S.phase===1?('phase 1, step '+S.t+': tortoise speed 1, hare speed '+v):
+      (S.res?(S.res==='ok'?'phase 2 ended on the loop start':(S.res==='never'?'phase 2: the pointers never meet':'phase 2 ended on the wrong node')):
+      'phase 2: one pointer restarted at the head; both speed 1');
+    $('fLab').innerHTML=T('tkb',16,22,msg,'start')+(S.phase===2?T('tk',16,38,'(hare speed '+v+' in phase 1)','start'):'');
+    $('fT').textContent=S.T===null?'…':S.T;
+    $('fB').textContent=S.T===null?'…':(S.T-a);
+    $('fK').textContent=S.T===null?'…':((S.T%c===0)?(S.T/c):(S.T/c).toFixed(2));
+    $('fR').textContent=!S.res?'…':(S.res==='ok'?'the start':(S.res==='never'?'never meets':'wrong node'));
+    $('fAv').textContent=a; $('fCv').textContent=c;
+    document.querySelectorAll('[data-fv]').forEach(function(b){b.classList.toggle('picked',+b.getAttribute('data-fv')===v);});
+  }
+  $('fA').addEventListener('input',function(){a=+this.value; runAll(); draw();});
+  $('fC').addEventListener('input',function(){c=+this.value; runAll(); draw();});
+  document.querySelectorAll('[data-fv]').forEach(function(b){
+    b.addEventListener('click',function(){v=+b.getAttribute('data-fv'); runAll(); draw();});});
+  $('fStep').addEventListener('click',function(){ if(S.res) reset(); step(); draw(); });
+  $('fRun').addEventListener('click',function(){ runAll(); draw(); });
+  H.predict('data-p7','pv7',{
+    a:'<b>That is the source’s a + b = c, and it cannot be right here:</b> the tortoise needs 10 steps just to reach the loop. It meets the hare at step 12.',
+    b:'<b>Correct.</b> They meet at step 12 with b = 2, and 12 = 4 × 3: the hare has lapped four times. In general a + b = kc, the first multiple of c that is at least a. The restart trick still works because only a mod c matters.',
+    c:'<b>At step 10 the tortoise has only just entered the loop.</b> The hare, which entered at step 5, is one node ahead of it on a 3-node loop; they meet two steps later, at 12.',
+    d:'<b>One too many.</b> 12 is a multiple of the loop length 3, and at every such step (once the tortoise is in the loop) the two are at the same node. The first is 12.'
+  });
+  runAll(); draw();
+})();
+</script>
+
+<script>
+/* Contents rail: mark the section currently in view (desktop only). */
+(function(){
+  'use strict';
+  var links=Array.prototype.slice.call(document.querySelectorAll('.rail a'));
+  if(!links.length||!window.IntersectionObserver) return;
+  var map={}; links.forEach(function(a){map[a.getAttribute('href').slice(1)]=a;});
+  var seen={};
+  var io=new IntersectionObserver(function(es){
+    es.forEach(function(e){seen[e.target.id]=e.isIntersecting;});
+    var ids=Object.keys(map),act=null;
+    for(var i=0;i<ids.length;i++) if(seen[ids[i]]){act=ids[i];break;}
+    if(!act) return;
+    links.forEach(function(a){a.classList.toggle('on',a===map[act]);});
+  },{rootMargin:'-70px 0px -65% 0px',threshold:0});
+  Object.keys(map).forEach(function(id){var el=document.getElementById(id); if(el) io.observe(el);});
+})();
+</script>
+
+<script>
+/* Safety net: if the MathJax bundle cannot be reached, degrade the TeX to
+   readable Unicode instead of leaving raw backslash markup on the page. */
+(function () {
+  'use strict';
+  var GREEK = { theta:'θ', sigma:'σ', delta:'δ', mu:'μ', pi:'π',
+                infty:'∞', alpha:'α', beta:'β', lambda:'λ' };
+  var SUB = { '1':'₁','2':'₂','3':'₃','i':'ᵢ','j':'ⱼ','n':'ₙ','p':'ₚ','x':'ₓ','y':'ᵧ' };
+  var SUP = { '2':'²','3':'³','n':'ⁿ','p':'ᵖ','*':'*' };
+
+  function degrade(t) {
+    t = t.replace(/\$\$/g, '').replace(/\\[()[\]]/g, '');
+    t = t.replace(/\\(?:left|right|textstyle|displaystyle|!|,|;|:)/g, '');
+    t = t.replace(/\\q?quad/g, ' ');
+    t = t.replace(/\\mathbb\{R\}/g, 'ℝ').replace(/\\mathbb\{Z\}/g, 'ℤ')
+         .replace(/\\mathbb\{N\}/g, 'ℕ').replace(/\\mathbb\{Q\}/g, 'ℚ');
+    t = t.replace(/\\(?:mathbf|mathrm|text|textbf|operatorname)\{([^{}]*)\}/g, '$1');
+    t = t.replace(/\\hat\{([^{}]*)\}/g, '$1̂').replace(/\\bar\{([^{}]*)\}/g, '$1̄');
+    t = t.replace(/\\sqrt\{([^{}]*)\}/g, '√($1)');
+    t = t.replace(/\\t?frac\{([^{}]*)\}\{([^{}]*)\}/g, '($1)/($2)');
+    t = t.replace(/\\binom\{([^{}]*)\}\{([^{}]*)\}/g, 'C($1,$2)');
+    t = t.replace(/\\([a-zA-Z]+)/g, function (m, w) {
+      if (GREEK[w]) return GREEK[w];
+      switch (w) {
+        case 'cdot': return '·';
+        case 'times': return '×';
+        case 'le': case 'leq': return '≤';
+        case 'ge': case 'geq': return '≥';
+        case 'neq': return '≠';
+        case 'approx': return '≈';
+        case 'in': return '∈';
+        case 'pm': return '±';
+        case 'to': case 'rightarrow': return '→';
+        case 'Rightarrow': return '⇒';
+        case 'iff': return '⇔';
+        case 'parallel': return '∥';
+        case 'perp': return '⊥';
+        case 'sum': return 'Σ';
+        case 'langle': return '⟨';
+        case 'rangle': return '⟩';
+        case 'wedge': return '∧';
+        case 'ast': return '*';
+        case 'cdots': case 'ldots': case 'dots': return '…';
+        case 'max': case 'min': case 'cos': case 'sin': case 'log': case 'exp': return w;
+        default: return w;
+      }
+    });
+    t = t.replace(/\\\|/g, '‖').replace(/\|\|/g, '‖');
+    t = t.replace(/_\{?([0-9ijnpxy])\}?/g, function (m, c) { return SUB[c] || ('_' + c); });
+    t = t.replace(/\^\{?([23np*])\}?/g, function (m, c) { return SUP[c] || ('^' + c); });
+    t = t.replace(/[{}]/g, '');
+    return t.replace(/[ \t]{2,}/g, ' ');
+  }
+
+  function run() {
+    if (window.MathJax && window.MathJax.startup && window.MathJax.startup.document) return;
+    var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+      acceptNode: function (n) {
+        if (!n.nodeValue || n.nodeValue.indexOf('\\') < 0 && n.nodeValue.indexOf('$$') < 0)
+          return NodeFilter.FILTER_REJECT;
+        var p = n.parentNode;
+        while (p && p !== document.body) {
+          var tag = p.nodeName;
+          if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'CODE' || tag === 'PRE')
+            return NodeFilter.FILTER_REJECT;
+          p = p.parentNode;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    var hits = [], n;
+    while ((n = walker.nextNode())) hits.push(n);
+    hits.forEach(function (node) { node.nodeValue = degrade(node.nodeValue); });
+    document.querySelectorAll('.mathbox').forEach(function (el) {
+      el.style.fontFamily = "'IBM Plex Mono', monospace";
+      el.style.fontSize = '15px';
+      el.style.textAlign = 'center';
+      el.style.padding = '10px 0';
+    });
+  }
+  setTimeout(run, 6000);
+})();
+</script>
+<script>
+/* Long display equations can be wider than their container - especially inside a
+   callout box, which is narrower than the main column. After the typesetter
+   finishes, measure each one and shrink it just enough to fit. Only ever shrinks,
+   never grows, and never below a readable floor - so the worst case is the
+   scrollbar we already had. */
+(function () {
+  'use strict';
+  var MIN_SCALE = 0.70;   /* below this, scrolling beats illegible text */
+
+  function fitOne(box) {
+    try {
+      var c = box.querySelector('mjx-container[display="true"]');
+      if (!c) return;
+      var svg = c.querySelector('svg');
+      if (!svg) return;
+      c.style.fontSize = '';
+      var avail = box.clientWidth;
+      if (!avail) return;
+      var w = svg.getBoundingClientRect().width;
+      if (!w || w <= avail) return;
+      var k = Math.max(MIN_SCALE, (avail / w) * 0.98);
+      c.style.fontSize = (k * 100).toFixed(1) + '%';
+      var w2 = svg.getBoundingClientRect().width;      /* one refinement pass */
+      if (w2 > avail) {
+        k = Math.max(MIN_SCALE, k * (avail / w2) * 0.98);
+        c.style.fontSize = (k * 100).toFixed(1) + '%';
+      }
+    } catch (e) { /* leave the equation exactly as it was */ }
+  }
+
+  /* Inline math cannot wrap and is not inside a scrollable .mathbox, so a long
+     inline expression pushes the whole page sideways.  Shrink any that is wider
+     than the text column it sits in; the ex-based sizing keeps the baseline. */
+  function fitInline(c) {
+    try {
+      var svg = c.querySelector('svg'); if (!svg) return;
+      c.style.fontSize = '';
+      var host = c.parentElement; if (!host) return;
+      var avail = host.clientWidth; if (!avail) return;
+      var w = svg.getBoundingClientRect().width;
+      if (!w || w <= avail) return;
+      c.style.fontSize = (Math.max(MIN_SCALE, (avail / w) * 0.98) * 100).toFixed(1) + '%';
+    } catch (e) { /* leave the expression exactly as it was */ }
+  }
+
+  function fitAll() {
+    try { document.querySelectorAll('.mathbox').forEach(fitOne); } catch (e) {}
+    try {
+      document.querySelectorAll('mjx-container:not([display="true"])').forEach(fitInline);
+    } catch (e) {}
+  }
+
+  function start() {
+    fitAll();
+    var t;
+    window.addEventListener('resize', function () {
+      clearTimeout(t); t = setTimeout(fitAll, 160);
+    });
+  }
+
+  function waitForTypesetter(n) {
+    if (window.MathJax && window.MathJax.startup && window.MathJax.startup.promise) {
+      window.MathJax.startup.promise.then(start, start);
+      return;
+    }
+    if (n > 60) return;            /* typesetter never arrived - nothing to fit */
+    setTimeout(function () { waitForTypesetter(n + 1); }, 200);
+  }
+  waitForTypesetter(0);
+})();
+</script>

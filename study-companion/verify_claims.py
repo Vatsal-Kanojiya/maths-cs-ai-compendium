@@ -2882,4 +2882,949 @@ print(f"[Ch13 s11]   peaks at 4 GPUs ({max(_gains,key=lambda g:g[1])[1]:.2f}x), 
 print(f"[Ch13 s11]   that is Goldratt's FIFTH focusing step, the one everyone forgets:")
 print(f"[Ch13 s11]   when a constraint is broken, go back to step one.")
 
+# =====================================================================
+# Chapter 14 part 1 -- data structures and algorithms: foundations,
+# arrays and hashing, linked lists / stacks / queues (source files 00-02)
+# Everything lives inside one function so no name leaks into the shared
+# namespace of the earlier chapters.
+# =====================================================================
+def _ch14p1():
+    import math, random, itertools, heapq, sys, time, bisect
+    import numpy as np
+    T = "[Ch14 %s]"
+    def say(sec, msg, ok=None):
+        tail = "" if ok is None else "   " + P(ok)
+        print(f"{T % sec} {msg}{tail}")
+
+    # --- s02: Big O is an order-of-magnitude statement -------------------
+    print()
+    n6 = 10**6
+    say("s02", f"n = 1e6: log2 n = {math.log2(n6):.2f} (table: 20), n log2 n = {n6*math.log2(n6):.3g} (table: 2e7)",
+        abs(math.log2(n6)-20) < 0.1 and abs(n6*math.log2(n6)/2e7-1) < 0.01)
+    e = n6*math.log10(2)
+    say("s02", f"2^(1e6) = 10^{e:.3f} (table: 10^301030)", round(e) == 301030)
+    # local slope of n log n on a log-log plot, between n and 2n
+    sl = {n: math.log2((2*n*math.log2(2*n))/(n*math.log2(n))) for n in (10**3, 10**6, 10**9)}
+    say("s02", "local log-log slope of n log n between n and 2n: " +
+        ", ".join(f"n=1e{int(math.log10(n))}: {s:.3f}" for n, s in sl.items()))
+    say("s02", "  it is 1 + log2(1 + 1/log2 n): never exactly 1, drifts down slowly",
+        all(abs(s-(1+math.log2(1+1/math.log2(n)))) < 1e-12 for n, s in sl.items()) and sl[10**3] > 1.13)
+    # exponential: doubling ratio is not constant -> not a power law
+    say("s02", f"2^n doubling ratio T(2n)/T(n) = 2^n: at n=10 it is {2**10}, at n=20 {2**20:,} -- no fixed slope",
+        2**20 > 1000*2**10 - 1)
+    # crossover of constants: c*n*log2 n against n^2
+    def cross(c):
+        lo, hi = 2.0, 1e12
+        for _ in range(200):
+            mid = math.sqrt(lo*hi)
+            if mid > c*math.log2(mid): hi = mid
+            else: lo = mid
+        return hi
+    xs = {c: cross(c) for c in (1, 10, 100, 1000)}
+    say("s02", "crossover where n^2 overtakes c*n*log2 n: " +
+        ", ".join(f"c={c}: n*={x:,.0f}" for c, x in xs.items()))
+    say("s02", "  a 100x worse constant costs only ~1000 in crossover size, never the race",
+        900 < xs[100] < 1100 and xs[1000] < 20000)
+
+    x4 = cross(10000)
+    say("s02", f"  at c=10,000 the crossover is n* = {x4:,.0f}; at c=100 the simple method is "
+        f"{1e6/(100*math.log2(1e6)):.0f}x slower at n=1e6; at n=100 the clever one costs "
+        f"{100*100*math.log2(100):,.0f} vs 10,000", 170_000 < x4 < 180_000 and round(1e6/(100*math.log2(1e6))) == 502)
+    # --- s03: hidden copies -- s += c in CPython -------------------------
+    def tcat(n, keepref):
+        best = 9e9
+        for _ in range(3):
+            t0 = time.perf_counter()
+            s = ""
+            if keepref:
+                for _i in range(n):
+                    t = s; s += "x"
+            else:
+                for _i in range(n):
+                    s += "x"
+            best = min(best, time.perf_counter()-t0)
+        return best
+    a1, a2 = tcat(400_000, False), tcat(1_600_000, False)
+    b1, b2 = tcat(20_000, True), tcat(80_000, True)
+    print()
+    say("s03", f"s += c, plain loop: 4x the length costs {a2/a1:.2f}x the time (linear would be 4, quadratic 16)",
+        a2/a1 < 8)
+    say("s03", f"s += c with a second reference alive: 4x the length costs {b2/b1:.2f}x (quadratic is 16)",
+        b2/b1 > 8)
+    say("s03", "  CPython resizes a string in place when nothing else refers to it; the")
+    say("s03", "  quadratic copy the source describes appears as soon as another name holds s.")
+
+    # --- s04: amortised cost; geometric vs arithmetic growth --------------
+    caps, last = [], sys.getsizeof([])
+    L = []
+    for _i in range(200_000):
+        L.append(0)
+        sz = sys.getsizeof(L)
+        if sz != last:
+            caps.append((sz - sys.getsizeof([]))//8); last = sz
+    ratios = [caps[i+1]/caps[i] for i in range(len(caps)-1) if caps[i] > 1000]
+    print()
+    say("s04", f"CPython list capacity steps (first few): {caps[:10]}")
+    say("s04", f"growth ratio at large sizes: {min(ratios):.3f}..{max(ratios):.3f} -- about 1.125, not 2",
+        all(1.10 < r < 1.14 for r in ratios))
+    def copies_geo(n, g):
+        cap, size, cp, worst = 1, 0, 0, 0.0
+        for k in range(1, n+1):
+            if size == cap:
+                cp += size; cap = max(cap+1, math.ceil(cap*g))
+            size += 1
+            worst = max(worst, cp/k)
+        return cp, worst
+    for g in (1.125, 1.5, 2.0):
+        cp, worst = copies_geo(1 << 18, g)
+        say("s04", f"growth x{g}: copies per append at n=2^18 {cp/(1<<18):.2f}, worst prefix {worst:.2f}, "
+            f"bound g/(g-1) = {g/(g-1):.2f}", worst <= g/(g-1) + 0.01)
+    def copies_ari(n, k):
+        cap, size, cp = k, 0, 0
+        for _i in range(n):
+            if size == cap:
+                cp += size; cap += k
+            size += 1
+        return cp
+    c1, c2 = copies_ari(100_000, 100), copies_ari(200_000, 100)
+    say("s04", f"arithmetic growth (+100 slots): doubling n multiplies copies by {c2/c1:.2f} -- quadratic, "
+        f"so O(n) per append", 3.9 < c2/c1 < 4.1)
+    c16 = copies_ari(1 << 18, 16)
+    say("s04", f"  +16 slots (the lab's arithmetic schedule): {c16/(1<<18):,.0f} copies per append at n=2^18",
+        abs(c16/(1 << 18) - 8192) < 20)
+    # slack: average idle fraction of capacity, sampled over n log-uniformly
+    def slack(g):
+        cap, size, fr = 1, 0, []
+        marks = set(int(round(10**x)) for x in np.linspace(2, 5.5, 4000))
+        for k in range(1, int(10**5.5)+1):
+            if size == cap: cap = max(cap+1, math.ceil(cap*g))
+            size += 1
+            if k in marks: fr.append(1-size/cap)
+        return float(np.mean(fr))
+    sk = {g: slack(g) for g in (1.125, 1.5, 2.0, 3.0)}
+    say("s04", "mean idle capacity: " + ", ".join(f"x{g}: {100*v:.1f}%" for g, v in sk.items()))
+    say("s04", "  bigger lots mean fewer copies and more idle space -- a trade-off, not an optimum",
+        sk[1.125] < sk[1.5] < sk[2.0] < sk[3.0])
+
+    # --- s05: the stack you do not see -----------------------------------
+    def qs_depth(a, smaller_first):
+        # iterative simulation of recursion depth for Lomuto partition, last-element pivot
+        maxd = 0
+        stack = [(0, len(a)-1, 1)]
+        a = list(a)
+        while stack:
+            lo, hi, d = stack.pop()
+            while lo < hi:
+                maxd = max(maxd, d)
+                p = a[hi]; i = lo
+                for j in range(lo, hi):
+                    if a[j] < p: a[i], a[j] = a[j], a[i]; i += 1
+                a[i], a[hi] = a[hi], a[i]
+                if smaller_first:
+                    if i-lo < hi-i:
+                        stack.append((i+1, hi, d)); hi = i-1; d += 1   # recurse left (smaller), loop on right
+                    else:
+                        stack.append((lo, i-1, d)); lo = i+1; d += 1
+                else:
+                    stack.append((i+1, hi, d+1)); hi = i-1; d += 1      # both sides are real calls
+        return maxd
+    print()
+    n = 2000
+    dn = qs_depth(range(n), False)
+    ds = qs_depth(range(n), True)
+    say("s05", f"quicksort, sorted input n={n}, last-element pivot: naive recursion depth {dn} (~n)", dn >= n-1)
+    rng = random.Random(14)
+    arr = list(range(n)); rng.shuffle(arr)
+    dr = qs_depth(arr, False)
+    say("s05", f"  same code, shuffled input: depth {dr} (~2-3 log2 n = {math.log2(n):.1f}); smaller side first on "
+        f"sorted input: depth {ds} <= log2 n", ds <= math.log2(n) + 1 and dr < 60)
+    say("s05", f"  so 'quicksort is O(log n) space' needs smaller-side-first, or luck", dn > 50*ds)
+    def qs_rec(a):
+        if len(a) <= 1: return a
+        p = a[-1]
+        return qs_rec([x for x in a[:-1] if x < p]) + [p] + qs_rec([x for x in a[:-1] if x >= p])
+    try:
+        qs_rec(list(range(2000))); crashed = False
+    except RecursionError:
+        crashed = True
+    ok_small = qs_rec(arr[:500]) == sorted(arr[:500])
+    say("s05", "  a plain recursive quicksort sorts shuffled input, and raises RecursionError on 2,000 "
+        "already-sorted items", crashed and ok_small)
+    say("s05", f"CPython default recursion limit = {sys.getrecursionlimit()}", sys.getrecursionlimit() == 1000)
+    def tail(k, acc=0):
+        return acc if k == 0 else tail(k-1, acc+1)
+    try:
+        tail(5000); tail_ok = False
+    except RecursionError:
+        tail_ok = True
+    say("s06", "a tail-recursive call 5000 deep still raises RecursionError (no tail-call elimination)", tail_ok)
+
+    # --- s07: counting Fibonacci's calls -- a recurrence done properly ----
+    F = [0, 1]
+    for _i in range(2, 70): F.append(F[-1]+F[-2])
+    cnt = [0]
+    def fib(k):
+        cnt[0] += 1
+        return k if k <= 1 else fib(k-1)+fib(k-2)
+    ok = True
+    for k in range(0, 23):
+        cnt[0] = 0; fib(k)
+        ok &= (cnt[0] == 2*F[k+1]-1)
+    print()
+    say("s07", "naive fib(n) makes exactly C(n) = 2F(n+1) - 1 calls, checked n = 0..22", ok)
+    c50 = 2*F[51]-1
+    say("s07", f"fib(50): {c50:,} calls = {c50:.3g}; source says 'over 10^15'; 2^50 = {2**50:.3g}",
+        c50 < 1e11 and 2**50 > 1e15)
+    say("s07", f"  the source overstates by {2**50/c50:,.0f}x: O(2^n) is a true bound but not a tight one")
+    phi = (1+5**0.5)/2
+    say("s07", f"C(n+1)/C(n) at n=40: {(2*F[42]-1)/(2*F[41]-1):.6f} -> phi = {phi:.6f}",
+        abs((2*F[42]-1)/(2*F[41]-1)-phi) < 1e-8)
+    # which subcalls repeat in fib(5)
+    seen = {}
+    def fibc(k):
+        seen[k] = seen.get(k, 0)+1
+        return k if k <= 1 else fibc(k-1)+fibc(k-2)
+    fibc(5)
+    say("s07", f"fib(5): fib(3) computed {seen[3]}x, fib(2) {seen[2]}x (source: twice, three times)",
+        seen[3] == 2 and seen[2] == 3)
+    t0 = time.perf_counter(); cnt[0] = 0; fib(24); t24 = time.perf_counter()-t0
+    per = t24/cnt[0]
+    say("s07", f"measured {per*1e9:.0f} ns per call here -> naive fib(50) ~ {c50*per/3600:.1f} hours "
+        f"(slow, not 'infeasible')")
+    r6050 = (2*F[61]-1)/(2*F[51]-1)
+    say("s07", f"  C(60)/C(50) = {r6050:.2f} (phi^10 = {phi**10:.2f}): fib(60) ~ {c50*per*r6050/86400:.1f} days "
+        f"at the measured rate", abs(r6050-phi**10) < 0.01)
+    # memo with the source's mutable default
+    def fib_memo(k, memo={}):
+        if k in memo: return memo[k]
+        if k <= 1: return k
+        memo[k] = fib_memo(k-1, memo)+fib_memo(k-2, memo)
+        return memo[k]
+    say("s07", f"source fib_memo(50) = {fib_memo(50):,} (correct)", fib_memo(50) == F[50])
+    def ways(total, coins, memo={}):          # the same idiom on a function that has a second input
+        if total == 0: return 1
+        if total < 0: return 0
+        if total in memo: return memo[total]
+        memo[total] = sum(ways(total-c, coins, memo) for c in coins)
+        return memo[total]
+    w1 = ways(10, (1, 2)); w2 = ways(10, (1, 5))
+    def ways_ok(total, coins):
+        memo = {}
+        def go(t):
+            if t == 0: return 1
+            if t < 0: return 0
+            if t not in memo: memo[t] = sum(go(t-c) for c in coins)
+            return memo[t]
+        return go(total)
+    say("s07", f"same idiom, ordered ways to make 10: coins (1,2) -> {w1}; then coins (1,5) -> {w2}, "
+        f"true answer {ways_ok(10,(1,5))}", w1 == ways_ok(10, (1, 2)) and w2 != ways_ok(10, (1, 5)))
+    say("s07", "  the shared default dict is harmless for fib only because fib has one input")
+
+    # --- s08: backtracking and N-Queens -----------------------------------
+    def queens(n, diag):
+        nodes = [0]; sols = [0]; cols = set(); d1 = set(); d2 = set()
+        def go(r):
+            nodes[0] += 1
+            if r == n: sols[0] += 1; return
+            for c in range(n):
+                if c in cols: continue
+                if diag and ((r-c) in d1 or (r+c) in d2): continue
+                cols.add(c); d1.add(r-c); d2.add(r+c)
+                go(r+1)
+                cols.discard(c); d1.discard(r-c); d2.discard(r+c)
+        go(0)
+        return nodes[0], sols[0]
+    nc, _s = queens(8, False)
+    nd, sd = queens(8, True)
+    print()
+    say("s08", f"8-queens: raw placements 8^8 = {8**8:,}; one-per-column orderings 8! = {math.factorial(8):,}",
+        8**8 == 16777216 and math.factorial(8) == 40320)
+    say("s08", f"  backtracking with column checks only visits {nc:,} nodes (every permutation prefix)",
+        nc == sum(math.factorial(8)//math.factorial(8-k) for k in range(9)))
+    say("s08", f"  with column AND diagonal checks it visits {nd:,} nodes and finds {sd} solutions",
+        sd == 92 and nd < 2500)
+    say("s08", f"  column-only nodes / full-check nodes = {nc/nd:.1f}", 53 <= nc/nd < 54)
+    say("s08", f"  the source credits both checks with n^n -> n!; n! is the column check alone. "
+        f"Diagonals cut a further {math.factorial(8)/nd:.0f}x off the leaves")
+    for n in (4, 6, 10):
+        a, s = queens(n, True)
+        say("s08", f"  n={n}: {a:,} nodes, {s} solutions, n! = {math.factorial(n):,}")
+    say("s08", f"  with no checks at all the 8-queens tree has (8^9-1)/7 = {(8**9-1)//7:,} nodes",
+        (8**9-1)//7 == sum(8**d for d in range(9)))
+    say("s08", "subsets of n items: 2^n; permutations: n!",
+        len(list(itertools.product([0, 1], repeat=6))) == 64)
+
+    # --- s09: dynamic programming IS the CPM forward pass -----------------
+    def rand_dag(rng, n, p):
+        E = [(i, j) for i in range(n) for j in range(i+1, n) if rng.random() < p]
+        d = [rng.randint(1, 9) for _i in range(n)]
+        return E, d
+    def forward(n, E, d):
+        ES = [0]*n; succ = [[] for _i in range(n)]; pred = [[] for _i in range(n)]
+        for i, j in E: succ[i].append(j); pred[j].append(i)
+        best_pred = [None]*n
+        for j in range(n):                       # 0..n-1 is a topological order by construction
+            for i in pred[j]:
+                if ES[i]+d[i] > ES[j]: ES[j] = ES[i]+d[i]; best_pred[j] = i
+        EF = [ES[k]+d[k] for k in range(n)]
+        end = max(range(n), key=lambda k: EF[k])
+        path = [end]
+        while best_pred[path[-1]] is not None: path.append(best_pred[path[-1]])
+        return max(EF), path[::-1], succ
+    def enumerate_paths(n, succ, d):
+        best = (0, None); count = 0
+        def go(u, acc, path):
+            nonlocal best, count
+            acc += d[u]
+            if not succ[u]:
+                count += 1
+                if acc > best[0]: best = (acc, path+[u])
+                return
+            for v in succ[u]: go(v, acc, path+[u])
+        preds = set(j for u in range(n) for j in succ[u])
+        for s in range(n):
+            if s not in preds: go(s, 0, [])
+        return best, count
+    rng = random.Random(1401)
+    agree = 0
+    for _t in range(300):
+        n = rng.randint(4, 11)
+        E, d = rand_dag(rng, n, 0.35)
+        L, path, succ = forward(n, E, d)
+        (Lb, pb), _c = enumerate_paths(n, succ, d)
+        if L == Lb and sum(d[k] for k in path) == L: agree += 1
+    print()
+    say("s09", f"forward pass (ES_j = max ES_i + d_i) equals the longest path found by enumerating every "
+        f"path: {agree}/300 random networks", agree == 300)
+    say("s09", "  and following the arg-max back gives a critical path of that length (same 300)")
+    rows = []
+    for k in (5, 10, 20, 40):
+        # a chain of k 'diamonds': each stage splits into two parallel activities and rejoins
+        nn = 3*k+1
+        E = []
+        for s in range(k):
+            a, b, c, dd = 3*s, 3*s+1, 3*s+2, 3*s+3
+            E += [(a, b), (a, c), (b, dd), (c, dd)]
+        rows.append((k, 2**k, len(E)))
+    say("s09", "diamond-chain networks: paths vs forward-pass relaxations: " +
+        "; ".join(f"k={k}: {p:,} vs {e}" for k, p, e in rows), rows[-1][1] > 10**12 and rows[-1][2] == 160)
+    # PERT: expectation does not pass through max
+    rs = np.random.default_rng(1402)
+    X = rs.normal(10, 2, (400_000, 2))
+    em = X.max(axis=1).mean()
+    say("s09", f"PERT merge: two parallel paths, each N(10, 2^2). Forward pass on means says 10; "
+        f"E[max] = {em:.3f}; theory 10 + 2/sqrt(pi) = {10+2/math.sqrt(math.pi):.3f}",
+        abs(em-(10+2/math.sqrt(math.pi))) < 0.02)
+    X5 = rs.normal(10, 2, (400_000, 5)).max(axis=1).mean()
+    say("s09", f"  five parallel paths: E[max] = {X5:.3f} -- the single-critical-path estimate is optimistic",
+        X5 > 12.2)
+    # house robber = brute force
+    def rob(nums):
+        if len(nums) == 1: return nums[0]
+        p2, p1 = nums[0], max(nums[0], nums[1])
+        for i in range(2, len(nums)): p2, p1 = p1, max(p1, p2+nums[i])
+        return p1
+    def rob_bf(nums):
+        best = 0
+        for mask in range(1 << len(nums)):
+            if mask & (mask >> 1): continue
+            best = max(best, sum(nums[i] for i in range(len(nums)) if mask >> i & 1))
+        return best
+    ok = all(rob(v) == rob_bf(v) for v in ([rng.randint(1, 50) for _i in range(rng.randint(1, 14))] for _t in range(300)))
+    say("s09", "House Robber DP == brute force over all non-adjacent subsets (300 cases)", ok)
+
+    # --- s10: memoisation and the MRP low-level code ----------------------
+    # BOM: product P -> A,B ; A -> C x2, D ; B -> C, D x3 ; C -> E x2, F ; D -> E, F x2 ; E -> G x4 ; F -> G x2, H
+    bom = {"P": [("A", 1), ("B", 2)], "A": [("C", 2), ("D", 1)], "B": [("C", 1), ("D", 3)],
+           "C": [("E", 2), ("F", 1)], "D": [("E", 1), ("F", 2)], "E": [("G", 4)], "F": [("G", 2), ("H", 1)],
+           "G": [], "H": []}
+    visits = [0]
+    def naive(item, q, out):
+        visits[0] += 1
+        out[item] = out.get(item, 0)+q
+        for c, m in bom[item]: naive(c, q*m, out)
+    tot_naive = {}; naive("P", 10, tot_naive)
+    # low-level codes: level = longest distance from the top
+    lvl = {"P": 0}
+    changed = True
+    while changed:
+        changed = False
+        for p, ch in bom.items():
+            if p in lvl:
+                for c, _m in ch:
+                    if lvl.get(c, -1) < lvl[p]+1: lvl[c] = lvl[p]+1; changed = True
+    gross = {"P": 10}; processed = 0
+    for item in sorted(bom, key=lambda x: lvl[x]):
+        processed += 1
+        for c, m in bom[item]: gross[c] = gross.get(c, 0)+gross[item]*m
+    print()
+    def npaths(item, tgt):
+        return 1 if item == tgt else sum(npaths(c, tgt) for c, _m in bom[item])
+    say("s10", f"BOM explosion for 10 products: naive recursion visits {visits[0]} item-nodes (one per path "
+        f"through the product tree), low-level-code order processes {processed} items, same totals",
+        tot_naive == gross and processed == len(bom) and visits[0] == sum(npaths("P", x) for x in bom))
+    say("s10", f"  G: {gross['G']:,} needed, reached along {npaths('P','G')} different paths; the naive walk "
+        f"explodes it once per path, MRP once", npaths("P", "G") >= 8)
+
+    # --- s11: knapsack -- NP-hard and still solved ------------------------
+    def subset_best(w, C):
+        reach = 1                                   # bitset of reachable sums
+        for x in w: reach |= (reach << x) & ((1 << (C+1))-1)
+        return reach.bit_length()-1
+    def subset_bf(w, C):
+        return max(s for s in (sum(c) for r in range(len(w)+1) for c in itertools.combinations(w, r)) if s <= C)
+    ok = True
+    for _t in range(200):
+        w = [rng.randint(1, 30) for _i in range(rng.randint(1, 12))]; C = rng.randint(1, 120)
+        ok &= subset_best(w, C) == subset_bf(w, C)
+    print()
+    say("s11", "subset-sum DP (fill one station as full as possible) == brute force, 200 cases", ok)
+    say("s11", "  DP work is n x (C+1) cells; brute force is 2^n subsets")
+    for bits in (8, 16, 24):
+        say("s11", f"  C with {bits} bits: {40*(2**bits+1):,} cells for 40 tasks -- doubles per added bit")
+    say("s11", "  polynomial in the VALUE of C, exponential in its length: pseudo-polynomial",
+        abs((2**24+1)/(2**16+1)-256) < 0.01)
+    # greedy 'fill each station perfectly' is still not optimal bin packing
+    def opt_bins(w, C):
+        for k in range(1, len(w)+1):
+            def place(i, loads):
+                if i == len(w): return True
+                seen_l = set()
+                for b in range(k):
+                    if loads[b]+w[i] <= C and loads[b] not in seen_l:
+                        seen_l.add(loads[b]); loads[b] += w[i]
+                        if place(i+1, loads): return True
+                        loads[b] -= w[i]
+                return False
+            if place(0, [0]*k): return k
+    gmemo = {}
+    def greedy_fill(w, C):
+        # fewest stations over EVERY way of filling each station to its maximum possible load
+        w = tuple(sorted(w))
+        if not w: return 0
+        if (w, C) in gmemo: return gmemo[(w, C)]
+        target = subset_best(list(w), C); best_ = None
+        for r in range(1, len(w)+1):
+            for c in set(itertools.combinations(range(len(w)), r)):
+                if sum(w[i] for i in c) == target:
+                    rest = [w[i] for i in range(len(w)) if i not in c]
+                    v = 1+greedy_fill(rest, C)
+                    best_ = v if best_ is None else min(best_, v)
+        gmemo[(w, C)] = best_
+        return best_
+    ch13 = [3, 5, 7, 4, 2, 2, 3, 4]
+    say("s11", f"Ch13's line {ch13}, C=10: fill-each-station-perfectly gives {greedy_fill(ch13,10)} stations, "
+        f"optimum {opt_bins(ch13,10)}", opt_bins(ch13, 10) == 3)
+    worse = [7, 7, 6, 4, 4, 4]
+    perfect = [c for r in range(1, 7) for c in itertools.combinations(worse, r) if sum(c) == 12]
+    say("s11", f"  tasks {worse}, cycle time 12: the only 100%-loaded station is {sorted(set(perfect))}; "
+        f"taking it gives {greedy_fill(worse,12)} stations, optimum {opt_bins(worse,12)} ({{7,4}},{{7,4}},{{6,4}})",
+        sorted(set(perfect)) == [(4, 4, 4)] and greedy_fill(worse, 12) == 4 and opt_bins(worse, 12) == 3)
+    say("s11", "  the hardness of bin packing is in how stations interact, not in filling any one of them")
+
+    # --- s12: arrays, pitch, and the cache --------------------------------
+    A2 = np.zeros((3, 5), dtype=np.float64)
+    print()
+    say("s12", f"row-major 3x5 float64 strides {A2.strides}: address of [i,j] = base + 40 i + 8 j",
+        A2.strides == (40, 8))
+    N = 1 << 23
+    a = np.arange(N, dtype=np.float64)
+    seq = np.arange(N); perm = np.random.default_rng(3).permutation(N)
+    def tg(idx):
+        best = 9e9
+        for _i in range(3):
+            t0 = time.perf_counter(); a[idx].sum(); best = min(best, time.perf_counter()-t0)
+        return best
+    ts, tr = tg(seq), tg(perm)
+    say("s12", f"gathering 8.4M doubles: in order {ts*1e3:.0f} ms, shuffled order {tr*1e3:.0f} ms -> {tr/ts:.1f}x "
+        f"(same work, same Big O)", tr/ts > 1.5)
+    say("s12", "  the source's '10-100x' is plausible for pointer chasing in C; this is what one machine shows")
+    utf = {c: len(c.encode("utf-8")) for c in ("a", "é", "中", "\U0001F600")}
+    say("s12", f"UTF-8 bytes: a={utf['a']}, e-acute={utf[chr(0xe9)]}, CJK={utf[chr(0x4e2d)]}, emoji={utf[chr(0x1F600)]}",
+        list(utf.values()) == [1, 2, 3, 4])
+
+    # --- s13: hashing and the utilisation cliff ---------------------------
+    rs = np.random.default_rng(1403)
+    def lp_stats(m, alpha, trials=6):
+        succ, unsucc = [], []
+        for _t in range(trials):
+            tab = np.full(m, -1, dtype=np.int64)
+            nkeys = int(alpha*m)
+            homes = rs.integers(0, m, nkeys)
+            disp = np.zeros(nkeys, dtype=np.int64)
+            for kk in range(nkeys):
+                h = homes[kk]; d = 0
+                while tab[(h+d) % m] != -1: d += 1
+                tab[(h+d) % m] = kk; disp[kk] = d
+            succ.append(disp.mean()+1)
+            occ = tab != -1
+            # unsuccessful search from each home slot: probes until an empty slot
+            # distance to next empty slot, cyclic
+            idx = np.arange(m)
+            empties = np.flatnonzero(~occ)
+            pos = np.searchsorted(empties, idx)
+            nxt_empty = np.where(pos < len(empties), empties[np.minimum(pos, len(empties)-1)], empties[0]+m)
+            unsucc.append(float((nxt_empty-idx+1).mean()))
+        return float(np.mean(succ)), float(np.mean(unsucc))
+    print()
+    for al in (0.5, 0.75, 0.9):
+        s_, u_ = lp_stats(1 << 14, al)
+        ks, ku = 0.5*(1+1/(1-al)), 0.5*(1+1/(1-al)**2)
+        say("s13", f"linear probing at alpha={al}: successful {s_:.2f} (Knuth {ks:.2f}), "
+            f"unsuccessful {u_:.2f} (Knuth {ku:.2f})", abs(s_/ks-1) < 0.08 and abs(u_/ku-1) < 0.12)
+    sets = sorted(lp_stats(1 << 14, 0.9, trials=4)[1] for _k in range(8))
+    kn9 = 0.5*(1+1/(1-0.9)**2)
+    say("s13", f"  at alpha=0.9, eight separate sets of four tables: miss cost {sets[0]:.1f} to {sets[-1]:.1f} "
+        f"(Knuth {kn9:.1f}), median {np.median(sets):.1f}", sets[-1]/sets[0] > 1.15 and abs(np.median(sets)/kn9-1) < 0.08)
+    for al in (0.5, 0.9, 1.5):
+        m = 1 << 14; nk = int(al*m)
+        b = rs.integers(0, m, nk)
+        cnts = np.bincount(b, minlength=m)
+        # successful search: position within its chain, averaged over keys
+        pos = np.concatenate([np.arange(1, c+1) for c in cnts if c > 0])
+        say("s13", f"chaining at alpha={al}: successful {pos.mean():.3f} (1 + alpha/2 = {1+al/2:.3f}), "
+            f"unsuccessful scans {cnts.mean():.3f} (alpha)", abs(pos.mean()-(1+al/2)) < 0.03)
+    say("s13", f"linear probing miss cost at alpha=0.95: {0.5*(1+1/0.05**2):.1f} (passes 200)",
+        0.5*(1+1/0.05**2) > 200)
+    say("s13", "  chaining degrades like alpha and can pass 1; linear probing blows up like 1/(1-alpha)^2")
+    say("s13", "  M/M/1 queue length rho/(1-rho) is the same cliff with a milder power")
+    # birthday
+    p23 = 1-math.prod((365-i)/365 for i in range(23))
+    say("s13", f"P(two of 23 share a slot among 365) = {p23:.4f}", abs(p23-0.5073) < 1e-4)
+    firsts = []
+    for _t in range(4000):
+        seen_s = set(); k = 0
+        while True:
+            x = int(rs.integers(0, 65536)); k += 1
+            if x in seen_s: break
+            seen_s.add(x)
+        firsts.append(k)
+    th = math.sqrt(math.pi*65536/2)+2/3
+    say("s13", f"65,536-slot table: first collision at insert {np.mean(firsts):.0f} on average "
+        f"(sqrt(pi m/2) + 2/3 = {th:.0f}), when the table is {np.mean(firsts)/65536*100:.2f}% full",
+        abs(np.mean(firsts)/th-1) < 0.03)
+
+    # --- s14: the Bloom filter is a GO gauge -------------------------------
+    print()
+    def bloom_fp(nn, bits_per, k, queries=200_000):
+        m = nn*bits_per
+        bits = np.zeros(m, dtype=bool)
+        pos_members = rs.integers(0, m, (nn, k))       # ideal independent hash functions
+        bits[pos_members.ravel()] = True
+        fn = int((~bits[pos_members].all(axis=1)).sum())
+        q = rs.integers(0, m, (queries, k))
+        return float(bits[q].all(axis=1).mean()), fn
+    fp, fn = bloom_fp(20_000, 10, 7)
+    th = (1-math.exp(-7/10))**7
+    say("s14", f"Bloom filter, 10 bits per key, k=7: false positives {100*fp:.3f}% (theory {100*th:.3f}%), "
+        f"false negatives {fn}", abs(fp/th-1) < 0.1 and fn == 0)
+    kopt = 10*math.log(2)
+    fps = {k: (1-math.exp(-k/10))**k for k in range(1, 15)}
+    say("s14", f"optimal k = (m/n) ln 2 = {kopt:.2f}; best integer k = {min(fps, key=fps.get)}",
+        min(fps, key=fps.get) == 7)
+    fac = 0.5**math.log(2)
+    say("s14", f"at optimal k, p = {fac:.4f}^(m/n); {math.log(0.1)/math.log(fac):.2f} bits per key per factor of 10; "
+        f"0.6185^10 = {fac**10:.5f}", abs(fac-0.6185) < 1e-4 and abs(math.log(0.1)/math.log(fac)-4.79) < 0.01)
+    fp1, _f = bloom_fp(20_000, 10, 1)
+    say("s14", f"k=1 (a single check): {100*fp1:.2f}% (theory {100*(1-math.exp(-0.1)):.2f}%)",
+        abs(fp1/(1-math.exp(-0.1))-1) < 0.05)
+
+    # --- s15: two pointers -------------------------------------------------
+    def two_ptr(a, t):
+        i, j, steps = 0, len(a)-1, 0
+        while i < j:
+            steps += 1
+            s = a[i]+a[j]
+            if s == t: return (i, j), steps
+            if s < t: i += 1
+            else: j -= 1
+        return None, steps
+    ok = True; worst = 0
+    for _t in range(500):
+        a = sorted(rng.randint(-50, 50) for _i in range(rng.randint(2, 40))); t = rng.randint(-100, 100)
+        r, st = two_ptr(a, t)
+        bf = any(a[i]+a[j] == t for i in range(len(a)) for j in range(i+1, len(a)))
+        ok &= (r is not None) == bf
+        worst = max(worst, st/(len(a)-1))
+    print()
+    say("s15", f"sorted two-sum by two pointers agrees with brute force on 500 cases, never more than n-1 steps",
+        ok and worst <= 1)
+    def three_sum(nums):
+        nums = sorted(nums); res = []
+        for i in range(len(nums)-2):
+            if i > 0 and nums[i] == nums[i-1]: continue
+            l, r = i+1, len(nums)-1; tgt = -nums[i]
+            while l < r:
+                tot = nums[l]+nums[r]
+                if tot < tgt: l += 1
+                elif tot > tgt: r -= 1
+                else:
+                    res.append([nums[i], nums[l], nums[r]])
+                    while l < r and nums[l] == nums[l+1]: l += 1
+                    while l < r and nums[r] == nums[r-1]: r -= 1
+                    l += 1; r -= 1
+        return res
+    ok = True
+    for _t in range(300):
+        v = [rng.randint(-6, 6) for _i in range(rng.randint(0, 14))]
+        bf = sorted(set(tuple(sorted(c)) for c in itertools.combinations(v, 3) if sum(c) == 0))
+        ok &= sorted(tuple(x) for x in three_sum(v)) == bf
+    say("s15", "source's three_sum == brute force (unique triplets, heavy duplicates), 300 cases", ok)
+
+    # --- s16: trapping rain water is a spillway ----------------------------
+    def trap(h, strict=False, le=False):
+        l, r = 0, len(h)-1; lm = rm = w = 0
+        while l < r:
+            if (h[l] <= h[r]) if le else (h[l] < h[r]):
+                if (h[l] > lm) if strict else (h[l] >= lm): lm = h[l]
+                else: w += lm-h[l]
+                l += 1
+            else:
+                if (h[r] > rm) if strict else (h[r] >= rm): rm = h[r]
+                else: w += rm-h[r]
+                r -= 1
+        return w
+    def trap_bf(h):
+        return sum(max(0, min(max(h[:i+1]), max(h[i:]))-h[i]) for i in range(len(h)))
+    cases = [[rng.randint(0, 9) for _i in range(rng.randint(1, 30))] for _t in range(2000)]
+    print()
+    say("s16", "two-pointer trap == min(max-left, max-right) - h, 2000 random profiles",
+        all(trap(h) == trap_bf(h) for h in cases))
+    say("s16", f"the source warns '>=' vs '>' causes off-by-one water; swapping it changes {sum(trap(h, strict=True) != trap(h) for h in cases)} "
+        f"of 2000 answers (equal heights add zero water either way)", all(trap(h, strict=True) == trap(h) for h in cases))
+    say("s16", "  nor does '<' vs '<=' in the side test", all(trap(h, le=True) == trap(h) for h in cases))
+    say("s16", f"source example [0,1,0,2,1,0,1,3,2,1,2,1] traps {trap([0,1,0,2,1,0,1,3,2,1,2,1])} units",
+        trap([0, 1, 0, 2, 1, 0, 1, 3, 2, 1, 2, 1]) == 6)
+    src = [0, 1, 0, 2, 1, 0, 1, 3, 2, 1, 2, 1]; hi = list(src); hi[7] += 5
+    say("s16", f"raise the tallest bar of that profile from 3 to 8: water {trap(src)} -> {trap(hi)} (the lower "
+        f"weir sets the level)", trap(hi) == trap(src) == trap_bf(hi))
+    # 2-D: the straight-ray rule fails; the spill level is a minimax path
+    G = [[9, 9, 9, 9, 9, 9],
+         [9, 1, 9, 9, 9, 9],
+         [9, 1, 1, 9, 9, 9],
+         [9, 9, 1, 9, 9, 9],
+         [9, 9, 1, 1, 1, 0],
+         [9, 9, 9, 9, 9, 9]]
+    def pq_fill(G):
+        R, Cc = len(G), len(G[0]); lev = [[None]*Cc for _i in range(R)]; pq = []
+        for i in range(R):
+            for j in range(Cc):
+                if i in (0, R-1) or j in (0, Cc-1):
+                    lev[i][j] = G[i][j]; heapq.heappush(pq, (G[i][j], i, j))
+        while pq:
+            L_, i, j = heapq.heappop(pq)
+            for di, dj in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                a_, b_ = i+di, j+dj
+                if 0 <= a_ < R and 0 <= b_ < Cc and lev[a_][b_] is None:
+                    lev[a_][b_] = max(G[a_][b_], L_); heapq.heappush(pq, (lev[a_][b_], a_, b_))
+        return lev
+    def relax_fill(G):
+        R, Cc = len(G), len(G[0])
+        lev = [[G[i][j] if i in (0, R-1) or j in (0, Cc-1) else 10**9 for j in range(Cc)] for i in range(R)]
+        ch = True
+        while ch:
+            ch = False
+            for i in range(1, R-1):
+                for j in range(1, Cc-1):
+                    v = max(G[i][j], min(lev[i+1][j], lev[i-1][j], lev[i][j+1], lev[i][j-1]))
+                    if v < lev[i][j]: lev[i][j] = v; ch = True
+        return lev
+    def ray_rule(G, i, j):
+        row, col = G[i], [G[k][j] for k in range(len(G))]
+        return min(max(row[:j+1]), max(row[j:]), max(col[:i+1]), max(col[i:]))
+    lv = pq_fill(G)
+    say("s16", f"2-D profile: straight-line rule puts water at level {ray_rule(G,1,1)} over cell (1,1); "
+        f"true level {lv[1][1]} -- it drains down a winding channel", ray_rule(G, 1, 1) == 9 and lv[1][1] == 1)
+    ok = True
+    for _t in range(150):
+        R_, C_ = rng.randint(3, 8), rng.randint(3, 8)
+        Gr = [[rng.randint(0, 9) for _j in range(C_)] for _i in range(R_)]
+        ok &= pq_fill(Gr) == relax_fill(Gr)
+    say("s16", "  the true level is the minimax path to the edge: priority-queue fill == relaxation, 150 grids", ok)
+    say("s16", "  in 1-D there are only two escape paths, so minimax collapses to min(maxL, maxR)")
+
+    # --- s17: sliding windows need a monotone constraint -------------------
+    def shortest_ge_window(a, K):
+        l = s = 0; best = None
+        for r, x in enumerate(a):
+            s += x
+            while s >= K and l <= r:
+                best = r-l+1 if best is None else min(best, r-l+1)
+                s -= a[l]; l += 1
+        return best
+    def shortest_ge_bf(a, K):
+        best = None
+        for i in range(len(a)):
+            s = 0
+            for j in range(i, len(a)):
+                s += a[j]
+                if s >= K: best = j-i+1 if best is None else min(best, j-i+1); break
+        return best
+    okpos = all(shortest_ge_window(v, K) == shortest_ge_bf(v, K)
+                for v, K in (([rng.randint(0, 9) for _i in range(rng.randint(1, 20))], rng.randint(1, 40)) for _t in range(1000)))
+    print()
+    say("s17", "shortest subarray with sum >= K: sliding window == brute force when all values >= 0 (1000 cases)", okpos)
+    ce = None
+    for _t in range(20000):
+        v = [rng.randint(-5, 9) for _i in range(rng.randint(2, 6))]; K = rng.randint(1, 15)
+        if shortest_ge_window(v, K) != shortest_ge_bf(v, K):
+            if ce is None or len(v) < len(ce[0]): ce = (v, K)
+    say("s17", f"  with negatives it fails: {ce[0]}, K={ce[1]} -> window says {shortest_ge_window(*ce)}, "
+        f"true {shortest_ge_bf(*ce)}", ce is not None)
+    def lols(s):
+        ci = {}; l = b = 0
+        for r, ch_ in enumerate(s):
+            if ch_ in ci and ci[ch_] >= l: l = ci[ch_]+1
+            ci[ch_] = r; b = max(b, r-l+1)
+        return b
+    def lols_bf(s):
+        return max([0]+[j-i for i in range(len(s)) for j in range(i+1, len(s)+1) if len(set(s[i:j])) == j-i])
+    say("s17", "longest substring without repeats (source) == brute force, 500 strings",
+        all(lols(s) == lols_bf(s) for s in ("".join(rng.choice("abcd") for _i in range(rng.randint(0, 15))) for _t in range(500))))
+
+    from collections import Counter
+    def min_window(s_, t_, ge=False):
+        if not t_ or not s_: return ""
+        need = Counter(t_); have = 0; req = len(need); l = 0; best = (float("inf"), 0, 0); wc = {}
+        for r, ch_ in enumerate(s_):
+            wc[ch_] = wc.get(ch_, 0)+1
+            if ch_ in need and ((wc[ch_] >= need[ch_]) if ge else (wc[ch_] == need[ch_])): have += 1
+            while have == req:
+                if r-l+1 < best[0]: best = (r-l+1, l, r)
+                lc = s_[l]; wc[lc] -= 1
+                if lc in need and wc[lc] < need[lc]: have -= 1
+                l += 1
+        return s_[best[1]:best[2]+1] if best[0] != float("inf") else ""
+    def mw_bf(s_, t_):
+        need = Counter(t_); best = None
+        for i in range(len(s_)):
+            for j in range(i+1, len(s_)+1):
+                if not (need - Counter(s_[i:j])):
+                    if best is None or j-i < len(best): best = s_[i:j]
+                    break
+        return best or ""
+    mcases = [("".join(rng.choice("abc") for _i in range(rng.randint(0, 12))),
+               "".join(rng.choice("abc") for _i in range(rng.randint(1, 3)))) for _t in range(800)]
+    okmw = all(len(min_window(a_, b_)) == len(mw_bf(a_, b_)) for a_, b_ in mcases)
+    badge = sum(len(min_window(a_, b_, True)) != len(mw_bf(a_, b_)) for a_, b_ in mcases)
+    say("s17", f"minimum window substring (source, '==') == brute force on 800 cases; with '>=' {badge} answers go wrong",
+        okmw and badge > 0)
+    # --- s18: prefix sums are a shear-force diagram -------------------------
+    # simply supported beam, span 10 m, point loads (kN) at x
+    loads = [(2.0, 20.0), (5.0, 35.0), (7.5, 15.0)]
+    Lb = 10.0
+    RB = sum(P_*x for x, P_ in loads)/Lb; RA = sum(P_ for _x, P_ in loads)-RB
+    pts = [(0.0, RA)] + [(x, -P_) for x, P_ in loads] + [(Lb, RB)]
+    V = list(itertools.accumulate(f for _x, f in pts))           # shear just right of each point
+    M = [0.0]
+    for i in range(1, len(pts)): M.append(M[-1]+V[i-1]*(pts[i][0]-pts[i-1][0]))
+    print()
+    say("s18", f"beam: RA={RA:.2f}, RB={RB:.2f} kN; SFD as a running (prefix) sum: {[round(v,2) for v in V]}")
+    say("s18", f"  closes to zero at the far end (sum F = 0) and BMD closes to {M[-1]:.1e} (sum M = 0)",
+        abs(V[-1]) < 1e-9 and abs(M[-1]) < 1e-9)
+    say("s18", f"  net load between x=1 and x=6: V(6)-V(1) = {V[2]-V[0]:.1f} kN = -(20+35)",
+        abs((V[2]-V[0])+55) < 1e-9)
+    def subarray_sum(nums, k, init=True):
+        c = pre = 0; pc = {0: 1} if init else {}
+        for x in nums:
+            pre += x; c += pc.get(pre-k, 0); pc[pre] = pc.get(pre, 0)+1
+        return c
+    def ss_bf(nums, k):
+        return sum(1 for i in range(len(nums)) for j in range(i+1, len(nums)+1) if sum(nums[i:j]) == k)
+    ok = all(subarray_sum(v, k) == ss_bf(v, k) for v, k in
+             (([rng.randint(-4, 4) for _i in range(rng.randint(0, 16))], rng.randint(-4, 4)) for _t in range(800)))
+    say("s18", "subarray-sum-equals-k via prefix-sum hash == brute force, negatives included (800 cases)", ok)
+    say("s18", f"  without the {{0:1}} seed, [3,1,2] with k=3 counts {subarray_sum([3,1,2],3,False)} instead of "
+        f"{ss_bf([3,1,2],3)}", subarray_sum([3, 1, 2], 3, False) < ss_bf([3, 1, 2], 3))
+    xs = np.random.default_rng(5).random(1 << 22).astype(np.float32)
+    pre32 = np.concatenate([[np.float32(0)], np.cumsum(xs, dtype=np.float32)])
+    errs = []
+    for lo in (3_000_000, 3_500_000, 4_000_000):
+        exact = math.fsum(float(v) for v in xs[lo:lo+10])
+        errs.append(abs(float(pre32[lo+10]-pre32[lo])-exact)/exact)
+    say("s18", f"float32 prefix sums over 4.2M values: a 10-element range read by subtraction is off by "
+        f"{100*max(errs):.0f}% (worst of 3); summing the 10 directly is exact to 1e-7",
+        max(errs) > 0.01)
+    say("s18", f"  float32 spacing near 2.1 million: {float(np.spacing(np.float32(2.1e6)))}",
+        float(np.spacing(np.float32(2.1e6))) == 0.25)
+    say("s18", "  the SFD read at two distant sections: difference of two big numbers (catastrophic cancellation)")
+    def pes(nums):
+        n = len(nums); res = [1]*n; p = 1
+        for i in range(n): res[i] = p; p *= nums[i]
+        s = 1
+        for i in range(n-1, -1, -1): res[i] *= s; s *= nums[i]
+        return res
+    ok = all(pes(v) == [math.prod(v[:i]+v[i+1:]) for i in range(len(v))]
+             for v in ([rng.randint(-3, 3) for _i in range(rng.randint(1, 9))] for _t in range(500)))
+    say("s18", "product-except-self (prefix x suffix) == brute force, zeros included (500 cases)", ok)
+
+    # --- s19: Floyd's tortoise and hare -------------------------------------
+    def run_floyd(a, c, vs=1, vf=2, limit=None):
+        # positions on a rho: tail 0..a-1, cycle a..a+c-1
+        def adv(p, k):
+            for _i in range(k):
+                p = p+1 if p < a+c-1 else a
+            return p
+        s = f = 0; t = 0; limit = limit or 4*(a+c)+10
+        while t < limit:
+            s = adv(s, vs); f = adv(f, vf); t += 1
+            if s == f: return t
+        return None
+    ok_meet = True; ok_within = True; ok_start = True; kmax = 1
+    for a in range(0, 25):
+        for c in range(1, 25):
+            t = run_floyd(a, c)
+            if t is None: ok_meet = False; continue
+            b = t-a
+            ok_within &= 0 <= b <= c
+            ok_start &= (t % c == 0)
+            kmax = max(kmax, t//c)
+            # phase 2: pointer from head and pointer from meeting point, both speed 1
+            p = 0; q = (a + (b % c)) if b >= 0 else None
+            if q is not None:
+                steps = 0
+                while p != q:
+                    p = p+1 if p < a+c-1 else a
+                    q = q+1 if q < a+c-1 else a
+                    steps += 1
+                ok_start &= (p == a) and steps <= a+c
+    print()
+    say("s19", "tortoise(1) and hare(2) meet on every rho-shaped list with tail a<25, cycle c<25", ok_meet)
+    say("s19", "  the tortoise meets within c steps of entering the loop", ok_within)
+    say("s19", f"  a + b is a MULTIPLE of c (k up to {kmax}), not c itself; restart-from-head still lands on the start",
+        ok_start and kmax > 1)
+    tt = run_floyd(10, 3)
+    say("s19", f"  e.g. tail 10, loop 3: they meet after {tt} steps, b = {tt-10}, a + b = {tt} = {tt//3} x 3",
+        tt % 3 == 0 and tt//3 > 1)
+    firstmult = all(run_floyd(a, c) == max(1, math.ceil(a/c))*c for a in range(25) for c in range(1, 25))
+    say("s19", "  sharper: the first meeting is at the first multiple of c that is >= a -- both pointers are "
+        "in the loop, and at T = kc their offsets coincide", firstmult)
+    def phase2(a, c, vf):
+        T = run_floyd(a, c, 1, vf, 20*(a+c)+20)
+        if T is None: return None, None
+        s = a+((T-a) % c) if T >= a else T
+        p, q, st = 0, s, 0
+        while p != q and st < 5*(a+c)+10:
+            p = p+1 if p < a+c-1 else a; q = q+1 if q < a+c-1 else a; st += 1
+        return T, (p if p == q else None)
+    met3 = all(phase2(a, c, 3)[0] is not None for a in range(12) for c in range(1, 12))
+    bad3 = [(a, c) for a in range(12) for c in range(1, 12) if phase2(a, c, 3)[1] != a]
+    say("s19", "a hare at speed 3 still always meets the tortoise (detection works)", met3)
+    say("s19", f"  but the restart-from-head trick then fails on {len(bad3)} of 132 lists -- every one with an even loop "
+        f"(e.g. tail {bad3[0][0]}, loop {bad3[0][1]}: the two pointers circle forever)",
+        len(bad3) > 0 and all(c % 2 == 0 for _a, c in bad3))
+    t104, r104 = phase2(10, 4, 3)
+    say("s19", f"  tail 10, loop 4, hare speed 3: meet at step {t104}, restart phase lands on "
+        f"{'nothing (they circle forever)' if r104 is None else r104} instead of node 10", t104 is not None and r104 != 10)
+    say("s19", "  with speed v the meeting step satisfies (v-1)T = 0 mod c; only v = 2 forces T = kc")
+
+    # --- s20: stacks and monotonic stacks ------------------------------------
+    def daily(tp):
+        res = [0]*len(tp); st = []; pops = 0
+        for i, x in enumerate(tp):
+            while st and x > tp[st[-1]]:
+                j = st.pop(); res[j] = i-j; pops += 1
+            st.append(i)
+        return res, pops
+    def daily_bf(tp):
+        return [next((j-i for j in range(i+1, len(tp)) if tp[j] > tp[i]), 0) for i in range(len(tp))]
+    ok = True; popok = True
+    for _t in range(500):
+        tp = [rng.randint(30, 40) for _i in range(rng.randint(1, 25))]
+        r_, pops = daily(tp); ok &= r_ == daily_bf(tp); popok &= pops <= len(tp)
+    print()
+    say("s20", "daily temperatures (monotonic stack) == brute force, 500 cases; pops <= n every time", ok and popok)
+    def hist(hs, keep_start=True):
+        hs = hs+[0]; st = []; best = 0
+        for i, h in enumerate(hs):
+            start = i
+            while st and st[-1][1] > h:
+                idx, hh = st.pop(); best = max(best, hh*(i-idx))
+                if keep_start: start = idx
+            st.append((start, h))
+        return best
+    def hist_bf(hs):
+        return max([0]+[min(hs[i:j+1])*(j-i+1) for i in range(len(hs)) for j in range(i, len(hs))])
+    cases = [[rng.randint(0, 9) for _i in range(rng.randint(1, 15))] for _t in range(1000)]
+    say("s20", "largest rectangle in histogram (source) == brute force, 1000 cases",
+        all(hist(h) == hist_bf(h) for h in cases))
+    bad = min((h for h in cases if hist(h, False) != hist_bf(h)), key=len)
+    say("s20", f"  drop 'start = idx' and {bad} gives {hist(bad,False)} instead of {hist_bf(bad)}",
+        hist(bad, False) != hist_bf(bad))
+
+    # --- s21: queues, heaps, and the dispatch rule ---------------------------
+    class Q2:
+        def __init__(s): s.a = []; s.b = []; s.moves = 0; s.worst = 0
+        def push(s, x): s.a.append(x)
+        def pop(s):
+            if not s.b:
+                m_ = len(s.a)
+                while s.a: s.b.append(s.a.pop()); s.moves += 1
+                s.worst = max(s.worst, m_)
+            return s.b.pop()
+    q = Q2(); out = []; pushed = 0
+    for _t in range(5000):
+        if rng.random() < 0.55 or not (q.a or q.b): q.push(pushed); pushed += 1
+        else: out.append(q.pop())
+    print()
+    say("s21", f"queue from two stacks: FIFO order kept; {q.moves} transfers for {pushed} pushes; "
+        f"worst single pop moved {q.worst}", out == sorted(out) and q.moves <= pushed and q.worst > 1)
+    class Cmp:
+        n = 0
+        __slots__ = ("v",)
+        def __init__(s, v): s.v = v
+        def __lt__(s, o): Cmp.n += 1; return s.v < o.v
+    data = [Cmp(x) for x in np.random.default_rng(9).permutation(100_000).tolist()]
+    Cmp.n = 0; hp = list(data); heapq.heapify(hp)
+    say("s21", f"heapify 100,000 items: {Cmp.n:,} comparisons ({Cmp.n/100_000:.2f} per item) -- O(n), not n log n",
+        Cmp.n < 2*100_000)
+    def kth(vals, k):
+        dd = [Cmp(x) for x in vals]; Cmp.n = 0; reps = 0
+        h = dd[:k]; heapq.heapify(h)
+        for x in dd[k:]:
+            if h[0] < x: heapq.heapreplace(h, x); reps += 1
+        c_stream, ans1 = Cmp.n, h[0].v
+        h2 = [Cmp(-v) for v in vals]; Cmp.n = 0; heapq.heapify(h2)
+        for _i in range(k): top = heapq.heappop(h2)
+        return c_stream, reps, Cmp.n, ans1, -top.v
+    vals = [c.v for c in data]; asc = sorted(vals)
+    say("s21", "kth largest, n = 100,000: comparisons, size-k heap (source) vs heapify-all + k pops")
+    okk = True; rw = []; aw = []
+    for k in (10, 1000):
+        cs, reps, cp, a1, a2 = kth(vals, k)
+        okk &= a1 == a2 == asc[-k]; rw.append(cs < cp)
+        say("s21", f"  random order,    k={k:>5,}: {cs:>9,} vs {cp:>9,}; root replaced {reps:,} times "
+            f"(k ln(n/k) = {k*math.log(100_000/k):,.0f})", abs(reps/(k*math.log(100_000/k))-1) < 0.05)
+        cs, reps, cp, a1, a2 = kth(asc, k)
+        okk &= a1 == a2 == asc[-k]; aw.append(cs > cp)
+        say("s21", f"  ascending order, k={k:>5,}: {cs:>9,} vs {cp:>9,}; root replaced {reps:,} times")
+    say("s21", "  both methods agree with sorting in all four runs", okk)
+    say("s21", "  the source's Big O is backwards (n + k log n is never worse than n log k), yet on random input")
+    say("s21", "  the size-k heap still wins, because only ~k ln(n/k) elements ever beat the root; on ascending",
+        all(rw))
+    say("s21", "  input every element does, and it loses by ~3x at k=10. Neither method is 'the optimal' one.",
+        all(aw))
+    try:
+        class LN:
+            def __init__(s, v): s.val = v
+        h = []; heapq.heappush(h, (1, LN(1))); heapq.heappush(h, (1, LN(1))); crash = False
+    except TypeError:
+        crash = True
+    say("s21", "merge-k heap tuple without the index tiebreak raises TypeError on equal values", crash)
+    # SPT with release times: the non-delay dispatcher is not optimal
+    jobs = {"A": (0, 10), "B": (1, 1)}      # (release, processing)
+    def sched(order):
+        t = 0; tot = 0
+        for j in order:
+            r_, p_ = jobs[j]; t = max(t, r_)+p_; tot += t
+        return tot
+    greedy = sched(["A", "B"])             # at t=0 only A is waiting, so a dispatcher starts it
+    best = min(sched(o) for o in itertools.permutations(jobs))
+    say("s21", f"SPT via a heap with arrivals: job A (r=0,p=10), job B (r=1,p=1). Dispatching whatever is "
+        f"waiting gives total completion {greedy}; waiting 1 minute for B gives {best}", greedy == 21 and best == 14)
+    say("s21", "  SPT is optimal only when every job is on hand at t=0 (Ch13 part 2 s04); with arrivals")
+    say("s21", "  the single-machine problem is NP-hard. The heap implements the rule; it does not rescue it.")
+
+_ch14p1()
+
 print("\n" + "="*66)

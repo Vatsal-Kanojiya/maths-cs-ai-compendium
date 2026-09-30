@@ -51,6 +51,7 @@ merely structural, that is said plainly.
 | 13 | Computing and OS *(pt 1: maths & architecture)* | [`ch13-computing-os/`](ch13-computing-os/index.html) | [Read online](https://claude.ai/artifact/Cf6EDgFhPKoQduGnLRRxdV) |
 | 13 | Computing and OS *(pt 2: OS & concurrency)* | [`ch13-computing-os-part2/`](ch13-computing-os-part2/index.html) | [Read online](https://claude.ai/artifact/Na2XhiZWm68g7Sb8u6wbpw) |
 | 13 | Computing and OS *(pt 3: languages + end matter)* | [`ch13-computing-os-part3/`](ch13-computing-os-part3/index.html) | [Read online](https://claude.ai/artifact/HL2a7m5wT1fxBiCp5LTFQj) |
+| 14 | Data Structures and Algorithms *(pt 1: foundations, arrays, lists)* | [`ch14-data-structures-algorithms/`](ch14-data-structures-algorithms/index.html) | [Read online](https://claude.ai/artifact/TCQEggFEntAofLXcUbunbd) |
 
 ## What's in a chapter page
 
@@ -87,8 +88,8 @@ chapters rely on the linked chips instead.
 
 ## Verification
 
-`verify_claims.py` checks the load-bearing mathematical claims across all thirteen chapters
-(444 checks, zero failures)
+`verify_claims.py` checks the load-bearing mathematical claims across chapters 01-14
+(546 checks, zero failures)
 against independent computation rather than against anybody's memory — the von Mises and
 Tresca norm identities, the unit-change nearest-neighbour flip, the worked bracket example,
 the `1/sqrt(d)` concentration of cosine similarity, the inertia tensor eigenvalues, polar
@@ -115,7 +116,14 @@ simple-truss induction invariant `m = 2j - 3`, bisection against binary search, 
 anomaly (FIFO page replacement faults more with four frames than with three), Amdahl's law
 against a two-station line, SPT's optimality for mean flow time, the time quantum's EOQ form
 `q* = sqrt(A/B)`, Little's law by simulation, and a dimension checker refusing to add a force
-to a length exactly as a compiler refuses to add an i32 to an f64.
+to a length exactly as a compiler refuses to add an i32 to an f64; and -- for Chapter 14 --
+the CPM forward pass against exhaustive longest-path enumeration on 300 random networks, the
+exact call count `2F(n+1) - 1` of naive Fibonacci, the `g/(g-1)` bound on copies per append
+and CPython's measured 1.125 growth factor, Knuth's linear-probing formulas and the birthday
+bound by simulation, the Bloom-filter false-positive rate, the shear-force diagram as a prefix
+sum closing to zero, trapping rain water as a minimax spill level (exact in 1-D, verified
+against a relaxation solver in 2-D), `a + b = kc` for Floyd's cycle detection, and PERT's
+merge bias `E[max] = mu + sigma/sqrt(pi)`.
 
 Several checks exist because they caught an error. The suite has overturned claims in the
 source material (what neighbour-averaging consensus converges to; whether four legs are
@@ -125,7 +133,11 @@ opposite of its caption) and claims written for these pages before they were tes
 (whether a Kalman filter's damping ratio varies with noise; what actually compounds in
 behavioural cloning; what damped least squares does near a singularity; whether the
 two-to-four-layer limit on GNN depth follows from the over-smoothing rate — on a sparse
-graph it does not). A test that passes is worth less than one that has failed at least
+graph it does not; whether a size-k heap loses to heapify-and-pop for the kth largest
+element -- on random input it wins, on sorted input it loses by 3x; whether a speed-3 hare can
+skip past the tortoise -- it cannot, but the cycle-start trick then fails on 36 of 132 small lists, all with
+even loops).
+A test that passes is worth less than one that has failed at least
 once.
 
 ```

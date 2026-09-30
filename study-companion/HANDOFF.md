@@ -5,8 +5,8 @@ minutes instead of re-deriving decisions already made.
 
 ## State
 
-Branch `claude/blissful-euler-0c6xih`, latest commit `39bd305` carries sheets 1–13 of 20,
-**Chapter 13 complete in three parts**. All are published. Working tree clean.
+Branch `claude/blissful-euler-0c6xih` carries sheets 1–13 of 20 plus **Chapter 14 part 1 of
+2**. All are published. Working tree clean after each part's commit.
 
 | # | Chapter | Folder | Published |
 |---|---------|--------|-----------|
@@ -25,31 +25,37 @@ Branch `claude/blissful-euler-0c6xih`, latest commit `39bd305` carries sheets 1�
 | 13 | Computing and OS **pt 1/3** | `ch13-computing-os/` | https://claude.ai/artifact/Cf6EDgFhPKoQduGnLRRxdV |
 | 13 | Computing and OS **pt 2/3** | `ch13-computing-os-part2/` | https://claude.ai/artifact/Na2XhiZWm68g7Sb8u6wbpw |
 | 13 | Computing and OS **pt 3/3** | `ch13-computing-os-part3/` | https://claude.ai/artifact/HL2a7m5wT1fxBiCp5LTFQj |
+| 14 | Data Structures and Algorithms **pt 1/2** | `ch14-data-structures-algorithms/` | https://claude.ai/artifact/TCQEggFEntAofLXcUbunbd |
 
-`verify_claims.py` stands at **444 checks, 0 failures**, covering chapters 01–13. Run it first
-in any new session — it is the fastest way to confirm nothing has rotted. It needs numpy and
-scipy, which a fresh container will not have: `pip install numpy scipy`.
+`verify_claims.py` stands at **546 checks, 0 failures**, covering chapters 01–14 part 1. Run it
+first in any new session — it is the fastest way to confirm nothing has rotted. It needs numpy
+and scipy, which a fresh container will not have: `pip install numpy scipy`. The Chapter 14
+block lives inside one function, `_ch14p1()`, so none of its names can collide with the shared
+module namespace — do the same for every new block.
 
-Next up: **Chapter 14 — Data Structures and Algorithms**. Source is
-`chapter 14 - data structures and algorithms/`, **2,695 lines across 6 files** — above the
-~2,000-line line, so **split it**, probably in two.
+Next up: **Chapter 14 part 2** — source files `03. trees.md` (381 lines), `04. graphs.md`
+(323) and `05. sorting and search.md` (553), plus the chapter's end matter. Part 1's §22 is the
+contract, and every item in it is a promise stated on the published page:
+- **Trees.** The BOM of §10 is a tree with shared parts (a DAG, strictly); the heap of §21 is a
+  tree stored at fixed pitch. Return to recursion-as-induction (§06) on trees.
+- **Graphs.** The CPM event numbering of §09 (Fulkerson's rule) **is** a topological sort —
+  prove it and verify it. The 2-D rain-water fill of §16 is a priority-queue search of the
+  Dijkstra kind; the minimax spill level is a bottleneck-path problem, so show the same
+  priority queue computing both. BFS runs on §21's queue. Sheet 12 already spent the graph
+  *Laplacian*; part 2 does the algorithms.
+- **Sorting and search.** Build quicksort properly, including the pivot choice behind §05's
+  space bound (§05 already verified: plain recursion on sorted input is 1,999 deep and crashes
+  CPython). Binary search is Sheet 13 §06's bisection. And §02/§15 promised that `n log n` is a
+  **lower bound** for comparison sorting — `log2(n!)` comparisons, the decision-tree argument;
+  compute it against measured merge-sort comparison counts. File 00 also says N-Queens is in
+  file 05; check.
+- **End matter for the whole chapter**: worked example, the 24-question bank in three tiers
+  covering *both* parts, the concept map, a "what the chapter does not cover" section, and part
+  2's own provenance appendix.
 
-**Chapter 14 inherits two explicit promises from Chapter 13**, both stated on the page:
-- Part 1 §06 built recurrences and the Master Theorem, and showed **bisection IS binary
-  search** and that merge sort and the FFT share a recurrence. Part 3 §14 says Sheet 14 "takes
-  part 1 §06's recurrences and part 1 §09's complexity classes and does them properly". The
-  source itself says the same in Ch13 file 01: *"we will go deeper into graphs in the pure
-  computer science chapters"*.
-- Part 1 §09 established that the reader's industrial-engineering heuristics are heuristics
-  **because the problems are NP-hard** — line balancing is bin packing, a CNC drill path is
-  TSP. Chapter 14 is where the algorithms behind those heuristics live, so pick that up rather
-  than re-deriving it.
-
-The bridge bank's Ch14 entry (trees ↔ bill-of-materials, graphs ↔ pipe networks and precedence
-diagrams) is thin and Sheet 12 already spent the graph material. Expect to find the real
-bridges elsewhere — sorting/searching against inspection and lookup procedures, amortised
-analysis against averaged changeover cost, and hashing against bin assignment are the obvious
-places to start looking.
+Copy the **page skeleton from `ch14-data-structures-algorithms/`, not from Chapter 13** — see
+the known issue about Chapters 09–13 below. Chapter 14 part 1 is the first page since Chapter 08
+whose header, contents rail and script tail match the design system.
 
 ### Session hygiene that matters
 
@@ -98,6 +104,11 @@ grep -rho "images/[a-z0-9_]*\.svg" *.md | sed 's|images/||' | sort -u
 #    complete head + BOTH token blocks. 339 is wrong - it ends inside the first
 #    <style>. Change only the <title>. Assert count('<style>')==count('</style>').
 sed -n '1,385p' study-companion/ch11-autonomous-systems/index.html | sed 's|<title>.*</title>|<title>NEW NAME</title>|' > "$W/index.html"
+
+# 3b. the BODY SKELETON (titleblock with .tb-in cells, .shell, .rail, <main>) and the SCRIPT
+#     TAIL (rail observer + TeX safety net + equation auto-fitter) come from
+#     ch14-data-structures-algorithms/, NOT from chapters 09-13, which are broken - see Known
+#     issues. Run `python3 study-companion/audit_classes.py` before publishing.
 
 # 4. write the body in 5-6 appended heredoc chunks. USE A QUOTED DELIMITER (<<'EOF').
 #    An unquoted one turns every $$ into the shell's PID and every \\ into \, which
@@ -277,8 +288,27 @@ event loop is the machine-interference problem**. Added that the source omits: *
 anomaly** and **Little's law**. Four source corrections, one visible by running the source's
 own code.
 
-**14 Data structures and algorithms.** Big-O ↔ scaling laws. Trees ↔ bill-of-materials
-hierarchies. Graphs ↔ pipe networks and assembly precedence diagrams.
+**14 Data structures and algorithms.** ~~Big-O ↔ scaling laws. Trees ↔ bill-of-materials
+hierarchies. Graphs ↔ pipe networks and assembly precedence diagrams.~~ **Part 1 written.**
+Big-O ↔ scaling laws held, with a correction the bank lacked: Big O is an upper bound only and
+the scaling law is Θ — and the source itself confuses them (fib(50): it quoted 2^50 ≈ 1.1e15
+calls; the exact count is 2F₅₁−1 ≈ 4.07e10, growth φⁿ). The headline was **outside the bank:
+the CPM forward pass IS dynamic programming** — the source's five-step DP recipe maps line for
+line onto TE_j = max(TE_i + t_ij), Fulkerson numbering is step 4, backtracking the maxima is the
+critical path, the backward pass is a second DP; verified against path enumeration on 300 random
+networks, and a 40-stage network has 1.1e12 paths against 160 additions. Its break: **PERT's
+merge bias**, E[max] > max E (two N(10,2²) paths merge at 10 + 2/√π = 11.13, not 10). Also
+exact: the **MRP low-level code is tabulation in topological order**; **a shear-force diagram
+is a prefix sum** (and float32 cancellation is its break); **trapping rain water is a
+spillway** — exact in 1-D, and in 2-D the level is a **minimax path** the straight-line rule
+gets wrong (verified counterexample: rule says 8 deep, truth is 0); **the hash-table load
+factor has the M/M/1 utilisation cliff** with a steeper power, 1/(1−α)²; **a Bloom filter is a
+GO gauge** (same economics, different mechanism); **an array is a fixed pitch**; **amortised
+cost is setup spread over a lot**, and the lot must grow geometrically because this setup costs
+the stock on hand. And the one that answers Sheet 13: knapsack is NP-hard yet solved in
+pseudo-polynomial time, **but filling each station perfectly still loses a station** — tasks
+{7,7,6,4,4,4}, cycle 12: the only 100% station is {4,4,4}, which forces 4 stations against an
+optimum of 3. Trees ↔ BOM and graphs ↔ precedence diagrams belong to part 2.
 
 **15 Production software engineering.** Version control ↔ **drawing revision control**,
 ECN/ECO. Testing ↔ inspection and QA. CI/CD ↔ line automation. Containers ↔ standardised
@@ -319,6 +349,27 @@ as genuine surveys and mark them clearly as not derived from the compendium.
   Chapter 12's publish reported its subscription as "arming in the background, not registered
   yet", which is not a confirmed watch either. Do not state that a chapter is being watched
   unless the publish result says so.
+- **Chapters 09–13 (seven pages) are built on a broken page skeleton. Found at Chapter 14.**
+  Chapter 09 introduced a header written with classes the design system never defines —
+  `sheet`, `tb-main`, `tb-meta`, `tb-sub`, `toc`, `lede` — and every later chapter copied its
+  predecessor, so the drift went forward seven times. Effects, all visible on a phone: the whole
+  title block (eyebrow, h1, subtitle, meta) sits inside the **sticky** `.titleblock`, which was
+  designed for a 46px strip, so it pins ~340px over the content while scrolling; the page has
+  **no side gutter** (the `.shell` wrapper that supplies it is missing), so text touches the
+  screen edge; the contents list renders as a run of underlined inline links; and there is no
+  desktop contents rail. Also, **Chapters 12 and 13 dropped the TeX-to-Unicode safety net**,
+  and **Chapter 13 parts 2 and 3 dropped the equation auto-fitter** too. Chapters 01–08 and 14
+  are correct. Audit: `python3 study-companion/audit_classes.py` prints each sheet with any undefined
+  classes after its name, and exits 1 if there are any; at Chapter 14 it lists exactly the
+  seven pages above, each with the same six classes.
+  **The fix** per page: replace everything from `<div class="sheet">` to `<section id="top"` with
+  Chapter 14's `<header class="titleblock"><div class="tb-in">…</div></header><div
+  class="shell"><nav class="rail">…</nav><main>` (keep the page's own contents links, add
+  `class="on"` to the first), turn the old `tb-k`/`h1`/`tb-sub` into `<p class="eyebrow">`,
+  `<h1>`, `<p class="lead">` at the top of `#top`, rename `lede`→`lead`, and give the page
+  Chapter 14's script tail (rail observer + safety net + auto-fitter). Then re-probe at five
+  widths, screenshot, and republish to the **same** artifact URL (read it first). Not done at
+  Chapter 14 because it touches seven published artifacts and the request was a new chapter.
 - **Nine of the twelve published sheets have display equations that overflow their `.mathbox`
   at 390px, and Chapter 10 has one clipped `.ro-k` label.** Measured at Chapter 12; details in
   the series-sweep note under the browser-probe section. Pre-existing, not regressions, and
@@ -832,6 +883,39 @@ record. **Write the forward-promise section as the last content section of every
 next run has a contract instead of a guess. It worked: part 2 opened by paying three named
 debts, and part 3 closed the chapter with end matter that draws on all three.
 
+## The Chapter 14 lesson worth generalising
+
+**A correction to the source is itself a claim, and it can be wrong.** Part 1 found ten
+source errors, and two of the corrections this run first *wrote* were refuted when computed.
+The source says a size-k heap beats heapify-then-pop for the kth largest element, and argues it
+with Big O that is backwards (`n + k log n` is never worse than `n log k`). The draft
+correction said heapify-then-pop therefore wins. Counting comparisons on 100,000 random numbers:
+the size-k heap wins, 100,374 against 165,150, because only about `k ln(n/k)` elements ever beat
+its root (90 measured, 92 predicted). On ascending input it loses by 3×. The source had the right
+conclusion for random data and the wrong reason; the correction had the right reason and the
+wrong conclusion. Likewise the draft "break" for Floyd's method — a speed-3 hare can skip past
+the tortoise and never meet — is false from a common start: at every multiple of the loop length
+both pointers are at the same offset. What *does* fail at speed 3 is the cycle-start trick
+(36 of 132 small lists, all with even loops). **Compute the correction as hard as the claim.**
+
+**Audit the skeleton, not just the content.** Every earlier probe measured overflow, clipping,
+readouts and equations, and all passed on seven pages whose header and navigation were built
+from classes that do not exist. Nothing in the probe looked for them, and each chapter copied
+the previous one. The fix is the audit command under Known issues: every class used in the
+markup must be defined in the page's own CSS. Run it before every publish; it takes a second.
+And **copy the skeleton from a page known to be correct, not from the most recent page** — the
+most recent page is where drift accumulates.
+
+**The probe now checks values, not just presence.** `probe14.js` asserts eighteen readouts at
+rest against the verified numbers (crossover 996, 2,057 N-Queens nodes, TE equal to the
+enumerated longest path, the linear-probing miss cost within 10% of Knuth, and so on). A
+readout that renders the wrong number passes every structural check; this does not.
+
+**Near a cliff, report the spread, not just the mean.** The hash-table lab first said its
+simulation agreed with Knuth's formula "a little less closely near 0.95". Measured, a single set
+of four 16,384-slot tables at load 0.9 ranges from 40.1 to 56.9 around the formula's 50.5; the
+median sits on it. The footer now says so, with the numbers.
+
 ## On splitting a chapter into parts
 
 Chapter 09 (3,250 source lines) was built in four runs and Chapter 10 (1,900) in two, against
@@ -868,5 +952,9 @@ Ch13 both found bank entries that were plainly *wrong* (Gauss–Seidel; "pipelin
 assembly line" undersold as a simile). Treat it as a floor, and check it.
 
 All of 13–20 are now measured, so every split decision is already made. Chapter 16 is the
-largest source in the series after Chapter 09 and will want three parts; Chapter 14 wants two.
-Everything else is a single run.
+largest source in the series after Chapter 09 and will want three parts; Chapter 14 is split in
+two and part 1 is done. Everything else is a single run.
+
+Separately from new chapters, **seven published pages (Chapters 09–13) need the skeleton repair
+described under Known issues**. It is mechanical, and it should be done before the series is
+called finished.
