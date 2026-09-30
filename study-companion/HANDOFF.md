@@ -19,13 +19,13 @@ parts**. All are published. Working tree clean after each part's commit.
 | 06 | Machine Learning | `ch06-machine-learning/` | https://claude.ai/artifact/AazU1pknayKewgpJQhzo3Z |
 | 07 | Computational Linguistics | `ch07-computational-linguistics/` | https://claude.ai/artifact/G4qe4sW6y1Av9kVibTq11R |
 | 08 | Computer Vision | `ch08-computer-vision/` | https://claude.ai/artifact/YGYUxoUzmFo2R2W5fb7PP7 |
-| 09 | Audio and Speech | `ch09-audio-speech/` | https://claude.ai/artifact/UeVoa1oWJcZJL8KMsbbLHq |
-| 10 | Multimodal Learning | `ch10-multimodal/` | https://claude.ai/artifact/VVW3i2z1z8dxCEUsvupMAW |
-| 11 | Autonomous Systems | `ch11-autonomous-systems/` | https://claude.ai/artifact/9xX3kBS2wW6MJT8keXAvQA |
-| 12 | Graph Neural Networks | `ch12-graph-neural-networks/` | https://claude.ai/artifact/6PoKo8b3Hq3QzVQvRDJT8u |
-| 13 | Computing and OS **pt 1/3** | `ch13-computing-os/` | https://claude.ai/artifact/Cf6EDgFhPKoQduGnLRRxdV |
-| 13 | Computing and OS **pt 2/3** | `ch13-computing-os-part2/` | https://claude.ai/artifact/Na2XhiZWm68g7Sb8u6wbpw |
-| 13 | Computing and OS **pt 3/3** | `ch13-computing-os-part3/` | https://claude.ai/artifact/HL2a7m5wT1fxBiCp5LTFQj |
+| 09 | Audio and Speech | `ch09-audio-speech/` | https://claude.ai/artifact/4RnmBWKc9mafmxVfhU6fgC |
+| 10 | Multimodal Learning | `ch10-multimodal/` | https://claude.ai/artifact/EgZ7A7gvNQV2WX6qsrSHUD |
+| 11 | Autonomous Systems | `ch11-autonomous-systems/` | https://claude.ai/artifact/HmWc8fGrEkZwwGtY4c13Fm |
+| 12 | Graph Neural Networks | `ch12-graph-neural-networks/` | https://claude.ai/artifact/MYh6LwcoooM3bXK7hsusay |
+| 13 | Computing and OS **pt 1/3** | `ch13-computing-os/` | https://claude.ai/artifact/QHLDK6zRLNSFmkwngRQ1rK |
+| 13 | Computing and OS **pt 2/3** | `ch13-computing-os-part2/` | https://claude.ai/artifact/9LrByU3Hw9UUwoooGhQmKA |
+| 13 | Computing and OS **pt 3/3** | `ch13-computing-os-part3/` | https://claude.ai/artifact/46yW11goFtfNaMG2QfWVZh |
 | 14 | Data Structures and Algorithms **pt 1/2** | `ch14-data-structures-algorithms/` | https://claude.ai/artifact/TCQEggFEntAofLXcUbunbd |
 | 14 | Data Structures and Algorithms **pt 2/2** | `ch14-data-structures-algorithms-part2/` | https://claude.ai/artifact/NESj33J7qvUysyK9djgRed |
 
@@ -363,9 +363,12 @@ as genuine surveys and mark them clearly as not derived from the compendium.
   the end of the Chapter 14 session** (undefined `sheet`/`tb-main`/`tb-meta`/`tb-sub`/`toc`/`lede`
   replaced with Chapter 14's titleblock + shell + rail; safety net and fitter restored; probed at
   1180 and 390: 47px header, 16px gutter, no page scroll, no errors). `audit_classes.py` now passes
-  on every sheet. **Republishing those seven artifacts is pending**: a republish to an existing URL
-  requires reading the live page in full first (~165 KB each). The live pages differ from the
-  pre-fix repo copies only by the host's publish wrapper, so no merge is needed.
+  on every sheet. **Republished as new artifacts**, by the user's choice, because updating an
+  existing URL requires reading the live page in full first (~165 KB each, ~300k tokens for all
+  seven). The state table and README now carry the new URLs. **The old URLs still exist and still
+  show the broken layout**; they are superseded, not deleted (deleting is the user's call). The
+  new artifacts were published after this session hit the 10-watch cap, so none of them is
+  watched.
 - **Nine of the twelve published sheets have display equations that overflow their `.mathbox`
   at 390px, and Chapter 10 has one clipped `.ro-k` label.** Measured at Chapter 12; details in
   the series-sweep note under the browser-probe section. Pre-existing, not regressions, and

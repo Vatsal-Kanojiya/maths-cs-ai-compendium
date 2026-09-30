@@ -14,7 +14,7 @@ that have bitten before, and one lesson per chapter. Then run the checks it asks
 ```
 pip install numpy scipy
 python3 study-companion/verify_claims.py        # expect 612 PASS, 0 "*** FAIL ***", return code 0
-python3 study-companion/audit_classes.py        # Chapters 09-13 are known to fail (see Known issues)
+python3 study-companion/audit_classes.py        # every sheet should pass (exit code 0)
 ```
 
 Check the verifier's return code and stderr, not only its stdout.
@@ -40,11 +40,9 @@ ceiling. Chapter 14 part 2 made two promises to Sheet 15 that must be paid:
 After that come Chapters 16 (three parts, the largest source after Chapter 09), 17 and 18.
 Chapters 19–20 are outline stubs; decide deliberately whether to write them.
 
-**Optional, but recommended before the series is called finished:** the skeleton repair of
-Chapters 09–13 (seven published pages). It is described under Known issues in HANDOFF. Those
-pages use undefined classes, so on a phone the title block stays pinned over about 40% of the
-screen and there is no side gutter. Chapters 12–13 also lack the TeX safety net. Ask me before
-doing it, or do it if I say so.
+**Already done:** the Chapter 09–13 skeleton repair. It is fixed in the repo and republished at new
+URLs, which are in the HANDOFF state table. `audit_classes.py` passes on every sheet; keep it that
+way.
 
 **Workflow, per chapter or part:**
 1. Read the whole source.

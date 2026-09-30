@@ -44,13 +44,13 @@ merely structural, that is said plainly.
 | 06 | Machine Learning | [`ch06-machine-learning/`](ch06-machine-learning/index.html) | [Read online](https://claude.ai/artifact/AazU1pknayKewgpJQhzo3Z) |
 | 07 | Computational Linguistics | [`ch07-computational-linguistics/`](ch07-computational-linguistics/index.html) | [Read online](https://claude.ai/artifact/G4qe4sW6y1Av9kVibTq11R) |
 | 08 | Computer Vision | [`ch08-computer-vision/`](ch08-computer-vision/index.html) | [Read online](https://claude.ai/artifact/YGYUxoUzmFo2R2W5fb7PP7) |
-| 09 | Audio and Speech | [`ch09-audio-speech/`](ch09-audio-speech/index.html) | [Read online](https://claude.ai/artifact/UeVoa1oWJcZJL8KMsbbLHq) |
-| 10 | Multimodal Learning | [`ch10-multimodal/`](ch10-multimodal/index.html) | [Read online](https://claude.ai/artifact/VVW3i2z1z8dxCEUsvupMAW) |
-| 11 | Autonomous Systems | [`ch11-autonomous-systems/`](ch11-autonomous-systems/index.html) | [Read online](https://claude.ai/artifact/9xX3kBS2wW6MJT8keXAvQA) |
-| 12 | Graph Neural Networks | [`ch12-graph-neural-networks/`](ch12-graph-neural-networks/index.html) | [Read online](https://claude.ai/artifact/6PoKo8b3Hq3QzVQvRDJT8u) |
-| 13 | Computing and OS *(pt 1: maths & architecture)* | [`ch13-computing-os/`](ch13-computing-os/index.html) | [Read online](https://claude.ai/artifact/Cf6EDgFhPKoQduGnLRRxdV) |
-| 13 | Computing and OS *(pt 2: OS & concurrency)* | [`ch13-computing-os-part2/`](ch13-computing-os-part2/index.html) | [Read online](https://claude.ai/artifact/Na2XhiZWm68g7Sb8u6wbpw) |
-| 13 | Computing and OS *(pt 3: languages + end matter)* | [`ch13-computing-os-part3/`](ch13-computing-os-part3/index.html) | [Read online](https://claude.ai/artifact/HL2a7m5wT1fxBiCp5LTFQj) |
+| 09 | Audio and Speech | [`ch09-audio-speech/`](ch09-audio-speech/index.html) | [Read online](https://claude.ai/artifact/4RnmBWKc9mafmxVfhU6fgC) |
+| 10 | Multimodal Learning | [`ch10-multimodal/`](ch10-multimodal/index.html) | [Read online](https://claude.ai/artifact/EgZ7A7gvNQV2WX6qsrSHUD) |
+| 11 | Autonomous Systems | [`ch11-autonomous-systems/`](ch11-autonomous-systems/index.html) | [Read online](https://claude.ai/artifact/HmWc8fGrEkZwwGtY4c13Fm) |
+| 12 | Graph Neural Networks | [`ch12-graph-neural-networks/`](ch12-graph-neural-networks/index.html) | [Read online](https://claude.ai/artifact/MYh6LwcoooM3bXK7hsusay) |
+| 13 | Computing and OS *(pt 1: maths & architecture)* | [`ch13-computing-os/`](ch13-computing-os/index.html) | [Read online](https://claude.ai/artifact/QHLDK6zRLNSFmkwngRQ1rK) |
+| 13 | Computing and OS *(pt 2: OS & concurrency)* | [`ch13-computing-os-part2/`](ch13-computing-os-part2/index.html) | [Read online](https://claude.ai/artifact/9LrByU3Hw9UUwoooGhQmKA) |
+| 13 | Computing and OS *(pt 3: languages + end matter)* | [`ch13-computing-os-part3/`](ch13-computing-os-part3/index.html) | [Read online](https://claude.ai/artifact/46yW11goFtfNaMG2QfWVZh) |
 | 14 | Data Structures and Algorithms *(pt 1: foundations, arrays, lists)* | [`ch14-data-structures-algorithms/`](ch14-data-structures-algorithms/index.html) | [Read online](https://claude.ai/artifact/TCQEggFEntAofLXcUbunbd) |
 | 14 | Data Structures and Algorithms *(pt 2: trees, graphs, search + end matter)* | [`ch14-data-structures-algorithms-part2/`](ch14-data-structures-algorithms-part2/index.html) | [Read online](https://claude.ai/artifact/NESj33J7qvUysyK9djgRed) |
 
