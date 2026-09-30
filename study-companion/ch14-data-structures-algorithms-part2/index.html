@@ -1,0 +1,2577 @@
+<title>Trees, Graphs and Search</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(', '\\)']], displayMath: [['$$', '$$']], processEscapes: true },
+  svg: { fontCache: 'global', scale: 1.0 },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-svg.js" id="MathJax-script" async></script>
+
+<style>
+/* ============ TOKENS: light is complete and authoritative ============ */
+:root{
+  --ground:#F0F2F1;
+  --sheet:#FBFCFB;
+  --sheet-2:#F4F6F5;
+  --ink:#14181A;
+  --ink-2:#4E575B;
+  --ink-3:#77838A;
+  --rule:#D3DAD7;
+  --rule-strong:#A8B4B0;
+  --accent:#12507E;
+  --accent-ink:#0E4267;
+  --accent-soft:#E4EEF6;
+  --bridge:#1F8A4C;
+  --bridge-soft:#E4F2EA;
+  --brk:#A8500F;
+  --brk-soft:#FAEBDF;
+  --s1:#BF5B00;
+  --s2:#0F74C7;
+  --s3:#1F8A4C;
+  --paper:#FFFFFF;            /* pasted-drawing ground, both themes */
+  --paper-ink:#1b1b1b;
+  --shadow:0 1px 2px rgba(20,24,26,.06), 0 6px 18px rgba(20,24,26,.05);
+  --f-disp:'Archivo Narrow', 'Arial Narrow', Helvetica, sans-serif;
+  --f-body:'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --f-mono:'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+    --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+    --rule:#293134; --rule-strong:#3F494C;
+    --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+    --bridge:#35AC63; --bridge-soft:#11281B;
+    --brk:#E0913F; --brk-soft:#2E2012;
+    --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+  --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+  --rule:#293134; --rule-strong:#3F494C;
+  --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+  --bridge:#35AC63; --bridge-soft:#11281B;
+  --brk:#E0913F; --brk-soft:#2E2012;
+  --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:var(--f-body); font-size:17px; line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ============ TITLE BLOCK (engineering drawing header) ============ */
+.titleblock{
+  position:sticky; top:env(safe-area-inset-top,0px); z-index:40;
+  background:var(--sheet); border-bottom:1px solid var(--rule-strong);
+}
+.tb-in{
+  max-width:1240px; margin:0 auto; padding:0 16px;
+  display:flex; align-items:stretch; gap:0; min-height:46px;
+}
+.tb-cell{
+  display:flex; flex-direction:column; justify-content:center;
+  padding:5px 14px; border-right:1px solid var(--rule);
+  font-family:var(--f-disp);
+}
+.tb-cell:first-child{padding-left:0}
+.tb-cell:last-child{border-right:0; margin-left:auto; padding-right:0}
+.tb-k{
+  font-size:8.5px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); line-height:1.4;
+}
+.tb-v{font-size:13px; font-weight:700; letter-spacing:.02em; color:var(--ink); line-height:1.3}
+.tb-v.accent{color:var(--accent)}
+.tb-hide{display:none}
+@media (min-width:680px){ .tb-hide{display:flex} }
+
+.themebtn{
+  appearance:none; background:transparent; border:1px solid var(--rule-strong);
+  color:var(--ink-2); font-family:var(--f-disp); font-size:10px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:6px 10px; border-radius:2px;
+  cursor:pointer; align-self:center; white-space:nowrap;
+}
+.themebtn:hover{border-color:var(--accent); color:var(--accent)}
+.themebtn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+/* ============ SHELL ============ */
+.shell{max-width:1240px; margin:0 auto; padding:0 16px; padding-block:0 64px}
+@media (min-width:1080px){
+  .shell{display:grid; grid-template-columns:212px minmax(0,1fr); gap:44px; align-items:start}
+}
+.rail{display:none}
+@media (min-width:1080px){
+  .rail{
+    display:block; position:sticky; top:calc(env(safe-area-inset-top,0px) + 70px);
+    padding-block:28px; font-family:var(--f-disp); font-size:12.5px;
+  }
+}
+.rail-h{
+  font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-3);
+  padding-bottom:8px; border-bottom:1px solid var(--rule); margin-bottom:10px;
+}
+.rail a{
+  display:flex; gap:9px; padding:4px 0; color:var(--ink-2); text-decoration:none;
+  border-left:2px solid transparent; padding-left:9px; margin-left:-11px; line-height:1.35;
+}
+.rail a:hover{color:var(--accent)}
+.rail a.on{color:var(--accent); border-left-color:var(--accent); font-weight:700}
+.rail a .n{font-family:var(--f-mono); font-size:10.5px; color:var(--ink-3); flex:none; padding-top:1px}
+.rail a.on .n{color:var(--accent)}
+
+main{min-width:0; padding-block:0 0}
+.col{max-width:70ch}
+
+/* ============ TYPE ============ */
+h1,h2,h3,h4{font-family:var(--f-disp); text-wrap:balance; margin:0; line-height:1.14}
+h1{font-size:clamp(34px,7vw,58px); font-weight:700; letter-spacing:-.015em}
+h2{font-size:clamp(25px,4.2vw,34px); font-weight:700; letter-spacing:-.01em}
+h3{font-size:19px; font-weight:700; letter-spacing:.005em; margin-top:2px}
+h4{font-size:14px; font-weight:700; letter-spacing:.06em; text-transform:uppercase}
+p{margin:0 0 1.05em}
+a{color:var(--accent-ink)}
+strong{font-weight:600}
+em{font-style:italic}
+code{font-family:var(--f-mono); font-size:.87em; background:var(--sheet-2); padding:1px 5px; border-radius:2px; border:1px solid var(--rule)}
+.lead{font-size:19.5px; line-height:1.56; color:var(--ink-2)}
+.eyebrow{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--ink-3); margin:0 0 10px;
+}
+.srcref{
+  font-family:var(--f-mono); font-size:11px; color:var(--ink-3);
+  border:1px solid var(--rule); border-radius:2px; padding:2px 7px; display:inline-block;
+  background:var(--sheet-2); white-space:nowrap;
+}
+
+/* ============ SECTION ============ */
+section{padding-block:38px 0; scroll-margin-top:calc(env(safe-area-inset-top,0px) + 62px)}
+.sechead{display:flex; align-items:baseline; gap:13px; margin-bottom:6px; flex-wrap:wrap}
+.secnum{
+  font-family:var(--f-mono); font-size:12px; font-weight:600; color:var(--accent);
+  border:1px solid var(--accent); border-radius:2px; padding:2px 7px; flex:none;
+  background:var(--accent-soft);
+}
+.rule-h{border:0; border-top:1px solid var(--rule); margin:0 0 22px}
+.rule-d{border:0; border-top:1px dashed var(--rule-strong); margin:34px 0}
+
+/* ============ CALLOUTS ============ */
+.note{
+  border:1px solid var(--rule); border-left:3px solid var(--accent);
+  background:var(--sheet); border-radius:2px; padding:16px 18px; margin:22px 0;
+}
+/* Greek letters must never be uppercased: text-transform turns beta into
+   a capital Beta, which is the Latin letter B on screen -- likewise eta->H,
+   kappa->K, lambda->A-shape.  Any Greek inside an uppercased label wears .gk. */
+.gk{text-transform:none}
+.note.bridge{border-left-color:var(--bridge); background:var(--bridge-soft)}
+.note.brk{border-left-color:var(--brk); background:var(--brk-soft)}
+.note-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; margin-bottom:7px; display:flex; align-items:center; gap:8px;
+}
+.note.bridge .note-h{color:var(--bridge)}
+.note.brk .note-h{color:var(--brk)}
+.note .note-h{color:var(--accent)}
+.note p:last-child, .note ul:last-child{margin-bottom:0}
+.note-h .ic{
+  width:15px; height:15px; border-radius:50%; border:1.5px solid currentColor; flex:none;
+  display:grid; place-items:center; font-size:9.5px; font-weight:700; font-family:var(--f-mono);
+}
+ul,ol{margin:0 0 1.05em; padding-left:1.25em}
+li{margin-bottom:.4em}
+li::marker{color:var(--ink-3)}
+
+/* ============ DEFINITION BLOCK ============ */
+.defn{
+  background:var(--sheet); border:1px solid var(--rule); border-radius:3px;
+  padding:18px 20px; margin:22px 0; box-shadow:var(--shadow);
+}
+.defn-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:10px;
+  padding-bottom:8px; border-bottom:1px solid var(--rule);
+}
+.defn p:last-child{margin-bottom:0}
+
+/* ============ TABLES ============ */
+.tw{overflow-x:auto; margin:22px 0; border:1px solid var(--rule); border-radius:3px; background:var(--sheet)}
+table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:480px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule); vertical-align:top}
+thead th{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); background:var(--sheet-2); font-weight:700; white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:0}
+td.mono,th.mono{font-family:var(--f-mono); font-size:13px; font-variant-numeric:tabular-nums}
+.tw caption{
+  caption-side:bottom; text-align:left; padding:9px 14px; font-size:12.5px;
+  color:var(--ink-3); border-top:1px solid var(--rule); font-family:var(--f-disp);
+}
+
+/* ============ FIGURES ============ */
+figure{margin:24px 0}
+.paper{
+  background:var(--paper); border:1px solid var(--rule-strong); border-radius:3px;
+  padding:16px; display:flex; justify-content:center; box-shadow:var(--shadow);
+}
+.paper img{max-width:100%; height:auto; display:block}
+figcaption{
+  font-family:var(--f-disp); font-size:12.5px; color:var(--ink-3); margin-top:9px;
+  line-height:1.45; padding-left:2px;
+}
+figcaption b{color:var(--ink-2); font-weight:700; letter-spacing:.04em}
+
+/* ============ INTERACTIVE PANELS ============ */
+.lab{
+  background:var(--sheet); border:1px solid var(--rule-strong); border-radius:3px;
+  margin:26px 0; overflow:hidden; box-shadow:var(--shadow);
+}
+.lab-h{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:11px 16px; border-bottom:1px solid var(--rule); background:var(--sheet-2);
+}
+.lab-t{font-family:var(--f-disp); font-size:13px; font-weight:700; letter-spacing:.05em; text-transform:uppercase}
+.lab-tag{
+  font-family:var(--f-mono); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--accent); border:1px solid var(--accent); border-radius:2px; padding:2px 6px;
+  margin-left:auto; white-space:nowrap;
+}
+.lab-body{padding:16px}
+.lab-foot{
+  padding:11px 16px; border-top:1px solid var(--rule); background:var(--sheet-2);
+  font-size:13.5px; color:var(--ink-2); line-height:1.5;
+}
+.lab-foot b{color:var(--ink)}
+.stage{width:100%; max-width:560px; height:auto; display:block; margin-inline:auto; touch-action:none; cursor:grab}
+.stage.drag{cursor:grabbing}
+
+/* Dividers are drawn as cell borders rather than as 1px grid gaps over a grey
+   backdrop: when the item count does not fill the last row, a gap-based grid
+   leaves the backdrop showing as an empty grey block. */
+.readout{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr)); gap:0;
+  background:var(--sheet); border:1px solid var(--rule); border-radius:2px;
+  margin-top:14px; overflow:hidden;
+}
+.ro{background:var(--sheet); padding:8px 11px;
+  border-right:1px solid var(--rule); border-bottom:1px solid var(--rule)}
+.ro-k{
+  font-family:var(--f-disp); font-size:9px; letter-spacing:.13em; text-transform:uppercase;
+  color:var(--ink-3); margin-bottom:2px;
+  /* was white-space:nowrap, which clipped the longer keys instead of wrapping */
+  white-space:normal; overflow-wrap:break-word; line-height:1.3; min-height:2.6em;
+}
+.ro-v{
+  font-family:var(--f-mono); font-size:15px; font-weight:500; font-variant-numeric:tabular-nums;
+  color:var(--ink); line-height:1.25;
+}
+.ro-v.a{color:var(--s2)} .ro-v.b{color:var(--s1)} .ro-v.c{color:var(--s3)}
+
+.ctl{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:14px}
+.ctl label{
+  font-family:var(--f-disp); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-2); white-space:nowrap;
+}
+input[type=range]{
+  -webkit-appearance:none; appearance:none; height:22px; background:transparent;
+  flex:1 1 160px; min-width:130px; cursor:pointer;
+}
+input[type=range]:focus-visible{outline:2px solid var(--accent); outline-offset:3px}
+input[type=range]::-webkit-slider-runnable-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-moz-range-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:16px; height:16px; border-radius:50%;
+  background:var(--accent); border:2px solid var(--sheet); margin-top:-6.5px;
+}
+input[type=range]::-moz-range-thumb{
+  width:16px; height:16px; border-radius:50%; background:var(--accent);
+  border:2px solid var(--sheet);
+}
+.btn{
+  appearance:none; font-family:var(--f-disp); font-size:11px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:7px 13px; border-radius:2px;
+  border:1px solid var(--rule-strong); background:var(--sheet); color:var(--ink-2); cursor:pointer;
+}
+.btn:hover{border-color:var(--accent); color:var(--accent)}
+.btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.btn.on{background:var(--accent); border-color:var(--accent); color:var(--sheet)}
+
+.legend{display:flex; gap:16px; flex-wrap:wrap; margin-top:12px}
+.lg{display:flex; align-items:center; gap:7px; font-family:var(--f-disp); font-size:12px; color:var(--ink-2)}
+.lg i{width:15px; height:3px; border-radius:2px; flex:none; display:block}
+
+/* ============ MISC ============ */
+.mathbox{overflow-x:auto; overflow-y:hidden; margin:18px 0}
+mjx-container[display="true"]{margin:0 !important}
+.kv{display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:15px; margin:16px 0}
+.kv dt{font-family:var(--f-mono); font-size:13px; color:var(--accent); white-space:nowrap}
+.kv dd{margin:0; color:var(--ink-2)}
+
+details.q{
+  border:1px solid var(--rule); border-radius:3px; background:var(--sheet);
+  margin-bottom:9px; overflow:hidden;
+}
+details.q summary{
+  cursor:pointer; padding:12px 15px; font-weight:600; list-style:none;
+  display:flex; gap:11px; align-items:flex-start; font-size:15.5px;
+}
+details.q summary::-webkit-details-marker{display:none}
+details.q summary::after{
+  content:'+'; margin-left:auto; font-family:var(--f-mono); color:var(--accent);
+  font-size:17px; line-height:1; flex:none; padding-top:2px;
+}
+details.q[open] summary::after{content:'\2212'}
+details.q summary:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
+details.q summary .qn{
+  font-family:var(--f-mono); font-size:12px; color:var(--ink-3); flex:none; padding-top:3px;
+}
+details.q .ans{padding:0 15px 14px 41px; font-size:15.5px; color:var(--ink-2); border-top:1px solid var(--rule); padding-top:13px}
+details.q .ans p:last-child{margin-bottom:0}
+
+.endnote{
+  margin-top:44px; padding-top:20px; border-top:1px solid var(--rule-strong);
+  font-size:13.5px; color:var(--ink-3); font-family:var(--f-disp); line-height:1.55;
+}
+.endnote a{color:var(--accent)}
+
+.srcref{text-decoration:none}
+a.srcref{color:var(--ink-2); transition:none}
+
+</style>
+<style>
+.srcref{text-decoration:none}
+a.srcref{color:var(--ink-2)}
+a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(--accent-soft)}
+.srcref.nolink{opacity:.75; font-style:italic}
+.pv{font-family:var(--f-disp); font-size:9.5px; font-weight:700; letter-spacing:.1em;
+    text-transform:uppercase; padding:2px 7px; border-radius:2px; white-space:nowrap}
+.pv.ok{background:var(--bridge-soft); color:var(--bridge)}
+.pv.add{background:var(--accent-soft); color:var(--accent)}
+.pv.corr{background:var(--brk-soft); color:var(--brk)}
+.flag{display:inline-block; padding:1px 7px; border-radius:2px; font-family:var(--f-disp);
+      font-size:10px; letter-spacing:.1em; text-transform:uppercase; font-weight:700}
+.flag.ok{background:var(--bridge-soft); color:var(--bridge)}
+.flag.bad{background:var(--brk-soft); color:var(--brk)}
+.predict{border:1px solid var(--rule-strong); border-left:3px solid var(--brk);
+  background:var(--brk-soft); border-radius:2px; padding:13px 15px; margin:0 0 14px}
+.predict-h{font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--brk); margin-bottom:6px}
+.predict p{margin:0 0 10px; font-size:15px}
+.predict .opts{display:flex; gap:8px; flex-wrap:wrap}
+.pbtn{appearance:none; font-family:var(--f-disp); font-size:12px; font-weight:600;
+  padding:6px 12px; border-radius:2px; border:1px solid var(--rule-strong);
+  background:var(--sheet); color:var(--ink-2); cursor:pointer}
+.pbtn:hover{border-color:var(--brk); color:var(--brk)}
+.pbtn.picked{background:var(--brk); border-color:var(--brk); color:var(--sheet)}
+.pverdict{margin-top:10px; font-size:14.5px; color:var(--ink-2); display:none}
+.pverdict.show{display:block}
+.pverdict b{color:var(--ink)}
+.gap{border:1px solid var(--rule); border-left:3px solid var(--ink-3); background:var(--sheet-2);
+  border-radius:2px; padding:14px 16px; margin:18px 0}
+.gap-h{font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:7px}
+</style>
+
+<header class="titleblock">
+  <div class="tb-in">
+    <div class="tb-cell"><div class="tb-k">Chapter</div><div class="tb-v accent">14 &middot; Data Structures and Algorithms</div></div>
+    <div class="tb-cell tb-hide"><div class="tb-k">Sheet</div><div class="tb-v">14 of 20, part 2 of 2</div></div>
+    <div class="tb-cell tb-hide"><div class="tb-k">Reader</div><div class="tb-v">B.E. Mechanical</div></div>
+    <div class="tb-cell tb-hide"><div class="tb-k">Prerequisite</div><div class="tb-v">Sheet 14 part 1</div></div>
+    <div class="tb-cell"><button class="themebtn" id="themebtn" type="button" aria-label="Switch colour theme">Theme</button></div>
+  </div>
+</header>
+
+<div class="shell">
+
+<nav class="rail" aria-label="Chapter contents">
+  <div class="rail-h">Contents</div>
+  <a href="#bridge" class="on"><span class="n">00</span><span>The bridge</span></a>
+  <a href="#trees"><span class="n">01</span><span>The indented BOM</span></a>
+  <a href="#treerec"><span class="n">02</span><span>Recursion on a tree</span></a>
+  <a href="#bst"><span class="n">03</span><span>Order of arrival</span></a>
+  <a href="#tries"><span class="n">04</span><span>Dialling codes</span></a>
+  <a href="#unionfind"><span class="n">05</span><span>Which parts are one body</span></a>
+  <a href="#fenwick"><span class="n">06</span><span>Loads that change</span></a>
+  <a href="#graphs"><span class="n">07</span><span>Storing a graph</span></a>
+  <a href="#bfs"><span class="n">08</span><span>Diamond offsets</span></a>
+  <a href="#dfs"><span class="n">09</span><span>Three colours</span></a>
+  <a href="#topo"><span class="n">10</span><span>Fulkerson&rsquo;s rule</span></a>
+  <a href="#dijkstra"><span class="n">11</span><span>What water does</span></a>
+  <a href="#scc"><span class="n">12</span><span>Equations solved together</span></a>
+  <a href="#sorting"><span class="n">13</span><span>The n log n floor</span></a>
+  <a href="#quicksort"><span class="n">14</span><span>Quicksort, properly</span></a>
+  <a href="#binsearch"><span class="n">15</span><span>Bisection again</span></a>
+  <a href="#answer"><span class="n">16</span><span>A serial line</span></a>
+  <a href="#greedy"><span class="n">17</span><span>Slip gauges</span></a>
+  <a href="#dprev"><span class="n">18</span><span>DP, briefly</span></a>
+  <a href="#worked"><span class="n">19</span><span>Worked example</span></a>
+  <a href="#breaks"><span class="n">20</span><span>Where it breaks</span></a>
+  <a href="#recall"><span class="n">21</span><span>Question bank</span></a>
+  <a href="#map"><span class="n">22</span><span>The map</span></a>
+  <a href="#provenance"><span class="n">A</span><span>Provenance</span></a>
+</nav>
+
+<main>
+
+<section id="top" style="padding-top:44px">
+  <div class="col">
+    <p class="eyebrow">Maths, CS &amp; AI Compendium &middot; Chapter 14, part 2 of 2</p>
+    <h1>Everything That Branches</h1>
+    <p class="lead" style="margin-top:18px">
+      A bill of materials is a tree, and an indented BOM is a preorder traversal of it. The
+      rule you learned for numbering the events of a CPM network is a topological sort. The
+      method of joints is one too, until a compound truss stops it cold. And water in a pipe
+      network does not take the shortest path.
+    </p>
+    <p>
+      Part 1 was about structures that are lines. This part lets them branch: trees, graphs,
+      and the sorting and searching that make branching structures fast. It also pays the
+      debts part 1 left. The CPM event numbering of part 1 &sect;09 turns out to be
+      Fulkerson&rsquo;s rule, and Fulkerson&rsquo;s rule is Kahn&rsquo;s algorithm for
+      topological sorting, checked on 500 random networks (&sect;10). The 2-D rain water of
+      part 1 &sect;16 is Dijkstra&rsquo;s shortest-path method with one symbol changed
+      (&sect;11). Quicksort gets built properly, and its best-known repair fails on an input
+      the source never considers (&sect;14). And the \(n\log n\) that part 1 treated as a speed
+      turns out to be a floor no comparison sort can go below (&sect;13).
+    </p>
+    <p>
+      The headline is &sect;10. The method of joints is a topological sort of a truss: you
+      repeatedly pick a joint with at most two unknown members, solve it, and move on. On a
+      simple truss that never gets stuck. On a compound truss (a triangle joined to another
+      triangle by three bars, still with \(m = 2j - 3\)) every joint has three unknowns from
+      the start, and the procedure stops. That is the same wall a computer hits when a set of
+      equations must be solved together, and &sect;12 gives it its name.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Corrections to the source in this part. Each is recomputed by <code>verify_claims.py</code>.</caption>
+      <thead><tr><th>Source says</th><th>Computed</th><th>Where</th></tr></thead>
+      <tbody>
+        <tr><td>Traversal by <code>inorder(left) + [val] + inorder(right)</code> &ldquo;is \(O(n^2)\)&rdquo;</td><td>Only for a path-shaped tree: 523,776 element copies for 1,023 nodes. A balanced tree costs 9,217, which is \(O(n\log n)\).</td><td>&sect;01</td></tr>
+        <tr><td>BST insert and BST validate, printed a page apart</td><td>The insert files a duplicate key in the right subtree. The validator rejects exactly that tree.</td><td>&sect;03</td></tr>
+        <tr><td>Union-find &ldquo;without path compression: \(O(n)\) per find&rdquo;</td><td>With union by rank alone the height never exceeds \(\log_2 n\): 12 for 4,096 items. The \(O(n)\) needs both repairs left out.</td><td>&sect;05</td></tr>
+        <tr><td>BFS marking visited on dequeue risks &ldquo;incorrect results&rdquo;</td><td>Distances were identical in 300 of 300 graphs when repeats are skipped. The cost is work: up to 3.6&times; the queue pushes.</td><td>&sect;08</td></tr>
+        <tr><td>&ldquo;Dijkstra does not work with negative weights&rdquo;</td><td>True of textbook Dijkstra. The code printed re-queues improved nodes and matched Bellman&ndash;Ford on 300 graphs with negative edges. It never stops on a negative cycle.</td><td>&sect;11</td></tr>
+        <tr><td>&ldquo;Random pivot or median-of-three eliminates&rdquo; quicksort&rsquo;s \(O(n^2)\)</td><td>Not with repeated keys. On 2,000 equal keys the printed partition makes exactly 1,999,000 comparisons under every pivot rule. A three-way partition makes 2,000.</td><td>&sect;14</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="bridge">
+  <div class="col">
+    <div class="sechead"><span class="secnum">00</span><h2>The bridge</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2014%20-%20data%20structures%20and%20algorithms/03.%20trees.md" target="_blank" rel="noopener">src 03. trees &#8599;</a>
+    </div>
+    <p>
+      The verdict column follows part 1&rsquo;s convention. <b>Identity</b> means the same
+      procedure or formula, checked numerically. <b>Breaks</b> means the correspondence holds
+      in structure and fails in substance, and the section says where.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>What a GATE-prepared mechanical engineer already owns, and what part 2 calls it.</caption>
+      <thead><tr><th>What you already know</th><th>What this part calls it</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td>The indented bill of materials</td><td>Preorder traversal of a tree</td><td><b style="color:var(--bridge)">Identity.</b> See &sect;01.</td></tr>
+        <tr><td>Standard-cost roll-up, components first</td><td>Postorder traversal</td><td><b style="color:var(--bridge)">Identity.</b> See &sect;01.</td></tr>
+        <tr><td>A card index kept in part-number order</td><td>A binary search tree</td><td><b style="color:var(--brk)">Breaks</b> when numbers arrive in sequence, as they usually do. See &sect;03.</td></tr>
+        <tr><td>STD dialling codes</td><td>A trie; a prefix-free code</td><td><b style="color:var(--bridge)">Same structure.</b> See &sect;04.</td></tr>
+        <tr><td>Welding parts into bodies; closed loops in a frame</td><td>Union-find; redundant edges</td><td><b style="color:var(--bridge)">Identity</b> in the count: \(m - n + c\), Sheet 12&rsquo;s cyclomatic number. See &sect;05.</td></tr>
+        <tr><td>A shear-force diagram whose loads keep changing</td><td>A Fenwick tree</td><td><b style="color:var(--bridge)">New,</b> and the answer to a trade-off. See &sect;06.</td></tr>
+        <tr><td>Offsetting a pocket boundary for a toolpath</td><td>Multi-source breadth-first search</td><td><b style="color:var(--brk)">Breaks.</b> Grid BFS measures diamonds, not circles. See &sect;08.</td></tr>
+        <tr><td>Fulkerson&rsquo;s rule for numbering CPM events</td><td>Kahn&rsquo;s topological sort</td><td><b style="color:var(--bridge)">Identity.</b> See &sect;10.</td></tr>
+        <tr><td>The method of joints</td><td>A topological sort of the truss&rsquo;s equations</td><td><b style="color:var(--bridge)">Identity</b> on simple trusses; a compound truss stops it. See &sect;10.</td></tr>
+        <tr><td>Head loss along a pipe route</td><td>A shortest path (Dijkstra)</td><td><b style="color:var(--brk)">Breaks.</b> Flow divides over every path; it solves a Laplacian. See &sect;11.</td></tr>
+        <tr><td>Equations you must solve simultaneously</td><td>Strongly connected components</td><td><b style="color:var(--bridge)">Same structure.</b> See &sect;12.</td></tr>
+        <tr><td>Bisection, Sheet 13 part 1 &sect;06</td><td>Binary search</td><td><b style="color:var(--bridge)">Identity,</b> already shown. See &sect;15.</td></tr>
+        <tr><td>Balancing a line whose tasks form a chain</td><td>Binary search on the answer</td><td><b style="color:var(--bridge)">Identity.</b> The source&rsquo;s shipping problem is this. See &sect;16.</td></tr>
+        <tr><td>Johnson&rsquo;s rule; SPT; the slip-gauge procedure</td><td>Greedy algorithms with a proof</td><td><b style="color:var(--bridge)">Identity.</b> The gauge rule is exactly optimal for the M87 set. See &sect;17.</td></tr>
+        <tr><td>&mdash;</td><td>Balanced-tree rotations; the sorting lower-bound argument</td><td><b style="color:var(--brk)">No counterpart.</b> Learn these cold. See &sect;&sect;03, 13.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="trees">
+  <div class="col">
+    <div class="sechead"><span class="secnum">01</span><h2>A tree is the indented BOM</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2014%20-%20data%20structures%20and%20algorithms/03.%20trees.md" target="_blank" rel="noopener">src 03. trees &#8599;</a>
+    </div>
+    <p>
+      A <b>tree</b> is a connected graph with no loops. One node is the <b>root</b>; every
+      other node has exactly one <b>parent</b>; nodes with no children are <b>leaves</b>. In a
+      <b>binary tree</b> every node has at most two children, called left and right. The
+      source&rsquo;s key advice is that tree problems are solved recursively, because a tree
+      is a root with smaller trees hanging from it.
+    </p>
+    <p>
+      There are four standard orders in which to visit every node, and three of them are
+      procedures you already follow.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: the indented BOM is a preorder traversal</div>
+      <p>
+        <b>Preorder</b> visits a node, then each of its subtrees in turn. Write each item as you
+        visit it, indented by its depth, and you have produced an indented bill of materials:
+        pump, casing, bolt, gasket, impeller, motor, bearing, bearing (<code>[Ch14p2 s01]</code>).
+        Every assembly appears directly above its components, which is what the format is
+        for.
+      </p>
+      <p style="margin-bottom:0">
+        <b>Postorder</b> visits both subtrees first and the node last. That is the standard-cost
+        roll-up: an assembly&rsquo;s cost is its own labour plus the rolled-up cost of each
+        component, so every component must be costed before its parent. For the small pump in
+        the verification script it gives 3,160. <b>Level order</b>, visiting the root, then all
+        its children, then all theirs, is how an MRP run takes a product structure level by
+        level (part 1 &sect;10).
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks</div>
+      <p style="margin-bottom:0">
+        The fourth order, <b>inorder</b> (left subtree, node, right subtree), has no BOM meaning.
+        It exists for binary search trees, where it visits keys in sorted order (&sect;03). And a
+        real product structure is not quite a tree: a bearing used in both the motor and the
+        gearbox has two parents. Part 1 &sect;10 called that a directed acyclic graph and
+        showed why MRP needs low-level codes for it. A tree view duplicates the shared part
+        under each parent, which is fine for listing and wasteful for computing.
+      </p>
+    </div>
+    <p>
+      The source&rsquo;s first traversals build each answer by gluing lists together:
+      <code>inorder(left) + [val] + inorder(right)</code>. It warns that this is
+      \(O(n^2)\) because each join copies the lists. The warning is right in kind and
+      overstated in size. Each element is copied once for every ancestor above it, so the
+      total is the sum of all depths: 9,217 copies for a balanced tree of 1,023 nodes, close to
+      \(n\log_2 n\), and 523,776 for a tree of the same size shaped like a chain
+      (<code>[Ch14p2 s01]</code>). The \(n^2\) is the worst case, not the usual one. The fix
+      the source gives, appending to one shared list, is still the right habit.
+    </p>
+  </div>
+</section>
+
+<section id="treerec">
+  <div class="col">
+    <div class="sechead"><span class="secnum">02</span><h2>Recursion on a tree</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2014%20-%20data%20structures%20and%20algorithms/03.%20trees.md" target="_blank" rel="noopener">src 03. trees &#8599;</a>
+    </div>
+    <p>
+      Part 1 &sect;06 showed that recursion is proof by induction run as a program. On a tree
+      the induction is on subtrees: if the function is right for both children, the combining
+      step makes it right for the node. The height of a tree is the smallest example.
+      An empty tree has height 0, and any other tree has height
+      \(1 + \max(\text{left}, \text{right})\).
+    </p>
+    <p>
+      The source&rsquo;s hard problem shows where the pattern needs care. <b>Maximum path
+      sum</b> asks for the largest total along any path between two nodes, with negative
+      values allowed. At each node there are two different quantities, and the source is
+      right that confusing them is the usual mistake:
+    </p>
+    <ul>
+      <li>the best path that <em>bends</em> at this node, using both children; it can be the
+        answer but cannot be extended upward, because a path cannot fork;</li>
+      <li>the best path that <em>continues</em> upward, using at most one child; this is what
+        the node reports to its parent.</li>
+    </ul>
+    <p>
+      The node records the first in a running best and returns the second. The source&rsquo;s
+      code agrees with a brute-force search over every pair of nodes on 300 random trees with
+      negative values (<code>[Ch14p2 s02]</code>). A subtree whose best contribution is
+      negative is treated as absent, which is the <code>max(&hellip;, 0)</code> in the code.
+    </p>
+    <p>
+      The <b>lowest common ancestor</b> code carries the caveat the source states: it assumes
+      both nodes are in the tree. Ask it about a node that is absent and it returns the other
+      node, as if that were the answer (<code>[Ch14p2 s02]</code>). A function that can return
+      a plausible wrong answer should say so in its name or check its inputs.
+    </p>
+  </div>
+</section>
+
+<section id="bst">
+  <div class="col">
+    <div class="sechead"><span class="secnum">03</span><h2>Binary search trees, and the order of arrival</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2014%20-%20data%20structures%20and%20algorithms/03.%20trees.md" target="_blank" rel="noopener">src 03. trees &#8599;</a>
+    </div>
+    <p>
+      A <b>binary search tree</b> (BST) keeps every key in a node&rsquo;s left subtree smaller
+      than the node and every key in its right subtree larger. Searching compares with the
+      root and goes left or right, one level per comparison, so a search costs the height of
+      the tree. It is binary search (&sect;15) stored in a shape that allows cheap inserts.
+    </p>
+    <p>
+      The cost is set by the height, and the height is set by the <em>order in which keys
+      arrive</em> (<code>[Ch14p2 s03]</code>):
+    </p>
+    <ul>
+      <li>Inserted in sorted order, 1,000 keys make a tree of height <b>999</b>. Every new key
+        is larger than all before it and hangs off the right. The tree is a linked list, and a
+        search is a linear scan.</li>
+      <li>Inserted in random order, the mean depth of a node is 11.01, against the theoretical
+        \(2(1 + 1/n)H_n - 4 = 10.99\), where \(H_n\) is the harmonic number. A perfectly
+        balanced tree has \(\log_2 1000 = 9.97\) levels. Random order costs about 10% more
+        than perfect, which is almost nothing.</li>
+    </ul>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where the card-index picture breaks: the worst case is the usual one</div>
+      <p style="margin-bottom:0">
+        A card index kept in part-number order is the picture a BST suggests, and in a plant it
+        fails in a specific way. Part numbers are usually issued in sequence. A plain BST fed
+        new parts as they are created receives sorted input, which is exactly its worst case.
+        Real systems use <b>balanced</b> search trees (AVL trees, red&ndash;black trees, and the
+        B-trees inside databases), which rotate nodes after each insert to keep the height near
+        \(\log_2 n\) whatever the arrival order. Rotations have no counterpart in your training;
+        the bridge table lists them as one to learn cold.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>The source&rsquo;s insert and validate disagree</div>
+      <p style="margin-bottom:0">
+        The source defines a BST with left keys <em>smaller</em> and right keys
+        <em>larger</em>, which leaves no place for a duplicate. Its <code>insert_bst</code>
+        sends an equal key to the right anyway. Its <code>is_valid_bst</code>, a page later,
+        demands strictly larger keys on the right, so it rejects the tree its own insert built
+        from the keys 5 and 5 (<code>[Ch14p2 s03]</code>). With distinct keys the two agree on
+        all 300 trees tested. Pick one rule for duplicates (reject them, count them, or send
+        them consistently to one side) and make every function use it.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">The same 31 keys, three trees</div><div class="lab-tag">Predict, then insert</div></div>
+    <div class="predict">
+      <p style="margin-top:0">
+        Part numbers 1 to 31 are entered into a plain search tree in the order they were issued,
+        1 first. How many nodes does a search for part 31 visit?
+      </p>
+      <button class="pbtn" data-p1="a" type="button">5, since log&#8322; 32 = 5</button>
+      <button class="pbtn" data-p1="b" type="button">About 10</button>
+      <button class="pbtn" data-p1="c" type="button">31</button>
+      <button class="pbtn" data-p1="d" type="button">It depends on the values</button>
+      <div class="pverdict" id="pv1"></div>
+    </div>
+    <svg class="stage" id="bS" viewBox="0 0 480 300" role="img"
+         aria-label="A binary search tree drawn by depth, built from the chosen insertion order">
+      <g id="bEdge"></g><g id="bNode"></g><g id="bLab"></g>
+    </svg>
+    <div class="ctl">
+      <label for="bSl">Keys n</label>
+      <input type="range" id="bSl" min="7" max="63" value="31" step="1">
+      <span class="ro-v" id="bVal" style="min-width:32px">31</span>
+    </div>
+    <div class="ctl">
+      <button class="btn" data-bo="sorted" type="button">Issued in order</button>
+      <button class="btn" data-bo="random" type="button">Random order</button>
+      <button class="btn" data-bo="middle" type="button">Middle first</button>
+      <button class="btn" id="bNew" type="button">Reshuffle</button>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Height<br>(levels &minus; 1)</div><div class="ro-v b" id="bH">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Mean depth<br>of a key</div><div class="ro-v a" id="bD">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Random-order<br>theory</div><div class="ro-v c" id="bT">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Balanced<br>height</div><div class="ro-v" id="bB">&mdash;</div></div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    Each key is drawn at its sorted position across the width and at its depth down the page,
+    so the picture is the tree itself. <b>Issued in order</b> gives a diagonal line 31 levels
+    deep: a search for part 31 visits all <b>31</b> nodes, the answer to the prediction.
+    <b>Middle first</b> inserts the median, then the medians of each half, and builds the
+    perfectly balanced tree of height 4, with a mean depth of 3.161. <b>Random order</b> lands
+    in between and close to balanced; its mean depth hovers around the theoretical value in the
+    third readout, which is an average over all orders, so any one shuffle can sit a little
+    above or below it.
+  </div>
+</section>
+
+<section id="tries">
+  <div class="col">
+    <div class="sechead"><span class="secnum">04</span><h2>Tries, and dialling codes</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2014%20-%20data%20structures%20and%20algorithms/03.%20trees.md" target="_blank" rel="noopener">src 03. trees &#8599;</a>
+    </div>
+    <p>
+      A <b>trie</b> (a prefix tree) stores strings one character per level. The root&rsquo;s
+      children are the possible first characters, their children the second characters, and
+      so on; a node is marked where a stored string ends. Looking up a string of length
+      \(L\) follows \(L\) edges, however many strings are stored, as the source says. Finding
+      every string with a given prefix means walking to the prefix&rsquo;s node and collecting
+      everything below it.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same structure: trunk dialling codes</div>
+      <p style="margin-bottom:0">
+        India&rsquo;s trunk codes have different lengths: 11 for Delhi, 22 for Mumbai, 80 for
+        Bengaluru, and longer codes for smaller towns. An exchange must route a call while the
+        digits are still arriving, so no code may be the beginning of another. A set of codes
+        with that property is <b>prefix-free</b>, and it is exactly a trie in which every
+        code ends at a leaf: the moment the digits reach a leaf, the call knows where it is
+        going. The older electromechanical exchanges of the step-by-step type did this with
+        one bank of switches per dialled digit (reported), which is a trie built from
+        hardware. Hierarchical part-classification codes work the same way: every part whose
+        code starts with the same digits is one family, one node of the trie.
+      </p>
+    </div>
+    <p>
+      The source&rsquo;s hard problem, finding many words in a grid of letters, builds a trie
+      of the words first and searches the grid once, abandoning any path whose letters are
+      not a prefix of some word. It is part 1 &sect;08&rsquo;s pruning, with the trie as the
+      check that fires early.
+    </p>
+  </div>
+</section>
+
+<section id="unionfind">
+  <div class="col">
+    <div class="sechead"><span class="secnum">05</span><h2>Union-find: which parts are one body</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2014%20-%20data%20structures%20and%20algorithms/03.%20trees.md" target="_blank" rel="noopener">src 03. trees &#8599;</a>
+    </div>
+    <p>
+      <b>Union-find</b> keeps track of which items belong together. Each group is stored as a
+      small tree whose root represents it. <code>find(x)</code> climbs from \(x\) to its root;
+      <code>union(x, y)</code> hangs one root under the other. Two repairs keep the trees
+      flat: <b>union by rank</b> hangs the shorter tree under the taller, and <b>path
+      compression</b> points every node it passes directly at the root. With both, a long
+      sequence of operations costs so little per operation that it is constant for every
+      practical size (the inverse Ackermann bound; reported, not derived here).
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity in the count: welding parts, and redundant members</div>
+      <p style="margin-bottom:0">
+        Start with \(n\) loose parts and weld them together one joint at a time. Union-find
+        says, for each weld, whether the two parts were already one rigid body. A weld between
+        parts of the same body closes a loop. The source&rsquo;s &ldquo;redundant
+        connection&rdquo; problem is that loop-closing weld. Over a whole assembly, the number
+        of loop-closing joints equals \(m - n + c\) for \(m\) joints, \(n\) parts and \(c\)
+        separate bodies at the end, on all 300 random cases checked (<code>[Ch14p2 s05]</code>).
+        That count is the cyclomatic number, which Sheet 12 &sect;07 showed is the number of
+        redundant members of a spring network: each loop-closing member is one more force that
+        equilibrium alone cannot find.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>The pitfall table blames the wrong omission</div>
+      <p style="margin-bottom:0">
+        It says union-find without path compression costs \(O(n)\) per find in the worst case.
+        Not if union by rank is kept. A tree only gains height when two trees of equal height
+        merge, which needs twice as many items each time, so the height cannot exceed
+        \(\log_2 n\). Merging 4,096 items in the worst possible order gives height exactly
+        <b>12</b>. Leave out <em>both</em> repairs and the same items form a chain of height
+        <b>4,095</b> (<code>[Ch14p2 s05]</code>). The \(O(n)\) needs both omissions; either repair
+        alone gives \(O(\log n)\).
+      </p>
+    </div>
+    <p>
+      The same structure drives Kruskal&rsquo;s method for the cheapest network connecting a
+      set of points, which the source mentions: take connections in order of cost and reject
+      any that would close a loop. Laying out an air header to reach every machine with the
+      least pipe is that problem, before anyone thinks about flow.
+    </p>
+  </div>
+</section>
+
+<section id="fenwick">
+  <div class="col">
+    <div class="sechead"><span class="secnum">06</span><h2>A Fenwick tree: a shear diagram whose loads change</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2014%20-%20data%20structures%20and%20algorithms/03.%20trees.md" target="_blank" rel="noopener">src 03. trees &#8599;</a>
+    </div>
+    <p>
+      Part 1 &sect;18 showed that a prefix-sum array is a shear-force diagram, and that it
+      answers any range query with one subtraction. The price appears when a load changes.
+      Move one wheel load on a crane runway beam and every shear value to its right changes,
+      so the array must be rebuilt: \(O(n)\) per change. Keeping only the loads is the
+      opposite trade: \(O(1)\) to change a load, \(O(n)\) to add up a range.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Three ways to keep running totals when the loads keep changing.</caption>
+      <thead><tr><th>Stored</th><th>Change one load</th><th>Sum over a range</th></tr></thead>
+      <tbody>
+        <tr><td>The loads themselves</td><td>\(O(1)\)</td><td>\(O(n)\)</td></tr>
+        <tr><td>The prefix sums (the shear diagram)</td><td>\(O(n)\)</td><td>\(O(1)\)</td></tr>
+        <tr><td>A Fenwick tree</td><td>\(O(\log n)\)</td><td>\(O(\log n)\)</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      A <b>Fenwick tree</b> stores partial sums over blocks of carefully chosen lengths: entry
+      \(i\) covers a block whose length is the lowest set bit of \(i\) in binary. A running
+      total up to \(i\) adds a handful of blocks, stripping the lowest bit each hop; a load
+      change updates the handful of blocks that contain it, adding the lowest bit each hop.
+      Checked against brute force on 3,000 random changes and queries over 1,000 positions, it
+      was right every time and never took more than 17 hops per operation, against a bound of
+      \(2\lceil\log_2(n+1)\rceil = 20\) (<code>[Ch14p2 s06]</code>). For a 20-station beam you
+      would simply recompute. The structure earns its keep when the positions number millions
+      and the changes never stop, as with a stream of sensor readings.
+    </p>
+    <p>
+      A <b>segment tree</b> does the same for operations that cannot be undone by subtraction,
+      such as the minimum or maximum over a range.
+    </p>
+  </div>
+</section>
+
+<section id="graphs">
+  <div class="col">
+    <div class="sechead"><span class="secnum">07</span><h2>Storing a graph</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2014%20-%20data%20structures%20and%20algorithms/04.%20graphs.md" target="_blank" rel="noopener">src 04. graphs &#8599;</a>
+    </div>
+    <p>
+      Sheet 12 treated a graph through its matrices: the adjacency matrix and the Laplacian.
+      For algorithms the choice of storage matters more than the choice of matrix. An
+      <b>adjacency matrix</b> has a row and a column per node, \(O(V^2)\) entries however few
+      edges exist. An <b>adjacency list</b> keeps, for each node, only its neighbours:
+      \(O(V + E)\).
+    </p>
+    <p>
+      You have met the difference in finite elements. A mesh of a million nodes, each joined
+      to about ten neighbours, has \(10^{12}\) entries as a full matrix, eight terabytes in
+      double precision, and about \(10^7\) nonzeros as a list, around a hundred megabytes
+      (<code>[Ch14p2 s07]</code>). FE solvers store the stiffness matrix in sparse formats that
+      are adjacency lists in disguise. The source&rsquo;s advice, a list for almost everything,
+      is the same advice.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>An overreach</div>
+      <p style="margin-bottom:0">
+        The source says nearly every graph problem reduces to breadth-first or depth-first
+        search. Many interview problems do. But this part&rsquo;s own &sect;11 needs a priority
+        queue that neither provides, and the pipe network there is not a search at all: it is
+        a linear solve. Treat BFS and DFS as the two tools to reach for first, not as the
+        whole kit.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="bfs">
+  <div class="col">
+    <div class="sechead"><span class="secnum">08</span><h2>Breadth first, and the diamond-shaped offset</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2014%20-%20data%20structures%20and%20algorithms/04.%20graphs.md" target="_blank" rel="noopener">src 04. graphs &#8599;</a>
+    </div>
+    <p>
+      <b>Breadth-first search</b> (BFS) explores a graph in waves. It holds the frontier in the
+      queue of part 1 &sect;21: take the oldest node out, put each of its unvisited neighbours
+      in. Everything one edge from the start is finished before anything two edges away, so the
+      wave in which a node is first reached is its distance in edges. That makes BFS the
+      shortest-path method when every edge counts the same.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Marking on dequeue is slower, not wrong</div>
+      <p style="margin-bottom:0">
+        The source insists that a node be marked visited when it is <em>put into</em> the
+        queue, because marking it when it comes <em>out</em> lets it be queued several times,
+        &ldquo;wasting time and potentially causing incorrect results&rdquo;. Tested on 300
+        random graphs: marking on dequeue and skipping repeats gives the same distances every
+        time, at a cost of up to 3.6&times; as many queue entries. Wrong answers appear only
+        with a further mistake, writing a node&rsquo;s distance each time it is queued, so that
+        a later, longer route overwrites a shorter one: that version was wrong on 207 of the
+        300 graphs (<code>[Ch14p2 s08]</code>). The source&rsquo;s rule is the right habit; its
+        reason names the wrong risk.
+      </p>
+    </div>
+    <p>
+      Start the queue with many sources at once and BFS measures the distance to the nearest
+      of them. The source&rsquo;s rotting-oranges problem does this, and its answer matched a
+      separate nearest-source search on every random grid (<code>[Ch14p2 s08]</code>). Counting
+      islands on a grid is the same flood fill run once per island.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>The distance to the boundary is what a pocketing toolpath follows</div>
+      <p style="margin-bottom:0">
+        A contour-parallel pocketing toolpath is a set of curves at fixed distances inside the
+        pocket boundary and outside any boss. Seed a multi-source BFS with every boundary cell
+        of a gridded pocket, and each wave is one such offset. The structure is right: offsets
+        are level sets of the distance to the nearest boundary.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks: a grid does not measure circles</div>
+      <p style="margin-bottom:0">
+        A grid wave that steps to four neighbours measures \(|\Delta x| + |\Delta y|\), which
+        overstates the true distance by up to \(\sqrt2 = 1.4142\) along the diagonals; one that
+        steps to eight neighbours measures \(\max(|\Delta x|, |\Delta y|)\), which understates it
+        by down to \(1/\sqrt2 = 0.7071\) (<code>[Ch14p2 s08]</code>). Its offsets around a drilled
+        hole are diamonds or squares, never circles. A cutter following them would leave
+        scallops or gouge. CAM systems offset geometry exactly, and image-processing codes
+        correct grids with weighted or exact distance transforms (reported).
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Offsets from a BFS wave</div><div class="lab-tag">Predict, then spread</div></div>
+    <div class="predict">
+      <p style="margin-top:0">
+        A BFS wave spreads from a single cell, one step at a time, to the four neighbours of
+        every cell it has reached. What shape is the wavefront after ten steps?
+      </p>
+      <button class="pbtn" data-p2="a" type="button">A circle of radius 10</button>
+      <button class="pbtn" data-p2="b" type="button">A square</button>
+      <button class="pbtn" data-p2="c" type="button">A diamond</button>
+      <button class="pbtn" data-p2="d" type="button">Depends on the grid size</button>
+      <div class="pverdict" id="pv2"></div>
+    </div>
+    <svg class="stage" id="rS" viewBox="0 0 480 300" role="img"
+         aria-label="A grid coloured in bands of distance from a hole or a pocket boundary, measured three ways">
+      <g id="rCell"></g><g id="rLab"></g>
+    </svg>
+    <div class="ctl">
+      <button class="btn" data-rs="hole" type="button">One hole</button>
+      <button class="btn" data-rs="pocket" type="button">Pocket with boss</button>
+    </div>
+    <div class="ctl">
+      <button class="btn" data-rm="4" type="button">4-neighbour BFS</button>
+      <button class="btn" data-rm="8" type="button">8-neighbour BFS</button>
+      <button class="btn" data-rm="e" type="button">True distance</button>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Worst over<br>the true distance</div><div class="ro-v b" id="rO">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Worst under<br>the true distance</div><div class="ro-v a" id="rU">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Farthest cell<br>from a source</div><div class="ro-v c" id="rW">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Cells<br>measured</div><div class="ro-v" id="rN">&mdash;</div></div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    Each band is three units of distance wide, so the band edges are the offset curves a
+    toolpath would follow. From <b>one hole</b> the four-neighbour wave makes
+    <b>diamonds</b>, the answer to the prediction, and overstates the diagonal distance by
+    1.414; the eight-neighbour wave makes squares and understates it by 0.707; the true
+    distance makes circles. In the <b>pocket with boss</b> the same errors show as sharp
+    corners where a real offset would be rounded around the boss. The readouts compare each
+    measured distance with the straight-line distance to the nearest source cell, over every
+    cell on the grid.
+  </div>
+</section>
+
+<section id="dfs">
+  <div class="col">
+    <div class="sechead"><span class="secnum">09</span><h2>Depth first, and three colours for a loop</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2014%20-%20data%20structures%20and%20algorithms/04.%20graphs.md" target="_blank" rel="noopener">src 04. graphs &#8599;</a>
+    </div>
+    <p>
+      <b>Depth-first search</b> (DFS) follows one path as far as it goes before backing up,
+      using a stack: the call stack of part 1 &sect;05 if it is written recursively. It is the
+      tool for exhaustive search with backtracking (part 1 &sect;08) and for detecting loops.
+    </p>
+    <p>
+      To find a loop in a directed graph (a course that is its own prerequisite, or a part that
+      contains itself) the source gives each node three states: not yet visited, in progress
+      (on the current path), and finished. Reaching an in-progress node means the path has
+      come back on itself. Reaching a finished node means nothing. On 500 random directed
+      graphs this test agrees with the topological sort of &sect;10, which detects loops a
+      different way (<code>[Ch14p2 s09]</code>).
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Why two states are not enough: the shared part</div>
+      <p style="margin-bottom:0">
+        A checker with only &ldquo;seen&rdquo; and &ldquo;not seen&rdquo;, treating anything
+        seen before as a loop, reports a loop in the four-node diamond A&rarr;B, A&rarr;C,
+        B&rarr;D, C&rarr;D, which has none (<code>[Ch14p2 s09]</code>). In BOM terms that
+        diamond is a component D used by two sub-assemblies B and C: a shared part, the most
+        ordinary thing in a product structure. A BOM that genuinely contains itself is a data
+        error MRP software must reject. A checker that also rejects every shared part is
+        useless, and the third state is what tells the two apart.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="topo">
+  <div class="col">
+    <div class="sechead"><span class="secnum">10</span><h2>Fulkerson&rsquo;s rule is a topological sort, and so is the method of joints</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2014%20-%20data%20structures%20and%20algorithms/04.%20graphs.md" target="_blank" rel="noopener">src 04. graphs &#8599;</a>
+    </div>
+    <p>
+      A <b>topological order</b> of a directed graph lists its nodes so that every arrow runs
+      from an earlier node to a later one. One exists exactly when the graph has no loops. The
+      source gives <b>Kahn&rsquo;s algorithm</b> for finding it: take any node with no arrows
+      coming in, write it down, delete its outgoing arrows, and repeat. If nodes remain but none
+      is free of incoming arrows, there is a loop.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: this is Fulkerson&rsquo;s rule</div>
+      <p>
+        You learned a rule for numbering the events of an activity-on-arrow network:
+        (1) number the initial event 1; (2) delete every arrow leaving a numbered event, which
+        leaves new initial events; (3) number those next, and repeat until the end event is
+        numbered. That is Kahn&rsquo;s algorithm, step for step. On 500 random networks the two
+        reach the same verdict on loops, and Fulkerson&rsquo;s numbering is always a valid order
+        (<code>[Ch14p2 s10]</code>). A GATE problem that asked you to number a network was asking
+        for a topological sort.
+      </p>
+      <p style="margin-bottom:0">
+        The rule also produces something the source does not mention. The round in which an
+        event gets its number equals the largest number of arrows on any path into it, checked
+        on every one of those networks. And the rule exists for the reason part 1 &sect;09 gave:
+        the forward pass needs every \(TE_i\) before \(TE_j\) whenever \(i \to j\), which is
+        step 4 of the DP recipe. Fulkerson&rsquo;s rule is that step, done by hand.
+      </p>
+    </div>
+    <h3>The method of joints is the same procedure</h3>
+    <p>
+      Solving a truss by joints follows the same pattern. Find the reactions from overall
+      equilibrium. Then repeatedly pick a joint with at most two unknown member forces, solve
+      its two equilibrium equations, and mark those members known, which may leave another
+      joint with only two unknowns. A joint becomes &ldquo;ready&rdquo; when its unknowns fall
+      to two, as a node in Kahn&rsquo;s algorithm becomes ready when its incoming arrows fall
+      to zero.
+    </p>
+    <p>
+      On a <b>simple truss</b> this never gets stuck, and Sheet 13 part 1 &sect;04 already holds
+      the proof. A simple truss is built from a triangle by adding one joint and two members at
+      a time. Run the construction backwards: the last joint added has exactly two members, so
+      it can be solved first; remove it, and what is left is again a simple truss. By
+      induction the whole truss solves joint by joint. Checked on Warren trusses of 2, 3, 5 and
+      8 panels: a ready joint was always available, and the forces matched a full matrix solve
+      to \(10^{-9}\) (<code>[Ch14p2 s10]</code>).
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it stops: the compound truss</div>
+      <p>
+        Take a triangle inside a triangle, joined by three bars: 6 joints and 9 members, so
+        \(m = 2j - 3\) and the truss is statically determinate (its equilibrium matrix has full
+        rank, 12 of 12). But every joint has three members. After the reactions, no joint has
+        fewer than three unknowns, and the method of joints stops before it starts, with all 9
+        member forces unknown (<code>[Ch14p2 s10]</code>).
+      </p>
+      <p style="margin-bottom:0">
+        What unblocks it is a set of equations solved <em>together</em>. The six equations at
+        the three inner joints contain exactly six unknowns (the inner triangle&rsquo;s three
+        members and the three connecting bars), and they can be solved as a block. After that,
+        each outer joint has two unknowns and the rest goes joint by joint. The outer
+        triangle&rsquo;s joints give an equally valid block. You were taught the other way out:
+        cut the three connecting bars with a section and take the inner triangle as a free
+        body. That is a three-unknown block written with rigid-body equations. Either way,
+        \(m = 2j - 3\) is necessary for a simple truss, not sufficient, and &sect;12 names what
+        the block is.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Solve a truss joint by joint</div><div class="lab-tag">Predict, then step</div></div>
+    <div class="predict">
+      <p style="margin-top:0">
+        The compound truss has 6 joints and 9 members, so \(m = 2j - 3\) and it is statically
+        determinate. Can the method of joints solve it one joint at a time?
+      </p>
+      <button class="pbtn" data-p3="a" type="button">Yes, like any determinate truss</button>
+      <button class="pbtn" data-p3="b" type="button">Yes, if you start at a support</button>
+      <button class="pbtn" data-p3="c" type="button">No: every joint has three unknowns</button>
+      <button class="pbtn" data-p3="d" type="button">No: it is indeterminate</button>
+      <div class="pverdict" id="pv3"></div>
+    </div>
+    <svg class="stage" id="tS" viewBox="0 0 480 300" role="img"
+         aria-label="A truss whose joints are solved one at a time; solved members show their force, tension in blue and compression in orange">
+      <g id="tMem"></g><g id="tJnt"></g><g id="tLab"></g>
+    </svg>
+    <div class="ctl">
+      <button class="btn" data-tt="warren" type="button">Warren (simple)</button>
+      <button class="btn" data-tt="compound" type="button">Compound</button>
+    </div>
+    <div class="ctl">
+      <button class="btn" id="tStep" type="button">Step</button>
+      <button class="btn" id="tRun" type="button">Run</button>
+      <button class="btn" id="tBlk" type="button">Solve a block</button>
+      <button class="btn" id="tReset" type="button">Reset</button>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Joints solved<br>one at a time</div><div class="ro-v a" id="tJ">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Member forces<br>still unknown</div><div class="ro-v b" id="tU">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Largest set<br>solved together</div><div class="ro-v c" id="tB">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Largest force<br>kN</div><div class="ro-v" id="tF">&mdash;</div></div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    Reactions are found first, from overall equilibrium, as you would. <b>Step</b> solves the
+    lowest-numbered joint that has at most two unknown members, marks its members with their
+    forces (blue tension, orange compression, in kN) and numbers the joint in the order solved;
+    joints solved as part of a block are marked B.
+    On the Warren truss, <b>Run</b> goes all the way: nine joints, never more than two
+    unknowns at once, largest force 23.53&nbsp;kN, in the middle panels of both chords. On the
+    compound truss the first step already fails: every joint has three unknowns, which answers
+    the prediction (<b>no</b>). <b>Solve a block</b> then finds the smallest group of joints
+    whose equations close on their own unknowns (three joints, six unknowns, either triangle)
+    and solves them together, after which the rest goes joint by joint. The forces match the
+    verification script&rsquo;s full solve in both trusses.
+  </div>
+</section>
+
+<section id="dijkstra">
+  <div class="col">
+    <div class="sechead"><span class="secnum">11</span><h2>Shortest paths, and what water actually does</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2014%20-%20data%20structures%20and%20algorithms/04.%20graphs.md" target="_blank" rel="noopener">src 04. graphs &#8599;</a>
+    </div>
+    <p>
+      When edges have lengths, BFS&rsquo;s waves no longer mean distance. <b>Dijkstra&rsquo;s
+      algorithm</b> replaces the queue with the priority queue of part 1 &sect;21: always expand
+      the unfinished node with the smallest distance found so far, and relax its outgoing
+      edges. It costs \(O((V+E)\log V)\) with a binary heap, and on 300 random graphs the
+      source&rsquo;s code agrees with the slower Bellman&ndash;Ford method
+      (<code>[Ch14p2 s11]</code>).
+    </p>
+    <p>
+      The heap can hold stale entries, older and longer distances for a node that has since
+      improved, and the source&rsquo;s <code>if d &gt; dist[node]: continue</code> skips them.
+      That line saves work and changes no answer: without it the distances are identical on
+      the same 300 graphs. On a hub reached by 40 successively shorter routes, the check cuts
+      the edge scans from 1,680 to 120 (<code>[Ch14p2 s11]</code>).
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>The negative-weight pitfall describes code the source does not print</div>
+      <p style="margin-bottom:0">
+        The source warns that Dijkstra fails with negative weights. That is true of the
+        textbook version, which declares a node finished the first time it leaves the heap:
+        with edges A&rarr;B of 2, A&rarr;C of 3 and C&rarr;B of &minus;2, it reports B at 2 when
+        the answer is 1. The code on the page never declares anything finished. When a
+        distance improves it pushes the node again, so it reports 1, and on 300 random graphs
+        with negative edges and no negative loop it matched Bellman&ndash;Ford every time
+        (<code>[Ch14p2 s11]</code>). The costs are real but different: that version can take
+        exponentially long on adversarial graphs (reported), and with a negative loop it
+        never stops. Here it was cut off after 200,000 heap pops.
+      </p>
+    </div>
+    <h3>Part 1&rsquo;s spill level is Dijkstra with one symbol changed</h3>
+    <p>
+      Part 1 &sect;16 promised that the 2-D rain-water level is found by a priority-queue
+      search from the edges. Here it is: the same code, with the path cost \(d + w\) replaced
+      by \(\max(d, h)\). The level at a cell is the lowest possible value of the highest point
+      on a route to the edge, and on 150 random grids this search matches part 1&rsquo;s
+      independent relaxation method (<code>[Ch14p2 s11]</code>).
+    </p>
+  </div>
+  <div class="mathbox col">$$\begin{aligned}\text{shortest path:}\quad d_v &= \min_{u \to v}\big(d_u + w_{uv}\big)\\ \text{spill level:}\quad d_v &= \min_{u \to v}\max\big(d_u,\, h_v\big)\end{aligned}$$</div>
+  <div class="col">
+    <p>
+      What makes both work is the same property: a path&rsquo;s cost never decreases as the path
+      gets longer. Adding a non-negative length and taking a maximum both have it. A negative
+      edge destroys it, and that is precisely why declaring a node finished becomes unsafe.
+    </p>
+    <h3>The bank said graphs are pipe networks</h3>
+    <p>
+      The bridge bank for this chapter paired graphs with pipe networks, and the structure is
+      right: junctions are nodes, pipes are edges, and head loss along a route adds up like a
+      path length. So Dijkstra finds the route of least resistance. In the six-junction network
+      of the lab below, that is inlet&ndash;2&ndash;3&ndash;outlet, with a total resistance of
+      6.0; the next routes cost 6.5, 7.0 and 9.0 (<code>[Ch14p2 s11]</code>).
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks: water does not choose a route</div>
+      <p>
+        At steady state, flow into every junction equals flow out, and each pipe carries flow
+        in proportion to the head difference across it (laminar flow, \(\Delta h = RQ\)). That
+        is a linear system, and it is Sheet 12&rsquo;s graph Laplacian with conductances
+        \(1/R\) on the edges, not a search. Solved: water runs in all 8 pipes; the network passes
+        a unit flow at a head drop of 3.004, about half the best single route&rsquo;s 6.0; and
+        more water enters pipe 0&ndash;1 (0.531), which is <em>not</em> on the least-resistance
+        route, than pipe 0&ndash;2 (0.469), which is. Continuity holds at every junction to
+        \(4\times10^{-16}\) (<code>[Ch14p2 s11]</code>).
+      </p>
+      <p style="margin-bottom:0">
+        With turbulent losses, \(\Delta h = RQ^2\), the split changes (it is the problem Hardy
+        Cross iteration solves) but every pipe still carries flow. And the two answers behave
+        differently as a pipe changes. Raise the resistance of pipe 2&ndash;3: the best route
+        costs \(4 + R_{23}\) until \(R_{23}\) reaches 3, then jumps to a different route at
+        7.0, while the flow split moves smoothly. Shortest path answers &ldquo;which single
+        hose should I run?&rdquo;. The network&rsquo;s behaviour is a Laplacian solve.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Least-resistance route against real flow</div><div class="lab-tag">Predict, then open the valve</div></div>
+    <div class="predict">
+      <p style="margin-top:0">
+        Water enters at the left junction and leaves at the right. Which pipes carry flow?
+      </p>
+      <button class="pbtn" data-p4="a" type="button">Only those on the least-resistance route</button>
+      <button class="pbtn" data-p4="b" type="button">All eight</button>
+      <button class="pbtn" data-p4="c" type="button">Only the two cheapest routes</button>
+      <button class="pbtn" data-p4="d" type="button">Only pipes with below-average resistance</button>
+      <div class="pverdict" id="pv4"></div>
+    </div>
+    <svg class="stage" id="pS" viewBox="0 0 480 290" role="img"
+         aria-label="A six-junction pipe network showing either the least-resistance route or the actual flow in each pipe">
+      <g id="pPipe"></g><g id="pNode"></g><g id="pLab"></g>
+    </svg>
+    <div class="ctl">
+      <label for="pSl">Resistance of pipe 2&ndash;3</label>
+      <input type="range" id="pSl" min="5" max="100" value="20" step="1">
+      <span class="ro-v" id="pVal" style="min-width:40px">2.0</span>
+    </div>
+    <div class="ctl">
+      <button class="btn" data-pm="route" type="button">Least-resistance route</button>
+      <button class="btn" data-pm="lam" type="button">Laminar flow</button>
+      <button class="btn" data-pm="turb" type="button">Turbulent flow</button>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Best single<br>route, R</div><div class="ro-v b" id="pR">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Network head drop<br>at unit flow</div><div class="ro-v a" id="pE">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Pipes<br>carrying flow</div><div class="ro-v c" id="pN">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Flow in<br>pipe 2&ndash;3</div><div class="ro-v" id="pQ">&mdash;</div></div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    Each pipe is labelled with its resistance \(R\). <b>Least-resistance route</b> highlights
+    Dijkstra&rsquo;s answer. <b>Laminar flow</b> and <b>Turbulent flow</b> solve the network and
+    draw each pipe&rsquo;s width in proportion to its flow, labelled as a share of the inflow.
+    At the default resistances all <b>eight</b> pipes carry flow, the answer to the prediction,
+    and pipe 0&ndash;1 carries more than pipe 0&ndash;2 although the best route uses 0&ndash;2.
+    Drag the slider past 3.0 and watch the two displays behave differently: the highlighted
+    route jumps to another path at once, while the flows shift gradually. The head-drop
+    readout (3.004 laminar, 1.352 turbulent at the default) is the network&rsquo;s effective
+    resistance, always below the best single route&rsquo;s.
+  </div>
+</section>
+
+<section id="scc">
+  <div class="col">
+    <div class="sechead"><span class="secnum">12</span><h2>Strongly connected components, and equations solved together</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2014%20-%20data%20structures%20and%20algorithms/04.%20graphs.md" target="_blank" rel="noopener">src 04. graphs &#8599;</a>
+    </div>
+    <p>
+      In a directed graph, a <b>strongly connected component</b> (SCC) is a largest set of
+      nodes in which every node can reach every other. <b>Kosaraju&rsquo;s algorithm</b>, which
+      the source outlines, finds them all with two depth-first passes, the second on the graph
+      with every arrow reversed. It agrees with a brute-force test of mutual reachability on
+      300 random graphs (<code>[Ch14p2 s12]</code>). Shrink each component to a single node and
+      what remains has no loops, so it has a topological order (&sect;10).
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same structure: which equations must be solved together</div>
+      <p style="margin-bottom:0">
+        Write a system of equations as a graph: an arrow from equation \(i\) to unknown \(j\)
+        whenever \(j\) appears in equation \(i\). Each strongly connected component is a group
+        of equations that depend on one another in a loop, so they must be solved
+        simultaneously; the components themselves can be solved one after another in
+        topological order. On 100 random sparse systems, solving component by component gave
+        the same answer as solving the whole system at once (<code>[Ch14p2 s12]</code>). Sparse
+        solvers use exactly this decomposition (reported). The compound truss of &sect;10 is
+        the mechanical version: the method of joints is the topological sort, and the
+        six-unknown block is a component it cannot break.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="sorting">
+  <div class="col">
+    <div class="sechead"><span class="secnum">13</span><h2>Sorting, and the n log n floor</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2014%20-%20data%20structures%20and%20algorithms/05.%20sorting%20and%20search.md" target="_blank" rel="noopener">src 05. sorting and search &#8599;</a>
+    </div>
+    <p>
+      Part 1 &sect;02 said that proving a problem hard is much harder than proving an algorithm
+      fast, and promised one proof that works. Here it is, and it is short. A sort that learns
+      about its input only by comparing two items at a time gets one yes-or-no answer per
+      comparison. Its possible runs form a binary tree of comparisons, and every one of the
+      \(n!\) orderings of the input must end at a different leaf, or two different inputs
+      would be rearranged the same way. A binary tree with \(n!\) leaves has some path at least
+      \(\log_2 n!\) long, so some input needs that many comparisons:
+    </p>
+  </div>
+  <div class="mathbox col">$$\text{comparisons} \;\ge\; \lceil\log_2 n!\,\rceil \;\approx\; n\log_2 n - 1.443\,n$$</div>
+  <div class="col">
+    <p>
+      The bound holds for the average over all inputs too. Merge sort comes close
+      (<code>[Ch14p2 s13]</code>):
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Comparisons to sort \(n\) distinct items: the floor, and merge sort against it.</caption>
+      <thead><tr><th>\(n\)</th><th>\(\lceil\log_2 n!\rceil\)</th><th>Merge sort, average</th><th>Merge sort, worst</th></tr></thead>
+      <tbody>
+        <tr><td>10</td><td>22</td><td>23</td><td>25</td></tr>
+        <tr><td>100</td><td>525</td><td>542</td><td>573</td></tr>
+        <tr><td>1,000</td><td>8,530</td><td>8,718</td><td>8,977</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>What the floor does not say</div>
+      <p style="margin-bottom:0">
+        It counts comparisons and nothing else. Binary insertion sort, which finds each new
+        item&rsquo;s place by binary search, sorts 1,000 items with 8,590 comparisons, within 1%
+        of the floor, and then shifts 252,216 items to make room: \(O(n^2)\) work that the
+        bound never sees (<code>[Ch14p2 s13]</code>). The floor also does not apply to sorts that
+        never compare. <b>Counting sort</b> reads each key as a number and drops it straight
+        into a slot, \(O(n + k)\) for keys from a range of \(k\) values. Grading aggregate
+        through a stack of sieves works the same way: nothing is compared with anything, each
+        grain falls into its size class, and it only works because the classes are known in
+        advance.
+      </p>
+    </div>
+    <p>
+      A sort is <b>stable</b> if equal keys keep their input order, which matters when you
+      sort by one key and then another. The source&rsquo;s merge takes from the left half on a
+      tie (<code>&lt;=</code>), which keeps it stable; with <code>&lt;</code> it is not, as the
+      source warns and a test confirms (<code>[Ch14p2 s13]</code>). The source&rsquo;s table of
+      algorithms is otherwise right, with one entry to read carefully: quicksort&rsquo;s
+      \(O(\log n)\) space needs the smaller-side-first recursion of part 1 &sect;05.
+    </p>
+  </div>
+</section>
+
+<section id="quicksort">
+  <div class="col">
+    <div class="sechead"><span class="secnum">14</span><h2>Quicksort, built properly</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2014%20-%20data%20structures%20and%20algorithms/05.%20sorting%20and%20search.md" target="_blank" rel="noopener">src 05. sorting and search &#8599;</a>
+    </div>
+    <p>
+      Quicksort picks a <b>pivot</b>, moves every item smaller than the pivot to its left and
+      the rest to its right (the <b>partition</b>), then sorts the two sides the same way. The
+      source&rsquo;s partition is Lomuto&rsquo;s: pivot on the last item, one pass, a swap for
+      every item found smaller than the pivot. Its speed depends entirely on how evenly the
+      pivot splits the items. Counting comparisons for 2,000 items (<code>[Ch14p2 s14]</code>):
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Comparisons for \(n = 2{,}000\). For reference, \(n\log_2 n = 21{,}932\) and \(n(n-1)/2 = 1{,}999{,}000\).</caption>
+      <thead><tr><th>Input</th><th>Lomuto, last</th><th>Lomuto, random</th><th>Lomuto, median of 3</th><th>Three-way, random</th></tr></thead>
+      <tbody>
+        <tr><td>Random order</td><td>24,337</td><td>24,005</td><td>21,043</td><td>24,766</td></tr>
+        <tr><td>Already sorted</td><td><b>1,999,000</b></td><td>25,052</td><td>17,964</td><td>24,944</td></tr>
+        <tr><td>All keys equal</td><td><b>1,999,000</b></td><td><b>1,999,000</b></td><td><b>1,999,000</b></td><td>2,000</td></tr>
+        <tr><td>Two distinct keys</td><td><b>1,003,258</b></td><td><b>1,001,332</b></td><td><b>1,010,962</b></td><td>3,036</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      The source&rsquo;s advice fixes the famous case. On sorted input the last item is always
+      the largest, every split is 1,999 against 0, and the cost is the full \(n(n-1)/2\); a
+      random pivot or the median of three brings it down to about \(n\log_2 n\).
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>The repair fails on repeated keys, which is what plant data looks like</div>
+      <p style="margin-bottom:0">
+        The source says a random pivot or median-of-three &ldquo;eliminates&rdquo; the
+        \(O(n^2)\) case. Not with repeated keys. When every key is equal, no item is smaller
+        than any pivot, so Lomuto&rsquo;s partition puts everything on one side whichever pivot
+        is chosen: exactly 1,999,000 comparisons under all three rules. Two distinct values
+        cost about a million. Sorting 2,000 parts by material grade, by a rounded dimension, or
+        by a pass/fail flag is precisely this input. The repair is a <b>three-way
+        partition</b> (the &ldquo;Dutch national flag&rdquo;): smaller, equal and larger in one
+        pass, with the equal block never touched again. It sorts the all-equal input with
+        2,000 comparisons.
+      </p>
+    </div>
+    <p>
+      Two more properties complete the picture. Quicksort is not stable: a partition can swap
+      equal keys past each other. And its recursion depth follows the splits, so the
+      \(O(\log n)\) space of the source&rsquo;s table needs the smaller-side-first rule of
+      part 1 &sect;05; the lab reports the depth alongside the count.
+    </p>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Where quicksort spends its comparisons</div><div class="lab-tag">Predict, then sort</div></div>
+    <div class="predict">
+      <p style="margin-top:0">
+        All 2,000 part numbers in a batch are identical. The source&rsquo;s quicksort, with a
+        random pivot, sorts them. How many comparisons?
+      </p>
+      <button class="pbtn" data-p5="a" type="button">About 22,000 (n log&#8322; n)</button>
+      <button class="pbtn" data-p5="b" type="button">About 2,000</button>
+      <button class="pbtn" data-p5="c" type="button">About 2,000,000</button>
+      <button class="pbtn" data-p5="d" type="button">None: they are already sorted</button>
+      <div class="pverdict" id="pv5"></div>
+    </div>
+    <svg class="stage" id="kS" viewBox="0 0 480 280" role="img"
+         aria-label="Items partitioned at each recursion depth of quicksort for the chosen input, pivot rule and partition scheme">
+      <g id="kGrid"></g><g id="kBar"></g><g id="kLab"></g>
+    </svg>
+    <div class="ctl">
+      <label for="kSl">Items n</label>
+      <input type="range" id="kSl" min="100" max="2000" value="2000" step="100">
+      <span class="ro-v" id="kVal" style="min-width:48px">2000</span>
+    </div>
+    <div class="ctl">
+      <button class="btn" data-ki="random" type="button">Random</button>
+      <button class="btn" data-ki="sorted" type="button">Sorted</button>
+      <button class="btn" data-ki="equal" type="button">All equal</button>
+      <button class="btn" data-ki="two" type="button">Two values</button>
+    </div>
+    <div class="ctl">
+      <button class="btn" data-kp="last" type="button">Pivot: last</button>
+      <button class="btn" data-kp="random" type="button">Pivot: random</button>
+      <button class="btn" data-kp="median3" type="button">Pivot: median of 3</button>
+      <button class="btn" data-ks="lomuto" type="button">Lomuto</button>
+      <button class="btn" data-ks="3way" type="button">Three-way</button>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Comparisons</div><div class="ro-v a" id="kC">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">&divide; n log&#8322; n</div><div class="ro-v b" id="kR">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Recursion<br>levels</div><div class="ro-v c" id="kD">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Worst case<br>n(n&minus;1)/2</div><div class="ro-v" id="kW">&mdash;</div></div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    The bars show how many items are partitioned at each depth of the recursion. A good run is
+    a short, flat block: about \(\log_2 n\) levels, each handling nearly all \(n\) items. A bad
+    run is a long ramp: \(n\) levels, each handling one item fewer than the last, and its area
+    is the \(n(n-1)/2\) in the last readout. The current choices are highlighted. Set <b>All
+    equal</b> and try every pivot with <b>Lomuto</b>: the ramp never changes and the count
+    stays at 1,999,000 for 2,000 items, the answer to the prediction (<b>about
+    2,000,000</b>). Switch to <b>Three-way</b> and it collapses to a single level of 2,000
+    comparisons.
+  </div>
+</section>
+
+<section id="binsearch">
+  <div class="col">
+    <div class="sechead"><span class="secnum">15</span><h2>Binary search is bisection, again</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2014%20-%20data%20structures%20and%20algorithms/05.%20sorting%20and%20search.md" target="_blank" rel="noopener">src 05. sorting and search &#8599;</a>
+    </div>
+    <p>
+      Sheet 13 part 1 &sect;06 showed that binary search and the bisection method are one
+      algorithm. The source&rsquo;s templates are correct: the exact-match search and the
+      <code>lower_bound</code> search (the first item not less than the target) agree with
+      Python&rsquo;s own <code>bisect</code> module on 2,000 random cases, and never probe more
+      than \(\lceil\log_2(n+1)\rceil\) items (<code>[Ch14p2 s15]</code>).
+    </p>
+    <p>
+      The midpoint is written <code>lo + (hi - lo) // 2</code> rather than
+      <code>(lo + hi) // 2</code>, and the source&rsquo;s reason is real. In languages with
+      32-bit integers, two indices above about a billion overflow when added: \((2^{30}+5) +
+      (2^{30}+9)\) wraps to &minus;2,147,483,634, and the search reads from a negative index
+      (<code>[Ch14p2 s15]</code>). A bug of exactly this kind sat unnoticed for years in widely
+      used library code (reported). Python&rsquo;s integers do not overflow, so there the rewrite
+      is a portable habit.
+    </p>
+    <p>
+      The source&rsquo;s two harder searches check out. Searching a sorted list that has been
+      rotated works because one half is always in order, and the source is right that the
+      <code>&lt;=</code> in <code>nums[lo] &lt;= nums[mid]</code> matters: changed to
+      <code>&lt;</code>, it fails 100 times in 3,000 tests (<code>[Ch14p2 s15]</code>). The
+      median of two sorted lists, found by searching for a split point rather than a value,
+      agrees with the median of the merged list on 2,000 cases.
+    </p>
+  </div>
+</section>
+
+<section id="answer">
+  <div class="col">
+    <div class="sechead"><span class="secnum">16</span><h2>Binary search on the answer is balancing a serial line</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2014%20-%20data%20structures%20and%20algorithms/05.%20sorting%20and%20search.md" target="_blank" rel="noopener">src 05. sorting and search &#8599;</a>
+    </div>
+    <p>
+      The source&rsquo;s most useful search pattern searches over the <em>answer</em>. If you
+      can test whether a candidate answer \(x\) is feasible, and feasibility is monotone (once
+      feasible, larger \(x\) stays feasible), then bisect on \(x\). This is bisection with
+      &ldquo;feasible?&rdquo; in place of &ldquo;did the sign change?&rdquo;, and it is how you
+      would pick the smallest catalogue shaft that passes a stress check.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: the shipping problem is line balancing with a chain of tasks</div>
+      <p>
+        The source&rsquo;s example: packages must ship in their given order within \(d\) days;
+        find the smallest daily capacity. Read packages as tasks, days as stations and capacity
+        as cycle time, and it is line balancing with a strictly serial precedence chain:
+        the least cycle time that fits the line into \(d\) stations, which is the type-II
+        line-balancing problem. The source&rsquo;s bisection with a fill-in-order check agrees
+        with a brute-force search over every way of cutting the sequence on 400 cases
+        (<code>[Ch14p2 s16]</code>).
+      </p>
+      <p style="margin-bottom:0">
+        The check itself answers the type-I question. For a chain of tasks and a fixed cycle
+        time, filling stations in order until the next task does not fit gives the fewest
+        stations; brute force agrees on 400 cases. It takes one pass, so it is linear time,
+        which is the case Sheet 13 part 1 &sect;09 promised: a line with serial precedence is
+        easy, and here is the algorithm.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks: general precedence</div>
+      <p style="margin-bottom:0">
+        The fill-in-order check is exact only because a chain allows one order. With a general
+        precedence diagram, finding the fewest stations for a given cycle time is the NP-hard
+        problem of Sheet 13 &sect;09, and part 1 &sect;11 showed that even filling every station
+        perfectly can lose one. Bisecting on the cycle time with a heuristic check inherits the
+        heuristic&rsquo;s error. The outer search is sound; the answer is only as good as the
+        feasibility test inside it.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="greedy">
+  <div class="col">
+    <div class="sechead"><span class="secnum">17</span><h2>Greedy, when it is safe, and a slip-gauge rule that is optimal</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2014%20-%20data%20structures%20and%20algorithms/05.%20sorting%20and%20search.md" target="_blank" rel="noopener">src 05. sorting and search &#8599;</a>
+    </div>
+    <p>
+      A <b>greedy</b> algorithm takes the best-looking step and never reconsiders it. The
+      source is right that this needs a proof each time; its two examples have one, and both
+      agree with brute force (jump game on 1,000 cases, merging intervals on 500;
+      <code>[Ch14p2 s17]</code>). Your training holds greedy rules of both kinds, and it is worth
+      sorting them:
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Greedy rules you already use, and whether they are optimal.</caption>
+      <thead><tr><th>Rule</th><th>Optimal?</th><th>Evidence</th></tr></thead>
+      <tbody>
+        <tr><td>SPT: shortest job first, one machine</td><td><b style="color:var(--bridge)">Yes</b>, for mean flow time with all jobs present</td><td>Sheet 13 part 2 &sect;04; part 1 &sect;21 showed arrivals break it</td></tr>
+        <tr><td>Johnson&rsquo;s rule, two machines in series</td><td><b style="color:var(--bridge)">Yes</b>, for makespan</td><td>Matches the best of every sequence on 300 random shops</td></tr>
+        <tr><td>Giving change in rupees, largest note first</td><td><b style="color:var(--bridge)">Yes</b>, for &#8377;1, 2, 5, 10, 20, 50, 100, 200, 500</td><td>Optimal for every amount up to 5,000</td></tr>
+        <tr><td>Giving change in coins of 1, 3 and 4</td><td><b style="color:var(--brk)">No</b></td><td>For 6: greedy gives 4+1+1, three coins; 3+3 is two</td></tr>
+        <tr><td>Largest-candidate line balancing</td><td><b style="color:var(--brk)">No</b></td><td>Loses a station; Sheet 13 part 1 &sect;09</td></tr>
+        <tr><td>Nearest-neighbour drill path</td><td><b style="color:var(--brk)">No</b></td><td>30% longer; Sheet 13 part 1 &sect;09</td></tr>
+        <tr><td>Slip gauges: clear the last decimal place first</td><td><b style="color:var(--bridge)">Yes</b>, for the M87 set</td><td>Never more blocks than the minimum over 95,001 lengths</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: the slip-gauge rule is greedy change-making, and it is optimal</div>
+      <p>
+        Building a length from slip gauges is change-making: the gauges are the coins, the
+        length is the amount, each block can be used once, and the aim is the fewest blocks,
+        because every wrung joint adds a little error. The rule taught in metrology, clear the
+        last decimal place first, is a greedy algorithm. For 41.125&nbsp;mm with the M87 set it
+        takes 1.005, then 1.12, then 9, then 30: four blocks.
+      </p>
+      <p style="margin-bottom:0">
+        It is optimal. Taking the M87 set as usually listed (1.0005; 1.001 to 1.009; 1.01 to
+        1.49; 0.5 to 9.5 in steps of 0.5; 10 to 90 in tens; reported), an exact search for the
+        fewest blocks, each used at most once, was run for every length from 4 to 99&nbsp;mm in
+        steps of 0.001&nbsp;mm: 95,001 lengths. The rule built every one of them and never used
+        more blocks than the minimum (<code>[Ch14p2 s17]</code>). Most lengths need four blocks
+        (72,765 of them), and 20,711 need three. The set is designed so that each decimal place
+        has exactly one block that clears it, the same design that makes rupee denominations
+        safe for greedy change and coins of 1, 3 and 4 unsafe.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="dprev">
+  <div class="col">
+    <div class="sechead"><span class="secnum">18</span><h2>Dynamic programming, briefly revisited</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2014%20-%20data%20structures%20and%20algorithms/05.%20sorting%20and%20search.md" target="_blank" rel="noopener">src 05. sorting and search &#8599;</a>
+    </div>
+    <p>
+      File 05 repeats the DP material of file 00, which part 1 &sect;&sect;07&ndash;11 covered
+      through the CPM forward pass. Three of its examples are worth a line each, and all three
+      agree with brute force (<code>[Ch14p2 s18]</code>):
+    </p>
+    <ul>
+      <li><b>Coin change</b> with unlimited coins: the fewest coins for each amount from 0 up,
+        each built from a smaller amount. It is the exact method that the greedy rules of
+        &sect;17 either match or lose to.</li>
+      <li><b>Longest common subsequence</b> of two strings: a table indexed by a prefix of each.
+        Comparing two revisions of a drawing&rsquo;s notes or a program&rsquo;s text line by
+        line is this problem, and classic file-comparison tools are built on it (reported).</li>
+      <li><b>0/1 knapsack</b> in one row instead of a table. The source&rsquo;s warning is
+        exact: sweep the capacities from right to left and each item is used at most once;
+        sweep left to right and the same code solves the <em>unbounded</em> knapsack, because
+        an item added early in the sweep can be added again later. Both claims hold on 300
+        cases.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="worked">
+  <div class="col">
+    <div class="sechead"><span class="secnum">19</span><h2>Worked example: a stores index for a million part numbers</h2>
+      <span class="srcref nolink" title="Written for this sheet; not in the source chapter">both parts</span>
+    </div>
+    <p>
+      A plant&rsquo;s stores holds a million seven-digit part numbers. Five questions reach it
+      every day. Solve them twice, once as the stores clerk would with bins, ledgers and a job
+      board, and once as a programmer would, and compare what each structure costs.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>The same five questions, answered by a storekeeper and by a program.</caption>
+      <thead><tr><th>Question</th><th>As a storekeeper</th><th>As a program</th><th>Cost</th></tr></thead>
+      <tbody>
+        <tr><td>1. Is part 4183572 here, and where?</td><td>Bins filed by the last two digits</td><td>Hash table (part 1 &sect;13)</td><td>About 1.5 probes at half load</td></tr>
+        <tr><td>2. List every part in family 418-xxxx</td><td>A ledger kept in part-number order; open it at 4180000</td><td>Sorted list, two binary searches (&sect;15)</td><td>About 40 probes plus the 1,100 members</td></tr>
+        <tr><td>3. Which assemblies use part X?</td><td>The where-used list: the BOM read upward</td><td>Reversed BOM edges as adjacency lists; BFS (&sect;&sect;07&ndash;08)</td><td>Proportional to what it finds</td></tr>
+        <tr><td>4. How many of each part for 50 pumps?</td><td>MRP by low-level code</td><td>Topological order (&sect;10), then the DP of part 1 &sect;10</td><td>Linear in the BOM&rsquo;s edges</td></tr>
+        <tr><td>5. Which job goes to the machine next?</td><td>The job board, by the dispatch rule</td><td>Heap keyed on the rule (part 1 &sect;21)</td><td>\(O(\log n)\) per job</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      The numbers are measured on a million synthetic part numbers (<code>[Ch14p2 s19]</code>).
+      Binary search on the sorted list takes 19.0 probes on average and never more than 20,
+      against \(\log_2 10^6 = 19.9\). Family 418-xxxx has 1,100 members; two binary searches
+      find its first and last, so listing it touches about 1,140 entries. The hash table
+      answers question 1 faster, in about 1.5 probes, and cannot answer question 2 at all
+      without examining all 1,000,000 entries. Scrambling keys evenly across slots is its whole
+      job, and scrambled keys have lost their order.
+    </p>
+    <p>
+      So no single structure serves both of the first two questions best, and the third
+      concern decides between them: <b>new part numbers</b>. They arrive in sequence. Inserting
+      into a sorted list shifts everything after the insertion point, \(O(n)\) each time; a
+      plain search tree turns into a chain on sequential keys (&sect;03). What serves questions
+      1 and 2 and survives sequential inserts is a balanced ordered index: about 20 probes for
+      a lookup, two searches plus the members for a family, and \(O(\log n)\) per insert
+      whatever order parts arrive in.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>The storekeeper was already running several indexes</div>
+      <p style="margin-bottom:0">
+        The clerk&rsquo;s answer had the same shape: bins for finding, an ordered ledger for
+        listing, a where-used list, a job board. One set of records, several indexes over it,
+        each chosen for a question. Databases work the same way (reported), and they pay the
+        price the clerk paid: every new part must be entered in every index. That is
+        &sect;06&rsquo;s trade-off table again, between the cost of changing the records and the
+        cost of asking about them.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="breaks">
+  <div class="col">
+    <div class="sechead"><span class="secnum">20</span><h2>Where it breaks, across both parts</h2>
+      <span class="srcref nolink" title="Summary of both parts">both parts</span>
+    </div>
+    <p>
+      Every correspondence in this chapter, and the place it stops being true. The right-hand
+      column is the part to remember.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>The chapter&rsquo;s bridges and their edges. Part 1 sections are marked 1&sect;, part 2 sections 2&sect;.</caption>
+      <thead><tr><th>You know</th><th>It is</th><th>Where it breaks</th></tr></thead>
+      <tbody>
+        <tr><td>A scaling law</td><td>Big O (1&sect;02)</td><td>Big O is an upper bound only; constants rule below the crossover</td></tr>
+        <tr><td>Log&ndash;log exponent fitting</td><td>Doubling experiments (1&sect;02)</td><td>\(n\log n\) has no constant slope</td></tr>
+        <tr><td>Setup spread over a lot</td><td>Amortised cost (1&sect;04)</td><td>This setup grows with the stock, so lots must grow geometrically</td></tr>
+        <tr><td>CPM forward pass</td><td>Dynamic programming (1&sect;09)</td><td>PERT: the expected maximum exceeds the maximum of expectations</td></tr>
+        <tr><td>Filling one station</td><td>Knapsack (1&sect;11)</td><td>The line is strongly NP-hard; perfect stations can lose one</td></tr>
+        <tr><td>A fixed pitch</td><td>An array (1&sect;12)</td><td>Equal Big O, unequal cost: memory order costs 4.5&times;</td></tr>
+        <tr><td>Queue utilisation cliff</td><td>Hash load factor (1&sect;13)</td><td>A steeper power, and geometry rather than time</td></tr>
+        <tr><td>A GO gauge</td><td>A Bloom filter (1&sect;14)</td><td>Error grows with every key; keys cannot be removed</td></tr>
+        <tr><td>A spillway</td><td>Trapping rain water (1&sect;16)</td><td>In 2-D the level is a minimax path, not a two-sided rule</td></tr>
+        <tr><td>A moving average</td><td>A sliding window (1&sect;17)</td><td>A variable window needs a monotone rule; negatives break it</td></tr>
+        <tr><td>The shear-force diagram</td><td>A prefix sum (1&sect;18)</td><td>Floating point: short ranges far out lose accuracy</td></tr>
+        <tr><td>Runners on a track</td><td>Floyd&rsquo;s method (1&sect;19)</td><td>The start-finding trick needs a hare speed of exactly 2</td></tr>
+        <tr><td>SPT dispatching</td><td>A heap (1&sect;21)</td><td>Arrivals over time make the rule suboptimal</td></tr>
+        <tr><td>An indented BOM</td><td>A tree, preorder (2&sect;01)</td><td>Shared parts make it a DAG; inorder means nothing</td></tr>
+        <tr><td>An ordered card index</td><td>A search tree (2&sect;03)</td><td>Sequential part numbers are its worst case</td></tr>
+        <tr><td>Welding parts; closed loops</td><td>Union-find (2&sect;05)</td><td>It counts loops; it finds no forces</td></tr>
+        <tr><td>Pocket offsetting</td><td>Multi-source BFS (2&sect;08)</td><td>Grid waves measure diamonds or squares, not circles</td></tr>
+        <tr><td>Fulkerson&rsquo;s rule; the method of joints</td><td>Topological sort (2&sect;10)</td><td>A compound truss has no joint to start from</td></tr>
+        <tr><td>Head loss along a route</td><td>A shortest path (2&sect;11)</td><td>Water divides over every path; the network is a Laplacian solve</td></tr>
+        <tr><td>A serial line</td><td>Binary search on the answer (2&sect;16)</td><td>General precedence makes the inner check heuristic</td></tr>
+        <tr><td>The slip-gauge rule</td><td>Greedy change-making (2&sect;17)</td><td>Optimal only because the set is designed for it</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="recall">
+  <div class="col">
+    <div class="sechead"><span class="secnum">21</span><h2>Question bank</h2>
+      <span class="srcref nolink" title="Covers both parts">both parts</span>
+    </div>
+    <p>
+      Twenty-four prompts across the whole chapter, in three tiers. Answer before opening.
+    </p>
+
+    <div class="gap">
+      <div class="gap-h">Tier 1 &mdash; recall</div>
+      <details><summary>Define \(f = O(g)\). What does \(\Theta\) add, and which one is a scaling law?</summary>
+        <p>\(f(n) \le c\,g(n)\) for all \(n \ge n_0\): an upper bound only. \(\Theta\) bounds from below as well, and that two-sided statement is what a scaling law like the square&ndash;cube law says.</p></details>
+      <details><summary>What is amortised cost, and why must a dynamic array grow by a factor rather than by a fixed amount?</summary>
+        <p>Total cost of a sequence divided by its length. Each resize copies everything on hand, so the setup grows with the stock; only geometric growth keeps copies per append bounded (by \(g/(g-1)\)). A fixed +100 slots makes the total quadratic.</p></details>
+      <details><summary>State the DP recipe and map each step onto the CPM forward pass.</summary>
+        <p>State \(TE_j\); recurrence \(TE_j = \max_i(TE_i + t_{ij})\); base \(TE_1 = 0\); order by Fulkerson&rsquo;s numbering; recover the critical path by walking back along the maximising arrows.</p></details>
+      <details><summary>Under linear probing at load factor 0.75, what does a hit cost and what does a miss cost?</summary>
+        <p>Knuth: a hit \(\tfrac12(1 + 1/(1-\alpha)) = 2.5\) probes, a miss \(\tfrac12(1 + 1/(1-\alpha)^2) = 8.5\). At 0.9 the miss costs 50.5.</p></details>
+      <details><summary>Which tree traversal is an indented BOM, and which is a standard-cost roll-up?</summary>
+        <p>Preorder (the assembly above its components) and postorder (components before the assembly that contains them).</p></details>
+      <details><summary>State Fulkerson&rsquo;s rule and name the algorithm it is.</summary>
+        <p>Number the initial event; delete arrows leaving numbered events; number the new initial events; repeat. It is Kahn&rsquo;s topological sort, and stalling with events unnumbered means the network has a loop.</p></details>
+      <details><summary>What is the lower bound for sorting by comparisons, and where does it come from?</summary>
+        <p>\(\lceil\log_2 n!\rceil \approx n\log_2 n - 1.443n\). The comparisons form a binary decision tree with at least \(n!\) leaves, one per ordering, so some leaf is at least that deep.</p></details>
+      <details><summary>What does a Bloom filter tell you with certainty?</summary>
+        <p>That a key is absent. &ldquo;Present&rdquo; is only probable: at 10 bits per key and 7 hash functions, about 0.82% of absent keys look present.</p></details>
+    </div>
+
+    <div class="gap">
+      <div class="gap-h">Tier 2 &mdash; apply</div>
+      <details><summary>Two parallel paths, each taking N(10, 2&sup2;) days, merge at one event. What does the forward pass on means say, and what is the expected merge time?</summary>
+        <p>The forward pass says 10. The expected merge time is \(10 + 2/\sqrt\pi = 11.13\). PERT&rsquo;s single-path estimate is optimistic wherever paths merge.</p></details>
+      <details><summary>Tasks of 7, 7, 6, 4, 4 and 4 seconds, cycle time 12. Fill each station as full as possible. How many stations, and what is the optimum?</summary>
+        <p>The only 100% station is {4, 4, 4}, which leaves 7, 7 and 6 needing a station each: 4 stations. The optimum is 3: {7, 4}, {7, 4}, {6, 4}.</p></details>
+      <details><summary>A list has a tail of 10 nodes and a loop of 3. When do tortoise and hare meet, and does \(a + b = c\)?</summary>
+        <p>At step 12, with \(b = 2\). So \(a + b = 12 = 4c\): a multiple of the loop, not the loop itself. The restart trick still finds the start because only the remainder matters.</p></details>
+      <details><summary>Part numbers 1 to 1,000 are inserted into a plain search tree in the order issued. What is its height, and what would you do?</summary>
+        <p>999: a chain. Use a balanced tree, which rotates to keep the height near \(\log_2 n\). Random order would give a mean depth about 10% above the balanced ideal.</p></details>
+      <details><summary>In the six-junction pipe network of &sect;11, which pipes carry flow, and does the least-resistance route&rsquo;s first pipe carry the most?</summary>
+        <p>All eight. No: pipe 0&ndash;1, which is not on the best route, carries 0.531 of the inflow against 0.469 in pipe 0&ndash;2, which is.</p></details>
+      <details><summary>How many comparisons does the source&rsquo;s quicksort make on 2,000 equal keys with a median-of-three pivot, and what fixes it?</summary>
+        <p>1,999,000, the full \(n(n-1)/2\), whatever the pivot rule. A three-way partition sorts the same input with 2,000.</p></details>
+      <details><summary>Build 41.125 mm from an M87 slip-gauge set. How many blocks, and can any combination use fewer?</summary>
+        <p>1.005 + 1.12 + 9 + 30: four blocks. No: an exact search over the whole set finds nothing shorter, for this length or any of the 95,001 checked.</p></details>
+      <details><summary>A 20-task serial line with a given cycle time: how do you find the fewest stations? And the least cycle time for 5 stations?</summary>
+        <p>Fill stations in order until the next task will not fit: one pass, and optimal for a chain. For the least cycle time, bisect on the cycle time using that fill as the feasibility test.</p></details>
+    </div>
+
+    <div class="gap">
+      <div class="gap-h">Tier 3 &mdash; judge</div>
+      <details><summary>The source says \(O(n^2)\) is optimal for Three Sum because &ldquo;you must consider all pairs&rdquo;. Is that a proof?</summary>
+        <p>No. The two-pointer method itself discards pairs by the row without considering them. Whether Three Sum can be done in \(O(n^{2-\varepsilon})\) is an open conjecture. The only lower bound this chapter proves is sorting&rsquo;s.</p></details>
+      <details><summary>A colleague proposes Dijkstra&rsquo;s algorithm to predict how cooling water divides in the plant&rsquo;s pipe network. Your response?</summary>
+        <p>It answers a different question: which single route loses least. Water divides over every path so that continuity holds at each junction. Solve the network: a Laplacian system for laminar losses, Hardy Cross or Newton for turbulent ones.</p></details>
+      <details><summary>A BOM checker reports a loop at every part used by two sub-assemblies. What is wrong with it?</summary>
+        <p>It uses two states, seen and unseen. A shared part is a diamond, not a loop. It needs the third state, in progress, and only reaching an in-progress part is a loop.</p></details>
+      <details><summary>When is a greedy rule safe? Name one you would trust and one you would not, with evidence.</summary>
+        <p>When there is a proof, an exchange argument or an exhaustive check. Trust Johnson&rsquo;s rule (matched the best sequence on 300 shops) or the slip-gauge rule on M87 (optimal on 95,001 lengths). Distrust largest-candidate balancing (loses a station) or nearest-neighbour drilling (30% longer).</p></details>
+      <details><summary>A linear-probing table at load 0.9 is slow. Rehash to 0.5, or switch to chaining?</summary>
+        <p>Either fixes it. Rehashing to 0.5 cuts the miss cost from 50.5 probes to 2.5; chaining&rsquo;s miss cost grows only as \(\alpha\). The planner&rsquo;s rule applies: keep slack, because every system with interference has a cliff near full.</p></details>
+      <details><summary>The method of joints stalls on a statically determinate truss. What does that tell you, and what do you do?</summary>
+        <p>The truss is not simple: some equations must be solved together. Take a section through the connecting bars, or solve the coupled block of joint equations at once. \(m = 2j - 3\) is necessary for a simple truss, not sufficient.</p></details>
+      <details><summary>The source says naive <code>fib(50)</code> takes &ldquo;over \(10^{15}\) operations&rdquo; and is infeasible. What is right and what is wrong?</summary>
+        <p>The count is \(2F_{51} - 1 = 4.07\times10^{10}\), growing as \(\varphi^n\); the \(10^{15}\) is the loose bound \(2^{50}\). At the measured rate it takes about 0.8 hours, so it is slow rather than infeasible. The conclusion, memoise, stands.</p></details>
+      <details><summary>Choose a structure for a million part numbers that must support exact lookup, family listings and sequential inserts.</summary>
+        <p>A balanced ordered index: about 20 probes per lookup, two searches plus the members for a family, \(O(\log n)\) inserts in any order. A hash table is faster for lookups but cannot list a family; a plain search tree degenerates on sequential numbers.</p></details>
+    </div>
+  </div>
+</section>
+
+<section id="map">
+  <div class="col">
+    <div class="sechead"><span class="secnum">22</span><h2>The map, and what the chapter leaves out</h2>
+      <span class="srcref nolink" title="Added material, not in the source chapter">beyond the chapter</span>
+    </div>
+    <p>
+      One mechanism ties the two parts together. The searches of part 2 are the line
+      structures of part 1 put to work: change the structure that holds the frontier and you
+      change the algorithm.
+    </p>
+  </div>
+  <figure class="col">
+    <svg viewBox="0 0 480 330" role="img" style="width:100%; max-width:560px; height:auto; display:block; margin-inline:auto"
+         aria-label="Concept map: each part-2 algorithm points up to the part-1 structure it runs on. DFS runs on a stack, BFS and Kahn's sort on a queue, Dijkstra on a heap, the Fenwick tree generalises prefix sums, binary search needs a sorted array; the CPM forward pass needs Kahn's order. Under each algorithm is the engineering procedure it corresponds to.">
+      <defs>
+        <marker id="cmArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M0,1 L9,5 L0,9 z" fill="var(--ink-3)"></path>
+        </marker>
+      </defs>
+      <text class="tkb" x="8" y="18">top: part 1 structures &#183; blue boxes: part 2 algorithms</text>
+      <g>
+        <rect x="8" y="28" width="72" height="30" rx="3" fill="var(--sheet-2)" stroke="var(--ink-3)"></rect>
+        <text class="tkb" x="44" y="47" text-anchor="middle">stack</text>
+        <rect x="88" y="28" width="150" height="30" rx="3" fill="var(--sheet-2)" stroke="var(--ink-3)"></rect>
+        <text class="tkb" x="163" y="47" text-anchor="middle">queue</text>
+        <rect x="246" y="28" width="72" height="30" rx="3" fill="var(--sheet-2)" stroke="var(--ink-3)"></rect>
+        <text class="tkb" x="282" y="47" text-anchor="middle">heap</text>
+        <rect x="326" y="28" width="72" height="30" rx="3" fill="var(--sheet-2)" stroke="var(--ink-3)"></rect>
+        <text class="tkb" x="362" y="47" text-anchor="middle">prefix sums</text>
+        <rect x="406" y="28" width="66" height="30" rx="3" fill="var(--sheet-2)" stroke="var(--ink-3)"></rect>
+        <text class="tkb" x="439" y="47" text-anchor="middle">sorted</text>
+      </g>
+      <g stroke="var(--ink-3)" stroke-width="1.3" marker-end="url(#cmArrow)">
+        <line x1="44" y1="138" x2="44" y2="62"></line>
+        <line x1="124" y1="138" x2="124" y2="62"></line>
+        <line x1="204" y1="138" x2="204" y2="62"></line>
+        <line x1="282" y1="138" x2="282" y2="62"></line>
+        <line x1="362" y1="138" x2="362" y2="62"></line>
+        <line x1="439" y1="138" x2="439" y2="62"></line>
+      </g>
+      <text class="tk" x="48" y="104">runs on</text>
+      <text class="tk" x="128" y="104">runs on</text>
+      <text class="tk" x="208" y="104">runs on</text>
+      <text class="tk" x="286" y="104">runs on</text>
+      <text class="tk" x="366" y="104">extends</text>
+      <text class="tk" x="443" y="104">needs</text>
+      <g>
+        <rect x="8" y="142" width="72" height="30" rx="3" fill="none" stroke="var(--c2)" stroke-width="1.6"></rect>
+        <text class="tkb" x="44" y="161" text-anchor="middle">DFS</text>
+        <rect x="88" y="142" width="72" height="30" rx="3" fill="none" stroke="var(--c2)" stroke-width="1.6"></rect>
+        <text class="tkb" x="124" y="161" text-anchor="middle">BFS</text>
+        <rect x="168" y="142" width="72" height="30" rx="3" fill="none" stroke="var(--c2)" stroke-width="1.6"></rect>
+        <text class="tkb" x="204" y="161" text-anchor="middle">Kahn sort</text>
+        <rect x="246" y="142" width="72" height="30" rx="3" fill="none" stroke="var(--c2)" stroke-width="1.6"></rect>
+        <text class="tkb" x="282" y="161" text-anchor="middle">Dijkstra</text>
+        <rect x="326" y="142" width="72" height="30" rx="3" fill="none" stroke="var(--c2)" stroke-width="1.6"></rect>
+        <text class="tkb" x="362" y="161" text-anchor="middle">Fenwick</text>
+        <rect x="406" y="142" width="66" height="30" rx="3" fill="none" stroke="var(--c2)" stroke-width="1.6"></rect>
+        <text class="tkb" x="439" y="161" text-anchor="middle">bisect</text>
+      </g>
+      <g>
+        <text class="tk" x="44" y="190" text-anchor="middle">BOM loop</text>
+        <text class="tk" x="44" y="203" text-anchor="middle">check</text>
+        <text class="tk" x="124" y="190" text-anchor="middle">pocket</text>
+        <text class="tk" x="124" y="203" text-anchor="middle">offsets</text>
+        <text class="tk" x="204" y="190" text-anchor="middle">Fulkerson;</text>
+        <text class="tk" x="204" y="203" text-anchor="middle">joints</text>
+        <text class="tk" x="282" y="190" text-anchor="middle">spill level</text>
+        <text class="tk" x="282" y="203" text-anchor="middle">(max for +)</text>
+        <text class="tk" x="362" y="190" text-anchor="middle">moving</text>
+        <text class="tk" x="362" y="203" text-anchor="middle">loads</text>
+        <text class="tk" x="439" y="190" text-anchor="middle">bisection;</text>
+        <text class="tk" x="439" y="203" text-anchor="middle">serial line</text>
+      </g>
+      <line x1="204" y1="212" x2="204" y2="262" stroke="var(--c1)" stroke-width="1.6" marker-end="url(#cmArrow)"></line>
+      <text class="tk" x="210" y="241">gives the order</text>
+      <rect x="128" y="266" width="152" height="30" rx="3" fill="none" stroke="var(--c1)" stroke-width="1.6"></rect>
+      <text class="tkb" x="204" y="285" text-anchor="middle">CPM forward pass = DP</text>
+      <text class="tk" x="204" y="314" text-anchor="middle">part 1 &#167;09: the chapter&#8217;s headline</text>
+    </svg>
+    <figcaption><b>Fig. 14.2</b> &mdash; Change the structure that holds the frontier and you change the algorithm: a stack gives depth-first search, a queue gives breadth-first search and Kahn&rsquo;s sort, a heap gives Dijkstra. Under each algorithm is the engineering procedure it matches in this chapter. Kahn&rsquo;s order is what the forward pass of part 1 &sect;09 needs, which closes the loop between the two parts.</figcaption>
+  </figure>
+  <div class="col">
+    <h3>What this chapter feeds</h3>
+    <p>
+      <b>Sheet 15 (production software engineering)</b> inherits &sect;18&rsquo;s longest common
+      subsequence as the core of comparing two versions of a file, which the bridge bank pairs
+      with drawing revision control, and part 1&rsquo;s hashing as the way version-control
+      systems name what they store (reported). <b>Sheet 16 (SIMD and GPU)</b> is where part 1
+      &sect;12&rsquo;s 4.5&times; memory-order penalty becomes the main cost, and where prefix
+      sums and sorting reappear as parallel building blocks. <b>Sheet 17 (AI inference)</b>
+      uses heaps to pick the most likely next tokens and part 1 &sect;08&rsquo;s pruned search
+      as beam search. <b>Sheet 18 (ML systems design)</b> takes part 1 &sect;13&rsquo;s cliff
+      near full load and makes it capacity planning.
+    </p>
+    <h3>What this chapter does not cover</h3>
+    <p>Naming it honestly, so two parts do not imply completeness:</p>
+    <ul>
+      <li><b>Network flow and matching.</b> The transportation and assignment problems in your
+        operations-research syllabus are exactly solvable in polynomial time; the assignment
+        method matched brute force on 200 random cost matrices (<code>[Ch14p2 s22]</code>), and
+        its \(O(n^3)\) running time is reported. That is the other half of Sheet 13&rsquo;s
+        lesson: you were given exact methods for those problems because they are easy, and
+        heuristics for line balancing because it is not. Max-flow min-cut, which ties them
+        together, is not in this chapter.</li>
+      <li><b>Computational geometry.</b> Offsetting, intersection, convex hulls and point
+        location are the algorithms inside CAD and CAM, the most mechanical part of the whole
+        field, and they are absent. &sect;08 only showed why a grid cannot stand in for them.</li>
+      <li><b>Proofs.</b> Correctness is argued by induction or checked by brute force on small
+        cases. Amortised analysis is done by accounting, not by potential functions. Balanced
+        trees are named, not built.</li>
+      <li><b>Strings and randomness.</b> No fast string matching, no suffix structures, and no
+        randomised algorithm beyond hashing and a random pivot.</li>
+      <li><b>Memory and parallelism.</b> Every cost here counts steps on one processor. External
+        sorting of data that does not fit in memory, cache-aware algorithms and parallel
+        algorithms are left to later sheets.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="provenance">
+  <div class="col">
+    <div class="sechead"><span class="secnum">A</span><h2>Provenance and changes</h2>
+      <span class="srcref nolink" title="Required by Apache-2.0 section 4(b)">licence notice</span>
+    </div>
+    <p>
+      This sheet is a derivative work of <b>chapter 14 &mdash; data structures and
+      algorithms</b> of the <i>Mathematics, Computer Science and AI Compendium</i>, licensed
+      under Apache&nbsp;2.0. Section&nbsp;4(b) of that licence requires prominent notice of
+      changes. The source is pinned at commit <code>9850ee5</code>; every section chip above
+      links to the file it draws on. <b>This appendix covers part 2</b>; part 1 carries its own.
+    </p>
+    <h3>Source material used in part 2</h3>
+    <ul>
+      <li><code>03. trees.md</code> (381 lines) &mdash; &sect;&sect;01&ndash;06</li>
+      <li><code>04. graphs.md</code> (323 lines) &mdash; &sect;&sect;07&ndash;12</li>
+      <li><code>05. sorting and search.md</code> (553 lines) &mdash; &sect;&sect;13&ndash;18</li>
+      <li>The worked example, the where-it-breaks summary, the question bank and the map
+        (&sect;&sect;19&ndash;22) draw on both parts and are written for this sheet. The source
+        files contain no figures; Fig. 14.2 was drawn for this sheet.</li>
+    </ul>
+    <h3>Changes made</h3>
+    <ul>
+      <li><b>Re-narrated for one reader</b> &mdash; a GATE-prepared mechanical engineering
+        graduate with no computing background &mdash; against structures, operations research,
+        production planning, metrology and fluid mechanics. The source&rsquo;s NeetCode
+        practice lists are not reproduced.</li>
+      <li><b>Corrections to the source, six,</b> each with its computation and listed at the
+        top of the sheet: the cost of traversal by list concatenation (&sect;01); the
+        disagreement between BST insert and validate on duplicate keys (&sect;03); the
+        union-find pitfall that blames path compression alone (&sect;05); the claim that
+        marking visited on dequeue gives wrong BFS results (&sect;08); the negative-weight
+        warning, which describes a different Dijkstra from the one printed (&sect;11); and the
+        claim that a random or median-of-three pivot removes quicksort&rsquo;s quadratic case,
+        which fails on repeated keys (&sect;14). Also noted: the sorting table&rsquo;s
+        \(O(\log n)\) quicksort space needs part 1 &sect;05&rsquo;s smaller-side-first rule,
+        and &ldquo;nearly every graph problem reduces to BFS or DFS&rdquo; overreaches
+        (&sect;07).</li>
+      <li><b>Correspondences added that are not in the source</b> &mdash; the indented BOM as
+        preorder and cost roll-up as postorder; sequential part numbers as the worst case of a
+        search tree; trunk dialling codes as a prefix-free trie; union-find&rsquo;s redundant
+        edges as Sheet 12&rsquo;s cyclomatic number; the Fenwick tree as a shear diagram whose
+        loads change; multi-source BFS as pocket offsetting, with the grid-metric break;
+        Fulkerson&rsquo;s rule as Kahn&rsquo;s algorithm; the method of joints as a topological
+        sort, with the compound truss as the block it cannot break; the pipe network as a
+        Laplacian solve rather than a shortest path; strongly connected components as
+        equations solved together; the shipping problem as serial-line balancing; Johnson&rsquo;s
+        rule and the slip-gauge rule as greedy algorithms with proofs.</li>
+      <li><b>Material added that the source does not have</b> &mdash; the decision-tree proof of
+        the sorting lower bound with measured distances from it; binary insertion sort as a
+        counterexample to reading the bound as a running time; the three-way partition; the
+        exact optimality of the slip-gauge rule for the M87 set; the 2-D spill level as
+        Dijkstra in the (min, max) algebra; the worked example; the where-it-breaks table; the
+        question bank; the concept map; and the list of what the chapter leaves out.</li>
+      <li><b>Five interactive labs</b> written for this sheet in plain SVG and vanilla
+        JavaScript, and one drawn figure.</li>
+      <li><b>66 new numerical checks</b> added to
+        <code>study-companion/verify_claims.py</code>, bringing it to 612 checks with no
+        failures.</li>
+    </ul>
+    <h3>What is claimed, and what is reported</h3>
+    <p>
+      Statements tagged <code>[Ch14p2 sNN]</code> are computed, and the tag names the block of
+      the verification script that computes them. Marked as <b>reported</b>, and not derived
+      here: the composition of the M87 slip-gauge set; the step-by-step telephone exchanges;
+      the inverse-Ackermann bound for union-find; the exponential worst case of Dijkstra with
+      negative edges; the use of block-triangular decomposition in sparse solvers; the
+      midpoint-overflow bug in library code; comparison tools built on longest common
+      subsequence; balanced trees in databases; exact geometric offsetting in CAM and weighted
+      distance transforms; the \(O(n^3)\) running time of the assignment method; hashing in
+      version control. No internet research was used.
+    </p>
+    <p class="endnote">
+      Sheet 14 of 20, part 2 of 2 &mdash; chapter complete. Source compendium &copy; its
+      authors, Apache&nbsp;2.0. This derivative sheet is offered under the same licence.
+      Next: <b>Sheet 15 &mdash; production software engineering</b>, where the longest common
+      subsequence of &sect;18 becomes version control.
+    </p>
+  </div>
+</section>
+
+</main>
+</div>
+
+<style>
+:root{--c1:#BF5B00; --c2:#0F74C7; --c3:#1F8A4C; --c4:#7A4FBF; --c5:#C2185B}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --c1:#D9782B; --c2:#4A97D6; --c3:#35AC63; --c4:#9575D0; --c5:#D65A82}
+}
+:root[data-theme="dark"]{
+  --c1:#D9782B; --c2:#4A97D6; --c3:#35AC63; --c4:#9575D0; --c5:#D65A82}
+.tk{fill:var(--ink-3); font-family:'IBM Plex Mono',monospace; font-size:10px}
+.tkb{fill:var(--ink-2); font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600}
+.tkn{fill:var(--sheet); font-family:'IBM Plex Mono',monospace; font-size:9px; font-weight:600}
+#kGrid line{stroke:var(--rule)}
+#bS, #rS, #tS, #pS, #kS{cursor:default}
+</style>
+
+<script>
+(function(){
+  'use strict';
+  var root=document.documentElement;
+  function dk(){var t=root.getAttribute('data-theme');
+    return t?t==='dark':(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);}
+  try{var sv=localStorage.getItem('ch14-theme'); if(sv==='dark'||sv==='light') root.setAttribute('data-theme',sv);}catch(e){}
+  var tb=document.getElementById('themebtn');
+  if(tb) tb.addEventListener('click',function(){var n=dk()?'light':'dark';
+    root.setAttribute('data-theme',n); try{localStorage.setItem('ch14-theme',n);}catch(e){}});
+  function $(id){return document.getElementById(id);}
+  function comma(n){return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,',');}
+  function predict(attr,vid,ans){
+    document.querySelectorAll('['+attr+']').forEach(function(b){
+      b.addEventListener('click',function(){
+        document.querySelectorAll('['+attr+']').forEach(function(o){o.classList.remove('picked');});
+        b.classList.add('picked');
+        var v=$(vid); v.innerHTML=ans[b.getAttribute(attr)]; v.classList.add('show');
+      });
+    });
+  }
+  function rng(seed){var s=seed>>>0; return function(){s=(s+0x6D2B79F5)>>>0; var t=s;
+    t=Math.imul(t^(t>>>15),t|1); t^=t+Math.imul(t^(t>>>7),t|61); return ((t^(t>>>14))>>>0)/4294967296;};}
+  function txt(cls,x,y,s,anchor,extra){return '<text class="'+cls+'" x="'+(+x).toFixed(1)+'" y="'+(+y).toFixed(1)+'"'+
+    (anchor?' text-anchor="'+anchor+'"':'')+(extra||'')+'>'+s+'</text>';}
+  function ln(x1,y1,x2,y2,st){return '<line x1="'+(+x1).toFixed(1)+'" y1="'+(+y1).toFixed(1)+'" x2="'+(+x2).toFixed(1)+'" y2="'+(+y2).toFixed(1)+'"'+(st||'')+'/>';}
+  /* dense Gaussian elimination with partial pivoting; returns null if singular */
+  function solve(A,b){
+    var n=A.length, M=A.map(function(r,i){return r.slice().concat([b[i]]);}), i, j, k;
+    for(i=0;i<n;i++){
+      var p=i; for(k=i+1;k<n;k++) if(Math.abs(M[k][i])>Math.abs(M[p][i])) p=k;
+      if(Math.abs(M[p][i])<1e-12) return null;
+      var t=M[i]; M[i]=M[p]; M[p]=t;
+      for(k=i+1;k<n;k++){ var f=M[k][i]/M[i][i]; if(f) for(j=i;j<=n;j++) M[k][j]-=f*M[i][j]; }
+    }
+    var x=new Array(n);
+    for(i=n-1;i>=0;i--){ var s=M[i][n]; for(j=i+1;j<n;j++) s-=M[i][j]*x[j]; x[i]=s/M[i][i]; }
+    return x;
+  }
+  function onBtn(attr,val){document.querySelectorAll('['+attr+']').forEach(function(b){b.classList.toggle('on',b.getAttribute(attr)===val);});}
+  window.__ch14={$:$,comma:comma,predict:predict,rng:rng,txt:txt,ln:ln,solve:solve,onBtn:onBtn};
+})();
+</script>
+
+<script>
+/* ===== LAB 1 -- the same keys, three trees ===== */
+(function(){
+  'use strict';
+  var H=window.__ch14, $=H.$, T=H.txt, L=H.ln, n=31, mode='random', seed=31;
+  function order(){
+    var a=[], i;
+    if(mode==='sorted'){ for(i=1;i<=n;i++) a.push(i); }
+    else if(mode==='middle'){ (function mid(lo,hi){ if(lo>hi) return; var m=Math.floor((lo+hi)/2); a.push(m); mid(lo,m-1); mid(m+1,hi); })(1,n); }
+    else { for(i=1;i<=n;i++) a.push(i); var r=H.rng(seed); for(i=n-1;i>0;i--){ var j=Math.floor(r()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } }
+    return a;
+  }
+  function draw(){
+    var keys=order(), left={}, right={}, depth={}, parent={}, root=keys[0], k, i;
+    depth[root]=0;
+    for(i=1;i<keys.length;i++){
+      k=keys[i]; var cur=root, d=0;
+      while(true){ d++;
+        if(k<cur){ if(left[cur]===undefined){ left[cur]=k; break; } cur=left[cur]; }
+        else { if(right[cur]===undefined){ right[cur]=k; break; } cur=right[cur]; } }
+      depth[k]=d; parent[k]=cur;
+    }
+    var hmax=0, sum=0; for(k=1;k<=n;k++){ hmax=Math.max(hmax,depth[k]); sum+=depth[k]; }
+    var dy=Math.min(46,248/Math.max(1,hmax)), r=Math.max(2.4,Math.min(7,200/n));
+    function X(k){return 22+(k-1)/(n-1)*436;} function Y(k){return 26+depth[k]*dy;}
+    var e='', nd='';
+    for(k=1;k<=n;k++) if(parent[k]!==undefined) e+=L(X(parent[k]),Y(parent[k]),X(k),Y(k),' stroke="var(--rule-strong)" stroke-width="1.2"');
+    for(k=1;k<=n;k++){
+      nd+='<circle cx="'+X(k).toFixed(1)+'" cy="'+Y(k).toFixed(1)+'" r="'+r.toFixed(1)+'" fill="'+(k===keys[0]?'var(--c1)':'var(--c2)')+'"/>';
+      if(n<=31&&hmax<=8) nd+=T('tkn',X(k),Y(k)+3,k,'middle');
+    }
+    $('bEdge').innerHTML=e; $('bNode').innerHTML=nd;
+    var Hn=0; for(i=1;i<=n;i++) Hn+=1/i;
+    $('bLab').innerHTML=T('tk',458,292,'root in orange; keys left to right in sorted order, depth downward','end');
+    $('bH').textContent=hmax; $('bD').textContent=(sum/n).toFixed(3);
+    $('bT').textContent=(2*(1+1/n)*Hn-4).toFixed(3); $('bB').textContent=Math.floor(Math.log2(n));
+    $('bVal').textContent=n; H.onBtn('data-bo',mode);
+  }
+  $('bSl').addEventListener('input',function(){n=+this.value; draw();});
+  document.querySelectorAll('[data-bo]').forEach(function(b){b.addEventListener('click',function(){mode=b.getAttribute('data-bo'); draw();});});
+  $('bNew').addEventListener('click',function(){seed=(seed*48271+3)%2147483647; mode='random'; draw();});
+  H.predict('data-p1','pv1',{
+    a:'<b>That is the balanced height,</b> and this tree is not balanced. Each new number is larger than every key before it, so it always goes right: the tree is a chain.',
+    b:'<b>Ten would be generous.</b> Random order gives a mean depth near 4.3 for 31 keys. Sorted order gives no branching at all.',
+    c:'<b>Correct: 31.</b> Every key hangs off the right of the one before, so the tree is a linked list and a search for the last key visits them all. Press Issued in order to see the diagonal.',
+    d:'<b>Only the order matters, not the values.</b> Any 31 distinct numbers inserted in increasing order make the same chain.'
+  });
+  draw();
+})();
+
+/* ===== LAB 2 -- offsets from a BFS wave ===== */
+(function(){
+  'use strict';
+  var H=window.__ch14, $=H.$, T=H.txt, W=31, Hh=19, CS=14, OX=23, OY=26, scene='hole', metric='4';
+  function sources(){
+    var src=[], x, y;
+    for(y=0;y<Hh;y++) for(x=0;x<W;x++){
+      if(scene==='hole'){ if(x===15&&y===9) src.push([x,y]); }
+      else if(x===0||y===0||x===W-1||y===Hh-1||(x-15)*(x-15)+(y-9)*(y-9)<=9) src.push([x,y]);
+    }
+    return src;
+  }
+  function draw(){
+    var src=sources(), isSrc={}, dist={}, q=[], i, x, y;
+    src.forEach(function(s){isSrc[s[0]+','+s[1]]=1;});
+    if(metric==='e'){
+      for(y=0;y<Hh;y++) for(x=0;x<W;x++){ var best=1e9; src.forEach(function(s){var d=Math.hypot(x-s[0],y-s[1]); if(d<best) best=d;}); dist[x+','+y]=best; }
+    } else {
+      var nb=[[1,0],[-1,0],[0,1],[0,-1]]; if(metric==='8') nb=nb.concat([[1,1],[1,-1],[-1,1],[-1,-1]]);
+      src.forEach(function(s){dist[s[0]+','+s[1]]=0; q.push(s);});
+      for(i=0;i<q.length;i++){ var c=q[i], dc=dist[c[0]+','+c[1]];
+        nb.forEach(function(d){ var nx=c[0]+d[0], ny=c[1]+d[1], key=nx+','+ny;
+          if(nx>=0&&ny>=0&&nx<W&&ny<Hh&&dist[key]===undefined){ dist[key]=dc+1; q.push([nx,ny]); } }); }
+    }
+    var o='', over=0, under=1e9, far=0, cnt=0;
+    for(y=0;y<Hh;y++) for(x=0;x<W;x++){
+      var key=x+','+y, d=dist[key], px=OX+x*CS, py=OY+y*CS;
+      if(isSrc[key]){ o+='<rect x="'+px+'" y="'+py+'" width="'+CS+'" height="'+CS+'" fill="var(--ink-2)"/>'; continue; }
+      var band=Math.floor(d/3);
+      o+='<rect x="'+px+'" y="'+py+'" width="'+CS+'" height="'+CS+'" fill="var(--c2)" fill-opacity="'+(band%2?0.5:0.14)+'"/>';
+      var tru=1e9; src.forEach(function(s){var e=Math.hypot(x-s[0],y-s[1]); if(e<tru) tru=e;});
+      over=Math.max(over,d/tru); under=Math.min(under,d/tru); far=Math.max(far,d); cnt++;
+    }
+    o+='<rect x="'+OX+'" y="'+OY+'" width="'+(W*CS)+'" height="'+(Hh*CS)+'" fill="none" stroke="var(--rule-strong)"/>';
+    $('rCell').innerHTML=o;
+    var nm={'4':'4-neighbour BFS: bands of |dx|+|dy|','8':'8-neighbour BFS: bands of max(|dx|,|dy|)','e':'true (straight-line) distance'};
+    $('rLab').innerHTML=T('tkb',OX,18,nm[metric]+', 3 cells per band','start');
+    $('rO').textContent=over.toFixed(3); $('rU').textContent=under.toFixed(3);
+    $('rW').textContent=metric==='e'?far.toFixed(2):far; $('rN').textContent=cnt;
+    H.onBtn('data-rs',scene); H.onBtn('data-rm',metric);
+  }
+  document.querySelectorAll('[data-rs]').forEach(function(b){b.addEventListener('click',function(){scene=b.getAttribute('data-rs'); draw();});});
+  document.querySelectorAll('[data-rm]').forEach(function(b){b.addEventListener('click',function(){metric=b.getAttribute('data-rm'); draw();});});
+  H.predict('data-p2','pv2',{
+    a:'<b>A wave on a grid cannot make a circle.</b> After ten steps it has reached exactly the cells with |dx| + |dy| &le; 10, and those form a diamond.',
+    b:'<b>That is the eight-neighbour wave,</b> which reaches every cell with max(|dx|, |dy|) &le; 10. With four neighbours the diagonal cells take two steps each.',
+    c:'<b>Correct: a diamond,</b> the set |dx| + |dy| &le; 10. Along a diagonal it overstates the true distance by &radic;2 = 1.414, which is the first readout.',
+    d:'<b>The shape is set by the neighbour rule, not the grid size.</b> Any grid with four-neighbour steps gives diamonds.'
+  });
+  draw();
+})();
+</script>
+
+<script>
+/* ===== LAB 3 -- solve a truss joint by joint ===== */
+(function(){
+  'use strict';
+  var H=window.__ch14, $=H.$, T=H.txt, L=H.ln;
+  var TR={
+    warren:{J:[[0,0],[2,0],[4,0],[6,0],[8,0],[1,1.7],[3,1.7],[5,1.7],[7,1.7]],
+            M:[[0,1],[1,2],[2,3],[3,4],[5,6],[6,7],[7,8],[0,5],[5,1],[1,6],[6,2],[2,7],[7,3],[3,8],[8,4]],
+            S:[[0,0],[0,1],[4,1]], P:{5:[0,-10],6:[0,-10],7:[0,-10],8:[0,-10]}, sc:50, x0:40, y0:196},
+    compound:{J:[[0,0],[6,0],[3,5.2],[2.2,1.2],[3.9,1.5],[2.9,3.0]],
+            M:[[0,1],[1,2],[2,0],[3,4],[4,5],[5,3],[0,3],[1,4],[2,5]],
+            S:[[0,0],[0,1],[1,1]], P:{5:[0,-10]}, sc:40, x0:120, y0:246}};
+  var name='warren', tr, A, b, full, known, solved, order, block, stuck, msg;
+  function build(){
+    tr=TR[name]; var j=tr.J.length, m=tr.M.length, nu=m+tr.S.length, i;
+    A=[]; b=[]; for(i=0;i<2*j;i++){ A.push(new Array(nu).fill(0)); b.push(0); }
+    tr.M.forEach(function(mm,k){ var a=mm[0], c=mm[1], dx=tr.J[c][0]-tr.J[a][0], dy=tr.J[c][1]-tr.J[a][1], l=Math.hypot(dx,dy);
+      A[2*a][k]+=dx/l; A[2*a+1][k]+=dy/l; A[2*c][k]-=dx/l; A[2*c+1][k]-=dy/l; });
+    tr.S.forEach(function(s,q){ A[2*s[0]+s[1]][m+q]+=1; });
+    Object.keys(tr.P).forEach(function(jn){ b[2*jn]-=tr.P[jn][0]; b[2*jn+1]-=tr.P[jn][1]; });
+    full=H.solve(A,b);
+  }
+  function reset(){
+    build(); known={}; solved={}; order=[]; block=0; stuck=false; msg='reactions found from overall equilibrium';
+    var m=tr.M.length; tr.S.forEach(function(s,q){ known[m+q]=full[m+q]; });
+  }
+  function unknownCols(rows){
+    var cols={}; rows.forEach(function(r){ for(var k=0;k<A[r].length;k++) if(Math.abs(A[r][k])>1e-12&&known[k]===undefined) cols[k]=1; });
+    return Object.keys(cols).map(Number);
+  }
+  function lsq(rows,cols){
+    /* normal equations for the small block; returns null unless the columns are independent and the rows consistent */
+    var AtA=cols.map(function(ci){return cols.map(function(cj){var s=0; rows.forEach(function(r){s+=A[r][ci]*A[r][cj];}); return s;});});
+    var rhs=rows.map(function(r){var s=b[r]; for(var k in known) s-=A[r][k]*known[k]; return s;});
+    var Atb=cols.map(function(ci){var s=0; rows.forEach(function(r,ix){s+=A[r][ci]*rhs[ix];}); return s;});
+    var x=H.solve(AtA,Atb); if(!x) return null;
+    var res=0; rows.forEach(function(r,ix){var s=rhs[ix]; cols.forEach(function(c,jx){s-=A[r][c]*x[jx];}); res=Math.max(res,Math.abs(s));});
+    return res<1e-8?x:null;
+  }
+  function step(){
+    if(stuck) return false;
+    for(var jn=0;jn<tr.J.length;jn++){
+      if(solved[jn]) continue;
+      var rows=[2*jn,2*jn+1], cols=unknownCols(rows);
+      if(cols.length<=2){
+        if(cols.length){ var x=lsq(rows,cols); if(!x) continue; cols.forEach(function(c,i){known[c]=x[i];}); block=Math.max(block,cols.length); }
+        solved[jn]=true; order.push(jn); msg='joint '+jn+' had '+cols.length+' unknown'+(cols.length===1?'':'s')+': solved';
+        return true;
+      }
+    }
+    if(Object.keys(known).length<A[0].length){ stuck=true; msg='stuck: every unsolved joint has three or more unknown members'; }
+    return false;
+  }
+  function solveBlock(){
+    var free=[]; for(var jn=0;jn<tr.J.length;jn++) if(!solved[jn]) free.push(jn);
+    if(!free.length||Object.keys(known).length===A[0].length){ msg='nothing left to solve'; return; }
+    for(var size=1;size<=free.length;size++){
+      var idx=[]; for(var i=0;i<size;i++) idx.push(i);
+      while(true){
+        var S=idx.map(function(i){return free[i];}), rows=[];
+        S.forEach(function(j){rows.push(2*j,2*j+1);});
+        var cols=unknownCols(rows);
+        if(cols.length&&cols.length<=rows.length){
+          var x=lsq(rows,cols);
+          if(x){ cols.forEach(function(c,i){known[c]=x[i];}); S.forEach(function(j){solved[j]=true;});
+            block=Math.max(block,cols.length); stuck=false;
+            msg='joints '+S.join(', ')+' solved together: '+cols.length+' unknowns in '+rows.length+' equations'; return; }
+        }
+        var p=size-1; while(p>=0&&idx[p]===free.length-size+p) p--;
+        if(p<0) break; idx[p]++; for(var q=p+1;q<size;q++) idx[q]=idx[q-1]+1;
+      }
+    }
+    msg='no block found';
+  }
+  function draw(){
+    var X=function(p){return tr.x0+p[0]*tr.sc;}, Y=function(p){return tr.y0-p[1]*tr.sc;};
+    var o='', m=tr.M.length, maxF=0, nk=0;
+    tr.M.forEach(function(mm,k){
+      var p=tr.J[mm[0]], q=tr.J[mm[1]], f=known[k], col, st;
+      if(f===undefined){ col='var(--rule-strong)'; st=' stroke-dasharray="4 3" stroke-width="1.6"'; }
+      else { nk++; maxF=Math.max(maxF,Math.abs(f)); col=Math.abs(f)<0.005?'var(--ink-3)':(f>0?'var(--c2)':'var(--c1)'); st=' stroke-width="2.6"'; }
+      o+=L(X(p),Y(p),X(q),Y(q),' stroke="'+col+'"'+st);
+      if(f!==undefined){ var mx=(X(p)+X(q))/2, my=(Y(p)+Y(q))/2;
+        o+='<rect x="'+(mx-15)+'" y="'+(my-7)+'" width="30" height="12" rx="2" fill="var(--sheet)" fill-opacity="0.9"/>'+
+           T('tk',mx,my+2.5,(Math.abs(f)<0.005?'0':(f>0?'+':'−')+Math.abs(f).toFixed(1)),'middle'); }
+    });
+    $('tMem').innerHTML=o;
+    var jd='';
+    tr.S.forEach(function(s){ if(s[1]===1){ var p=tr.J[s[0]]; jd+='<path d="M'+X(p)+','+(Y(p)+6)+' l-8,13 l16,0 z" fill="var(--sheet-2)" stroke="var(--ink-2)"/>'; } });
+    Object.keys(tr.P).forEach(function(jn){ var p=tr.J[jn];
+      jd+=L(X(p),Y(p)-34,X(p),Y(p)-10,' stroke="var(--c5)" stroke-width="2"')+'<path d="M'+(X(p)-4)+','+(Y(p)-15)+' L'+X(p)+','+(Y(p)-8)+' L'+(X(p)+4)+','+(Y(p)-15)+'" fill="none" stroke="var(--c5)" stroke-width="2"/>'; });
+    tr.J.forEach(function(p,jn){
+      jd+='<circle cx="'+X(p)+'" cy="'+Y(p)+'" r="5.5" fill="'+(solved[jn]?'var(--c3)':'var(--sheet)')+'" stroke="var(--ink-2)" stroke-width="1.3"/>';
+      var ix=order.indexOf(jn); if(ix>=0) jd+=T('tkb',X(p)+8,Y(p)+16,(ix+1),'start');
+      else if(solved[jn]) jd+=T('tkb',X(p)+8,Y(p)+16,'B','start');
+    });
+    $('tJnt').innerHTML=jd;
+    $('tLab').innerHTML=T('tkb',12,18,msg,'start')+T('tk',12,292,'blue tension, orange compression (kN); numbers = order solved','start');
+    $('tJ').textContent=order.length; $('tU').textContent=m-nk; $('tB').textContent=block;
+    $('tF').textContent=nk?maxF.toFixed(2):'…';
+    H.onBtn('data-tt',name);
+  }
+  document.querySelectorAll('[data-tt]').forEach(function(b){b.addEventListener('click',function(){name=b.getAttribute('data-tt'); reset(); draw();});});
+  $('tStep').addEventListener('click',function(){ step(); draw(); });
+  $('tRun').addEventListener('click',function(){ var g=0; while(step()&&g<100) g++; draw(); });
+  $('tBlk').addEventListener('click',function(){ solveBlock(); draw(); });
+  $('tReset').addEventListener('click',function(){ reset(); draw(); });
+  H.predict('data-p3','pv3',{
+    a:'<b>Determinate is not the same as simple.</b> Every joint has three members, so after the reactions no joint has only two unknowns. Press Compound, then Step.',
+    b:'<b>The supports do not help.</b> Joints 0 and 1 each still have three unknown members once the reactions are known.',
+    c:'<b>Correct.</b> m = 2j &minus; 3 counts equations and unknowns, not their arrangement. The method of joints needs a joint with two unknowns to start, and this truss has none. Solve a block: three joints, six unknowns, together.',
+    d:'<b>It is determinate:</b> the equilibrium matrix has full rank, 12 of 12, and the forces are unique. Only the joint-by-joint order fails.'
+  });
+  reset(); var g=0; while(step()&&g<100) g++; draw();
+})();
+</script>
+
+<script>
+/* ===== LAB 4 -- least-resistance route against real flow ===== */
+(function(){
+  'use strict';
+  var H=window.__ch14, $=H.$, T=H.txt, L=H.ln, r23=2.0, mode='lam';
+  var POS=[[44,150],[164,66],[164,234],[316,66],[316,234],[436,150]];
+  function pipes(){return [[0,1,2],[0,2,3],[1,2,1.5],[1,3,4],[2,3,r23],[2,4,5],[3,5,1],[4,5,1]];}
+  function laminar(P){
+    var A=[], b=[0,0,0,0,0], i, j;
+    for(i=0;i<5;i++) A.push([0,0,0,0,0]);
+    P.forEach(function(p){ var c=1/p[2], a=p[0], d=p[1];
+      if(a<5){A[a][a]+=c;} if(d<5){A[d][d]+=c;} if(a<5&&d<5){A[a][d]-=c; A[d][a]-=c;} });
+    b[0]=1; var h=H.solve(A,b); h.push(0); return h;
+  }
+  function turbulent(P,h0){
+    var h=h0.slice(0,5), it, i;
+    function F(hh){ var hf=hh.concat([0]), r=[-1,0,0,0,0];
+      P.forEach(function(p){ var dh=hf[p[0]]-hf[p[1]], q=(dh>=0?1:-1)*Math.sqrt(Math.abs(dh)/p[2]);
+        if(p[0]<5) r[p[0]]+=q; if(p[1]<5) r[p[1]]-=q; }); return r; }
+    for(it=0;it<80;it++){
+      var r=F(h), nr=Math.max.apply(null,r.map(Math.abs)); if(nr<1e-13) break;
+      var J=[]; for(i=0;i<5;i++) J.push([0,0,0,0,0]);
+      var hf=h.concat([0]);
+      P.forEach(function(p){ var dh=hf[p[0]]-hf[p[1]], g=1/(2*Math.sqrt(p[2]*(Math.abs(dh)+1e-14))), a=p[0], d=p[1];
+        if(a<5) J[a][a]+=g; if(d<5) J[d][d]+=g; if(a<5&&d<5){ J[a][d]-=g; J[d][a]-=g; } });
+      var dx=H.solve(J,r.map(function(v){return -v;})); if(!dx) break;
+      var t=1, ok=false;
+      for(var k=0;k<30;k++){ var hn=h.map(function(v,ii){return v+t*dx[ii];}), r2=F(hn);
+        if(Math.max.apply(null,r2.map(Math.abs))<nr){ h=hn; ok=true; break; } t/=2; }
+      if(!ok) break;
+    }
+    return h.concat([0]);
+  }
+  function route(P){
+    var dist=[0,1e9,1e9,1e9,1e9,1e9], prev=[-1,-1,-1,-1,-1,-1], done=[false,false,false,false,false,false];
+    for(var it=0;it<6;it++){ var u=-1; for(var i=0;i<6;i++) if(!done[i]&&(u<0||dist[i]<dist[u])) u=i; done[u]=true;
+      P.forEach(function(p,pi){ [[p[0],p[1]],[p[1],p[0]]].forEach(function(e){ if(e[0]===u&&dist[u]+p[2]<dist[e[1]]-1e-12){ dist[e[1]]=dist[u]+p[2]; prev[e[1]]=pi; } }); }); }
+    var used={}, v=5; while(v!==0){ var pi=prev[v]; used[pi]=1; v=(P[pi][0]===v)?P[pi][1]:P[pi][0]; }
+    return {d:dist[5], used:used};
+  }
+  function draw(){
+    var P=pipes(), hl=laminar(P), h=(mode==='turb')?turbulent(P,hl):hl, rt=route(P), o='', lab='', carrying=0, q23=0;
+    P.forEach(function(p,pi){
+      var a=POS[p[0]], c=POS[p[1]], dh=h[p[0]]-h[p[1]];
+      var q=(mode==='turb')?(dh>=0?1:-1)*Math.sqrt(Math.abs(dh)/p[2]):dh/p[2];
+      if(Math.abs(q)>1e-6) carrying++;
+      if(pi===4) q23=q;
+      var mx=(a[0]+c[0])/2, my=(a[1]+c[1])/2, w, col;
+      if(mode==='route'){ w=rt.used[pi]?6:2; col=rt.used[pi]?'var(--c1)':'var(--rule-strong)'; }
+      else { w=1.5+14*Math.abs(q); col='var(--c2)'; }
+      o+=L(a[0],a[1],c[0],c[1],' stroke="'+col+'" stroke-width="'+w.toFixed(1)+'" stroke-linecap="round"');
+      if(mode!=='route'&&Math.abs(q)>1e-6){
+        var s=q>0?1:-1, ux=(c[0]-a[0]), uy=(c[1]-a[1]), l=Math.hypot(ux,uy); ux=ux/l*s; uy=uy/l*s;
+        var bx=mx+ux*16, by=my+uy*16;
+        o+='<path d="M'+(bx-ux*9-uy*6).toFixed(1)+','+(by-uy*9+ux*6).toFixed(1)+' L'+bx.toFixed(1)+','+by.toFixed(1)+' L'+(bx-ux*9+uy*6).toFixed(1)+','+(by-uy*9-ux*6).toFixed(1)+'" fill="none" stroke="var(--ink-2)" stroke-width="1.6"/>';
+      }
+      var tag=mode==='route'?('R '+p[2].toFixed(1)):(Math.round(Math.abs(q)*1000)/10).toFixed(1)+'%';
+      lab+='<rect x="'+(mx-22)+'" y="'+(my-20)+'" width="44" height="13" rx="2" fill="var(--sheet)" fill-opacity="0.92"/>'+T('tk',mx,my-10,tag,'middle');
+    });
+    $('pPipe').innerHTML=o;
+    var nd='';
+    POS.forEach(function(p,i){ nd+='<circle cx="'+p[0]+'" cy="'+p[1]+'" r="11" fill="var(--sheet)" stroke="var(--ink-2)" stroke-width="1.5"/>'+T('tkb',p[0],p[1]+4,i,'middle'); });
+    nd+=T('tk',POS[0][0],POS[0][1]+28,'inlet','middle')+T('tk',POS[5][0],POS[5][1]+28,'outlet','middle');
+    $('pNode').innerHTML=nd;
+    var title={route:'least-resistance route (Dijkstra), total R '+rt.d.toFixed(2)+'; readouts show laminar flow',lam:'laminar flow, head loss = R Q: share of inflow per pipe',turb:'turbulent flow, head loss = R Q²: share of inflow per pipe'};
+    $('pLab').innerHTML=lab+T('tkb',12,18,title[mode],'start');
+    $('pR').textContent=rt.d.toFixed(2);
+    $('pE').textContent=(h[0]-h[5]).toFixed(3);
+    $('pN').textContent=carrying;
+    $('pQ').textContent=q23.toFixed(3);
+    $('pVal').textContent=r23.toFixed(1);
+    H.onBtn('data-pm',mode);
+  }
+  $('pSl').addEventListener('input',function(){r23=+this.value/10; draw();});
+  document.querySelectorAll('[data-pm]').forEach(function(b){b.addEventListener('click',function(){mode=b.getAttribute('data-pm'); draw();});});
+  H.predict('data-p4','pv4',{
+    a:'<b>Water does not choose a route.</b> Every pipe with a head difference across it carries flow, and every pipe here has one. Press Laminar flow: all eight pipes are drawn.',
+    b:'<b>Correct: all eight.</b> Continuity at each junction plus the loss law in each pipe is a Laplacian system, and its solution uses every path. Pipe 0&ndash;1 even carries more than 0&ndash;2, which is on the best route.',
+    c:'<b>More than two routes carry water.</b> The pipe to junction 4, on the dearest route (R 9.0), still takes about 27% of the flow in laminar conditions.',
+    d:'<b>Resistance sets how much each pipe carries, not whether it carries any.</b> Pipe 2&ndash;4, with R = 5, still carries flow.'
+  });
+  draw();
+})();
+</script>
+
+<script>
+/* ===== LAB 5 -- where quicksort spends its comparisons ===== */
+(function(){
+  'use strict';
+  var H=window.__ch14, $=H.$, T=H.txt, L=H.ln, n=2000, inp='random', piv='random', sch='lomuto';
+  function run(){
+    var r=H.rng(1414), a=new Int32Array(n), i;
+    if(inp==='random'){ for(i=0;i<n;i++) a[i]=i; for(i=n-1;i>0;i--){ var j=Math.floor(r()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } }
+    else if(inp==='sorted'){ for(i=0;i<n;i++) a[i]=i; }
+    else if(inp==='equal'){ for(i=0;i<n;i++) a[i]=7; }
+    else { for(i=0;i<n;i++) a[i]=r()<0.5?0:1; }
+    var pr=H.rng(77), comps=0, work=[], maxd=0, st=[[0,n-1,0]];
+    while(st.length){
+      var fr=st.pop(), lo=fr[0], hi=fr[1], d=fr[2];
+      if(lo>=hi) continue;
+      if(piv==='random'){ var k=lo+Math.floor(pr()*(hi-lo+1)); var t1=a[k]; a[k]=a[hi]; a[hi]=t1; }
+      else if(piv==='median3'){ var mid=(lo+hi)>>1, tri=[[a[lo],lo],[a[mid],mid],[a[hi],hi]].sort(function(x,y){return x[0]-y[0]||x[1]-y[1];});
+        var km=tri[1][1]; var t2=a[km]; a[km]=a[hi]; a[hi]=t2; }
+      var p=a[hi]; work[d]=(work[d]||0)+(hi-lo+1); if(d>maxd) maxd=d;
+      if(sch==='lomuto'){
+        var ii=lo;
+        for(var jj=lo;jj<hi;jj++){ comps++; if(a[jj]<p){ var t3=a[ii]; a[ii]=a[jj]; a[jj]=t3; ii++; } }
+        var t4=a[ii]; a[ii]=a[hi]; a[hi]=t4;
+        st.push([lo,ii-1,d+1]); st.push([ii+1,hi,d+1]);
+      } else {
+        var lt=lo, x=lo, gt=hi;
+        while(x<=gt){ comps++;
+          if(a[x]<p){ var t5=a[lt]; a[lt]=a[x]; a[x]=t5; lt++; x++; }
+          else if(a[x]>p){ var t6=a[x]; a[x]=a[gt]; a[gt]=t6; gt--; }
+          else x++; }
+        st.push([lo,lt-1,d+1]); st.push([gt+1,hi,d+1]);
+      }
+    }
+    return {comps:comps, work:work, levels:maxd+1};
+  }
+  function draw(){
+    var R=run(), X0=52, X1=462, YT=30, YB=236, D=R.levels, g='', o='', i;
+    var bw=(X1-X0)/Math.max(D,1);
+    g+=L(X0,YB,X1,YB,' stroke="var(--rule-strong)"')+L(X0,YT,X1,YT,' stroke="var(--rule)" stroke-dasharray="3 3"');
+    g+=T('tk',X0-6,YT+4,'n','end')+T('tk',X0-6,YB+3,'0','end');
+    g+=T('tk',X0,YB+14,'depth 0','start')+T('tk',X1,YB+14,H.comma(D-1),'end');
+    g+=T('tk',(X0+X1)/2,YB+28,'recursion depth','middle');
+    $('kGrid').innerHTML=g;
+    for(i=0;i<D;i++){ var w=R.work[i]||0, h=w/n*(YB-YT);
+      o+='<rect x="'+(X0+i*bw).toFixed(2)+'" y="'+(YB-h).toFixed(2)+'" width="'+Math.max(bw-(bw>3?1:0),0.6).toFixed(2)+'" height="'+h.toFixed(2)+'" fill="var(--c2)" fill-opacity="0.75"/>'; }
+    $('kBar').innerHTML=o;
+    var names={random:'random order',sorted:'already sorted',equal:'all keys equal',two:'two distinct keys'};
+    $('kLab').innerHTML=T('tkb',X0,18,names[inp]+' \u00b7 '+(sch==='lomuto'?'Lomuto':'three-way')+' \u00b7 pivot '+(piv==='median3'?'median of 3':piv),'start');
+    $('kC').textContent=H.comma(R.comps);
+    $('kR').textContent=(R.comps/(n*Math.log2(n))).toFixed(2);
+    $('kD').textContent=H.comma(R.levels);
+    $('kW').textContent=H.comma(n*(n-1)/2);
+    $('kVal').textContent=n;
+    H.onBtn('data-ki',inp); H.onBtn('data-kp',piv); H.onBtn('data-ks',sch);
+  }
+  $('kSl').addEventListener('input',function(){n=+this.value; draw();});
+  document.querySelectorAll('[data-ki]').forEach(function(b){b.addEventListener('click',function(){inp=b.getAttribute('data-ki'); draw();});});
+  document.querySelectorAll('[data-kp]').forEach(function(b){b.addEventListener('click',function(){piv=b.getAttribute('data-kp'); draw();});});
+  document.querySelectorAll('[data-ks]').forEach(function(b){b.addEventListener('click',function(){sch=b.getAttribute('data-ks'); draw();});});
+  H.predict('data-p5','pv5',{
+    a:'<b>That is the count for distinct keys in random order.</b> With every key equal, nothing is smaller than the pivot, so every partition peels off one item.',
+    b:'<b>That is what a three-way partition does.</b> The source&rsquo;s Lomuto partition cannot recognise equal keys and pays for them.',
+    c:'<b>Correct: 1,999,000, exactly n(n&minus;1)/2.</b> No item is smaller than any pivot, so every split is n&minus;1 against 0, whichever pivot rule is used. Set All equal and try all three.',
+    d:'<b>Quicksort does not check first.</b> It partitions whatever it is given, and on equal keys Lomuto&rsquo;s partition is at its worst.'
+  });
+  draw();
+})();
+</script>
+
+<script>
+/* Contents rail: mark the section currently in view (desktop only). */
+(function(){
+  'use strict';
+  var links=Array.prototype.slice.call(document.querySelectorAll('.rail a'));
+  if(!links.length||!window.IntersectionObserver) return;
+  var map={}; links.forEach(function(a){map[a.getAttribute('href').slice(1)]=a;});
+  var seen={};
+  var io=new IntersectionObserver(function(es){
+    es.forEach(function(e){seen[e.target.id]=e.isIntersecting;});
+    var ids=Object.keys(map),act=null;
+    for(var i=0;i<ids.length;i++) if(seen[ids[i]]){act=ids[i];break;}
+    if(!act) return;
+    links.forEach(function(a){a.classList.toggle('on',a===map[act]);});
+  },{rootMargin:'-70px 0px -65% 0px',threshold:0});
+  Object.keys(map).forEach(function(id){var el=document.getElementById(id); if(el) io.observe(el);});
+})();
+</script>
+
+<script>
+/* Safety net: if the MathJax bundle cannot be reached, degrade the TeX to
+   readable Unicode instead of leaving raw backslash markup on the page. */
+(function () {
+  'use strict';
+  var GREEK = { theta:'θ', sigma:'σ', delta:'δ', mu:'μ', pi:'π',
+                infty:'∞', alpha:'α', beta:'β', lambda:'λ' };
+  var SUB = { '1':'₁','2':'₂','3':'₃','i':'ᵢ','j':'ⱼ','n':'ₙ','p':'ₚ','x':'ₓ','y':'ᵧ' };
+  var SUP = { '2':'²','3':'³','n':'ⁿ','p':'ᵖ','*':'*' };
+
+  function degrade(t) {
+    t = t.replace(/\$\$/g, '').replace(/\\[()[\]]/g, '');
+    t = t.replace(/\\(?:left|right|textstyle|displaystyle|!|,|;|:)/g, '');
+    t = t.replace(/\\q?quad/g, ' ');
+    t = t.replace(/\\mathbb\{R\}/g, 'ℝ').replace(/\\mathbb\{Z\}/g, 'ℤ')
+         .replace(/\\mathbb\{N\}/g, 'ℕ').replace(/\\mathbb\{Q\}/g, 'ℚ');
+    t = t.replace(/\\(?:mathbf|mathrm|text|textbf|operatorname)\{([^{}]*)\}/g, '$1');
+    t = t.replace(/\\hat\{([^{}]*)\}/g, '$1̂').replace(/\\bar\{([^{}]*)\}/g, '$1̄');
+    t = t.replace(/\\sqrt\{([^{}]*)\}/g, '√($1)');
+    t = t.replace(/\\t?frac\{([^{}]*)\}\{([^{}]*)\}/g, '($1)/($2)');
+    t = t.replace(/\\binom\{([^{}]*)\}\{([^{}]*)\}/g, 'C($1,$2)');
+    t = t.replace(/\\([a-zA-Z]+)/g, function (m, w) {
+      if (GREEK[w]) return GREEK[w];
+      switch (w) {
+        case 'cdot': return '·';
+        case 'times': return '×';
+        case 'le': case 'leq': return '≤';
+        case 'ge': case 'geq': return '≥';
+        case 'neq': return '≠';
+        case 'approx': return '≈';
+        case 'in': return '∈';
+        case 'pm': return '±';
+        case 'to': case 'rightarrow': return '→';
+        case 'Rightarrow': return '⇒';
+        case 'iff': return '⇔';
+        case 'parallel': return '∥';
+        case 'perp': return '⊥';
+        case 'sum': return 'Σ';
+        case 'langle': return '⟨';
+        case 'rangle': return '⟩';
+        case 'wedge': return '∧';
+        case 'ast': return '*';
+        case 'cdots': case 'ldots': case 'dots': return '…';
+        case 'max': case 'min': case 'cos': case 'sin': case 'log': case 'exp': return w;
+        default: return w;
+      }
+    });
+    t = t.replace(/\\\|/g, '‖').replace(/\|\|/g, '‖');
+    t = t.replace(/_\{?([0-9ijnpxy])\}?/g, function (m, c) { return SUB[c] || ('_' + c); });
+    t = t.replace(/\^\{?([23np*])\}?/g, function (m, c) { return SUP[c] || ('^' + c); });
+    t = t.replace(/[{}]/g, '');
+    return t.replace(/[ \t]{2,}/g, ' ');
+  }
+
+  function run() {
+    if (window.MathJax && window.MathJax.startup && window.MathJax.startup.document) return;
+    var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+      acceptNode: function (n) {
+        if (!n.nodeValue || n.nodeValue.indexOf('\\') < 0 && n.nodeValue.indexOf('$$') < 0)
+          return NodeFilter.FILTER_REJECT;
+        var p = n.parentNode;
+        while (p && p !== document.body) {
+          var tag = p.nodeName;
+          if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'CODE' || tag === 'PRE')
+            return NodeFilter.FILTER_REJECT;
+          p = p.parentNode;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    var hits = [], n;
+    while ((n = walker.nextNode())) hits.push(n);
+    hits.forEach(function (node) { node.nodeValue = degrade(node.nodeValue); });
+    document.querySelectorAll('.mathbox').forEach(function (el) {
+      el.style.fontFamily = "'IBM Plex Mono', monospace";
+      el.style.fontSize = '15px';
+      el.style.textAlign = 'center';
+      el.style.padding = '10px 0';
+    });
+  }
+  setTimeout(run, 6000);
+})();
+</script>
+<script>
+/* Long display equations can be wider than their container - especially inside a
+   callout box, which is narrower than the main column. After the typesetter
+   finishes, measure each one and shrink it just enough to fit. Only ever shrinks,
+   never grows, and never below a readable floor - so the worst case is the
+   scrollbar we already had. */
+(function () {
+  'use strict';
+  var MIN_SCALE = 0.70;   /* below this, scrolling beats illegible text */
+
+  function fitOne(box) {
+    try {
+      var c = box.querySelector('mjx-container[display="true"]');
+      if (!c) return;
+      var svg = c.querySelector('svg');
+      if (!svg) return;
+      c.style.fontSize = '';
+      var avail = box.clientWidth;
+      if (!avail) return;
+      var w = svg.getBoundingClientRect().width;
+      if (!w || w <= avail) return;
+      var k = Math.max(MIN_SCALE, (avail / w) * 0.98);
+      c.style.fontSize = (k * 100).toFixed(1) + '%';
+      var w2 = svg.getBoundingClientRect().width;      /* one refinement pass */
+      if (w2 > avail) {
+        k = Math.max(MIN_SCALE, k * (avail / w2) * 0.98);
+        c.style.fontSize = (k * 100).toFixed(1) + '%';
+      }
+    } catch (e) { /* leave the equation exactly as it was */ }
+  }
+
+  /* Inline math cannot wrap and is not inside a scrollable .mathbox, so a long
+     inline expression pushes the whole page sideways.  Shrink any that is wider
+     than the text column it sits in; the ex-based sizing keeps the baseline. */
+  function fitInline(c) {
+    try {
+      var svg = c.querySelector('svg'); if (!svg) return;
+      c.style.fontSize = '';
+      var host = c.parentElement; if (!host) return;
+      var avail = host.clientWidth; if (!avail) return;
+      var w = svg.getBoundingClientRect().width;
+      if (!w || w <= avail) return;
+      c.style.fontSize = (Math.max(MIN_SCALE, (avail / w) * 0.98) * 100).toFixed(1) + '%';
+    } catch (e) { /* leave the expression exactly as it was */ }
+  }
+
+  function fitAll() {
+    try { document.querySelectorAll('.mathbox').forEach(fitOne); } catch (e) {}
+    try {
+      document.querySelectorAll('mjx-container:not([display="true"])').forEach(fitInline);
+    } catch (e) {}
+  }
+
+  function start() {
+    fitAll();
+    var t;
+    window.addEventListener('resize', function () {
+      clearTimeout(t); t = setTimeout(fitAll, 160);
+    });
+  }
+
+  function waitForTypesetter(n) {
+    if (window.MathJax && window.MathJax.startup && window.MathJax.startup.promise) {
+      window.MathJax.startup.promise.then(start, start);
+      return;
+    }
+    if (n > 60) return;            /* typesetter never arrived - nothing to fit */
+    setTimeout(function () { waitForTypesetter(n + 1); }, 200);
+  }
+  waitForTypesetter(0);
+})();
+</script>

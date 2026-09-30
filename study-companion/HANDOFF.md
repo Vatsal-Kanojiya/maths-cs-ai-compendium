@@ -5,8 +5,8 @@ minutes instead of re-deriving decisions already made.
 
 ## State
 
-Branch `claude/blissful-euler-0c6xih` carries sheets 1–13 of 20 plus **Chapter 14 part 1 of
-2**. All are published. Working tree clean after each part's commit.
+Branch `claude/blissful-euler-0c6xih` carries sheets 1–14 of 20, **Chapter 14 complete in two
+parts**. All are published. Working tree clean after each part's commit.
 
 | # | Chapter | Folder | Published |
 |---|---------|--------|-----------|
@@ -26,36 +26,28 @@ Branch `claude/blissful-euler-0c6xih` carries sheets 1–13 of 20 plus **Chapter
 | 13 | Computing and OS **pt 2/3** | `ch13-computing-os-part2/` | https://claude.ai/artifact/Na2XhiZWm68g7Sb8u6wbpw |
 | 13 | Computing and OS **pt 3/3** | `ch13-computing-os-part3/` | https://claude.ai/artifact/HL2a7m5wT1fxBiCp5LTFQj |
 | 14 | Data Structures and Algorithms **pt 1/2** | `ch14-data-structures-algorithms/` | https://claude.ai/artifact/TCQEggFEntAofLXcUbunbd |
+| 14 | Data Structures and Algorithms **pt 2/2** | `ch14-data-structures-algorithms-part2/` | https://claude.ai/artifact/NESj33J7qvUysyK9djgRed |
 
-`verify_claims.py` stands at **546 checks, 0 failures**, covering chapters 01–14 part 1. Run it
-first in any new session — it is the fastest way to confirm nothing has rotted. It needs numpy
-and scipy, which a fresh container will not have: `pip install numpy scipy`. The Chapter 14
-block lives inside one function, `_ch14p1()`, so none of its names can collide with the shared
-module namespace — do the same for every new block.
+`verify_claims.py` stands at **612 checks, 0 failures**, covering chapters 01–14. Run it first in
+any new session — it is the fastest way to confirm nothing has rotted. It needs numpy and scipy,
+which a fresh container will not have: `pip install numpy scipy`. The Chapter 14 blocks live
+inside two functions, `_ch14p1()` and `_ch14p2()` (tags `[Ch14 sNN]` and `[Ch14p2 sNN]`), so none
+of their names can collide with the shared module namespace — do the same for every new block.
+Also run `python3 study-companion/audit_classes.py` (see Known issues).
 
-Next up: **Chapter 14 part 2** — source files `03. trees.md` (381 lines), `04. graphs.md`
-(323) and `05. sorting and search.md` (553), plus the chapter's end matter. Part 1's §22 is the
-contract, and every item in it is a promise stated on the published page:
-- **Trees.** The BOM of §10 is a tree with shared parts (a DAG, strictly); the heap of §21 is a
-  tree stored at fixed pitch. Return to recursion-as-induction (§06) on trees.
-- **Graphs.** The CPM event numbering of §09 (Fulkerson's rule) **is** a topological sort —
-  prove it and verify it. The 2-D rain-water fill of §16 is a priority-queue search of the
-  Dijkstra kind; the minimax spill level is a bottleneck-path problem, so show the same
-  priority queue computing both. BFS runs on §21's queue. Sheet 12 already spent the graph
-  *Laplacian*; part 2 does the algorithms.
-- **Sorting and search.** Build quicksort properly, including the pivot choice behind §05's
-  space bound (§05 already verified: plain recursion on sorted input is 1,999 deep and crashes
-  CPython). Binary search is Sheet 13 §06's bisection. And §02/§15 promised that `n log n` is a
-  **lower bound** for comparison sorting — `log2(n!)` comparisons, the decision-tree argument;
-  compute it against measured merge-sort comparison counts. File 00 also says N-Queens is in
-  file 05; check.
-- **End matter for the whole chapter**: worked example, the 24-question bank in three tiers
-  covering *both* parts, the concept map, a "what the chapter does not cover" section, and part
-  2's own provenance appendix.
+Next up, two candidates — pick deliberately:
 
-Copy the **page skeleton from `ch14-data-structures-algorithms/`, not from Chapter 13** — see
-the known issue about Chapters 09–13 below. Chapter 14 part 1 is the first page since Chapter 08
-whose header, contents rail and script tail match the design system.
+1. **Chapter 15 — production software engineering**, a single run. Bank entry: version control ↔
+   drawing revision control / ECN, testing ↔ inspection and QA, CI/CD ↔ line automation,
+   containers ↔ jigs and fixtures. Chapter 14 part 2 §18 already promised that the longest common
+   subsequence "becomes version control" in Sheet 15, and §22 promised hashing as the way
+   version-control systems name what they store — pay both.
+2. **The skeleton repair of Chapters 09–13** (seven published pages), described under Known
+   issues. Mechanical, about one probe-and-republish cycle per page, and it fixes a sticky
+   header that covers ~40% of a phone screen on every sheet from 09 to 13. Worth doing before
+   the series is called finished; arguably before Chapter 15.
+
+Copy the **page skeleton from `ch14-data-structures-algorithms-part2/`**, not from Chapters 09–13.
 
 ### Session hygiene that matters
 
@@ -308,7 +300,24 @@ cost is setup spread over a lot**, and the lot must grow geometrically because t
 the stock on hand. And the one that answers Sheet 13: knapsack is NP-hard yet solved in
 pseudo-polynomial time, **but filling each station perfectly still loses a station** — tasks
 {7,7,6,4,4,4}, cycle 12: the only 100% station is {4,4,4}, which forces 4 stations against an
-optimum of 3. Trees ↔ BOM and graphs ↔ precedence diagrams belong to part 2.
+optimum of 3. **Part 2 written.** Trees ↔ BOM held exactly and more narrowly than the bank said:
+the **indented BOM is a preorder traversal** and the **standard-cost roll-up is a postorder
+traversal**; inorder has no BOM meaning, and shared parts make a real BOM a DAG. The graph entry
+split in two. Precedence diagrams went further than the bank: **Fulkerson's event-numbering rule
+IS Kahn's topological sort** (500 networks; the round an event is numbered in = the most arrows on
+any path into it), and **the method of joints is a topological sort of a truss** — a joint is
+"ready" at ≤2 unknowns as a node is at indegree 0; a simple truss never stalls (Sheet 13 §04's
+induction, run backwards), while a **compound truss** (triangle in a triangle, three bars, m = 2j −
+3, full rank) stalls at once and needs a six-unknown block solved together — which §12 names as a
+strongly connected component. Pipe networks **broke**: the structure maps (routes add head loss
+like path length) but water does not take the shortest path; it solves Sheet 12's Laplacian, runs
+in all 8 pipes of the lab network, and puts more flow into a pipe *off* the least-resistance route
+than into the one on it. Also exact: **the source's shipping problem is type-II line balancing
+with a serial chain**, and the fill-in-order check is the linear-time case Sheet 13 §09 promised;
+**the 2-D spill level is Dijkstra with max for +**; **Johnson's rule** is optimal by exhaustive
+check; and **the slip-gauge "clear the last decimal first" rule is greedy change-making and is
+exactly optimal for the M87 set** (95,001 lengths vs an exact search) — a positive result, as
+valuable as a correction.
 
 **15 Production software engineering.** Version control ↔ **drawing revision control**,
 ECN/ECO. Testing ↔ inspection and QA. CI/CD ↔ line automation. Containers ↔ standardised
@@ -911,6 +920,24 @@ rest against the verified numbers (crossover 996, 2,057 N-Queens nodes, TE equal
 enumerated longest path, the linear-probing miss cost within 10% of Knuth, and so on). A
 readout that renders the wrong number passes every structural check; this does not.
 
+**Procedures the reader executes by hand are algorithms, and checking them is a result either way.**
+Part 2's three best bridges were all hand procedures from the reader's training: Fulkerson's
+numbering rule (it is Kahn's algorithm), the method of joints (a topological sort, stopped by a
+compound truss) and the slip-gauge rule (greedy, and provably fine for M87). The last one is a
+*confirmation*, not a correction, and it is as satisfying to the reader: "the rule you learned is
+optimal, and here is why the set was designed so that it would be". Look for hand procedures in
+every remaining chapter's source domain — inspection plans, tolerance stacking, revision control.
+
+**Implement an engineering rule in integers before trusting a failure count.** The first slip-gauge
+check reported that the textbook rule could not build 45% of lengths. That was floating-point
+rounding in the check (`r % 10` returning 9.999…), not the rule. In integer units of 0.0005 mm the
+rule built all 95,001. Any check that walks decimal digits must work in integer units.
+
+**A claimed block size is a claim.** The first compound-truss check said joint-by-joint stalls
+"with 9 unknowns left to solve simultaneously". Nine is what is *left*; the block that must be
+solved together is six (the inner or the outer triangle's joints), after which the rest goes
+joint by joint. The page's lab now finds the smallest self-contained block and reports 6.
+
 **Near a cliff, report the spread, not just the mean.** The hash-table lab first said its
 simulation agreed with Knuth's formula "a little less closely near 0.95". Measured, a single set
 of four 16,384-slot tables at load 0.9 ranges from 40.1 to 56.9 around the formula's 50.5; the
@@ -944,16 +971,16 @@ push every part; never leave a part uncommitted at the end of a run.
 
 ## What is actually left
 
-Chapters 14–20, of which 19 and 20 are outline stubs (20 and 21 lines respectively) and may
-not be worth writing as chapters at all. That makes the real remaining work **chapters 14–18,
-five sheets**, of which two need splitting. The bridge bank has a pre-worked entry for each;
+Chapters 15–20, of which 19 and 20 are outline stubs (20 and 21 lines respectively) and may
+not be worth writing as chapters at all. That makes the real remaining work **chapters 15–18,
+four sheets**, of which one (Chapter 16) needs splitting. The bridge bank has a pre-worked entry for each;
 Chapters 08 through 13 have all found their headline bridge *outside* the bank, and Ch12 and
 Ch13 both found bank entries that were plainly *wrong* (Gauss–Seidel; "pipelining is like an
 assembly line" undersold as a simile). Treat it as a floor, and check it.
 
 All of 13–20 are now measured, so every split decision is already made. Chapter 16 is the
-largest source in the series after Chapter 09 and will want three parts; Chapter 14 is split in
-two and part 1 is done. Everything else is a single run.
+largest source in the series after Chapter 09 and will want three parts; Chapter 14 is done, in
+two parts. Everything else is a single run.
 
 Separately from new chapters, **seven published pages (Chapters 09–13) need the skeleton repair
 described under Known issues**. It is mechanical, and it should be done before the series is

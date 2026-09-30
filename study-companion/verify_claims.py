@@ -3827,4 +3827,1122 @@ def _ch14p1():
 
 _ch14p1()
 
+# =====================================================================
+# Chapter 14 part 2 -- trees, graphs, sorting and search (files 03-05)
+# plus the chapter's worked example. Inside one function: no name leaks.
+# =====================================================================
+def _ch14p2():
+    import math, random, itertools, heapq, bisect
+    from collections import deque, defaultdict
+    import numpy as np
+    T = "[Ch14p2 %s]"
+    def say(sec, msg, ok=None):
+        tail = "" if ok is None else "   " + P(ok)
+        print(f"{T % sec} {msg}{tail}")
+    rng = random.Random(1402)
+
+    class Node:
+        __slots__ = ("val", "left", "right")
+        def __init__(s, v, l=None, r=None): s.val = v; s.left = l; s.right = r
+
+    # --- s01: traversals, and what list concatenation costs ----------------
+    def balanced(lo, hi):
+        if lo > hi: return None
+        m = (lo+hi)//2
+        return Node(m, balanced(lo, m-1), balanced(m+1, hi))
+    def path_tree(n):
+        root = None
+        for v in range(n-1, -1, -1): root = Node(v, None, root)
+        return root
+    copies = [0]
+    def inorder_concat(t):
+        if not t: return []
+        a = inorder_concat(t.left); b = inorder_concat(t.right)
+        copies[0] += len(a)+1+len(b)
+        return a+[t.val]+b
+    import sys
+    old = sys.getrecursionlimit(); sys.setrecursionlimit(10000)
+    n = 1023
+    copies[0] = 0; inorder_concat(balanced(0, n-1)); cb = copies[0]
+    copies[0] = 0; inorder_concat(path_tree(n)); cp = copies[0]
+    sys.setrecursionlimit(old)
+    print()
+    say("s01", f"inorder by list concatenation, n = 1023: balanced tree copies {cb:,} elements "
+        f"(n log2 n = {n*math.log2(n):,.0f}); a path-shaped tree copies {cp:,} (n^2/2 = {n*n/2:,.0f})",
+        cb < 1.1*n*math.log2(n) and cp >= n*(n+1)//2)
+    say("s01", "  the source's O(n^2) is the worst case; a balanced tree costs O(n log n)")
+    # indented BOM = preorder; cost roll-up = postorder
+    bom = ("pump", 120, [("casing", 300, [("bolt", 2, []), ("gasket", 8, [])]),
+                         ("impeller", 450, []), ("motor", 2100, [("bearing", 90, []), ("bearing", 90, [])])])
+    lines = []
+    def pre(nd, d):
+        lines.append("  "*d+nd[0])
+        for c in nd[2]: pre(c, d+1)
+    pre(bom, 0)
+    def post(nd):
+        return nd[1]+sum(post(c) for c in nd[2])
+    say("s01", f"indented BOM = preorder: {' / '.join(l.strip() for l in lines)}")
+    say("s01", f"cost roll-up = postorder (children first): pump total {post(bom):,}",
+        post(bom) == 120+300+2+8+450+2100+90+90)
+
+    # --- s02: recursion on trees: max path sum, LCA ----------------------
+    def rand_tree(n, lo=-9, hi=9):
+        nodes = [Node(rng.randint(lo, hi)) for _i in range(n)]
+        for i in range(1, n):
+            while True:
+                p = nodes[rng.randrange(i)]
+                if p.left is None and rng.random() < 0.5: p.left = nodes[i]; break
+                if p.right is None: p.right = nodes[i]; break
+        return nodes
+    def max_path_sum(root):
+        best = [float("-inf")]
+        def dfs(nd):
+            if not nd: return 0
+            l = max(dfs(nd.left), 0); r = max(dfs(nd.right), 0)
+            best[0] = max(best[0], nd.val+l+r)
+            return nd.val+max(l, r)
+        dfs(root); return best[0]
+    def mps_bf(nodes):
+        par = {}
+        for nd in nodes:
+            for c in (nd.left, nd.right):
+                if c: par[id(c)] = nd
+        def anc(nd):
+            out = [nd]
+            while id(out[-1]) in par: out.append(par[id(out[-1])])
+            return out
+        best = float("-inf")
+        for a in nodes:
+            for b in nodes:
+                A = anc(a); B = anc(b); Bs = set(map(id, B))
+                lca = next(x for x in A if id(x) in Bs)
+                pa = A[:[id(x) for x in A].index(id(lca))+1]
+                pb = B[:[id(x) for x in B].index(id(lca))]
+                best = max(best, sum(x.val for x in pa)+sum(x.val for x in pb))
+        return best
+    ok = all(max_path_sum(ns[0]) == mps_bf(ns) for ns in (rand_tree(rng.randint(1, 12)) for _t in range(300)))
+    print()
+    say("s02", "max path sum (source) == brute force over every pair of nodes, 300 trees with negatives", ok)
+    def lca(root, p, q):
+        if not root or root is p or root is q: return root
+        l = lca(root.left, p, q); r = lca(root.right, p, q)
+        if l and r: return root
+        return l if l else r
+    ns = rand_tree(9); stranger = Node(0)
+    say("s02", "LCA (source) with q absent from the tree returns p itself, not 'no answer'",
+        lca(ns[0], ns[5], stranger) is ns[5])
+
+    # --- s03: binary search trees ----------------------------------------
+    def bst_insert(root, v):
+        if not root: return Node(v)
+        cur = root
+        while True:
+            if v < cur.val:
+                if cur.left is None: cur.left = Node(v); return root
+                cur = cur.left
+            else:
+                if cur.right is None: cur.right = Node(v); return root
+                cur = cur.right
+    def depths(root):
+        out = []; st = [(root, 0)]
+        while st:
+            nd, d = st.pop()
+            if nd: out.append(d); st.append((nd.left, d+1)); st.append((nd.right, d+1))
+        return out
+    n = 1000
+    r = None
+    for v in range(n): r = bst_insert(r, v)
+    hs = max(depths(r))
+    Hn = sum(1/k for k in range(1, n+1))
+    avg_th = 2*(1+1/n)*Hn-4
+    avgs = []; heights = []
+    for _t in range(200):
+        vals = list(range(n)); rng.shuffle(vals); r = None
+        for v in vals: r = bst_insert(r, v)
+        d = depths(r); avgs.append(sum(d)/n); heights.append(max(d))
+    print()
+    say("s03", f"BST from sorted insertion, n=1000: height {hs} -- a linked list", hs == n-1)
+    say("s03", f"random insertion order: mean node depth {np.mean(avgs):.2f} (theory 2(1+1/n)H_n - 4 = {avg_th:.2f}); "
+        f"mean height {np.mean(heights):.1f}; log2 n = {math.log2(n):.2f}", abs(np.mean(avgs)-avg_th) < 0.1)
+    say("s03", f"  a random BST is about {np.mean(avgs)/math.log2(n):.2f} x as deep on average as a perfectly balanced one")
+    n31 = 31; H31 = sum(1/k for k in range(1, n31+1))
+    def build_mid(lo, hi, out):
+        if lo > hi: return
+        m = (lo+hi)//2; out.append(m); build_mid(lo, m-1, out); build_mid(m+1, hi, out)
+    order = []; build_mid(0, n31-1, order); r = None
+    for v in order: r = bst_insert(r, v)
+    say("s03", f"lab sizes, n=31: middle-first insertion height {max(depths(r))}, mean depth {sum(depths(r))/n31:.3f}; "
+        f"random-order theory mean depth {2*(1+1/n31)*H31-4:.3f}", max(depths(r)) == 4)
+    def is_valid_bst(nd, lo=float("-inf"), hi=float("inf")):
+        if not nd: return True
+        if nd.val <= lo or nd.val >= hi: return False
+        return is_valid_bst(nd.left, lo, nd.val) and is_valid_bst(nd.right, nd.val, hi)
+    t = bst_insert(bst_insert(None, 5), 5)
+    say("s03", "the source's insert puts a duplicate key in the right subtree; its own validator then rejects the tree",
+        t.right is not None and t.right.val == 5 and not is_valid_bst(t))
+    okv = True
+    for _t in range(300):
+        vals = rng.sample(range(100), rng.randint(0, 15)); r = None
+        for v in vals: r = bst_insert(r, v)
+        okv &= is_valid_bst(r)
+    say("s03", "  with distinct keys, every tree it builds validates (300 cases)", okv)
+
+    # --- s05: union-find ----------------------------------------------------
+    class UF:
+        def __init__(s, n, rank=True, compress=True):
+            s.p = list(range(n)); s.rk = [0]*n; s.c = n; s.rank = rank; s.comp = compress
+        def find(s, x):
+            root = x
+            while s.p[root] != root: root = s.p[root]
+            if s.comp:
+                while s.p[x] != root: s.p[x], x = root, s.p[x]
+            return root
+        def union(s, a, b):
+            ra, rb = s.find(a), s.find(b)
+            if ra == rb: return False
+            if s.rank:
+                if s.rk[ra] < s.rk[rb]: ra, rb = rb, ra
+                s.p[rb] = ra
+                if s.rk[ra] == s.rk[rb]: s.rk[ra] += 1
+            else:
+                s.p[ra] = rb
+            s.c -= 1; return True
+        def height(s):
+            best = 0
+            for x in range(len(s.p)):
+                h = 0
+                while s.p[x] != x: x = s.p[x]; h += 1
+                best = max(best, h)
+            return best
+    okc = True
+    for _t in range(300):
+        nn = rng.randint(1, 15); m = rng.randint(0, 25)
+        E = [(rng.randrange(nn), rng.randrange(nn)) for _i in range(m)]
+        E = [(a, b) for a, b in E if a != b]
+        u = UF(nn); red = sum(1 for a, b in E if not u.union(a, b))
+        okc &= red == len(E)-nn+u.c
+    print()
+    say("s05", "edges union-find reports as redundant == m - n + c (the cyclomatic number), 300 random graphs", okc)
+    n = 1 << 12
+    u = UF(n, rank=True, compress=False)
+    step = 1
+    while step < n:
+        for i in range(0, n, 2*step): u.union(i, i+step)
+        step *= 2
+    hr = u.height()
+    v = UF(n, rank=False, compress=False)
+    for i in range(1, n): v.union(i-1, i)
+    hv = v.height()
+    say("s05", f"no path compression, union by rank, worst merge order, n=4096: height {hr} = log2 n", hr == 12)
+    say("s05", f"no path compression AND no union by rank: height {hv} -- the O(n) the source warns about needs both",
+        hv == n-1)
+
+    # --- s06: Fenwick tree: prefix sums whose loads change ------------------
+    class Fen:
+        def __init__(s, n): s.n = n; s.t = [0]*(n+1); s.ops = 0
+        def update(s, i, d):
+            i += 1
+            while i <= s.n: s.t[i] += d; i += i & -i; s.ops += 1
+        def prefix(s, i):
+            i += 1; tot = 0
+            while i > 0: tot += s.t[i]; i -= i & -i; s.ops += 1
+            return tot
+        def rng_(s, l, r): return s.prefix(r)-(s.prefix(l-1) if l > 0 else 0)
+    n = 1000; f = Fen(n); arr = [0]*n; okf = True; maxops = 0
+    for _t in range(3000):
+        if rng.random() < 0.5:
+            i = rng.randrange(n); d = rng.randint(-9, 9); arr[i] += d
+            b = f.ops; f.update(i, d); maxops = max(maxops, f.ops-b)
+        else:
+            l = rng.randrange(n); r_ = rng.randrange(l, n)
+            b = f.ops; okf &= f.rng_(l, r_) == sum(arr[l:r_+1]); maxops = max(maxops, f.ops-b)
+    print()
+    say("s06", f"Fenwick tree == brute force on 3,000 random updates and range queries; never more than "
+        f"{maxops} steps per operation (2 log2 n = {2*math.log2(n):.1f})", okf and maxops <= 2*math.ceil(math.log2(n+1)))
+
+    nn6 = 10**6; nnz = 10*nn6
+    say("s07", f"FE mesh, 1e6 nodes x ~10 neighbours: full matrix {nn6**2:.0e} entries = {nn6**2*8/1e12:.0f} TB in float64; "
+        f"list {nnz:.0e} nonzeros = {nnz*12/1e6:.0f} MB with 4-byte indices", nn6**2*8/1e12 == 8 and nnz*12/1e6 == 120)
+    # --- s08: BFS -----------------------------------------------------------
+    def rand_graph(n, p):
+        g = {i: [] for i in range(n)}
+        for i in range(n):
+            for j in range(i+1, n):
+                if rng.random() < p: g[i].append(j); g[j].append(i)
+        return g
+    def bfs_enqueue(g, s):
+        dist = {s: 0}; q = deque([s]); pushes = 1
+        while q:
+            u = q.popleft()
+            for v in g[u]:
+                if v not in dist: dist[v] = dist[u]+1; q.append(v); pushes += 1
+        return dist, pushes
+    def bfs_dequeue(g, s):
+        dist = {}; q = deque([(s, 0)]); pushes = 1
+        while q:
+            u, d = q.popleft()
+            if u in dist: continue
+            dist[u] = d
+            for v in g[u]:
+                if v not in dist: q.append((v, d+1)); pushes += 1
+        return dist, pushes
+    def bfs_overwrite(g, s):
+        dist = {s: 0}; seen = set(); q = deque([s])
+        while q:
+            u = q.popleft()
+            if u in seen: continue
+            seen.add(u)
+            for v in g[u]:
+                if v not in seen: dist[v] = dist[u]+1; q.append(v)
+        return dist
+    okd = True; extra = []; wrong = 0
+    for _t in range(300):
+        g = rand_graph(rng.randint(2, 25), 0.25)
+        a, pa = bfs_enqueue(g, 0); b, pb = bfs_dequeue(g, 0)
+        okd &= a == b; extra.append(pb/pa)
+        wrong += bfs_overwrite(g, 0) != a
+    print()
+    say("s08", f"BFS marking visited on DEQUEUE (skipping repeats) gives the same distances in 300 graphs, "
+        f"with up to {max(extra):.1f}x the queue pushes", okd and max(extra) > 1.5)
+    say("s08", f"  wrong answers appear only if a later enqueue may overwrite a distance: {wrong} of 300 graphs",
+        wrong > 0)
+    # multi-source BFS distance is Manhattan (4-conn) or Chebyshev (8-conn)
+    R_ = 40
+    def grid_bfs(src, eight):
+        dist = {src: 0}; q = deque([src])
+        nb = [(1, 0), (-1, 0), (0, 1), (0, -1)] + ([(1, 1), (1, -1), (-1, 1), (-1, -1)] if eight else [])
+        while q:
+            x, y = q.popleft()
+            for dx, dy in nb:
+                w = (x+dx, y+dy)
+                if abs(w[0]) <= R_ and abs(w[1]) <= R_ and w not in dist: dist[w] = dist[(x, y)]+1; q.append(w)
+        return dist
+    d4 = grid_bfs((0, 0), False); d8 = grid_bfs((0, 0), True)
+    r4 = max(d4[(x, y)]/math.hypot(x, y) for x in range(-R_, R_+1) for y in range(-R_, R_+1) if (x, y) != (0, 0))
+    r8 = min(d8[(x, y)]/math.hypot(x, y) for x in range(-R_, R_+1) for y in range(-R_, R_+1) if (x, y) != (0, 0))
+    say("s08", f"grid BFS from one cell: 4-connected distance is |dx|+|dy|, up to {r4:.4f}x the true distance; "
+        f"8-connected is max(|dx|,|dy|), down to {r8:.4f}x", abs(r4-math.sqrt(2)) < 1e-9 and abs(r8-1/math.sqrt(2)) < 1e-9)
+    say("s08", "  so BFS 'offsets' are diamonds or squares, never the circles a pocketing toolpath needs")
+    def rot(grid):
+        g = [row[:] for row in grid]; R, C = len(g), len(g[0])
+        q = deque((r, c) for r in range(R) for c in range(C) if g[r][c] == 2)
+        fresh = sum(row.count(1) for row in g)
+        if fresh == 0: return 0
+        t = 0
+        while q and fresh:
+            t += 1
+            for _i in range(len(q)):
+                r, c = q.popleft()
+                for dr, dc in ((0, 1), (0, -1), (1, 0), (-1, 0)):
+                    nr, nc = r+dr, c+dc
+                    if 0 <= nr < R and 0 <= nc < C and g[nr][nc] == 1: g[nr][nc] = 2; fresh -= 1; q.append((nr, nc))
+        return t if fresh == 0 else -1
+    def rot_bf(grid):
+        R, C = len(grid), len(grid[0]); srcs = [(r, c) for r in range(R) for c in range(C) if grid[r][c] == 2]
+        best = 0
+        for r in range(R):
+            for c in range(C):
+                if grid[r][c] != 1: continue
+                dd = {(r, c): 0}; q = deque([(r, c)]); found = None
+                while q and found is None:
+                    x, y = q.popleft()
+                    for dx, dy in ((0, 1), (0, -1), (1, 0), (-1, 0)):
+                        nx, ny = x+dx, y+dy
+                        if 0 <= nx < R and 0 <= ny < C and grid[nx][ny] != 0 and (nx, ny) not in dd:
+                            dd[(nx, ny)] = dd[(x, y)]+1
+                            if grid[nx][ny] == 2: found = dd[(nx, ny)]; break
+                            q.append((nx, ny))
+                if found is None: return -1
+                best = max(best, found)
+        return best
+    okr = all(rot(gr) == rot_bf(gr) for gr in ([[rng.choice([0, 1, 1, 2]) for _c in range(rng.randint(1, 6))]
+                                                for _r in range(rng.randint(1, 6))] for _t in range(400))
+              if len(set(len(x) for x in gr)) == 1)
+    say("s08", "multi-source BFS (rotting oranges, source) == max over fresh cells of the nearest-source distance", okr)
+
+    # --- s09: DFS, and why cycle detection needs three states ---------------
+    def cyc3(n, adj):
+        st = [0]*n
+        def go(u):
+            if st[u] == 1: return True
+            if st[u] == 2: return False
+            st[u] = 1
+            if any(go(v) for v in adj[u]): return True
+            st[u] = 2; return False
+        return any(go(u) for u in range(n))
+    def cyc2(n, adj):
+        seen = [False]*n
+        def go(u):
+            if seen[u]: return True
+            seen[u] = True
+            return any(go(v) for v in adj[u])
+        return any(go(u) for u in range(n) if not seen[u])
+    def kahn(n, adj):
+        indeg = [0]*n
+        for u in range(n):
+            for v in adj[u]: indeg[v] += 1
+        q = deque(u for u in range(n) if indeg[u] == 0); order = []
+        while q:
+            u = q.popleft(); order.append(u)
+            for v in adj[u]:
+                indeg[v] -= 1
+                if indeg[v] == 0: q.append(v)
+        return order
+    ok3 = True
+    for _t in range(500):
+        n = rng.randint(1, 9); adj = [[v for v in range(n) if v != u and rng.random() < 0.22] for u in range(n)]
+        ok3 &= cyc3(n, adj) == (len(kahn(n, adj)) < n)
+    diamond = [[1, 2], [3], [3], []]
+    print()
+    say("s09", "three-state DFS cycle test == Kahn's leftover test on 500 random directed graphs", ok3)
+    say("s09", "a two-state 'seen before means cycle' test calls the acyclic diamond A->B, A->C, B->D, C->D cyclic",
+        cyc2(4, diamond) and not cyc3(4, diamond))
+
+    # --- s10: Fulkerson's rule IS Kahn's algorithm; the method of joints ---
+    def fulkerson(n, adj):
+        # number the initial events; delete their arrows; number the new initial events; repeat
+        alive = set(range(n)); indeg = [0]*n; waves = []
+        for u in range(n):
+            for v in adj[u]: indeg[v] += 1
+        while alive:
+            wave = sorted(u for u in alive if indeg[u] == 0)
+            if not wave: return waves, False
+            waves.append(wave)
+            for u in wave:
+                alive.discard(u)
+                for v in adj[u]: indeg[v] -= 1
+        return waves, True
+    def longest_arrows(n, adj):
+        order = kahn(n, adj); L = [0]*n
+        for u in order:
+            for v in adj[u]: L[v] = max(L[v], L[u]+1)
+        return L
+    okF = True; okW = True
+    for _t in range(500):
+        n = rng.randint(1, 12)
+        acyclic = rng.random() < 0.7
+        adj = [[v for v in range(n) if (v > u if acyclic else v != u) and rng.random() < 0.25] for u in range(n)]
+        waves, done = fulkerson(n, adj)
+        ko = kahn(n, adj)
+        okF &= done == (len(ko) == n)
+        if done:
+            pos = {u: i for i, u in enumerate(u for w in waves for u in w)}
+            okF &= all(pos[u] < pos[v] for u in range(n) for v in adj[u])
+            L = longest_arrows(n, adj)
+            okW &= all(L[u] == k for k, w in enumerate(waves) for u in w)
+    print()
+    say("s10", "Fulkerson's numbering rule == Kahn's algorithm: same verdict on loops, and a valid event order, "
+        "500 random networks", okF)
+    say("s10", "  the wave in which Fulkerson numbers an event == the most arrows on any path into it", okW)
+    # method of joints as a topological sort
+    def truss_solve(joints, members, supports, loads):
+        j = len(joints); m = len(members)
+        unk = [("m", k) for k in range(m)] + [("r", s) for s in supports]
+        A = np.zeros((2*j, len(unk))); b = np.zeros(2*j)
+        for k, (a_, c_) in enumerate(members):
+            dx, dy = np.subtract(joints[c_], joints[a_]); L = math.hypot(dx, dy); ux, uy = dx/L, dy/L
+            A[2*a_, k] += ux; A[2*a_+1, k] += uy; A[2*c_, k] -= ux; A[2*c_+1, k] -= uy
+        for q_, (jn, ax) in enumerate(supports):
+            A[2*jn+ax, m+q_] += 1
+        for jn, (fx, fy) in loads.items():
+            b[2*jn] -= fx; b[2*jn+1] -= fy
+        return A, b, unk
+    def by_joints(joints, members, supports, loads, reactions_known):
+        A, b, unk = truss_solve(joints, members, supports, loads)
+        x_full = np.linalg.solve(A, b)
+        known = {}
+        if reactions_known:
+            for q_ in range(len(supports)): known[len(members)+q_] = x_full[len(members)+q_]
+        j = len(joints); solved_joints = []; progress = True
+        while progress:
+            progress = False
+            for jn in range(j):
+                if jn in solved_joints: continue
+                cols = [k for k in range(A.shape[1]) if (abs(A[2*jn, k]) > 1e-12 or abs(A[2*jn+1, k]) > 1e-12) and k not in known]
+                if len(cols) <= 2:
+                    rows = A[2*jn:2*jn+2]; rhs = b[2*jn:2*jn+2] - sum(rows[:, k]*known[k] for k in known)
+                    if cols:
+                        sol = np.linalg.lstsq(rows[:, cols], rhs, rcond=None)[0]
+                        for k, v_ in zip(cols, sol): known[k] = v_
+                    solved_joints.append(jn); progress = True
+        left = A.shape[1]-len(known)
+        err = max((abs(known[k]-x_full[k]) for k in known), default=0.0)
+        return solved_joints, left, err, x_full
+    # simple Warren truss: bottom joints 0..p, top joints between; pin at 0, roller at last bottom joint
+    def warren(p):
+        joints = [(2.0*i, 0.0) for i in range(p+1)] + [(2.0*i+1, 1.7) for i in range(p)]
+        members = [(i, i+1) for i in range(p)] + [(p+1+i, p+2+i) for i in range(p-1)]
+        for i in range(p): members += [(i, p+1+i), (p+1+i, i+1)]
+        supports = [(0, 0), (0, 1), (p, 1)]
+        loads = {p+1+i: (0.0, -10.0) for i in range(p)}
+        return joints, members, supports, loads
+    okw = True
+    for p in (2, 3, 5, 8):
+        J, M, S, Ld = warren(p)
+        assert len(M)+3 == 2*len(J)
+        order, left, err, _x = by_joints(J, M, S, Ld, True)
+        okw &= left == 0 and err < 1e-9
+    say("s10", "method of joints on Warren trusses of 2, 3, 5, 8 panels: a joint with <= 2 unknowns is always "
+        "available, and the forces match the full matrix solve to 1e-9", okw)
+    # complex truss: triangle inside a triangle, three connectors -- every joint has three members
+    Jc = [(0.0, 0.0), (6.0, 0.0), (3.0, 5.2), (2.2, 1.2), (3.9, 1.5), (2.9, 3.0)]
+    Mc = [(0, 1), (1, 2), (2, 0), (3, 4), (4, 5), (5, 3), (0, 3), (1, 4), (2, 5)]
+    Sc = [(0, 0), (0, 1), (1, 1)]; Lc = {5: (0.0, -10.0)}
+    Ac, bc, _u = truss_solve(Jc, Mc, Sc, Lc)
+    order, left, err, xc = by_joints(Jc, Mc, Sc, Lc, True)
+    say("s10", f"compound truss (triangle joined to a triangle by three bars; 6 joints, 9 members, m = 2j - 3): "
+        f"determinate, matrix rank {np.linalg.matrix_rank(Ac)} of 12; "
+        f"after the reactions, every joint has 3 unknown members, so joint-by-joint stalls at once with "
+        f"all {left} member forces still unknown", np.linalg.matrix_rank(Ac) == 12 and left == 9 and len(order) == 0)
+    say("s10", "  m = 2j - 3 does not make a truss simple: the counting rule is necessary, not sufficient")
+    inner_rows = [6, 7, 8, 9, 10, 11]; inner_cols = [3, 4, 5, 6, 7, 8]
+    blk = Ac[np.ix_(inner_rows, inner_cols)]
+    xb = np.linalg.solve(blk, bc[inner_rows])
+    known = {k: v for k, v in zip(inner_cols, xb)}
+    for q_ in range(3): known[9+q_] = xc[9+q_]
+    rest_ok = True
+    for jn in (0, 1, 2):
+        cols = [k for k in range(12) if (abs(Ac[2*jn, k]) > 1e-12 or abs(Ac[2*jn+1, k]) > 1e-12) and k not in known]
+        rest_ok &= len(cols) <= 2
+        rhs2 = bc[2*jn:2*jn+2]-sum(Ac[2*jn:2*jn+2, k]*known[k] for k in known)
+        for k, v_ in zip(cols, np.linalg.lstsq(Ac[2*jn:2*jn+2][:, cols], rhs2, rcond=None)[0]): known[k] = v_
+    say("s10", f"  the block that must be solved together: the 6 equations at the three inner joints, in the 6 forces of the "
+        f"inner triangle and the connecting bars (rank {np.linalg.matrix_rank(blk)}); after it, each outer joint has 2 "
+        f"unknowns and the rest goes joint by joint, matching the full solve to "
+        f"{max(abs(known[k]-xc[k]) for k in range(9)):.1e}", np.linalg.matrix_rank(blk) == 6 and rest_ok and
+        max(abs(known[k]-xc[k]) for k in range(9)) < 1e-9)
+
+    J4, M4, S4, L4 = warren(4)
+    A4, b4, _u4 = truss_solve(J4, M4, S4, L4); x4 = np.linalg.solve(A4, b4)
+    Aob = Ac[np.ix_([0, 1, 2, 3, 4, 5], [0, 1, 2, 6, 7, 8])]
+    rhs_ob = bc[[0, 1, 2, 3, 4, 5]] - Ac[np.ix_([0, 1, 2, 3, 4, 5], [9, 10, 11])] @ xc[9:]
+    xob = np.linalg.solve(Aob, rhs_ob)
+    say("s10", f"  the outer triangle's three joints form an equally valid block (rank {np.linalg.matrix_rank(Aob)}, "
+        f"same forces to {max(abs(xob - xc[[0,1,2,6,7,8]])):.1e})", np.linalg.matrix_rank(Aob) == 6 and
+        max(abs(xob - xc[[0, 1, 2, 6, 7, 8]])) < 1e-9)
+    say("s10", "lab Warren truss (4 panels, 10 kN at each top joint): member forces " +
+        " ".join(f"{v:+.2f}" for v in x4[:len(M4)]) + f"; reactions {x4[len(M4):].round(2).tolist()}")
+    say("s10", "lab compound truss (10 kN at the top inner joint): member forces " + " ".join(f"{v:+.2f}" for v in xc[:9])
+        + f"; reactions {xc[9:].round(3).tolist()}", all(abs(v) > 0.05 for v in xc[:9]))
+    # --- s11: shortest paths; what the source's Dijkstra really does ------------
+    def dijkstra(g, s, stale_check=True):
+        dist = {u: float("inf") for u in g}; dist[s] = 0; h = [(0, s)]; pops = scans = 0
+        while h:
+            d, u = heapq.heappop(h); pops += 1
+            if stale_check and d > dist[u]: continue
+            for v, w in g[u]:
+                scans += 1
+                if d+w < dist[v]: dist[v] = d+w; heapq.heappush(h, (d+w, v))
+            if pops > 200000: return None, pops, scans
+        return dist, pops, scans
+    def bellman(g, s):
+        dist = {u: float("inf") for u in g}; dist[s] = 0
+        for _i in range(len(g)):
+            for u in g:
+                for v, w in g[u]:
+                    if dist[u]+w < dist[v]: dist[v] = dist[u]+w
+        return dist
+    def textbook(g, s):
+        dist = {u: float("inf") for u in g}; dist[s] = 0; done = set(); h = [(0, s)]
+        while h:
+            d, u = heapq.heappop(h)
+            if u in done: continue
+            done.add(u)
+            for v, w in g[u]:
+                if v not in done and d+w < dist[v]: dist[v] = d+w; heapq.heappush(h, (d+w, v))
+        return dist
+    okd = True; okns = True; okneg = True
+    for _t in range(300):
+        n = rng.randint(2, 12)
+        g = {u: [(v, rng.randint(1, 20)) for v in range(n) if v != u and rng.random() < 0.3] for u in range(n)}
+        a, _p, _s = dijkstra(g, 0); b = bellman(g, 0); c, _p2, _s2 = dijkstra(g, 0, False)
+        okd &= a == b; okns &= c == b
+        pot = [rng.randint(0, 30) for _i in range(n)]
+        gn = {u: [(v, w+pot[u]-pot[v]) for v, w in g[u]] for u in g}
+        an, _p3, _s3 = dijkstra(gn, 0); bn = bellman(gn, 0)
+        okneg &= an == bn
+    print()
+    say("s11", "the source's Dijkstra == Bellman-Ford on 300 random non-negative graphs; without the stale-entry "
+        "check it still gives identical distances", okd and okns)
+    gh = {0: [], 99: []}
+    k_ = 40; m_ = 40
+    for i in range(1, k_+1):
+        gh[0].append((i, i)); gh[i] = [(99, 2*(k_-i)+1)]
+    gh[99] = [(200+j, 1) for j in range(m_)]
+    for j in range(m_): gh[200+j] = []
+    _a, p1, s1 = dijkstra(gh, 0, True); _b, p2, s2 = dijkstra(gh, 0, False)
+    say("s11", f"  a hub reached by 40 ever-shorter routes: {s1} edge scans with the check, {s2} without",
+        s2 > 10*s1 and _a == _b)
+    g0 = {"A": [("B", 2), ("C", 3)], "C": [("B", -2)], "B": []}
+    say("s11", f"negative edge A->C->B: textbook Dijkstra (finalise on pop) says B = {textbook(g0,'A')['B']}, "
+        f"true {bellman(g0,'A')['B']}; the source's code says {dijkstra(g0,'A')[0]['B']}",
+        textbook(g0, "A")["B"] == 2 and bellman(g0, "A")["B"] == 1 and dijkstra(g0, "A")[0]["B"] == 1)
+    say("s11", "  the printed code re-pushes improved nodes, so on 300 graphs with negative edges and no negative "
+        "cycle it matched Bellman-Ford every time", okneg)
+    gcyc = {"A": [("B", 1)], "B": [("C", -3)], "C": [("B", 1)]}
+    say("s11", "  with a negative cycle it never stops (cut off after 200,000 pops)", dijkstra(gcyc, "A")[0] is None)
+    # the pipe network: flow is a Laplacian solve, not a shortest path
+    pipes = [(0, 1, 2.0), (0, 2, 3.0), (1, 2, 1.5), (1, 3, 4.0), (2, 3, 2.0), (2, 4, 5.0), (3, 5, 1.0), (4, 5, 1.0)]
+    N = 6; Lp = np.zeros((N, N))
+    for a_, b_, R in pipes:
+        c = 1/R; Lp[a_, a_] += c; Lp[b_, b_] += c; Lp[a_, b_] -= c; Lp[b_, a_] -= c
+    rhs = np.zeros(N); rhs[0] = 1.0
+    keep = [i for i in range(N) if i != 5]
+    h_ = np.zeros(N); h_[keep] = np.linalg.solve(Lp[np.ix_(keep, keep)], rhs[keep])
+    Reff = h_[0]-h_[5]
+    gp = defaultdict(list)
+    for a_, b_, R in pipes: gp[a_].append((b_, R)); gp[b_].append((a_, R))
+    dsp = dijkstra(dict(gp), 0)[0][5]
+    routes = []
+    def allpaths(u, seen, acc, path):
+        if u == 5: routes.append((acc, path)); return
+        for v, R in gp[u]:
+            if v not in seen: allpaths(v, seen | {v}, acc+R, path+[v])
+    allpaths(0, {0}, 0.0, [0]); routes.sort()
+    say("s11", f"  simple routes from inlet to outlet, by total resistance: " +
+        "; ".join(f"{'-'.join(map(str,pth))} {r:.1f}" for r, pth in routes[:4]) + " ...",
+        routes[0][0] == dsp and routes[1][0] > routes[0][0])
+    flows = {(a_, b_): (h_[a_]-h_[b_])/R for a_, b_, R in pipes}
+    used = sum(1 for q in flows.values() if abs(q) > 1e-9)
+    say("s11", f"pipe network, laminar (head loss = R Q): least-resistance route {dsp:.2f}, but the network's "
+        f"effective resistance is {Reff:.3f}; flow runs in {used} of {len(pipes)} pipes, not just the shortest route",
+        Reff < dsp and used >= 7)
+    say("s11", f"  more water enters pipe 0-1 ({flows[(0,1)]:.3f}), which is NOT on the least-resistance route, than pipe "
+        f"0-2 ({flows[(0,2)]:.3f}), which is", flows[(0, 1)] > flows[(0, 2)] and routes[0][1][:2] == [0, 2])
+    say("s11", "  laminar flows per pipe: " + ", ".join(f"{a_}-{b_}: {q:+.3f}" for (a_, b_), q in flows.items()))
+    from scipy.optimize import fsolve
+    def turb_res(hk):
+        hh = np.zeros(N); hh[keep] = hk; res = -rhs[keep].copy()
+        for a_, b_, R in pipes:
+            dh = hh[a_]-hh[b_]; q = math.copysign(math.sqrt(abs(dh)/R), dh)
+            if a_ in keep: res[keep.index(a_)] += q
+            if b_ in keep: res[keep.index(b_)] -= q
+        return res
+    ht = np.zeros(N); ht[keep] = fsolve(turb_res, h_[keep]*2, xtol=1e-13)
+    tflows = {(a_, b_): math.copysign(math.sqrt(abs(ht[a_]-ht[b_])/R), ht[a_]-ht[b_]) for a_, b_, R in pipes}
+    say("s11", "  turbulent (head loss = R Q^2), same pipes: flows " + ", ".join(f"{q:+.3f}" for q in tflows.values()) +
+        f"; still {sum(1 for q in tflows.values() if abs(q) > 1e-9)} of 8 pipes carry flow",
+        max(abs(x) for x in turb_res(ht[keep])) < 1e-9)
+    say("s11", f"  turbulent head drop inlet to outlet for unit flow: {ht[0]-ht[5]:.3f} (the best single route alone: "
+        f"{sum(R for a_, b_, R in pipes if (a_, b_) in ((0, 2), (2, 3), (3, 5))):.1f})")
+    def best_route(r23):
+        g2 = defaultdict(list)
+        for a_, b_, R in pipes:
+            RR = r23 if (a_, b_) == (2, 3) else R
+            g2[a_].append((b_, RR)); g2[b_].append((a_, RR))
+        return dijkstra(dict(g2), 0)[0][5]
+    sw = [r/100 for r in range(50, 1001) if best_route(r/100) < 7-1e-9]
+    say("s11", f"  vary pipe 2-3: the best route is 4 + R(2-3) until R(2-3) = {max(sw):.2f}, then jumps to 0-1-3-5 at 7.0",
+        abs(max(sw)-2.99) < 0.011 and abs(best_route(3.5)-7.0) < 1e-9)
+    kcl = max(abs(sum((q if a_ == i else -q) for (a_, b_), q in flows.items() if i in (a_, b_))-rhs[i]) for i in keep)
+    say("s11", f"  continuity holds at every junction to {kcl:.1e}: water solves Sheet 12's Laplacian, it does not "
+        f"run Dijkstra", kcl < 1e-12)
+    # 2-D rain water = Dijkstra with max in place of +
+    def spill(G):
+        R, C = len(G), len(G[0]); dist = {}; h = []
+        for i in range(R):
+            for j in range(C):
+                if i in (0, R-1) or j in (0, C-1): heapq.heappush(h, (G[i][j], i, j))
+        while h:
+            d, i, j = heapq.heappop(h)
+            if (i, j) in dist: continue
+            dist[(i, j)] = d
+            for di, dj in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                a_, b_ = i+di, j+dj
+                if 0 <= a_ < R and 0 <= b_ < C and (a_, b_) not in dist:
+                    heapq.heappush(h, (max(d, G[a_][b_]), a_, b_))
+        return dist
+    def relax(G):
+        R, C = len(G), len(G[0])
+        lev = [[G[i][j] if i in (0, R-1) or j in (0, C-1) else 10**9 for j in range(C)] for i in range(R)]
+        ch = True
+        while ch:
+            ch = False
+            for i in range(1, R-1):
+                for j in range(1, C-1):
+                    v = max(G[i][j], min(lev[i+1][j], lev[i-1][j], lev[i][j+1], lev[i][j-1]))
+                    if v < lev[i][j]: lev[i][j] = v; ch = True
+        return lev
+    okm = True
+    for _t in range(150):
+        R, C = rng.randint(3, 8), rng.randint(3, 8); G = [[rng.randint(0, 9) for _j in range(C)] for _i in range(R)]
+        sp = spill(G); rl = relax(G)
+        okm &= all(sp[(i, j)] == rl[i][j] for i in range(R) for j in range(C))
+    say("s11", "part 1's 2-D spill level == Dijkstra with max(d, h) in place of d + w, 150 grids", okm)
+
+    # --- s12: strongly connected components ---------------------------------
+    def kosaraju(n, adj):
+        seen = [False]*n; order = []
+        for s in range(n):
+            if seen[s]: continue
+            st = [(s, iter(adj[s]))]; seen[s] = True
+            while st:
+                u, it = st[-1]
+                nxt = next(it, None)
+                if nxt is None: order.append(u); st.pop()
+                elif not seen[nxt]: seen[nxt] = True; st.append((nxt, iter(adj[nxt])))
+        radj = [[] for _i in range(n)]
+        for u in range(n):
+            for v in adj[u]: radj[v].append(u)
+        comp = [-1]*n; c = 0
+        for s in reversed(order):
+            if comp[s] != -1: continue
+            st = [s]; comp[s] = c
+            while st:
+                u = st.pop()
+                for v in radj[u]:
+                    if comp[v] == -1: comp[v] = c; st.append(v)
+            c += 1
+        return comp
+    def reach(n, adj):
+        Rm = [[False]*n for _i in range(n)]
+        for s in range(n):
+            st = [s]; Rm[s][s] = True
+            while st:
+                u = st.pop()
+                for v in adj[u]:
+                    if not Rm[s][v]: Rm[s][v] = True; st.append(v)
+        return Rm
+    okk = True
+    for _t in range(300):
+        n = rng.randint(1, 12); adj = [[v for v in range(n) if v != u and rng.random() < 0.2] for u in range(n)]
+        comp = kosaraju(n, adj); Rm = reach(n, adj)
+        okk &= all((comp[u] == comp[v]) == (Rm[u][v] and Rm[v][u]) for u in range(n) for v in range(n))
+    print()
+    say("s12", "Kosaraju's components == pairs that reach each other, 300 random directed graphs", okk)
+    okb = True
+    for _t in range(100):
+        n = rng.randint(3, 12); A = np.zeros((n, n))
+        for i in range(n):
+            A[i, i] = rng.uniform(2, 5)
+            for j in range(n):
+                if i != j and rng.random() < 0.15: A[i, j] = rng.uniform(-1, 1)
+        b = np.array([rng.uniform(-5, 5) for _i in range(n)])
+        adj = [[j for j in range(n) if j != i and A[i, j] != 0] for i in range(n)]
+        comp = kosaraju(n, adj); nc = max(comp)+1
+        cadj = [set() for _i in range(nc)]
+        for i in range(n):
+            for j in adj[i]:
+                if comp[i] != comp[j]: cadj[comp[i]].add(comp[j])
+        # solve blocks so that everything a block depends on is already known
+        x = np.zeros(n); done = set(); order_ = []
+        while len(done) < nc:
+            for c_ in range(nc):
+                if c_ not in done and cadj[c_] <= done: order_.append(c_); done.add(c_)
+        for c_ in order_:
+            idx = [i for i in range(n) if comp[i] == c_]; oth = [j for j in range(n) if comp[j] != c_]
+            x[idx] = np.linalg.solve(A[np.ix_(idx, idx)], b[idx]-A[np.ix_(idx, oth)] @ x[oth])
+        okb &= np.allclose(x, np.linalg.solve(A, b))
+    say("s12", "solving a sparse system one strongly connected block at a time, in dependency order, == solving it "
+        "whole (100 systems)", okb)
+
+    # --- s13: sorting and its lower bound -----------------------------------
+    cnt = [0]
+    def msort(a, lt=False):
+        if len(a) <= 1: return a
+        m = len(a)//2; L = msort(a[:m], lt); R = msort(a[m:], lt); out = []; i = j = 0
+        while i < len(L) and j < len(R):
+            cnt[0] += 1
+            if (L[i][0] < R[j][0]) if lt else (L[i][0] <= R[j][0]): out.append(L[i]); i += 1
+            else: out.append(R[j]); j += 1
+        return out+L[i:]+R[j:]
+    rows = []
+    for n in (10, 100, 1000):
+        lb = math.ceil(sum(math.log2(k) for k in range(2, n+1)))
+        ms = []
+        for _t in range(20):
+            a = [(rng.random(), i) for i in range(n)]; cnt[0] = 0; msort(a); ms.append(cnt[0])
+        worst = n*math.ceil(math.log2(n)) - 2**math.ceil(math.log2(n)) + 1
+        rows.append((n, lb, np.mean(ms), worst))
+    print()
+    for n, lb, avg, worst in rows:
+        say("s13", f"n={n:>5}: lower bound ceil(log2 n!) = {lb:,}; merge sort averages {avg:,.0f}, worst case {worst:,}")
+    say("s13", "  merge sort is within about 0.3n comparisons of the bound that no comparison sort can beat",
+        all(avg >= lb and avg-lb < 0.3*n for n, lb, avg, _w in rows))
+    # binary insertion: comparisons near the bound, moves quadratic
+    n = 1000; a = list(range(n)); rng.shuffle(a); out = []; comps = moves = 0
+    for x in a:
+        lo, hi = 0, len(out)
+        while lo < hi:
+            comps += 1; mid = (lo+hi)//2
+            if out[mid] < x: lo = mid+1
+            else: hi = mid
+        moves += len(out)-lo; out.insert(lo, x)
+    lb1000 = rows[-1][1]
+    say("s13", f"binary insertion sort, n=1000: {comps:,} comparisons (bound {lb1000:,}) but {moves:,} element moves",
+        comps < lb1000*1.02 and moves > n*n/5)
+    say("s13", "  the bound counts comparisons only; an algorithm can meet it and still be O(n^2)")
+    keys = [(rng.randint(0, 5), i) for i in range(200)]
+    s_le = msort(list(keys)); s_lt = msort(list(keys), True)
+    stable = lambda s: all(s[i][0] < s[i+1][0] or s[i][1] < s[i+1][1] for i in range(len(s)-1))
+    say("s13", "merge with <= keeps equal keys in input order; with < it does not", stable(s_le) and not stable(s_lt))
+
+    # --- s14: quicksort built properly ---------------------------------------
+    def qsort_count(a, pivot="last", scheme="lomuto"):
+        a = list(a); comps = [0]; st = [(0, len(a)-1)]; r = random.Random(7)
+        while st:
+            lo, hi = st.pop()
+            if lo >= hi: continue
+            if pivot == "random":
+                k = r.randint(lo, hi); a[k], a[hi] = a[hi], a[k]
+            elif pivot == "median3":
+                mid = (lo+hi)//2; trio = sorted([(a[lo], lo), (a[mid], mid), (a[hi], hi)])
+                k = trio[1][1]; a[k], a[hi] = a[hi], a[k]
+            p = a[hi]
+            if scheme == "lomuto":
+                i = lo
+                for j in range(lo, hi):
+                    comps[0] += 1
+                    if a[j] < p: a[i], a[j] = a[j], a[i]; i += 1
+                a[i], a[hi] = a[hi], a[i]
+                st.append((lo, i-1)); st.append((i+1, hi))
+            else:   # three-way (Dutch national flag)
+                lt, i, gt = lo, lo, hi
+                while i <= gt:
+                    comps[0] += 1
+                    if a[i] < p: a[lt], a[i] = a[i], a[lt]; lt += 1; i += 1
+                    elif a[i] > p: a[i], a[gt] = a[gt], a[i]; gt -= 1
+                    else: i += 1
+                st.append((lo, lt-1)); st.append((gt+1, hi))
+        assert a == sorted(a)
+        return comps[0]
+    n = 2000
+    inputs = {"random": rng.sample(range(n), n), "sorted": list(range(n)), "all equal": [7]*n,
+              "two values": [rng.randint(0, 1) for _i in range(n)]}
+    res = {(k, pv, sc): qsort_count(v, pv, sc) for k, v in inputs.items()
+           for pv, sc in (("last", "lomuto"), ("random", "lomuto"), ("median3", "lomuto"), ("random", "3way"))}
+    print()
+    nlogn = n*math.log2(n); quad = n*(n-1)/2
+    for k in inputs:
+        say("s14", f"{k:>10}: last {res[(k,'last','lomuto')]:>9,}  random {res[(k,'random','lomuto')]:>9,}  "
+            f"median-of-3 {res[(k,'median3','lomuto')]:>9,}  | 3-way + random {res[(k,'random','3way')]:>7,}")
+    say("s14", f"  (n log2 n = {nlogn:,.0f}; n(n-1)/2 = {quad:,.0f})")
+    say("s14", "  sorted input: random pivot and median-of-three both fix the last-element disaster",
+        res[("sorted", "random", "lomuto")] < 2*nlogn and res[("sorted", "median3", "lomuto")] < 2*nlogn
+        and res[("sorted", "last", "lomuto")] == quad)
+    say("s14", "  all-equal keys: NO pivot rule helps the source's Lomuto partition -- exactly n(n-1)/2 every time",
+        all(res[("all equal", pv, "lomuto")] == quad for pv in ("last", "random", "median3")))
+    say("s14", f"  a three-way partition sorts the same all-equal input with {res[('all equal','random','3way')]:,} "
+        f"comparisons", res[("all equal", "random", "3way")] == n)
+    say("s14", "  two distinct values: Lomuto with a random pivot is still quadratic in the long run of equal keys",
+        res[("two values", "random", "lomuto")] > quad/4)
+
+    # --- s15: binary search ------------------------------------------------------
+    def bsearch(a, t):
+        lo, hi = 0, len(a)-1; steps = 0
+        while lo <= hi:
+            steps += 1; mid = lo+(hi-lo)//2
+            if a[mid] == t: return mid, steps
+            if a[mid] < t: lo = mid+1
+            else: hi = mid-1
+        return -1, steps
+    def lower_bound(a, t):
+        lo, hi = 0, len(a)
+        while lo < hi:
+            mid = (lo+hi)//2
+            if a[mid] < t: lo = mid+1
+            else: hi = mid
+        return lo
+    okb = True; worst = 0
+    for _t in range(2000):
+        a = sorted(rng.sample(range(500), rng.randint(0, 60))); t = rng.randint(-5, 505)
+        i, st = bsearch(a, t); worst = max(worst, st-math.ceil(math.log2(len(a)+1)) if a else 0)
+        okb &= (i == -1 and t not in a) or (i >= 0 and a[i] == t)
+        okb &= lower_bound(a, t) == bisect.bisect_left(a, t)
+    print()
+    say("s15", "binary search and lower_bound (source) == Python's bisect, 2,000 cases; never more than "
+        "ceil(log2(n+1)) probes", okb and worst <= 0)
+    big = np.array([2**30+5, 2**30+9], dtype=np.int32)
+    with np.errstate(over="ignore"):
+        wrapped = int((big[0]+big[1]))
+    say("s15", f"why lo + (hi-lo)//2: in 32-bit integers (2^30+5) + (2^30+9) wraps to {wrapped:,}", wrapped < 0)
+    def search_rot(nums, t, le=True):
+        lo, hi = 0, len(nums)-1
+        while lo <= hi:
+            mid = (lo+hi)//2
+            if nums[mid] == t: return mid
+            if (nums[lo] <= nums[mid]) if le else (nums[lo] < nums[mid]):
+                if nums[lo] <= t < nums[mid]: hi = mid-1
+                else: lo = mid+1
+            else:
+                if nums[mid] < t <= nums[hi]: lo = mid+1
+                else: hi = mid-1
+        return -1
+    okr = True; badlt = 0
+    for _t in range(3000):
+        base = sorted(rng.sample(range(100), rng.randint(1, 12))); k = rng.randrange(len(base))
+        nums = base[k:]+base[:k]; t = rng.choice(nums+[101, -1])
+        exp = nums.index(t) if t in nums else -1
+        okr &= search_rot(nums, t) == exp
+        badlt += search_rot(nums, t, False) != exp
+    say("s15", f"search in a rotated array (source) is right on 3,000 cases; with < instead of <= it fails {badlt} times",
+        okr and badlt > 0)
+    def median2(a, b):
+        if len(a) > len(b): a, b = b, a
+        m, n = len(a), len(b); lo, hi = 0, m; half = (m+n+1)//2
+        while lo <= hi:
+            i = (lo+hi)//2; j = half-i
+            l1 = a[i-1] if i > 0 else float("-inf"); r1 = a[i] if i < m else float("inf")
+            l2 = b[j-1] if j > 0 else float("-inf"); r2 = b[j] if j < n else float("inf")
+            if l1 <= r2 and l2 <= r1:
+                return max(l1, l2) if (m+n) % 2 else (max(l1, l2)+min(r1, r2))/2
+            if l1 > r2: hi = i-1
+            else: lo = i+1
+    okm = all(median2(sorted(x), sorted(y)) == float(np.median(x+y))
+              for x, y in (([rng.randint(0, 50) for _i in range(rng.randint(0, 9))],
+                            [rng.randint(0, 50) for _i in range(rng.randint(1, 9))]) for _t in range(2000)))
+    say("s15", "median of two sorted arrays (source) == numpy median of the merged list, 2,000 cases", okm)
+
+    # --- s16: binary search on the answer IS serial line balancing -----------
+    def ship(weights, days):
+        lo, hi = max(weights), sum(weights)
+        while lo < hi:
+            mid = (lo+hi)//2; load = 0; d = 1
+            for w in weights:
+                if load+w > mid: d += 1; load = 0
+                load += w
+            if d <= days: hi = mid
+            else: lo = mid+1
+        return lo
+    def ship_bf(weights, days):
+        n = len(weights); best = float("inf")
+        for k in range(0, min(days, n)):
+            for cuts in itertools.combinations(range(1, n), k):
+                b = (0,)+cuts+(n,)
+                best = min(best, max(sum(weights[b[i]:b[i+1]]) for i in range(len(b)-1)))
+        return best
+    oks = all(ship(w, d) == ship_bf(w, d) for w, d in
+              (([rng.randint(1, 9) for _i in range(rng.randint(1, 9))], rng.randint(1, 5)) for _t in range(400)))
+    def greedy_stations(tasks, C):
+        st = 1; load = 0
+        for t in tasks:
+            if load+t > C: st += 1; load = 0
+            load += t
+        return st
+    def min_stations_chain(tasks, C):
+        n = len(tasks); best = n
+        for k in range(n):
+            for cuts in itertools.combinations(range(1, n), k):
+                b = (0,)+cuts+(n,)
+                if all(sum(tasks[b[i]:b[i+1]]) <= C for i in range(len(b)-1)): best = min(best, k+1)
+        return best
+    okg = all(greedy_stations(t, C) == min_stations_chain(t, C) for t, C in
+              (([rng.randint(1, 9) for _i in range(rng.randint(1, 9))], rng.randint(9, 20)) for _t in range(400)))
+    print()
+    say("s16", "ship-within-days (source) == brute force over every way to cut the sequence, 400 cases", oks)
+    say("s16", "  it is type-II line balancing with a serial precedence chain: the least cycle time for d stations")
+    say("s16", "filling stations in order until the next task does not fit == the fewest stations, for a chain "
+        "(400 cases) -- the linear-time case Sheet 13 part 1 s09 promised", okg)
+
+    # --- s17: greedy, and when it is right ---------------------------------------
+    def johnson(jobs):
+        a = sorted([j for j in jobs if j[0] <= j[1]], key=lambda j: j[0])
+        b = sorted([j for j in jobs if j[0] > j[1]], key=lambda j: -j[1])
+        return a+b
+    def makespan(seq):
+        t1 = t2 = 0
+        for p1, p2 in seq: t1 += p1; t2 = max(t2, t1)+p2
+        return t2
+    okj = True
+    for _t in range(300):
+        jobs = [(rng.randint(1, 9), rng.randint(1, 9)) for _i in range(rng.randint(1, 7))]
+        okj &= makespan(johnson(jobs)) == min(makespan(p) for p in itertools.permutations(jobs))
+    print()
+    say("s17", "Johnson's rule (two-machine flow shop) == the best of every sequence, 300 random shops", okj)
+    def greedy_coins(coins, amt):
+        c = 0
+        for x in sorted(coins, reverse=True): c += amt//x; amt %= x
+        return c
+    def dp_coins(coins, amt):
+        dp = [0]+[10**9]*amt
+        for a in range(1, amt+1):
+            for x in coins:
+                if x <= a: dp[a] = min(dp[a], dp[a-x]+1)
+        return dp
+    inr = [1, 2, 5, 10, 20, 50, 100, 200, 500]
+    dpi = dp_coins(inr, 5000)
+    say("s17", "greedy change in rupees {1,2,5,10,20,50,100,200,500} is optimal for every amount up to 5,000",
+        all(greedy_coins(inr, a) == dpi[a] for a in range(5001)))
+    dpb = dp_coins([1, 3, 4], 6)
+    say("s17", f"coins {{1,3,4}}, amount 6: greedy {greedy_coins([1,3,4],6)} coins (4+1+1), optimum {dpb[6]} (3+3)",
+        greedy_coins([1, 3, 4], 6) == 3 and dpb[6] == 2)
+    def can_jump(nums):
+        mr = 0
+        for i, j in enumerate(nums):
+            if i > mr: return False
+            mr = max(mr, i+j)
+        return True
+    def can_jump_bf(nums):
+        seen = {0}; st = [0]
+        while st:
+            i = st.pop()
+            for k in range(1, nums[i]+1):
+                if i+k < len(nums) and i+k not in seen: seen.add(i+k); st.append(i+k)
+        return len(nums)-1 in seen
+    okjump = all(can_jump(v) == can_jump_bf(v) for v in ([rng.randint(0, 3) for _i in range(rng.randint(1, 12))] for _t in range(1000)))
+    def merge_iv(iv):
+        iv = sorted([list(x) for x in iv]); out = [iv[0]]
+        for s, e in iv[1:]:
+            if s <= out[-1][1]: out[-1][1] = max(out[-1][1], e)
+            else: out.append([s, e])
+        return out
+    def cover(iv):
+        pts = set()
+        for s, e in iv: pts.update(x/2 for x in range(2*s, 2*e+1))
+        return pts
+    okiv = True
+    for _t in range(500):
+        iv = [(s, s+rng.randint(0, 6)) for s in (rng.randint(0, 20) for _i in range(rng.randint(1, 7)))]
+        mg = merge_iv(iv)
+        okiv &= cover(mg) == cover(iv) and all(mg[i][1] < mg[i+1][0] for i in range(len(mg)-1))
+    say("s17", "jump game and merge intervals (source) == brute force, 1,000 and 500 cases", okjump and okiv)
+    # slip gauges: the M87 set, and the textbook 'clear the last decimal first' rule
+    UNIT = 2000   # 0.0005 mm units
+    m87 = [1.0005] + [round(1+0.001*k, 3) for k in range(1, 10)] + [round(1+0.01*k, 2) for k in range(1, 50)] \
+          + [0.5*k for k in range(1, 20)] + [10.0*k for k in range(1, 10)]
+    units = [int(round(g*UNIT)) for g in m87]
+    CAP = int(100*UNIT)
+    INF = 10**4
+    best = np.full(CAP+1, INF, dtype=np.int32); best[0] = 0
+    for w in units:
+        nb = best.copy(); nb[w:] = np.minimum(best[w:], best[:-w]+1); best = nb
+    def rule(Lu):
+        # the textbook rule, in integer units of 0.0005 mm: clear the last decimal place first
+        used = []; u = Lu
+        if u % 2: used.append(2001); u -= 2001                    # 1.0005
+        mu = u//2                                                  # micrometres
+        d3 = mu % 10
+        if d3: used.append(2*(1000+d3)); mu -= 1000+d3             # 1.001 .. 1.009
+        hund = (mu//10) % 10; t = ((mu//100) % 10) % 5
+        if hund or t:
+            g = 1000+100*t+10*hund                                 # 1.01 .. 1.49
+            used.append(2*g); mu -= g
+        rem = mu % 10000                                           # a multiple of 0.5 mm below 10 mm
+        if rem:
+            if rem % 500: return None
+            used.append(2*rem); mu -= rem                          # 0.5 .. 9.5
+        if mu < 0: return None
+        if mu:
+            if mu % 10000 or mu > 90000: return None
+            used.append(2*mu)                                      # 10 .. 90
+        if len(set(used)) != len(used) or any(x not in units for x in used): return None
+        return used
+    worse = 0; checked = 0; fails = 0; example = None
+    for L_units in range(int(4*UNIT), int(99*UNIT)+1, 2):     # every 0.001 mm from 4 to 99 mm
+        L = L_units/UNIT; u = rule(L_units)
+        if u is None: fails += 1; continue
+        assert sum(u) == L_units
+        checked += 1
+        if len(u) > best[L_units]:
+            worse += 1
+            if example is None: example = (L, u, int(best[L_units]))
+    say("s17", f"slip gauges, M87 set (reported composition): 'clear the last decimal first' checked on {checked:,} "
+        f"lengths from 4 to 99 mm in 0.001 mm steps; it uses more blocks than the minimum on {worse:,} "
+        f"({100*worse/checked:.1f}%)", checked > 90000)
+    if example:
+        say("s17", f"  e.g. {example[0]:.3f} mm: rule {len(example[1])} blocks {[x/UNIT for x in example[1]]}, minimum {example[2]}")
+    say("s17", f"  lengths the rule could not build as stated: {fails:,}")
+
+    counts = defaultdict(int)
+    for L_units in range(int(4*UNIT), int(99*UNIT)+1, 2): counts[len(rule(L_units))] += 1
+    say("s17", "  blocks needed (rule = minimum): " + ", ".join(f"{k}: {v:,}" for k, v in sorted(counts.items())))
+    ex = rule(int(round(41.125*UNIT)))
+    say("s17", f"  41.125 mm -> {[x/UNIT for x in ex]}, {len(ex)} blocks; minimum {best[int(round(41.125*UNIT))]}",
+        len(ex) == best[int(round(41.125*UNIT))] == 4)
+    # --- s18: DP revisited --------------------------------------------------------
+    def coin_change(coins, amount):
+        dp = [float("inf")]*(amount+1); dp[0] = 0
+        for a in range(1, amount+1):
+            for c in coins:
+                if c <= a and dp[a-c]+1 < dp[a]: dp[a] = dp[a-c]+1
+        return dp[amount] if dp[amount] != float("inf") else -1
+    def cc_bf(coins, amount):
+        best = -1
+        for k in range(0, amount+1):
+            for combo in itertools.combinations_with_replacement(coins, k):
+                if sum(combo) == amount: return k
+        return best
+    okc = all(coin_change(c, a) == cc_bf(c, a) for c, a in
+              ((sorted(set(rng.randint(1, 9) for _i in range(rng.randint(1, 3)))), rng.randint(0, 14)) for _t in range(200)))
+    def lcs(a, b):
+        dp = [[0]*(len(b)+1) for _i in range(len(a)+1)]
+        for i in range(1, len(a)+1):
+            for j in range(1, len(b)+1):
+                dp[i][j] = dp[i-1][j-1]+1 if a[i-1] == b[j-1] else max(dp[i-1][j], dp[i][j-1])
+        return dp[-1][-1]
+    def lcs_bf(a, b):
+        for k in range(min(len(a), len(b)), -1, -1):
+            subs = set("".join(c) for c in itertools.combinations(a, k))
+            if any("".join(c) in subs for c in itertools.combinations(b, k)): return k
+    okl = all(lcs(a, b) == lcs_bf(a, b) for a, b in
+              (("".join(rng.choice("ab") for _i in range(rng.randint(0, 8))), "".join(rng.choice("ab") for _i in range(rng.randint(0, 8)))) for _t in range(200)))
+    def ks2(w, v, C):
+        n = len(w); dp = [[0]*(C+1) for _i in range(n+1)]
+        for i in range(1, n+1):
+            for c in range(C+1):
+                dp[i][c] = dp[i-1][c]
+                if w[i-1] <= c: dp[i][c] = max(dp[i][c], dp[i-1][c-w[i-1]]+v[i-1])
+        return dp[n][C]
+    def ks1(w, v, C, right_to_left=True):
+        dp = [0]*(C+1)
+        for i in range(len(w)):
+            rngc = range(C, w[i]-1, -1) if right_to_left else range(w[i], C+1)
+            for c in rngc: dp[c] = max(dp[c], dp[c-w[i]]+v[i])
+        return dp[C]
+    def ks_bf(w, v, C):
+        return max(sum(v[i] for i in S) for r in range(len(w)+1) for S in itertools.combinations(range(len(w)), r) if sum(w[i] for i in S) <= C)
+    def unbounded(w, v, C):
+        dp = [0]*(C+1)
+        for c in range(C+1):
+            for i in range(len(w)):
+                if w[i] <= c: dp[c] = max(dp[c], dp[c-w[i]]+v[i])
+        return dp[C]
+    okk = True; oku = True
+    for _t in range(300):
+        n = rng.randint(1, 7); w = [rng.randint(1, 8) for _i in range(n)]; v = [rng.randint(1, 20) for _i in range(n)]; C = rng.randint(0, 20)
+        okk &= ks2(w, v, C) == ks1(w, v, C) == ks_bf(w, v, C)
+        oku &= ks1(w, v, C, False) == unbounded(w, v, C)
+    print()
+    say("s18", "coin change and LCS (source) == brute force, 200 cases each", okc and okl)
+    say("s18", "0/1 knapsack: 2-D table == 1-D right-to-left == brute force, 300 cases", okk)
+    say("s18", "  the 1-D table swept left-to-right == the UNBOUNDED knapsack, exactly as the source warns", oku)
+
+    # --- s19: worked example -- a stores index for a million part numbers ------
+    wr = np.random.default_rng(1419)
+    parts = np.unique(wr.integers(1_000_000, 10_000_000, 1_100_000))[:1_000_000]
+    wr.shuffle(parts); keys = np.sort(parts)
+    probes = []
+    for t in wr.choice(parts, 2000):
+        lo, hi, st = 0, len(keys)-1, 0
+        while lo <= hi:
+            st += 1; mid = (lo+hi)//2
+            if keys[mid] == t: break
+            if keys[mid] < t: lo = mid+1
+            else: hi = mid-1
+        probes.append(st)
+    fam_lo, fam_hi = 4_180_000, 4_189_999
+    i0 = bisect.bisect_left(keys, fam_lo); i1 = bisect.bisect_right(keys, fam_hi)
+    k = i1-i0
+    print()
+    say("s19", f"{len(keys):,} part numbers: binary search on the sorted list takes {np.mean(probes):.1f} probes on average, "
+        f"never more than {max(probes)} (log2 n = {math.log2(len(keys)):.1f})", max(probes) <= 20)
+    say("s19", f"family 418-xxxx: two binary searches find all {k:,} members, touching about {2*20+k:,} entries; "
+        f"a hash table must examine all {len(keys):,}", k > 500)
+    say("s19", "  a hash table answers 'is this part here?' in about 1.5 probes at half load (part 1 s13), and cannot answer"
+        " 'which parts are in this range?' at all without a full scan")
+
+    # --- s22: not every IE problem is NP-hard: the assignment problem ----------
+    from scipy.optimize import linear_sum_assignment
+    oka = True
+    for _t in range(200):
+        n = rng.randint(2, 6); Cm = np.array([[rng.randint(1, 30) for _j in range(n)] for _i in range(n)])
+        r_, c_ = linear_sum_assignment(Cm)
+        best = min(sum(Cm[i, p[i]] for i in range(n)) for p in itertools.permutations(range(n)))
+        oka &= Cm[r_, c_].sum() == best
+    print()
+    say("s22", "assignment problem: the Hungarian-type exact method == the best of every assignment, 200 random "
+        "cost matrices up to 6 x 6", oka)
+
+_ch14p2()
+
 print("\n" + "="*66)

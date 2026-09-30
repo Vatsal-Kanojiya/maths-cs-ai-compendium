@@ -52,6 +52,7 @@ merely structural, that is said plainly.
 | 13 | Computing and OS *(pt 2: OS & concurrency)* | [`ch13-computing-os-part2/`](ch13-computing-os-part2/index.html) | [Read online](https://claude.ai/artifact/Na2XhiZWm68g7Sb8u6wbpw) |
 | 13 | Computing and OS *(pt 3: languages + end matter)* | [`ch13-computing-os-part3/`](ch13-computing-os-part3/index.html) | [Read online](https://claude.ai/artifact/HL2a7m5wT1fxBiCp5LTFQj) |
 | 14 | Data Structures and Algorithms *(pt 1: foundations, arrays, lists)* | [`ch14-data-structures-algorithms/`](ch14-data-structures-algorithms/index.html) | [Read online](https://claude.ai/artifact/TCQEggFEntAofLXcUbunbd) |
+| 14 | Data Structures and Algorithms *(pt 2: trees, graphs, search + end matter)* | [`ch14-data-structures-algorithms-part2/`](ch14-data-structures-algorithms-part2/index.html) | [Read online](https://claude.ai/artifact/NESj33J7qvUysyK9djgRed) |
 
 ## What's in a chapter page
 
@@ -89,7 +90,7 @@ chapters rely on the linked chips instead.
 ## Verification
 
 `verify_claims.py` checks the load-bearing mathematical claims across chapters 01-14
-(546 checks, zero failures)
+(612 checks, zero failures)
 against independent computation rather than against anybody's memory — the von Mises and
 Tresca norm identities, the unit-change nearest-neighbour flip, the worked bracket example,
 the `1/sqrt(d)` concentration of cosine similarity, the inertia tensor eigenvalues, polar
@@ -123,7 +124,12 @@ and CPython's measured 1.125 growth factor, Knuth's linear-probing formulas and 
 bound by simulation, the Bloom-filter false-positive rate, the shear-force diagram as a prefix
 sum closing to zero, trapping rain water as a minimax spill level (exact in 1-D, verified
 against a relaxation solver in 2-D), `a + b = kc` for Floyd's cycle detection, and PERT's
-merge bias `E[max] = mu + sigma/sqrt(pi)`.
+merge bias `E[max] = mu + sigma/sqrt(pi)`; and in its second part Fulkerson's event-numbering rule
+against Kahn's topological sort on 500 random networks, the method of joints against a full
+matrix solve (and the compound truss on which it stalls), a pipe network's Laplacian flow split
+against Dijkstra's least-resistance route, the `ceil(log2 n!)` sorting floor against measured
+merge-sort counts, quicksort's `n(n-1)/2` on repeated keys under every pivot rule, and the
+metrology rule for slip gauges against an exact minimum-block search over 95,001 lengths.
 
 Several checks exist because they caught an error. The suite has overturned claims in the
 source material (what neighbour-averaging consensus converges to; whether four legs are
@@ -136,7 +142,9 @@ two-to-four-layer limit on GNN depth follows from the over-smoothing rate — on
 graph it does not; whether a size-k heap loses to heapify-and-pop for the kth largest
 element -- on random input it wins, on sorted input it loses by 3x; whether a speed-3 hare can
 skip past the tortoise -- it cannot, but the cycle-start trick then fails on 36 of 132 small lists, all with
-even loops).
+even loops; whether the "clear the last decimal first" slip-gauge rule can build every length --
+a floating-point version of the check said it failed on 45% of them, and the integer version
+showed the failures were the check's own rounding).
 A test that passes is worth less than one that has failed at least
 once.
 
