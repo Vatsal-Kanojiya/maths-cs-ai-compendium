@@ -384,27 +384,21 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
   text-transform:uppercase; color:var(--ink-3); margin-bottom:7px}
 </style>
 
-<div class="sheet">
-
 <header class="titleblock">
-  <div class="tb-main">
-    <div class="tb-k">Sheet 10 of 20 &mdash; Multimodal Learning</div>
-    <h1>Fusion, Alignment, Codebooks</h1>
-    <p class="tb-sub">
-      Combining sensors is something you already do. This sheet is about what
-      transfers from that habit &mdash; which is the whole architecture &mdash; and the one
-      thing that does not, which is every guarantee you are used to having.
-    </p>
-  </div>
-  <div class="tb-meta">
-    <div class="tb-cell"><div class="tb-k">Reader</div><div class="tb-v">B.E. Mechanical</div></div>
-    <div class="tb-cell"><div class="tb-k">Prerequisite</div><div class="tb-v">Sheets 1&ndash;9</div></div>
-    <button class="btn" id="themebtn" type="button">Theme</button>
+  <div class="tb-in">
+    <div class="tb-cell"><div class="tb-k">Chapter</div><div class="tb-v accent">10 &middot; Multimodal Learning</div></div>
+    <div class="tb-cell tb-hide"><div class="tb-k">Sheet</div><div class="tb-v">10 of 20</div></div>
+    <div class="tb-cell tb-hide"><div class="tb-k">Reader</div><div class="tb-v">B.E. Mechanical</div></div>
+    <div class="tb-cell tb-hide"><div class="tb-k">Prerequisite</div><div class="tb-v">Sheets 1&ndash;9</div></div>
+    <div class="tb-cell"><button class="themebtn" id="themebtn" type="button" aria-label="Switch colour theme">Theme</button></div>
   </div>
 </header>
 
-<nav class="toc">
-  <a href="#bridge"><span class="n">00</span><span>The bridge</span></a>
+<div class="shell">
+
+<nav class="rail" aria-label="Chapter contents">
+  <div class="rail-h">Contents</div>
+  <a href="#bridge" class="on"><span class="n">00</span><span>The bridge</span></a>
   <a href="#fusion"><span class="n">01</span><span>Fusion is sensor fusion</span></a>
   <a href="#embed"><span class="n">02</span><span>A shared scale</span></a>
   <a href="#contrast"><span class="n">03</span><span>Contrastive alignment</span></a>
@@ -428,7 +422,14 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
 
 <section id="top" style="padding-top:44px">
   <div class="col">
-    <p class="lede">
+    <p class="eyebrow">Maths, CS &amp; AI Compendium &middot; Chapter 10</p>
+    <h1>Fusion, Alignment, Codebooks</h1>
+    <p class="lead" style="margin-top:18px">
+      Combining sensors is something you already do. This sheet is about what
+      transfers from that habit &mdash; which is the whole architecture &mdash; and the one
+      thing that does not, which is every guarantee you are used to having.
+    </p>
+    <p>
       A machine is never instrumented with one sensor. You put an accelerometer on the bearing
       housing, a thermocouple in the oil, a pressure tap on the discharge, and you form a
       judgement from all three &mdash; because each one is blind to what the others see. That is
@@ -898,7 +899,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     <div class="sechead"><span class="secnum">06</span><h2>Residual quantisation is successive approximation</h2>
       <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2010%20-%20multimodal%20learning/03.%20image%20and%20video%20tokenisation.md" target="_blank" rel="noopener">src 03. tokenisation &#8599;</a>
     </div>
-    <p class="lede">
+    <p class="lead">
       One codebook puts a hard floor under reconstruction quality: every position gets exactly
       one entry, and anything finer is lost. The fix is the one you would reach for, and it is
       the same algorithm as the converter in your data-acquisition card.
@@ -2274,5 +2275,24 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     setTimeout(function () { waitForTypesetter(n + 1); }, 200);
   }
   waitForTypesetter(0);
+})();
+</script>
+
+<script>
+/* Contents rail: mark the section currently in view (desktop only). */
+(function(){
+  'use strict';
+  var links=Array.prototype.slice.call(document.querySelectorAll('.rail a'));
+  if(!links.length||!window.IntersectionObserver) return;
+  var map={}; links.forEach(function(a){map[a.getAttribute('href').slice(1)]=a;});
+  var seen={};
+  var io=new IntersectionObserver(function(es){
+    es.forEach(function(e){seen[e.target.id]=e.isIntersecting;});
+    var ids=Object.keys(map),act=null;
+    for(var i=0;i<ids.length;i++) if(seen[ids[i]]){act=ids[i];break;}
+    if(!act) return;
+    links.forEach(function(a){a.classList.toggle('on',a===map[act]);});
+  },{rootMargin:'-70px 0px -65% 0px',threshold:0});
+  Object.keys(map).forEach(function(id){var el=document.getElementById(id); if(el) io.observe(el);});
 })();
 </script>

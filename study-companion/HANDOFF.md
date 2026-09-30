@@ -359,27 +359,13 @@ as genuine surveys and mark them clearly as not derived from the compendium.
   Chapter 12's publish reported its subscription as "arming in the background, not registered
   yet", which is not a confirmed watch either. Do not state that a chapter is being watched
   unless the publish result says so.
-- **Chapters 09–13 (seven pages) are built on a broken page skeleton. Found at Chapter 14.**
-  Chapter 09 introduced a header written with classes the design system never defines —
-  `sheet`, `tb-main`, `tb-meta`, `tb-sub`, `toc`, `lede` — and every later chapter copied its
-  predecessor, so the drift went forward seven times. Effects, all visible on a phone: the whole
-  title block (eyebrow, h1, subtitle, meta) sits inside the **sticky** `.titleblock`, which was
-  designed for a 46px strip, so it pins ~340px over the content while scrolling; the page has
-  **no side gutter** (the `.shell` wrapper that supplies it is missing), so text touches the
-  screen edge; the contents list renders as a run of underlined inline links; and there is no
-  desktop contents rail. Also, **Chapters 12 and 13 dropped the TeX-to-Unicode safety net**,
-  and **Chapter 13 parts 2 and 3 dropped the equation auto-fitter** too. Chapters 01–08 and 14
-  are correct. Audit: `python3 study-companion/audit_classes.py` prints each sheet with any undefined
-  classes after its name, and exits 1 if there are any; at Chapter 14 it lists exactly the
-  seven pages above, each with the same six classes.
-  **The fix** per page: replace everything from `<div class="sheet">` to `<section id="top"` with
-  Chapter 14's `<header class="titleblock"><div class="tb-in">…</div></header><div
-  class="shell"><nav class="rail">…</nav><main>` (keep the page's own contents links, add
-  `class="on"` to the first), turn the old `tb-k`/`h1`/`tb-sub` into `<p class="eyebrow">`,
-  `<h1>`, `<p class="lead">` at the top of `#top`, rename `lede`→`lead`, and give the page
-  Chapter 14's script tail (rail observer + safety net + auto-fitter). Then re-probe at five
-  widths, screenshot, and republish to the **same** artifact URL (read it first). Not done at
-  Chapter 14 because it touches seven published artifacts and the request was a new chapter.
+- ~~Chapters 09–13 (seven pages) were built on a broken page skeleton~~ **Fixed in the repo at
+  the end of the Chapter 14 session** (undefined `sheet`/`tb-main`/`tb-meta`/`tb-sub`/`toc`/`lede`
+  replaced with Chapter 14's titleblock + shell + rail; safety net and fitter restored; probed at
+  1180 and 390: 47px header, 16px gutter, no page scroll, no errors). `audit_classes.py` now passes
+  on every sheet. **Republishing those seven artifacts is pending**: a republish to an existing URL
+  requires reading the live page in full first (~165 KB each). The live pages differ from the
+  pre-fix repo copies only by the host's publish wrapper, so no merge is needed.
 - **Nine of the twelve published sheets have display equations that overflow their `.mathbox`
   at 390px, and Chapter 10 has one clipped `.ro-k` label.** Measured at Chapter 12; details in
   the series-sweep note under the browser-probe section. Pre-existing, not regressions, and
