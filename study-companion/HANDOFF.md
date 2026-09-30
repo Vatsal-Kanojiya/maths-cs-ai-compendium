@@ -1,6 +1,6 @@
 # Handoff — how to continue this series
 
-Read this first in a new session. It exists so the next run starts building within
+Read this first in a new session. The prompt to start one is in `NEXT_SESSION_PROMPT.md`. It exists so the next run starts building within
 minutes instead of re-deriving decisions already made.
 
 ## State
