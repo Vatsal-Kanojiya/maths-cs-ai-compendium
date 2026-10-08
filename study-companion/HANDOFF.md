@@ -6,8 +6,17 @@ in `NEXT_SESSION_PROMPT.md`.
 
 ## State
 
-Branch `claude/blissful-euler-0c6xih` carries sheets 1–14 of 20, **Chapter 14 complete in two
-parts**. All are published. Working tree clean after each part's commit.
+**The working branch is now `claude/nifty-pascal-e4h18c`.** It was fast-forwarded from
+`claude/blissful-euler-0c6xih` (which carries sheets 1–14 and stops there) at the start of the
+Chapter 15–18 session, because that session was bound to this branch name. Everything from
+Sheet 15 on is only on `claude/nifty-pascal-e4h18c`.
+
+Sheets 15–18 and a combined 19–20 coda were built by **parallel runs** in that session, each in
+its own git worktree, pushing to the one branch with fetch–rebase–push. To keep them from
+colliding, `verify_claims.py` was given one stub function per run (`_ch15`, `_ch16p1`…`_ch16p3`,
+`_ch17`, `_ch18`, `_ch1920`) separated by unchanged guard lines, and each run wrote its state row,
+README entry and lesson to `handoff-notes/` for the coordinating run to fold in here. The shared
+browser probe those runs used is now in the repo: `tools/probe.js` (see the probe section).
 
 | # | Chapter | Folder | Published |
 |---|---------|--------|-----------|
@@ -336,6 +345,15 @@ used in manufacturing. Redundancy ↔ reliability engineering.
 
 **19–20.** Outline stubs in the source (six files are empty). Either skip, or write them
 as genuine surveys and mark them clearly as not derived from the compendium.
+**Decided in the Chapter 15–18 session: one combined coda sheet, not two surveys.** A survey of
+AlphaFold, trading systems or Loihi would be built from claims this series cannot compute, which
+breaks rules 2, 3 and 5 at once. But several outline bullets have a derivable mathematical core
+that lands squarely on the reader's training — a leaky integrate-and-fire neuron is a first-order
+lag, Markowitz mean-variance is a Lagrange-multiplier problem on a covariance matrix, VaR by Monte
+Carlo is Sheet 05's tolerance analysis, a quantum gate is a unitary matrix and a qubit's state
+angle is halved on the Bloch sphere where Mohr's circle doubles it. The coda covers only such
+cores, says on its front page that the source chapters are outlines with six empty files, and
+names everything it leaves out rather than surveying it.
 
 ## Known issues
 
@@ -376,6 +394,22 @@ as genuine surveys and mark them clearly as not derived from the compendium.
 
 
 ## Browser probe — set this up before touching a chapter (added at Chapter 06)
+
+**Since the Chapter 15–18 session, use `tools/probe.js` instead of the http-server recipe
+below.** It opens the page from `file://` and answers every cdnjs MathJax request from a local
+copy through Playwright request routing, so there is no server, no port and no `_probe.html`:
+
+```bash
+cd study-companion/tools && mkdir -p vendor && (cd vendor && npm pack mathjax@3.2.2 --silent && tar xzf mathjax-3.2.2.tgz)
+node study-companion/tools/probe.js <abs path to chapter folder> <scratch out dir> --shots --expect expect.json
+```
+
+It runs every check in the list below at all five widths, drives every button, slider, select
+and checkbox, adds static checks (`<style>` balance, `$$` damage from an unquoted heredoc, a
+left-over `@SRC@`), asserts readout values at rest from `expect.json`
+(`[{"id":"bH","value":30,"tol":0},{"id":"bD","re":"3\\.16"}]`), and screenshots each
+`section .lab` at rest at 1180 and 390 with the sticky titleblock hidden. Exit 0 = clean. Read
+the screenshots anyway. `vendor/` is git-ignored. The older recipe is kept below for reference.
 
 cdnjs is blocked by the egress proxy, so MathJax will not load in a headless browser
 and every equation check silently passes on unrendered TeX. npm is *not* blocked:
