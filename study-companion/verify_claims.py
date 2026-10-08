@@ -4945,4 +4945,64 @@ def _ch14p2():
 
 _ch14p2()
 
+# ======================================================================================
+# Chapter 15 block. Owned by the Chapter 15 run: replace only the body of _ch15() below.
+# Keep every name inside the function so nothing collides with another chapter's block.
+def _ch15():
+    pass
+
+_ch15()
+# ----- end of Chapter 15 block -----
+
+
+# ======================================================================================
+# Chapter 16 part 1 block. Owned by the Chapter 16 part 1 run: replace only the body of _ch16p1() below.
+# Keep every name inside the function so nothing collides with another chapter's block.
+def _ch16p1():
+    pass
+
+_ch16p1()
+# ----- end of Chapter 16 part 1 block -----
+
+
+# ======================================================================================
+# Chapter 16 part 2 block. Owned by the Chapter 16 part 2 run: replace only the body of _ch16p2() below.
+# Keep every name inside the function so nothing collides with another chapter's block.
+def _ch16p2():
+    pass
+
+_ch16p2()
+# ----- end of Chapter 16 part 2 block -----
+
+
+# ======================================================================================
+# Chapter 16 part 3 block. Owned by the Chapter 16 part 3 run: replace only the body of _ch16p3() below.
+# Keep every name inside the function so nothing collides with another chapter's block.
+def _ch16p3():
+    pass
+
+_ch16p3()
+# ----- end of Chapter 16 part 3 block -----
+
+
+# ======================================================================================
+# Chapter 17 block. Owned by the Chapter 17 run: replace only the body of _ch17() below.
+# Keep every name inside the function so nothing collides with another chapter's block.
+def _ch17():
+    pass
+
+_ch17()
+# ----- end of Chapter 17 block -----
+
+
+# ======================================================================================
+# Chapter 18 block. Owned by the Chapter 18 run: replace only the body of _ch18() below.
+# Keep every name inside the function so nothing collides with another chapter's block.
+def _ch18():
+    pass
+
+_ch18()
+# ----- end of Chapter 18 block -----
+
+
 print("\n" + "="*66)
