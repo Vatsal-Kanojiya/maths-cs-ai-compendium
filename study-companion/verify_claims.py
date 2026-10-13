@@ -5123,10 +5123,10 @@ def _ch15():
     p1e9 = (1e9) ** 2 / 2 ** 161
     say("s05", f"full 160-bit names: chance of any accidental collision among 1e9 objects ~ n^2/2^161 = {p1e9:.1e}", p1e9 < 1e-30)
     say("s05", f"  50% only after 1.1774 x 2^80 = {1.1774 * 2 ** 80:.2e} objects")
-    def first_coll(bits, t):
-        seen = {}; mask = (1 << bits) - 1; i = 0
+    def first_coll(bits, t, pre="rev"):
+        seen = {}; i = 0
         while True:
-            h = int.from_bytes(hashlib.sha1(f"rev-{t}-{i}".encode()).digest()[:8], "big") >> (64 - bits)
+            h = int.from_bytes(hashlib.sha1(f"{pre}-{t}-{i}".encode()).digest()[:8], "big") >> (64 - bits)
             if h in seen: return i + 1
             seen[h] = i; i += 1
     meas24 = [first_coll(24, t) for t in range(400)]
@@ -5139,7 +5139,16 @@ def _ch15():
     meas16 = [first_coll(16, t) for t in range(50)]
     say("s05", f"lab '50 runs' at 16 bits: mean {np.mean(meas16):.1f} vs prediction {math.sqrt(math.pi / 2 * 2 ** 16):.1f}",
         abs(np.mean(meas16) / math.sqrt(math.pi / 2 * 2 ** 16) - 1) < 0.15)
-    LAB5 = {"b16": lab16, "b20": lab20, "b24": lab24, "b28": lab28, "m16": round(float(np.mean(meas16)), 1)}
+    LAB5 = {"run0": {}, "mean100": {}}
+    ok100 = True
+    for bits in range(12, 25, 2):
+        runs = [first_coll(bits, t, f"b{bits}") for t in range(100)]
+        mu = math.sqrt(math.pi / 2 * 2 ** bits); se = math.sqrt((4 - math.pi) / 2 * 2 ** bits) / 10
+        LAB5["run0"][bits] = runs[0]; LAB5["mean100"][bits] = round(float(np.mean(runs)), 1)
+        ok100 &= abs(np.mean(runs) - mu) < 3 * se
+        say("s05", f"  lab, {bits} bits: run 0 collides at {runs[0]:,}; mean of 100 runs {np.mean(runs):,.1f}, "
+            f"predicted {mu:,.1f} +/- {se:,.1f} (one standard error)")
+    say("s05", "every lab bit width: the 100-run mean lies within 3 standard errors of sqrt(pi/2 * 2^b)", ok100)
 
     # --- s06: a diff is a longest common subsequence (debt 1) ------------------------------------
     print()

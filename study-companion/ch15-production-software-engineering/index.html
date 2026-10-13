@@ -729,3 +729,541 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     </p>
   </div>
 </section>
+
+<section id="store">
+  <div class="col">
+    <div class="sechead"><span class="secnum">04</span><h2>What git stores: snapshots named by their content</h2>
+      <a class="srcref" href="@F2@" target="_blank" rel="noopener">src 02. git &#8599;</a>
+    </div>
+    <p>
+      <b>Git</b> keeps the history of a project as a chain of <b>commits</b>, each a complete
+      snapshot of every tracked file. The source&rsquo;s four places are right: you edit files
+      in the <b>working directory</b>, <code>git add</code> copies chosen changes to the
+      <b>staging area</b>, <code>git commit</code> records the staging area as a new snapshot in
+      the <b>local repository</b> (the hidden <code>.git/</code> folder), and
+      <code>git push</code> sends commits to a shared <b>remote</b>. What deserves care is how a
+      snapshot is stored and named, because that is the debt from Sheet 14.
+    </p>
+    <p>
+      Git stores three kinds of object. A <b>blob</b> is the bytes of one file. A
+      <b>tree</b> is a directory listing: file names, each with the name of its blob. A
+      <b>commit</b> is a short text naming one tree, the commit or commits before it (its
+      <b>parents</b>), the author, the time and the message. Every object&rsquo;s name is the
+      SHA-1 hash of its own bytes, with a short header in front. Part 1 of Sheet 14 &sect;13 used
+      a hash to <em>place</em> a key in a table; here a hash <em>is</em> the name. Each claim
+      below was checked by building small repositories with fixed author and time
+      (<code>[Ch15 s04]</code>):
+    </p>
+    <ul>
+      <li>The file <code>shaft dia 20 h7</code> is 16 bytes. SHA-1 of
+        <code>blob 16\0shaft dia 20 h7\n</code>, computed by hand in Python, is
+        <code>6c18c62c76ea&hellip;</code>, and <code>git hash-object</code> gives the same.</li>
+      <li>Two files with identical content, committed together, produce <b>three</b> objects:
+        one blob shared by both names, one tree, one commit. Identical content is stored
+        once.</li>
+      <li>The commit&rsquo;s name, <code>284d6dca863c&hellip;</code>, is the SHA-1 of its own
+        text. A second repository built independently with the same files, author, time and
+        message produced the same name, without asking anyone.</li>
+      <li>Change one character, h7 to h6, and commit. The blob&rsquo;s name changes, so the
+        tree that lists it changes, so the commit that names the tree changes. The untouched
+        file keeps its blob. The new commit carries its parent&rsquo;s name inside its own
+        text.</li>
+    </ul>
+  </div>
+  <figure class="col">
+    <svg viewBox="0 0 480 270" role="img" style="width:100%; max-width:560px; height:auto; display:block; margin-inline:auto"
+         aria-label="Two commits. Commit one names tree 981de6c, which lists a.txt and b.txt, both pointing to the same blob 6c18c62. Commit two names its parent 284d6dc and a new tree 939dbbc, which lists b.txt pointing to the unchanged blob 6c18c62 and a.txt pointing to a new blob 0f12bc7. The three new names are drawn in orange.">
+      <defs>
+        <marker id="gArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M0,1 L9,5 L0,9 z" fill="var(--ink-3)"></path>
+        </marker>
+      </defs>
+      <text class="tk" x="20" y="16">commit</text>
+      <text class="tk" x="20" y="122">tree</text>
+      <text class="tk" x="20" y="214">blob</text>
+      <rect x="20" y="24" width="170" height="44" rx="3" fill="var(--sheet-2)" stroke="var(--ink-3)" stroke-width="1.3"></rect>
+      <text class="tkb" x="105" y="42" text-anchor="middle">commit 284d6dc</text>
+      <text class="tk" x="105" y="58" text-anchor="middle">&#8220;one&#8221;, no parent</text>
+      <rect x="290" y="24" width="170" height="44" rx="3" fill="var(--sheet-2)" stroke="var(--c1)" stroke-width="1.8"></rect>
+      <text class="tkb" x="375" y="42" text-anchor="middle">commit (new name)</text>
+      <text class="tk" x="375" y="58" text-anchor="middle">&#8220;two&#8221;, parent 284d6dc</text>
+      <line x1="288" y1="46" x2="194" y2="46" stroke="var(--ink-3)" stroke-width="1.3" marker-end="url(#gArrow)"></line>
+      <text class="tk" x="241" y="40" text-anchor="middle">parent</text>
+      <rect x="20" y="128" width="170" height="36" rx="3" fill="var(--sheet-2)" stroke="var(--ink-3)" stroke-width="1.3"></rect>
+      <text class="tkb" x="105" y="150" text-anchor="middle">tree 981de6c</text>
+      <rect x="290" y="128" width="170" height="36" rx="3" fill="var(--sheet-2)" stroke="var(--c1)" stroke-width="1.8"></rect>
+      <text class="tkb" x="375" y="150" text-anchor="middle">tree 939dbbc</text>
+      <line x1="105" y1="70" x2="105" y2="124" stroke="var(--ink-3)" stroke-width="1.3" marker-end="url(#gArrow)"></line>
+      <line x1="375" y1="70" x2="375" y2="124" stroke="var(--ink-3)" stroke-width="1.3" marker-end="url(#gArrow)"></line>
+      <rect x="120" y="220" width="150" height="40" rx="3" fill="var(--sheet-2)" stroke="var(--ink-3)" stroke-width="1.3"></rect>
+      <text class="tkb" x="195" y="237" text-anchor="middle">blob 6c18c62</text>
+      <text class="tk" x="195" y="252" text-anchor="middle">shaft dia 20 h7</text>
+      <rect x="310" y="220" width="150" height="40" rx="3" fill="var(--sheet-2)" stroke="var(--c1)" stroke-width="1.8"></rect>
+      <text class="tkb" x="385" y="237" text-anchor="middle">blob 0f12bc7</text>
+      <text class="tk" x="385" y="252" text-anchor="middle">shaft dia 20 h6</text>
+      <line x1="70" y1="166" x2="160" y2="216" stroke="var(--ink-3)" stroke-width="1.3" marker-end="url(#gArrow)"></line>
+      <line x1="140" y1="166" x2="185" y2="216" stroke="var(--ink-3)" stroke-width="1.3" marker-end="url(#gArrow)"></line>
+      <text class="tk" x="78" y="196" text-anchor="end">a.txt</text>
+      <text class="tk" x="168" y="186" text-anchor="start">b.txt</text>
+      <line x1="330" y1="166" x2="232" y2="216" stroke="var(--ink-3)" stroke-width="1.3" marker-end="url(#gArrow)"></line>
+      <line x1="410" y1="166" x2="395" y2="216" stroke="var(--ink-3)" stroke-width="1.3" marker-end="url(#gArrow)"></line>
+      <text class="tk" x="290" y="188" text-anchor="end">b.txt</text>
+      <text class="tk" x="410" y="196" text-anchor="start">a.txt</text>
+    </svg>
+    <figcaption><b>Fig. 15.1</b> &mdash; One character changed in <code>a.txt</code>. Orange marks every object whose name changed: the new blob, the tree that lists it, and the commit that names the tree. <code>b.txt</code> is untouched, so both trees point at the same blob. The hashes are the real ones from the verification script; drawn for this sheet.</figcaption>
+  </figure>
+  <div class="col">
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same structure: drawing revision control</div>
+      <p>
+        A drawing office never stores a revision as a list of changes. Revision C of a drawing
+        is a complete drawing, and its revision block records what changed and why. A commit
+        is the same: a complete snapshot, plus a message. The parent link is the revision
+        history, and a branch (&sect;08) is the note saying which revision is current.
+      </p>
+      <p style="margin-bottom:0">
+        The new thing is the name. A drawing number is issued; a commit name is computed. The
+        consequence follows from Fig. 15.1: a commit&rsquo;s name covers its tree, its tree covers
+        every file, and its text covers its parent&rsquo;s name, which covers <em>its</em>
+        parent. Change any byte anywhere in the past and every name after it changes. A
+        commit name therefore certifies the entire history behind it, which no drawing number
+        does.
+      </p>
+    </div>
+    <p>
+      The source says that git &ldquo;internally stores diffs for efficiency&rdquo;. Measured,
+      that is wrong in the way it is usually meant (<code>[Ch15 s04]</code>). A 1,000-line,
+      41,670-byte file was committed, one line changed, and committed again. Both revisions sat
+      in <code>.git/objects</code> whole: each decompresses to 41,681 bytes, the file plus the
+      11-byte header <code>blob 41670\0</code>. Only when git later <b>packs</b> its objects
+      (<code>git gc</code>) does it compress similar objects against each other, and then it
+      kept the <em>newer</em> revision whole and stored the <em>older</em> one as a 17-byte delta
+      against it. That is the opposite of a change list, and sensible: the newest revision is
+      the one read most. A delta here is a sequence of copy and insert instructions on bytes,
+      chosen between any similar objects, not a line-by-line diff between a commit and its
+      parent. The diff you read in a review is computed when you ask for it, which is
+      &sect;06.
+    </p>
+  </div>
+</section>
+
+<section id="names">
+  <div class="col">
+    <div class="sechead"><span class="secnum">05</span><h2>What a content name guarantees, and what a drawing number does</h2>
+      <span class="srcref nolink" title="Added material, not in the source chapter">beyond the source</span>
+    </div>
+    <p>
+      A drawing number and a commit name answer different questions, and the difference is
+      worth stating precisely.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Two ways to name a revision.</caption>
+      <thead><tr><th></th><th>Drawing number + revision letter</th><th>Content hash (git)</th></tr></thead>
+      <tbody>
+        <tr><td>Who assigns it</td><td>A registry, once</td><td>Anyone, by computing it; no registry</td></tr>
+        <tr><td>Two identical drawings</td><td>Can carry different numbers</td><td>Always the same name</td></tr>
+        <tr><td>Two different drawings</td><td>Never the same number (by construction)</td><td>The same name only by an accident whose odds are computed below</td></tr>
+        <tr><td>Order</td><td>B comes after A</td><td>None in the name; order lives in the parent links</td></tr>
+        <tr><td>Silent edit after release</td><td>Possible: the number does not change</td><td>Impossible: the name changes</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      So a hash gives up the one thing a registry guarantees, uniqueness for certain, and gets
+      back something no registry can give: two people working offline, on different
+      continents, name the same content identically, and nobody can alter content without
+      changing its name. How much uniqueness is given up is a calculation. If \(n\) objects get
+      independent random names of \(b\) bits, the chance that no two share a name is a product,
+      and its approximation is the <b>birthday bound</b>:
+    </p>
+  </div>
+  <div class="mathbox col">$$\begin{aligned}P(\text{some two share a name}) &= 1-\prod_{i=1}^{n-1}\Big(1-\frac{i}{2^b}\Big)\\ &\approx 1-e^{-n^2/2^{b+1}}\end{aligned}$$</div>
+  <div class="col">
+    <p>
+      The chance reaches one half at \(n \approx 1.1774\cdot 2^{b/2}\): the square root of
+      the number of names, not the number of names. For git&rsquo;s full 160-bit SHA-1 names
+      that is \(1.42\times10^{24}\) objects, and among a billion objects the chance of any
+      accidental collision is about \(3.4\times10^{-31}\) (<code>[Ch15 s05]</code>). The
+      seven-digit short names git prints are another matter. Seven hex digits are 28 bits, and
+      the chance that some two objects in a repository share a seven-digit prefix reaches one
+      half at 19,291 objects. Git lengthens its abbreviations as a repository grows (reported),
+      and always stores the full name. A short hash in a log or an ECN is a convenience, not
+      an identity.
+    </p>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">How long a name lasts</div><div class="lab-tag">Predict, then hash</div></div>
+    <div class="predict">
+      <p style="margin-top:0">
+        Each part revision gets a 20-bit name: about a million possible names. Revisions are
+        named one after another. Roughly how many revisions before two of them share a name?
+      </p>
+      <button class="pbtn" data-p1="a" type="button">About 500,000 (half the names)</button>
+      <button class="pbtn" data-p1="b" type="button">About 1,000,000</button>
+      <button class="pbtn" data-p1="c" type="button">About 1,300</button>
+      <button class="pbtn" data-p1="d" type="button">Never, if names are random</button>
+      <div class="pverdict" id="pv1"></div>
+    </div>
+    <svg class="stage" id="hS" viewBox="0 0 480 250" role="img"
+         aria-label="The chance that some two of n names collide, against n, with the 100 measured first-collision counts marked along the bottom">
+      <g id="hGrid"></g><g id="hCurve"></g><g id="hRug"></g><g id="hLab"></g>
+    </svg>
+    <div class="ctl">
+      <label for="hSl">Name length, bits</label>
+      <input type="range" id="hSl" min="12" max="24" value="20" step="2">
+      <span class="ro-v" id="hVal" style="min-width:48px">20</span>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Run 0: first<br>repeat at</div><div class="ro-v a" id="hN">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Mean of<br>100 runs</div><div class="ro-v" id="hM">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Predicted<br>&#8730;(<span class="gk">&#960;</span>/2&middot;2<sup>b</sup>)</div><div class="ro-v" id="hP">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">50% point<br>1.1774&middot;2<sup>b/2</sup></div><div class="ro-v" id="hH">&mdash;</div></div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    The page computes real SHA-1 hashes of the names <code>b20-0-0</code>, <code>b20-0-1</code>,
+    &hellip; keeps the first <i>b</i> bits of each, and stops at the first name already seen.
+    It repeats that for 100 independent runs. The curve is the birthday bound; each tick along
+    the bottom is one run&rsquo;s first repeat, and the dashed line is their mean. At 20 bits the
+    mean is 1,317.8 against a prediction of 1,283.4 with a standard error of 67.1 for 100 runs,
+    and the other widths scatter by about one standard error either side
+    (<code>[Ch15 s05]</code>). Notice the spread of the ticks: in 400 runs at 24 bits the first
+    repeat came anywhere from the 203rd name to the 14,633rd, against a mean of 4,989.
+  </div>
+  <div class="col">
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks: accidents against adversaries</div>
+      <p style="margin-bottom:0">
+        The birthday bound is about accidents: names that behave like random draws. It says
+        nothing about someone who sets out to build two different files with the same name.
+        For SHA-1 that has been done deliberately, in a public demonstration in 2017
+        (reported), and git has since added collision detection and a SHA-256 object format
+        (reported). A content hash is an excellent check against mistakes and a weaker one
+        against malice, which is a different property from a drawing number&rsquo;s, not a
+        better or worse one. Git LFS (&sect;09) already names large files by SHA-256.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="diff">
+  <div class="col">
+    <div class="sechead"><span class="secnum">06</span><h2>A diff is a longest common subsequence</h2>
+      <a class="srcref" href="@F2@" target="_blank" rel="noopener">src 02. git &#8599;</a>
+    </div>
+    <p>
+      <code>git diff</code> shows what changed between two revisions as lines removed
+      (<code>-</code>) and lines added (<code>+</code>). Sheet 14 part 2 &sect;18 said this is
+      the longest common subsequence (LCS) problem and marked it as reported. Here is why it
+      is exact.
+    </p>
+    <p>
+      Call the old file \(N\) lines and the new one \(M\) lines. A diff is a way to turn one
+      into the other by deleting some old lines and inserting some new ones. The lines it does
+      not touch appear in both files, in the same order, so they form a common subsequence. A
+      diff that keeps \(K\) lines makes \(N-K\) deletions and \(M-K\) insertions. The fewest
+      edits therefore keep the most lines, and the most lines that can be kept is the LCS
+      length \(L\):
+    </p>
+  </div>
+  <div class="mathbox col">$$D_{\min} = N + M - 2L$$</div>
+  <div class="mathbox col">$$L_{i,j} = \begin{cases} L_{i-1,j-1}+1 & a_i = b_j\\ \max\big(L_{i-1,j},\,L_{i,j-1}\big) & \text{otherwise}\end{cases}$$</div>
+  <div class="col">
+    <p>
+      The second line is Sheet 14&rsquo;s recurrence for the table. So the claim to test is not
+      &ldquo;tools use LCS&rdquo; but something sharper: no correct diff can report fewer than
+      \(N+M-2L\) changed lines, and a tool that reaches that number has found an LCS. The
+      verification script generated 300 random pairs of files and ran six real tools on each
+      (<code>[Ch15 s06]</code>):
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>300 random file pairs. &ldquo;Floor&rdquo; is \(N+M-2L\) from the LCS table.</caption>
+      <thead><tr><th>Tool</th><th>Hits the floor</th><th>Exceeds it</th><th>Worst excess</th></tr></thead>
+      <tbody>
+        <tr><td><code>git diff</code> (default)</td><td class="mono">300</td><td class="mono">0</td><td class="mono">0 lines</td></tr>
+        <tr><td><code>git diff --minimal</code></td><td class="mono">300</td><td class="mono">0</td><td class="mono">0</td></tr>
+        <tr><td><code>git diff --patience</code></td><td class="mono">290</td><td class="mono">10</td><td class="mono">10</td></tr>
+        <tr><td><code>git diff --histogram</code></td><td class="mono">249</td><td class="mono">51</td><td class="mono">36</td></tr>
+        <tr><td>GNU <code>diff</code></td><td class="mono">300</td><td class="mono">0</td><td class="mono">0</td></tr>
+        <tr><td>GNU <code>diff -d</code> (minimal)</td><td class="mono">300</td><td class="mono">0</td><td class="mono">0</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      No tool ever went below the floor, which is the theorem. Then the same check on real
+      text: four pairs of revisions of this study series&rsquo; own files, taken from the
+      repository&rsquo;s history (<code>[Ch15 s06]</code>).
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Changed lines reported for real revisions. Bold marks a count above the floor.</caption>
+      <thead><tr><th>File, revisions</th><th>Lines</th><th>Floor</th><th>git</th><th>--minimal</th><th>patience</th><th>histogram</th><th>GNU</th><th>GNU -d</th></tr></thead>
+      <tbody>
+        <tr><td>README.md 1f32a83&rarr;42d11dc</td><td class="mono">163 / 171</td><td class="mono">14</td><td class="mono">14</td><td class="mono">14</td><td class="mono">14</td><td class="mono">14</td><td class="mono">14</td><td class="mono">14</td></tr>
+        <tr><td>HANDOFF.md 42d11dc&rarr;cfbdc1d</td><td class="mono">987 / 977</td><td class="mono">50</td><td class="mono">50</td><td class="mono">50</td><td class="mono">50</td><td class="mono">50</td><td class="mono">50</td><td class="mono">50</td></tr>
+        <tr><td>HANDOFF.md 45393cd&rarr;1f32a83</td><td class="mono">872 / 960</td><td class="mono">144</td><td class="mono"><b>150</b></td><td class="mono"><b>150</b></td><td class="mono">144</td><td class="mono">144</td><td class="mono"><b>148</b></td><td class="mono">144</td></tr>
+        <tr><td>NEXT_SESSION_PROMPT.md 23a98c7&rarr;cfbdc1d</td><td class="mono">79 / 77</td><td class="mono">10</td><td class="mono">10</td><td class="mono">10</td><td class="mono">10</td><td class="mono">10</td><td class="mono">10</td><td class="mono">10</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      On the third pair, git reports 150 changed lines, even with <code>--minimal</code>,
+      where the minimum is 144. Every one of the six extra lines is a blank line, the most
+      common line in that file (111 of its 872). The likely cause is a pass that sets very
+      frequent lines aside before the search for matches begins; that is inferred from this
+      measurement, not traced in git&rsquo;s source. Either way the diff is still correct, since
+      applying it gives the new file exactly. It is just not the shortest.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity, with an honest qualifier</div>
+      <p style="margin-bottom:0">
+        Comparing two revisions of a drawing&rsquo;s notes by hand, you find the longest run of
+        notes that survive in order and mark the rest as deleted or added. That is the LCS,
+        and the minimum diff is exactly \(N+M-2L\). What real tools do is aim at that minimum.
+        Plain Myers-style search hit it on every random pair and missed it by six blank lines
+        on one real file. Patience and histogram diffs anchor on lines that occur once in each
+        file, which tends to give diffs that are easier to read, and on random files they pay
+        for that with longer edit scripts. The exact table costs \(N\times M\) cells, 837,120
+        for the third pair; Myers&rsquo; method costs about \((N+M)\,D\), small when the
+        revisions are close (reported). So the LCS is the specification, and the tools are
+        fast approximations to it.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">The table behind a diff</div><div class="lab-tag">Predict, then compare</div></div>
+    <div class="predict">
+      <p style="margin-top:0">
+        Revision B of a drawing changes the material from EN8 to EN24, drops &ldquo;BREAK
+        SHARP EDGES&rdquo; and adds a plating note. Both revisions have six lines. How many
+        lines does the shortest diff mark as changed?
+      </p>
+      <button class="pbtn" data-p2="a" type="button">2</button>
+      <button class="pbtn" data-p2="b" type="button">3</button>
+      <button class="pbtn" data-p2="c" type="button">4</button>
+      <button class="pbtn" data-p2="d" type="button">6</button>
+      <div class="pverdict" id="pv2"></div>
+    </div>
+    <svg class="stage" id="dS" viewBox="0 0 480 300" role="img"
+         aria-label="The LCS table for two revisions, with the path the diff takes through it, and the resulting diff listing">
+      <g id="dGrid"></g><g id="dList"></g>
+    </svg>
+    <div class="ctl">
+      <button class="btn" data-dp="notes" type="button">Drawing notes</button>
+      <button class="btn" data-dp="myers" type="button">ABCABBA / CBABAC</button>
+      <button class="btn" data-dp="renum" type="button">Renumbered notes</button>
+      <button class="btn" id="dAlt" type="button">Another LCS</button>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Lines<br>N / M</div><div class="ro-v" id="dNM">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">LCS<br>length L</div><div class="ro-v a" id="dL">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Changed lines<br>N + M &minus; 2L</div><div class="ro-v" id="dD">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Different<br>LCSs</div><div class="ro-v" id="dK">&mdash;</div></div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    Rows are the old revision&rsquo;s lines, columns the new one&rsquo;s. Each cell holds the
+    LCS length of the two prefixes. The shaded path walks back from the bottom-right corner:
+    a diagonal step keeps a line, a step up deletes an old line, a step left inserts a new one.
+    The listing on the right is the diff that path produces. <b>ABCABBA / CBABAC</b> is the
+    standard example from the diff literature: it has three different LCSs (BABA, CABA, CBBA),
+    so three different shortest diffs, and <b>Another LCS</b> steps through them. Which one a
+    tool prints is a convention. <b>Renumbered notes</b> deletes note 3 of 5 and renumbers the
+    rest: every later line now differs, and the diff marks 5 lines where a person sees one
+    change. Strip the numbers and it marks 1 (<code>[Ch15 s06]</code>).
+  </div>
+  <div class="col">
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks</div>
+      <p style="margin-bottom:0">
+        A diff compares characters, not intent. The renumbering case shows it marking five
+        changes for one decision, and the opposite also happens: changing a tolerance from h7
+        to h6 is a one-character edit with a large consequence. That is why an ECN states the
+        reason for a change and a commit message (&sect;09) should too. And a line diff is
+        meaningless on a file that is not lines of text: two revisions of a CAD part file differ
+        in bytes scattered through a binary format, and only a geometric comparison says what
+        moved.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="merge">
+  <div class="col">
+    <div class="sechead"><span class="secnum">07</span><h2>Three-way merge, and why a vault locks drawings</h2>
+      <a class="srcref" href="@F2@" target="_blank" rel="noopener">src 02. git &#8599;</a>
+    </div>
+    <p>
+      Two engineers edit the same file at the same time. A drawing vault prevents this: one
+      engineer checks the drawing out, everyone else can only read it until it is checked
+      back in. That is a lock, the mutex of Sheet 13 part 2 &sect;12, and it rules out the
+      lost update by making everyone else wait. Git takes the opposite policy. Anyone edits
+      anything, and the edits are combined afterwards by a <b>three-way merge</b>: git finds
+      the last commit both sides share, the <b>base</b>, and compares each side to it.
+    </p>
+    <ul>
+      <li>A region neither side changed is kept.</li>
+      <li>A region one side changed takes that side&rsquo;s version.</li>
+      <li>A region both sides changed is taken if the two changes are identical, and is a
+        <b>conflict</b> otherwise, left in the file between markers for a person to decide.</li>
+    </ul>
+    <p>
+      The source says a conflict happens &ldquo;when two branches modify the same line&rdquo;.
+      Five cases on an eight-line file, merged by real git, show the rule is a little wider
+      (<code>[Ch15 s07]</code>):
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>What git did with two branches edited from the same base.</caption>
+      <thead><tr><th>Edits on the two sides</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>Line 2 on one side, line 6 on the other</td><td><span class="flag ok">clean</span></td></tr>
+        <tr><td>Line 3 on both sides, to different values</td><td><span class="flag bad">conflict</span></td></tr>
+        <tr><td>Line 3 on both sides, to the <em>same</em> value</td><td><span class="flag ok">clean</span></td></tr>
+        <tr><td>Line 3 on one side, line 4 on the other (adjacent)</td><td><span class="flag bad">conflict</span></td></tr>
+        <tr><td>Line 3 on one side, line 5 on the other (one line between)</td><td><span class="flag ok">clean</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      Adjacent edits conflict because there is no unchanged line between them to show where
+      one change ends and the other begins; one untouched line is enough. The markers need care
+      too. The source says the block under <code>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</code> is
+      &ldquo;the current branch&rsquo;s version&rdquo;. HEAD is wherever you are standing. In a
+      merge into main you stand on main, so HEAD is main. In a <em>rebase</em> of your branch
+      onto main (&sect;08), git stands on main and replays your commits one by one, so HEAD is
+      main again and <em>your</em> line is the one under <code>=======</code>. Measured on a
+      config file with <code>learning_rate = 0.0005</code> on your branch and
+      <code>0.002</code> on main: during the rebase the HEAD block held 0.002
+      (<code>[Ch15 s07]</code>). Read the commit names in the markers, not the word HEAD.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Two policies for one problem</div>
+      <p style="margin-bottom:0">
+        A lock pays in waiting: Sheet 13 part 2 &sect;16 showed contention capping a whole
+        system. A merge pays in conflicts, only when edits overlap. Which costs less depends on
+        how often two people touch the same region. Source code is many small regions, so
+        overlaps are rare and the merge wins. A CAD model saved as one binary file is a single
+        region, so every concurrent edit overlaps, and that is why engineering vaults lock and
+        why Git LFS added file locking for such files (reported). The vault is not old-fashioned;
+        it is the right policy for its file type.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks: clean is not correct</div>
+      <p style="margin-bottom:0">
+        A merge with no conflict is only a merge with no textual overlap. If one branch renames
+        a function and the other adds a new call to the old name, the edits touch different
+        lines, git merges them silently, and the result does not run. Two drawing changes can
+        each be right and still not fit together; checking the assembly is a separate step. In
+        software that step is the automated test run after every merge, &sect;18.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="rebase">
+  <div class="col">
+    <div class="sechead"><span class="secnum">08</span><h2>Branches, rebase, and bisect</h2>
+      <a class="srcref" href="@F2@" target="_blank" rel="noopener">src 02. git &#8599;</a>
+    </div>
+    <p>
+      A <b>branch</b> is a pointer to a commit, as the source says, and the pointer is
+      literal: a 41-byte file holding one commit name and a newline
+      (<code>[Ch15 s08]</code>). Creating a branch writes 41 bytes, which is why the source can
+      say &ldquo;branch always&rdquo;. When you commit on a branch, git moves the pointer to the
+      new commit.
+    </p>
+    <p>
+      There are two ways to bring a branch up to date with main. A <b>merge</b> adds a commit
+      with two parents. A <b>rebase</b> replays each of your commits on top of main&rsquo;s
+      latest commit. A replayed commit has a different parent, so by &sect;04 it has a different
+      name: in the check, all three replayed commits got new names and none was kept, while the
+      changes they carry were identical, as compared by <code>git patch-id</code>, which hashes
+      the change itself (<code>[Ch15 s08]</code>). The source&rsquo;s rule &ldquo;never rebase
+      commits that have been pushed and shared&rdquo; follows directly. Colleagues hold the old
+      names; after the rebase those names belong to a history that is no longer on the branch.
+      It is re-issuing released drawings under new numbers while the shop floor still works
+      from the old ones.
+    </p>
+    <p>
+      <b><code>git bisect</code></b> finds the commit that introduced a fault. You mark one
+      commit good and one bad; git checks out the commit halfway between, you test it, and
+      git keeps the half that must contain the change. It is bisection, the method of Sheet 13
+      part 1 &sect;06 and Sheet 14 part 2 &sect;15, run on history. A repository of 300 commits
+      with a fault introduced at commit 187 was bisected with an automatic test: git named
+      commit 187 after <b>8</b> builds, against \(\log_2 299 = 8.22\) (<code>[Ch15 s08]</code>).
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks</div>
+      <p style="margin-bottom:0">
+        Bisection needs a single change of sign between the two ends. Bisect needs the same:
+        every commit after the culprit must test bad and every one before it good. A fault that
+        comes and goes, or a test that fails at random, breaks the assumption, and bisect then
+        names a wrong commit with full confidence; &sect;24 computes how often. The source says
+        atomic commits make bisect possible. Bisect works on any history; small commits make
+        its answer <em>useful</em>, because the culprit it names is then small enough to read.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="discipline">
+  <div class="col">
+    <div class="sechead"><span class="secnum">09</span><h2>The ECN, the ignore list, and the hash in the log</h2>
+      <a class="srcref" href="@F2@" target="_blank" rel="noopener">src 02. git &#8599;</a>
+    </div>
+    <p>
+      A commit message has the job of the reason-for-change field on an ECN. The diff already
+      records <em>what</em> changed, computed (&sect;06); only a person can record <em>why</em>.
+      The source&rsquo;s conventions, a summary of 50 characters or fewer in the imperative
+      mood and a body wrapped at 72, are conventions, and good ones. A <b>pull request</b> is the
+      change review: a proposed set of commits, a description, reviewers who must approve
+      before it merges. Keeping it small is the same advice as keeping an ECN to one change.
+    </p>
+    <p>
+      Three of the source&rsquo;s practical warnings, each checked (<code>[Ch15 s09]</code>):
+    </p>
+    <ul>
+      <li><b>Ignoring a file after committing it does nothing to the past.</b> A
+        <code>.env</code> file holding <code>KEY=abc123</code> was committed, then added to
+        <code>.gitignore</code>. Git went on tracking it (<code>git status</code> showed it
+        modified). After <code>git rm --cached .env</code> it was untracked, and
+        <code>git show HEAD~1:.env</code> still printed <code>KEY=abc123</code>. A committed
+        secret has to be treated as published and changed at its source. Rewriting history
+        removes it but renames every later commit (&sect;08).</li>
+      <li><b>Large files are stored by name.</b> A Git LFS pointer, the small file committed in
+        place of a large one, is 129 bytes naming the real file by the SHA-256 of its content
+        and its size. Content addressing again, with a longer hash.</li>
+      <li><b>The source&rsquo;s way of logging the commit is broken twice.</b>
+        <code>subprocess.check_output(['git', 'rev-parse', 'HEAD']).strip()</code> returns
+        bytes, so a log line built from it reads <code>commit b'8539e9&hellip;'</code>; add
+        <code>.decode()</code> or pass <code>text=True</code>. More seriously, HEAD names the
+        last <em>commit</em>. Edit a file without committing and HEAD&rsquo;s name does not
+        change, so the logged hash no longer names the code that ran. Record
+        <code>git status --porcelain</code> as well, or refuse to train from a modified tree.</li>
+    </ul>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same structure: red-line mark-ups</div>
+      <p style="margin-bottom:0">
+        Recording only the commit hash is recording the drawing number while the shop works
+        from a copy with red-line mark-ups on it. The number is correct and the part made is
+        not the part on the drawing. The fix is the same in both trades: either fold the
+        mark-ups into a released revision before making the part, or record the mark-ups with
+        the part.
+      </p>
+    </div>
+  </div>
+</section>
