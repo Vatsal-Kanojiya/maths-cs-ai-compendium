@@ -5651,6 +5651,17 @@ def _ch15():
             tot += (1 - fe) ** need; steps_all.append(steps)
         return tot / N, np.mean(steps_all), max(steps_all)
     w1 = p_correct(300, 0.05, 1); w2 = p_correct(300, 0.05, 2); w3 = p_correct(300, 0.05, 3)
+    needs = []
+    for cul in range(300):
+        lo, hi, need = 0, 299, 0
+        while lo < hi:
+            m = (lo + hi) // 2
+            if m >= cul: hi = m
+            else: lo = m + 1; need += 1
+        needs.append(need)
+    say("s24", f"hand estimate: the correct path needs {np.mean(needs):.2f} 'good' verdicts on average, and "
+        f"0.95^{np.mean(needs):.2f} = {0.95 ** np.mean(needs):.3f} against the exact average {w1[0]:.3f}",
+        abs(0.95 ** np.mean(needs) - w1[0]) < 0.01)
     say("s24", f"bisect 300 commits: {w1[1]:.2f} builds on average, at most {w1[2]}; ceil(log2 300) = {math.ceil(math.log2(300))}",
         w1[2] == 9 and abs(w1[1] - 8.2) < 0.1)
     say("s24", f"test falsely fails a good build 5% of the time: right culprit with prob {w1[0]:.3f} (one run per step), "

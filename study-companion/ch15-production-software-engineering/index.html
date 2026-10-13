@@ -1946,3 +1946,376 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     </p>
   </div>
 </section>
+
+<section id="containers">
+  <div class="col">
+    <div class="sechead"><span class="secnum">19</span><h2>A container is a palletised fixture</h2>
+      <a class="srcref" href="@F5@" target="_blank" rel="noopener">src 05. deployment and devops &#8599;</a>
+    </div>
+    <p>
+      Sheet 13 part 2 &sect;10 explained what a container is: a process walled off by the
+      host&rsquo;s own kernel, which shares that kernel instead of booting one of its own. File 05
+      is the practical side. An <b>image</b> is a packaged file system, built from a recipe
+      called a <b>Dockerfile</b> whose lines each add a <b>layer</b>: start from a base image,
+      install system packages, install Python packages, copy in the code, name the command to
+      run. <code>docker run</code> starts a container from the image.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same structure: a palletised fixture</div>
+      <p style="margin-bottom:0">
+        On a flexible manufacturing line the workpiece is clamped once onto a standard pallet,
+        and the pallet locates on any machine with the matching zero-point receiver. Setup is
+        done once, off the machine, and repeated identically everywhere. An image is that pallet:
+        the program with everything it needs above the operating system, located on any host
+        through one standard interface, the kernel&rsquo;s system calls. &ldquo;It works on my
+        machine&rdquo; becomes &ldquo;it works on any machine with this receiver&rdquo;.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where the analogy breaks, and a qualification to Sheet 13</div>
+      <p style="margin-bottom:0">
+        Sheet 13 part 2 &sect;10 said an image runs identically everywhere. Everything inside
+        the image is identical; the machine is not in the image. The kernel belongs to the host,
+        and so does the GPU driver: <code>docker run --gpus all</code> passes the host&rsquo;s
+        driver into the container (reported). An image built for one CUDA version can fail on a
+        host whose driver is too old, exactly as a pallet locates perfectly on a machine whose
+        spindle cannot reach the speed the job needs. The pallet brings the setup, not the
+        spindle.
+      </p>
+    </div>
+    <p>
+      The source&rsquo;s example Dockerfile would not run the program it names, for three
+      reasons:
+    </p>
+    <ul>
+      <li><b>The command points at code the image does not have, or cannot import.</b> File 03
+        put entry scripts in a top-level <code>scripts/</code> folder; the Dockerfile copies only
+        <code>src/</code> and <code>configs/</code> and runs <code>src/scripts/serve.py</code>.
+        Even with the script there, a <code>src/</code>-layout package that was never installed
+        cannot be imported: a mock of that tree, run the same way, stops with
+        <code>ModuleNotFoundError: No module named 'my_project'</code>
+        (<code>[Ch15 s19]</code>). The image needs a <code>pip install .</code> step, which is
+        &sect;10&rsquo;s point arriving at deployment.</li>
+      <li><b>It installs Python 3.11 and then uses another Python.</b> <code>pip</code> and
+        <code>python3</code> refer to the distribution&rsquo;s default interpreter, which on
+        Ubuntu 22.04 is 3.10 (reported), so the requirements are installed for 3.10 and 3.11 is
+        never used.</li>
+      <li><b>The multi-stage example copies packages to a path stamped with a version.</b>
+        <code>pip install --user</code> writes into a folder whose name contains the
+        interpreter&rsquo;s version, here <code>~/.local/lib/python3.13/site-packages</code>
+        (<code>[Ch15 s19]</code>). Packages built in the <code>python:3.11</code> stage are only
+        found by a Python 3.11 in the final stage, and the CUDA runtime image it copies them into
+        does not ship Python at all (reported). Build and run stages must use the same
+        interpreter.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="layers">
+  <div class="col">
+    <div class="sechead"><span class="secnum">20</span><h2>Layer order is &ldquo;paint last&rdquo;</h2>
+      <a class="srcref" href="@F5@" target="_blank" rel="noopener">src 05. deployment and devops &#8599;</a>
+    </div>
+    <p>
+      Docker keeps every layer it has built. On a rebuild it reuses a layer if that line of the
+      Dockerfile, the files it copies, and every layer before it are unchanged; once one layer
+      changes, every layer after it is rebuilt. The cache key of each layer covers the key of
+      the one before, the same chain as commit names in &sect;04: change layer 4 of 5 and layers
+      1&ndash;3 are reused, 4 and 5 are not (<code>[Ch15 s20]</code>, on a model of the chain).
+      So the source&rsquo;s advice is to put what rarely changes first and what often changes
+      last: install the Python packages before copying in the code, so that editing one line of
+      code does not reinstall everything.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: delayed differentiation</div>
+      <p style="margin-bottom:0">
+        A garment maker that dyes sweaters after knitting them, rather than knitting from dyed
+        yarn, can change the colour mix without re-knitting anything. Do the common operations
+        first and the variant-specific ones last, so a change to a variant reworks only the end
+        of the route. A Dockerfile is a route, and the cache makes the economics the same.
+      </p>
+    </div>
+    <p>
+      &ldquo;Rarely changing first&rdquo; is the rule when every step costs the same. When costs
+      differ it needs a correction, which a short derivation supplies. Let step \(i\) take
+      \(c_i\) seconds and change on a given build with probability \(p_i\). Step \(i\) is rebuilt
+      if it or any step before it changed, so the expected rebuild time per build is
+    </p>
+  </div>
+  <div class="mathbox col">$$E = \sum_i c_i\Big(1-\prod_{j\le i}(1-p_j)\Big)$$</div>
+  <div class="col">
+    <p>
+      Swap two neighbouring steps and compare the two totals; everything else cancels, and step
+      \(i\) should come before step \(j\) exactly when
+    </p>
+  </div>
+  <div class="mathbox col">$$\frac{p_i}{c_i\,(1-p_i)} \;<\; \frac{p_j}{c_j\,(1-p_j)}$$</div>
+  <div class="col">
+    <p>
+      Sorting by that ratio gave the best of every possible order on 300 random Dockerfiles,
+      checked against all permutations; ordering by change frequency alone was worse in 235 of
+      them, by up to 1.72 times the optimum (<code>[Ch15 s20]</code>). It is the same
+      adjacent-exchange argument that proves Johnson&rsquo;s rule and the shortest-processing-time
+      rule (Sheet 13 part 2 &sect;04, Sheet 14 part 2 &sect;17), and &sect;18&rsquo;s inspection
+      order is its sibling. The ratio says: an expensive step that changes fairly often can still
+      belong early, because rebuilding it is what you are trying to avoid.
+    </p>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Order the route</div><div class="lab-tag">Predict, then rebuild</div></div>
+    <div class="predict">
+      <p style="margin-top:0">
+        Downloading the model weights takes 600 s and they change on 30% of builds. Copying the
+        config files takes 1 s and they change on 20%. Which should come first in the
+        Dockerfile?
+      </p>
+      <button class="pbtn" data-p5="a" type="button">Configs: they change less often</button>
+      <button class="pbtn" data-p5="b" type="button">Weights</button>
+      <button class="pbtn" data-p5="c" type="button">It makes no difference</button>
+      <div class="pverdict" id="pv5"></div>
+    </div>
+    <svg class="stage" id="lS" viewBox="0 0 480 250" role="img"
+         aria-label="The five Dockerfile steps in build order. Each pale bar is the step's full time; the dark part is its expected rebuild time per build under the chosen order.">
+      <g id="lBars"></g><g id="lLab"></g>
+    </svg>
+    <div class="ctl">
+      <button class="btn" data-lo="src" type="button">Ratio rule</button>
+      <button class="btn" data-lo="freq" type="button">Least often changed first</button>
+      <button class="btn" data-lo="rev" type="button">Reversed</button>
+      <button class="btn" id="lSim" type="button">Simulate 2,000 builds</button>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Expected<br>rebuild, s</div><div class="ro-v a" id="lE">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Simulated<br>mean, s</div><div class="ro-v" id="lM">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Best of all<br>120 orders, s</div><div class="ro-v" id="lB">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">No cache, s</div><div class="ro-v" id="lN">&mdash;</div></div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    Each row is a step in build order, with its time and change rate. The pale bar is the
+    step&rsquo;s full time; the solid part is what it costs per build on average, its time
+    multiplied by the chance that it or anything above it changed. The ratio rule&rsquo;s order
+    is also the order the steps are listed in, and it costs 222.7 s per build, the best of all
+    120 orders; putting the configs before the weights because they change less often costs
+    301.5 s; reversed, 857.1 s; with no cache at all, 963 s (<code>[Ch15 s20]</code>). The
+    simulated mean draws real random builds and should sit within a few seconds of the
+    expected value. The answer to the prediction is the weights.
+  </div>
+  <div class="col">
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks: a cache key names the command, not the result</div>
+      <p style="margin-bottom:0">
+        The model treats each step as changing or not. Docker keys a <code>RUN</code> step by
+        the text of the command (reported), not by what the command fetches. <code>RUN apt-get
+        update &amp;&amp; apt-get install &hellip;</code> is reused from the cache next month
+        even though the package servers now hold newer versions, so a cache hit can be stale,
+        and a clean rebuild of the same Dockerfile gives a different image. &sect;05&rsquo;s
+        rule applies: a hash certifies exactly what was hashed, and here that is the command.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="tracking">
+  <div class="col">
+    <div class="sechead"><span class="secnum">21</span><h2>Experiment tracking is traceability</h2>
+      <a class="srcref" href="@F5@" target="_blank" rel="noopener">src 05. deployment and devops &#8599;</a>
+    </div>
+    <p>
+      An <b>experiment tracker</b> (the source names Weights &amp; Biases and MLflow) records,
+      for every training run, the configuration, the metrics as training proceeds, and the files
+      produced. A <b>model registry</b> records which trained model is in which stage, from
+      development to production, and what produced it.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same structure: lot genealogy</div>
+      <p style="margin-bottom:0">
+        A traceability record ties a finished part to the heat number of its bar stock, the
+        machine, the program revision, the operator and the gauges used to pass it. The
+        source&rsquo;s reproducibility checklist is the same record for a model: commit (program
+        revision), config (process settings), random seeds, data version (heat number),
+        environment (machine and tooling), hardware. A model registry is the record of which lot
+        is released to which customer.
+      </p>
+    </div>
+    <p>
+      The source&rsquo;s W&amp;B loop has a bug. It saves the model when
+      <code>val_loss &lt; best_loss</code> but never updates <code>best_loss</code>, so the
+      condition compares every epoch with the starting value. For validation losses 0.90,
+      0.80, 0.85, 0.70, 0.75, 0.72 it saves at all six epochs; updating <code>best_loss</code>
+      saves at epochs 0, 1 and 3 (<code>[Ch15 s21]</code>). File 03&rsquo;s early-stopping
+      callback, which does update its best value, is the correct version of the same logic.
+    </p>
+    <p>
+      The source then says the image hash is &ldquo;a complete environment fingerprint&rdquo; and
+      that reproducing the image reproduces the training. Both halves overreach. An image&rsquo;s
+      digest names one built image, and rebuilding from the same Dockerfile later does not give
+      that image back, because steps such as <code>apt-get update</code> fetch whatever is
+      current (&sect;20). Keep the image itself, by digest, not only the recipe: the route card
+      is not the part. And the digest leaves out the kernel, the driver and the GPU (&sect;19),
+      while GPU arithmetic that adds numbers in a varying order gives slightly different sums
+      (Sheet 13 part 1 &sect;11). The digest is necessary for reproducibility, not sufficient.
+    </p>
+  </div>
+</section>
+
+<section id="monitoring">
+  <div class="col">
+    <div class="sechead"><span class="secnum">22</span><h2>Monitoring: tails and drift</h2>
+      <a class="srcref" href="@F5@" target="_blank" rel="noopener">src 05. deployment and devops &#8599;</a>
+    </div>
+    <p>
+      A deployed model is watched for latency, throughput, error rate, accuracy where labels
+      arrive, and <b>drift</b>, a change in the inputs (data drift) or in the relation between
+      inputs and correct outputs (concept drift). Serving and capacity are Sheet 17&rsquo;s and
+      Sheet 18&rsquo;s subjects; two things in the source need fixing here.
+    </p>
+    <p>
+      <b>Percentiles.</b> The p99 latency is the time that 99% of requests beat. The source says
+      &ldquo;a p99 of 500ms means 1 in 100 users waits half a second&rdquo;. It means 1 in 100
+      <em>requests</em> takes <em>at least</em> half a second, possibly much longer, since p99
+      says nothing about the tail beyond it. And users are not requests. A page that makes \(k\)
+      requests meets at least one slow one with probability
+    </p>
+  </div>
+  <div class="mathbox col">$$P(\text{page meets a slow request}) = 1-0.99^k$$</div>
+  <div class="col">
+    <p>
+      which is 9.6% for 10 requests and 63.4% for 100; a simulation with log-normal latencies
+      gave 63.0% (<code>[Ch15 s22]</code>). It is the third appearance of the series-system
+      formula on this sheet, after the random test in &sect;16 and the flaky suite after it.
+    </p>
+    <p>
+      <b>Drift scores.</b> The source names the Kolmogorov&ndash;Smirnov test and the population
+      stability index (PSI). PSI compares the fraction \(a_k\) of live inputs in each histogram
+      bin with the fraction \(e_k\) seen in training:
+    </p>
+  </div>
+  <div class="mathbox col">$$\text{PSI} = \sum_k (a_k-e_k)\ln\frac{a_k}{e_k} = \mathrm{KL}(a\,\|\,e)+\mathrm{KL}(e\,\|\,a)$$</div>
+  <div class="col">
+    <p>
+      The identity, checked on 200 random histograms (<code>[Ch15 s22]</code>), says PSI is the
+      Kullback&ndash;Leibler divergence of Sheet 05 &sect;08 taken both ways and added, so it is
+      symmetric in the two distributions. The usual alarm levels of 0.1 and 0.25 are rules of
+      thumb (reported), not derived.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same structure: a control chart</div>
+      <p style="margin-bottom:0">
+        Drift monitoring is statistical process control (Sheet 04): limits set from a reference
+        period, here the training data, and a statistic plotted against them. The source&rsquo;s
+        alert &ldquo;if p99 exceeds 200 ms for 5 minutes&rdquo; is a run rule: requiring the
+        signal to persist trades a slower alarm for fewer false ones, the same producer&rsquo;s
+        and consumer&rsquo;s risk as &sect;16.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks</div>
+      <p style="margin-bottom:0">
+        A control chart assumes the process should stay where it was during the reference
+        period. Real inputs drift for legitimate reasons, seasons and new customers among them,
+        so the reference goes stale and needs a policy for renewal. And concept drift cannot be
+        seen in the inputs at all: the inputs can look exactly as they did in training while the
+        right answers have changed. Only labelled outcomes reveal it, and they usually arrive
+        late.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="orchestration">
+  <div class="col">
+    <div class="sechead"><span class="secnum">23</span><h2>A pipeline is a precedence diagram, again</h2>
+      <a class="srcref" href="@F5@" target="_blank" rel="noopener">src 05. deployment and devops &#8599;</a>
+    </div>
+    <p>
+      An <b>orchestrator</b> such as Airflow runs a pipeline of tasks (ingest, preprocess,
+      train, evaluate, deploy) declared as a directed acyclic graph: each task names the tasks
+      it must wait for. That is a precedence diagram, and the orchestrator starts a task when
+      everything before it has finished, which is Fulkerson&rsquo;s rule and Kahn&rsquo;s
+      topological sort, proved the same in Sheet 14 part 2 &sect;10. A loop in the graph means
+      the pipeline can never start, which is why the graph must be acyclic. The source&rsquo;s
+      example, <code>preprocess &gt;&gt; train &gt;&gt; evaluate &gt;&gt; deploy</code>, is a
+      single chain, a serial line; real pipelines branch, and the critical path through them is
+      Sheet 14 part 1 &sect;09&rsquo;s forward pass.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same structure: gauge correlation</div>
+      <p style="margin-bottom:0">
+        A <b>feature store</b> computes each input feature once and serves the same value to
+        training and to the live model. The problem it solves, training-serving skew, is a
+        supplier and a customer measuring the same feature by different methods and disagreeing
+        about good parts. The cure in both trades is one agreed method, used at both ends.
+      </p>
+    </div>
+    <p>
+      The source&rsquo;s guidance on when to adopt an orchestrator (more than a few steps, a
+      schedule, several teams, automatic retries) is judgment and reads as sound. Where to go
+      from here, designing whole systems around these pieces, is Sheet 18.
+    </p>
+  </div>
+</section>
+
+<section id="worked">
+  <div class="col">
+    <div class="sechead"><span class="secnum">24</span><h2>Worked example: which of 300 commits broke the model?</h2>
+      <span class="srcref nolink" title="Written for this sheet; not in the source chapter">whole chapter</span>
+    </div>
+    <p>
+      A model scored well at release v1.4. Today&rsquo;s version scores badly. There are 300
+      commits in between. The regression check, a short training run and an evaluation, takes
+      20 minutes, and because GPU arithmetic is not perfectly repeatable, it fails a good build
+      5% of the time; a broken build always fails. Find the culprit and say how sure you are.
+    </p>
+    <h3>Solved as a quality engineer with a drawing history</h3>
+    <p>
+      The ECN log lists 300 changes. Testing them in order is linear search: 150 tests on
+      average, 50 hours. Halving instead, testing the middle revision and keeping the half that
+      must contain the change, needs \(\lceil\log_2 300\rceil = 9\) tests at most. Each test is
+      an inspection with a 5% producer&rsquo;s risk, and one false reject sends the search into
+      the wrong half for good. The search only goes wrong on a revision that really is good, and
+      on the way to the culprit you meet about four of those, so the chance of the right answer
+      is about \(0.95^4 \approx 0.81\). The fix from &sect;16 applies: call a revision bad only if
+      it fails twice. The false-reject rate per test drops to \(0.05^2 = 0.0025\).
+    </p>
+    <h3>Solved with git</h3>
+    <p>
+      <code>git bisect start &lt;bad&gt; &lt;good&gt;</code>, then <code>git bisect run
+      ./regress.sh</code>, where the script exits with failure only if the evaluation fails
+      twice in a row. Git checks out each midpoint, runs the script, and names the first bad
+      commit. <code>git show</code> on that commit prints its diff, computed as in &sect;06,
+      and its message, the ECN&rsquo;s reason for change.
+    </p>
+    <h3>The numbers, computed</h3>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Bisecting 300 commits with a check that falsely fails a good build 5% of the time (<code>[Ch15 s24]</code>).</caption>
+      <thead><tr><th>Policy</th><th>Builds</th><th>P(right commit)</th></tr></thead>
+      <tbody>
+        <tr><td>Linear search through the log</td><td class="mono">150 on average</td><td class="mono">falls as 0.95<sup>k</sup> over the good builds passed</td></tr>
+        <tr><td>Bisect, one run per step</td><td class="mono">8.29 on average, 9 at most</td><td class="mono">0.819</td></tr>
+        <tr><td>Bisect, bad only if 2 runs fail</td><td class="mono">under 16.6 on average</td><td class="mono">0.9902</td></tr>
+        <tr><td>Bisect, bad only if 3 runs fail</td><td class="mono">under 24.9 on average</td><td class="mono">0.99951</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      The hand estimate holds up: the correct path passes through 3.93 good verdicts on average,
+      and \(0.95^{3.93} = 0.817\) against the exact 0.819, which a Monte Carlo of 20,000 bisections
+      also gives (<code>[Ch15 s24]</code>). Both solutions are the same algorithm, bisection with
+      a sampling plan at each step, and the second is the first with the bookkeeping done by a
+      machine. A second run is needed only when a build fails, so two runs per step cost fewer than
+      17 builds on average, under six hours, and lift the chance of the right answer from 82%
+      to 99%, against 150 builds for the linear search.
+    </p>
+    <p>
+      What the computation does not cover is the assumption under all of it: once broken,
+      always broken. If the regression comes from two commits interacting, or comes and goes,
+      bisection has no single sign change to find, and the answer it gives is the first commit
+      at which the check happened to fail.
+    </p>
+  </div>
+</section>
