@@ -5680,7 +5680,594 @@ _ch15()
 # Chapter 16 part 1 block. Owned by the Chapter 16 part 1 run: replace only the body of _ch16p1() below.
 # Keep every name inside the function so nothing collides with another chapter's block.
 def _ch16p1():
-    pass
+    import math, os, re, shutil, subprocess, tempfile, time, random
+    from collections import OrderedDict
+    import numpy as np
+    T = "[Ch16 %s]"
+    def say(sec, msg, ok=None):
+        tail = "" if ok is None else "   " + P(ok)
+        print(f"{T % sec} {msg}{tail}")
+    here = os.path.dirname(os.path.abspath(__file__))
+    srcdir = os.path.join(os.path.dirname(here), "chapter 16 - SIMD and GPU programming")
+    srcfiles = ["00. why C++ and how ML frameworks work.md", "01. hardware fundamentals.md",
+                "02. ARM and NEON.md", "03. x86 and AVX.md"]
+    def blocks(fi):
+        s = open(os.path.join(srcdir, srcfiles[fi])).read()
+        return re.findall(r"```(\w*)\n(.*?)```", s, re.S)
+    gxx = shutil.which("g++"); clangxx = shutil.which("clang++")
+    try:
+        cpuflags = open("/proc/cpuinfo").read().split("flags", 1)[1].split("\n", 1)[0].split()
+    except Exception:
+        cpuflags = []
+    x86ok = bool(gxx) and "avx2" in cpuflags and "fma" in cpuflags
+    tmp16 = tempfile.mkdtemp(prefix="ch16p1_")
+    def build(name, code, flags):
+        p = os.path.join(tmp16, name + ".cpp"); o = os.path.join(tmp16, name)
+        open(p, "w").write(code)
+        r = subprocess.run([gxx] + flags + ["-o", o, p], capture_output=True, text=True)
+        return o if r.returncode == 0 else None
+    def run(o, *args, timeout=300):
+        r = subprocess.run([o] + list(args), capture_output=True, text=True, timeout=timeout)
+        return r.stdout
+    def runbest(o, pats, tries=3, *args):
+        # timings on a shared VM are noisy: run the program several times, keep each figure's minimum
+        best = {}
+        for _ in range(tries):
+            out = run(o, *args)
+            for key, pat in pats.items():
+                v = num(pat, out)
+                if v == v: best[key] = min(best.get(key, float("inf")), v)
+        return best
+    def num(pat, s):
+        m = re.search(pat, s); return float(m.group(1)) if m else float("nan")
+    print()
+    if not x86ok:
+        say("s00", "NOTE: no g++ or no AVX2+FMA on this machine; the measured checks below are skipped, "
+            "the derived ones still run")
+
+    # ---------------- s01: the two-language stack --------------------------------------
+    n4 = 4096
+    fl = 2 * n4**3
+    say("s01", f"4096 x 4096 matmul = 2n^3 = {fl:,} FLOPs (source: ~137 billion)", fl == 137_438_953_472)
+    say("s01", f"source's own ratio 30 min / 10 ms = {1800/0.010:,.0f} (it says 180,000x)", round(1800/0.010) == 180000)
+    need = fl / 0.010
+    core_avx2 = 4e9 * 8 * 2 * 2; core_512 = 4e9 * 16 * 2 * 2
+    say("s01", f"10 ms needs {need/1e12:.2f} TFLOP/s = {need/core_avx2:.1f} AVX2 cores or {need/core_512:.1f} "
+        f"AVX-512 cores at 4 GHz running at 100% of peak", abs(need/core_avx2 - 107.4) < 0.1 and abs(need/core_512 - 53.7) < 0.1)
+    # pure-Python triple loop, extrapolated by n^3
+    nn = 64
+    Ap = np.random.default_rng(1).random((nn, nn)).tolist(); Bp = np.random.default_rng(2).random((nn, nn)).tolist()
+    best = 1e9
+    for _ in range(3):
+        t0 = time.perf_counter()
+        Cp = [[0.0]*nn for _ in range(nn)]
+        for i in range(nn):
+            Ci = Cp[i]; Ai = Ap[i]
+            for k in range(nn):
+                a = Ai[k]; Bk = Bp[k]
+                for j in range(nn):
+                    Ci[j] += a * Bk[j]
+        best = min(best, time.perf_counter() - t0)
+    ext = best * (4096 / nn) ** 3
+    say("s01", f"measured: a pure-Python triple loop at n = 64 extrapolates to {ext/60:,.0f} min for n = 4096 "
+        f"(source: ~30 min; the order of magnitude holds)", 5*60 < ext < 20*3600)
+    X = np.random.default_rng(3).random((2048, 2048), dtype=np.float32); Y = X.T.copy()
+    X @ Y
+    t0 = time.perf_counter(); c0 = time.process_time(); X @ Y; w_mm = time.perf_counter() - t0; c_mm = time.process_time() - c0
+    a50 = np.random.default_rng(4).standard_normal(20_000_000).astype(np.float32); b50 = a50[::-1].copy()
+    a50 * b50
+    t0 = time.perf_counter(); c0 = time.process_time(); a50 * b50; w_el = time.perf_counter() - t0; c_el = time.process_time() - c0
+    say("s01", f"measured: NumPy elementwise a*b uses {c_el/w_el:.2f} CPU-seconds per wall-second (one thread); "
+        f"a 2048 matmul uses {c_mm/w_mm:.2f} on {os.cpu_count()} CPUs (BLAS threads)",
+        c_el / w_el < 1.35 and (os.cpu_count() < 2 or c_mm / w_mm > 1.5))
+    say("s01", f"measured: 2048^3 matmul in float32 runs at {2*2048**3/w_mm/1e9:,.0f} GFLOP/s through NumPy/BLAS")
+    kf = 3
+    say("s01", f"fusion: matmul then {kf} elementwise ops moves (1 + 2k) = {1+2*kf} output-sized arrays unfused, "
+        f"1 fused, a {1+2*kf}x cut in that traffic", 1 + 2*kf == 7)
+
+    # ---------------- s02: the source's C++ tasks ----------------------------------------
+    N1 = 10_000_000
+    vals = np.arange(N1, dtype=np.float32) * np.float32(0.001)
+    seq = float(np.cumsum(vals, dtype=np.float32)[-1])
+    exact = math.fsum(vals.astype(np.float64))
+    say("s02", f"task 1's float accumulator: sequential float32 sum = {seq:.6g}, exact sum of the same values = "
+        f"{exact:.9g}, error {100*(exact-seq)/exact:.2f}%", abs(seq - 4.83701e10) < 1e5 and 3.0 < 100*(exact-seq)/exact < 3.5)
+    say("s02", f"task 3: 4096^2 = {4096**2:,} = 2^24 ones; float32(2^24) + 1 == 2^24 is "
+        f"{np.float32(2**24) + np.float32(1) == np.float32(2**24)}: both sums land exactly on the last integer "
+        f"float32 can count to", 4096**2 == 2**24 and np.float32(2**24) + np.float32(1) == np.float32(2**24))
+    if x86ok:
+        b0 = blocks(0)
+        o = build("t1", b0[11][1], ["-O3"])
+        out = run(o) if o else ""
+        csum, ctime = num(r"Sum: (\S+)", out), num(r"Time: (\S+)", out)
+        say("s02", f"source task 1 compiled and run: prints Sum {csum:.6g} (NumPy model "
+            f"{seq:.6g}), {ctime:.1f} ms", abs(csum - seq) / seq < 1e-5)
+
+    # ---------------- s03: why clocks stopped ------------------------------------------------
+    p4 = 4 * 3.0**3; p1 = 4.5**3
+    say("s03", f"P ~ f^3 (V ~ f): four cores at 3 GHz draw {p4/p1:.3f}x one core at 4.5 GHz and do "
+        f"{12/4.5:.3f}x the work per second (source: 'similar power', '4x the work')",
+        abs(p4/p1 - 1.185) < 1e-3 and abs(12/4.5 - 2.667) < 1e-3)
+    say("s03", f"doubling 4 GHz to 8 GHz under the cube law: {2**3}x the power (100 W -> 800 W)", 2**3 == 8)
+    fe = 4.5 / 4 ** (1/3)
+    say("s03", f"equal power, four cores: each at 4.5/4^(1/3) = {fe:.3f} GHz, total {4*fe/4.5:.3f}x the work",
+        abs(fe - 2.835) < 1e-3 and abs(4*fe/4.5 - 2.520) < 1e-3)
+    def s_star(n): return (n ** (-1/3) - 1/n) / (1 - 1/n)
+    say("s03", f"equal power with Amdahl: n cores beat one fast core while the serial fraction s < "
+        f"(n^-1/3 - 1/n)/(1 - 1/n): n=2 {s_star(2):.3f}, n=4 {s_star(4):.3f}, n=16 {s_star(16):.3f}",
+        abs(s_star(4) - 0.5066) < 1e-3)
+    ok = True
+    for _ in range(200):
+        N_, k_ = random.uniform(0.5, 3), random.uniform(0.5, 3)
+        ok &= abs((k_**3 / k_) - k_**2) < 1e-12   # power/flow = energy per unit ~ speed^2, pump and chip alike
+    say("s03", "affinity laws: P ~ N^3 and Q ~ N give energy per unit pumped ~ N^2; P ~ f^3 and ops ~ f give "
+        "energy per operation ~ f^2 -- same exponents", ok)
+
+    # ---------------- s04: inside a core --------------------------------------------------------
+    def predict(pattern, bits, state):
+        miss = 0; top = (1 << bits) - 1; thr = (top + 1) // 2
+        for taken in pattern:
+            if (state >= thr) != taken: miss += 1
+            state = min(top, state + 1) if taken else max(0, state - 1)
+        return miss / len(pattern)
+    loop = ([True]*9 + [False]) * 1000
+    alt = [True, False] * 5000
+    say("s04", f"loop branch (9 taken, 1 exit): 1-bit predictor misses {100*predict(loop,1,1):.0f}%, "
+        f"2-bit counter {100*predict(loop,2,3):.0f}%", abs(predict(loop, 1, 1) - 0.2) < 1e-3 and abs(predict(loop, 2, 3) - 0.1) < 1e-3)
+    say("s04", f"alternating T,N: 2-bit counter misses {100*predict(alt,2,2):.0f}% from 'weakly taken', "
+        f"{100*predict(alt,2,1):.0f}% from 'weakly not taken' (hysteresis can lock in the worst case)",
+        abs(predict(alt, 2, 2) - 0.5) < 1e-3 and abs(predict(alt, 2, 1) - 1.0) < 1e-3)
+    rr = random.Random(16); rnd = [rr.random() < 0.5 for _ in range(100000)]
+    say("s04", f"random 50/50 branch: 2-bit counter misses {100*predict(rnd,2,2):.1f}% -- no predictor can beat 50%",
+        abs(predict(rnd, 2, 2) - 0.5) < 0.02)
+    say("s04", f"expected cost per branch = miss rate x penalty = 0.05 x 15 = {0.05*15:.2f} cycles", abs(0.05*15 - 0.75) < 1e-12)
+    clock = float("nan"); br_pen = float("nan")
+    MEAS = r'''
+#include <immintrin.h>
+#include <chrono>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <vector>
+#include <algorithm>
+#include <numeric>
+#include <random>
+#include <sys/mman.h>
+static double now(){return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();}
+#define BAR(x) asm volatile("" : : "r"(x) : "memory")
+static double ghz(){ long x=1; const long it=20000000; double best=1e9;
+  for(int r=0;r<5;r++){ double t=now(); for(long i=0;i<it;i++) asm volatile(
+   "add %0,%0\n\tadd %0,%0\n\tadd %0,%0\n\tadd %0,%0\n\tadd %0,%0\n\tadd %0,%0\n\tadd %0,%0\n\tadd %0,%0\n\t"
+   "add %0,%0\n\tadd %0,%0\n\tadd %0,%0\n\tadd %0,%0\n\tadd %0,%0\n\tadd %0,%0\n\tadd %0,%0\n\tadd %0,%0":"+r"(x));
+   best=std::min(best,now()-t);} BAR(x); return 16.0*it/best/1e9; }
+template<int K> static double fr(long it){ __m256 a[K]; __m256 x=_mm256_set1_ps(0.999999f), y=_mm256_set1_ps(1e-7f);
+  for(int k=0;k<K;k++) a[k]=_mm256_set1_ps((float)k); double best=1e9;
+  for(int r=0;r<5;r++){ double t=now(); for(long i=0;i<it;i++){
+#pragma GCC unroll 32
+   for(int k=0;k<K;k++) a[k]=_mm256_fmadd_ps(a[k],x,y);} best=std::min(best,now()-t);}
+  for(int k=0;k<K;k++) BAR(a[k][0]); return (double)it*K/best; }
+template<int K> static double dr(const float* a,const float* b,int n,int reps){ double best=1e9; float sink=0;
+  for(int q=0;q<5;q++){ double t=now(); for(int r=0;r<reps;r++){ __m256 acc[K]; for(int k=0;k<K;k++) acc[k]=_mm256_setzero_ps();
+   for(int i=0;i+8*K<=n;i+=8*K){
+#pragma GCC unroll 32
+    for(int k=0;k<K;k++) acc[k]=_mm256_fmadd_ps(_mm256_loadu_ps(a+i+8*k),_mm256_loadu_ps(b+i+8*k),acc[k]);}
+   __m256 s=acc[0]; for(int k=1;k<K;k++) s=_mm256_add_ps(s,acc[k]); sink+=s[0]; BAR(a);} best=std::min(best,now()-t);}
+  BAR(sink); return (double)reps*(n/8)/best; }
+__attribute__((noinline)) long branchy(const int* d,int n){ long s=0; for(int i=0;i<n;i++){ if(d[i]>=128) s+=d[i]; asm volatile("":"+r"(s)); } return s; }
+__attribute__((noinline)) void addv(const float* a,const float* b,float* c,long n){ for(long i=0;i<n;i++) c[i]=a[i]+b[i]; }
+__attribute__((noinline)) void addnt(const float* a,const float* b,float* c,long n){ for(long i=0;i<n;i+=8) _mm256_stream_ps(c+i,_mm256_add_ps(_mm256_load_ps(a+i),_mm256_load_ps(b+i))); _mm_sfence(); }
+int main(int argc,char** argv){
+  double G=ghz(); printf("clock %.4f\n",G);
+  if(!strcmp(argv[1],"addlat")){ float x=1.0f, y=1e-9f; const long it=20000000; double best=1e9;
+    for(int r=0;r<5;r++){ double t=now(); for(long i=0;i<it;i++) asm volatile(
+     "vaddss %1,%0,%0\n\tvaddss %1,%0,%0\n\tvaddss %1,%0,%0\n\tvaddss %1,%0,%0\n\tvaddss %1,%0,%0\n\tvaddss %1,%0,%0\n\tvaddss %1,%0,%0\n\tvaddss %1,%0,%0":"+x"(x):"x"(y));
+     best=std::min(best,now()-t);} BAR(x); printf("addlat %.4f\n",best*G*1e9/(8.0*it)); }
+  if(!strcmp(argv[1],"fma")){ long it=8000000;
+    printf("fma 1 %.4f\n",fr<1>(it)/G/1e9); printf("fma 2 %.4f\n",fr<2>(it)/G/1e9); printf("fma 4 %.4f\n",fr<4>(it)/G/1e9);
+    printf("fma 6 %.4f\n",fr<6>(it)/G/1e9); printf("fma 8 %.4f\n",fr<8>(it)/G/1e9); printf("fma 10 %.4f\n",fr<10>(it)/G/1e9);
+    printf("fma 16 %.4f\n",fr<16>(it)/G/1e9);
+    int n=2048; float* A=(float*)aligned_alloc(64,4*(n+64)); float* B=(float*)aligned_alloc(64,4*(n+64));
+    for(int i=0;i<n+64;i++){A[i]=1;B[i]=0.5f;}
+    printf("dotal %.4f\n",dr<8>(A,B,n,50000)/G/1e9); printf("dotmis %.4f\n",dr<8>(A+1,B+1,n,50000)/G/1e9);
+    printf("dot1 %.4f\n",dr<1>(A,B,n,50000)/G/1e9); }
+  if(!strcmp(argv[1],"branch")){ const int n=1<<20; std::vector<int> d(n); std::mt19937 g(16); for(auto& x:d) x=g()%256;
+    std::vector<int> s=d; std::sort(s.begin(),s.end()); double tr=1e9,ts=1e9; long k=0;
+    for(int r=0;r<15;r++){ double t=now(); k+=branchy(d.data(),n); tr=std::min(tr,now()-t); t=now(); k+=branchy(s.data(),n); ts=std::min(ts,now()-t);}
+    BAR(k); printf("rand_ns %.4f\nsort_ns %.4f\n",tr/n*1e9,ts/n*1e9); }
+  if(!strcmp(argv[1],"chase")){ const long L=(256L<<20)/64; struct alignas(64) Nd{Nd* nx; char pad[56];};
+    Nd* m=(Nd*)aligned_alloc(2<<20,L*64); madvise(m,L*64,MADV_HUGEPAGE);
+    std::vector<long> p(L); std::iota(p.begin(),p.end(),0); std::mt19937_64 g(16); std::shuffle(p.begin(),p.end(),g);
+    for(long i=0;i<L;i++) m[p[i]].nx=&m[p[(i+1)%L]];
+    int Ks[]={1,2,4,8,16,32}; for(int K:Ks){ Nd* q[32]; for(int k=0;k<K;k++) q[k]=&m[p[(L/K)*k]];
+      long st=1500000/K; if(st<60000) st=60000; double t=now(); for(long i=0;i<st;i++) for(int k=0;k<K;k++) q[k]=q[k]->nx;
+      t=now()-t; for(int k=0;k<K;k++) BAR(q[k]); printf("chase %d %.4f\n",K,t/(st*(double)K)*1e9); } }
+  if(!strcmp(argv[1],"bw")){ const long N=1<<24; float* a=(float*)aligned_alloc(64,4*N); float* b=(float*)aligned_alloc(64,4*N); float* c=(float*)aligned_alloc(64,4*N);
+    for(long i=0;i<N;i++){a[i]=1;b[i]=2;c[i]=0;} double bn=1e9,bt=1e9;
+    for(int t=0;t<8;t++){ double s=now(); addv(a,b,c,N); BAR(c); bn=std::min(bn,now()-s); }
+    for(int t=0;t<8;t++){ double s=now(); addnt(a,b,c,N); BAR(c); bt=std::min(bt,now()-s); }
+    printf("bw_normal %.4f\nbw_nt %.4f\n",12.0*N/bn/1e9,12.0*N/bt/1e9); }
+  if(!strcmp(argv[1],"zmm")){ __m512 a[16]; __m512 x=_mm512_set1_ps(0.999999f),y=_mm512_set1_ps(1e-7f);
+    for(int k=0;k<16;k++) a[k]=_mm512_set1_ps((float)k); long it=8000000; double best=1e9;
+    for(int r=0;r<5;r++){ double t=now(); for(long i=0;i<it;i++){
+#pragma GCC unroll 16
+     for(int k=0;k<16;k++) a[k]=_mm512_fmadd_ps(a[k],x,y);} best=std::min(best,now()-t);}
+    for(int k=0;k<16;k++) BAR(a[k][0]); printf("zmm_gflops %.3f\n",it*16.0*32/best/1e9);
+    printf("ymm_gflops %.3f\n",fr<16>(it)*16/1e9); }
+  return 0; }
+'''
+    meas = None
+    if x86ok:
+        meas = build("meas", MEAS, ["-O2", "-march=native", "-fno-if-conversion", "-fno-if-conversion2"])
+    if meas:
+        out = run(meas, "branch")
+        clock = num(r"clock (\S+)", out)
+        dns = num(r"rand_ns (\S+)", out) - num(r"sort_ns (\S+)", out)
+        br_pen = dns / 0.5 * clock
+        say("s04", f"measured: a 50/50 data-dependent branch costs {dns:.2f} ns more per element than the same branch "
+            f"on sorted data -> {br_pen:.0f} cycles per mispredict at {clock:.2f} GHz (source: ~15)", 8 < br_pen < 60)
+
+    # ---------------- s05: SIMD lanes ----------------------------------------------------------
+    tab = {128: (4, 2), 256: (8, 4), 512: (16, 8)}
+    say("s05", "register width / 32 and / 64: 128 -> 4 floats 2 doubles, 256 -> 8/4, 512 -> 16/8",
+        all(w // 32 == f and w // 64 == d for w, (f, d) in tab.items()))
+    def strokes(n, W): return math.ceil(n / W), n / (W * math.ceil(n / W))
+    say("s05", f"10 holes on an 8-spindle head: {strokes(10,8)[0]} strokes, {100*strokes(10,8)[1]:.1f}% of spindle-strokes "
+        f"cut; on a 4-spindle head: {strokes(10,4)[0]} strokes, {100*strokes(10,4)[1]:.1f}%",
+        strokes(10, 8) == (2, 0.625) and abs(strokes(10, 4)[1] - 10/12) < 1e-12)
+    ok = True
+    for W in (16, 32, 64):
+        for off in range(4, 64, 4):
+            pos = [off + k * W for k in range(64 * 64 // math.gcd(W, 64))]
+            frac = sum((p % 64) + W > 64 for p in pos) / len(pos)
+            want = 0.0 if off % W == 0 else W / 64
+            ok &= abs(frac - want) < 1e-12
+    say("s05", "a W-byte load at a misaligned offset splits a 64-byte line on exactly W/64 of loads "
+        "(16 B: 25%, 32 B: 50%, 64 B: 100%); offsets that are multiples of W never split", ok)
+    def shuf(imm):  # _mm_shuffle_ps(a, a, imm) as a 4x4 0/1 matrix
+        M = np.zeros((4, 4))
+        for d in range(4): M[d, (imm >> (2 * d)) & 3] = 1
+        return M
+    S1, S2 = shuf(0b01001110), shuf(0b10110001)
+    ok = np.allclose(S1 @ S1.T, np.eye(4)) and np.allclose(S2 @ S2.T, np.eye(4))
+    ok &= [int(np.argmax(S1[d])) for d in range(4)] == [2, 3, 0, 1] and [int(np.argmax(S2[d])) for d in range(4)] == [1, 0, 3, 2]
+    rg = np.random.default_rng(5)
+    for _ in range(1000):
+        v = rg.standard_normal(4); m = np.maximum(v, S1 @ v); m = np.maximum(m, S2 @ m)
+        ok &= np.allclose(m, v.max())
+    say("s05", "the two max-reduction shuffles are permutation matrices (lane i <- i XOR 2, then i XOR 1, the FFT "
+        "butterfly pattern) and leave the maximum in every lane, 1,000 random vectors", ok)
+    say("s05", f"but a shuffle is not always a permutation: immediate 0 broadcasts lane 0, a matrix of rank "
+        f"{np.linalg.matrix_rank(shuf(0))}", np.linalg.matrix_rank(shuf(0)) == 1)
+
+    # ---------------- s06: roofline ---------------------------------------------------------------
+    pk_src = 4e9 * 8 * 2; pk = pk_src * 2
+    say("s06", f"source's peak 4e9 x 8 x 2 = {pk_src/1e9:.0f} GFLOP/s counts an FMA as one FLOP; its matmul counts "
+        f"2n^3, so the matching peak is {pk/1e9:.0f} GFLOP/s per core", pk_src == 64e9 and pk == 128e9)
+    say("s06", f"ridge point at 50 GB/s: {pk_src/50e9:.2f} FLOP/B as printed, {pk/50e9:.2f} corrected; 8 cores: "
+        f"{8*pk/50e9:.2f}", abs(pk/50e9 - 2.56) < 1e-12 and abs(8*pk/50e9 - 20.48) < 1e-12)
+    code = blocks(1)[4][1].replace("import jax.numpy as jnp", "")
+    import io, contextlib
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        exec(code, {})
+    o = buf.getvalue()
+    got = re.findall(r":\s*([0-9.]+) FLOPS/byte", o)
+    say("s06", f"source's intensity task, run: ReLU {got[0]}, matmul {got[1]}, LayerNorm {got[2]}, conv {got[3]} FLOP/B "
+        f"(exact: 0.125, 170.67, 0.625, {2*9*64*128*32*32/((9*64*128+64*1024+128*1024)*4):.2f})",
+        got == ["0.12", "171", "0.62", "140"])
+    def roof(I, peak=pk, bw=50e9): return min(peak, bw * I)
+    say("s06", f"achievable on one corrected core: ReLU {roof(0.125)/1e9:.2f}, LayerNorm {roof(0.625)/1e9:.2f}, "
+        f"matmul {roof(170.67)/1e9:.0f} GFLOP/s -- the first two are set by the delivery station alone",
+        roof(0.125) == 6.25e9 and roof(170.67) == pk)
+    say("s06", f"matmul's n/6 assumes each matrix crosses the bus once; with no reuse each multiply-add fetches two "
+        f"floats: 2 FLOP / 8 B = {2/8} FLOP/B, below every ridge above", 2/8 < 1.28)
+
+    # ---------------- s07: staging and tiling -----------------------------------------------------
+    def reuse_curve(n, order, b):
+        trace = []
+        if order == "ijk":
+            for i in range(n):
+                for j in range(n):
+                    for k in range(n): trace += [(0, i, k), (1, k, j), (2, i, j)]
+        else:
+            for ii in range(0, n, b):
+                for jj in range(0, n, b):
+                    for kk in range(0, n, b):
+                        for i in range(ii, ii + b):
+                            for j in range(jj, jj + b):
+                                for k in range(kk, kk + b): trace += [(0, i, k), (1, k, j), (2, i, j)]
+        ids = {}; tr = [ids.setdefault(x, len(ids)) for x in trace]
+        Nt = len(tr); fen = [0] * (Nt + 1); last = {}; dist = []
+        def add(i, v):
+            i += 1
+            while i <= Nt: fen[i] += v; i += i & -i
+        def pre(i):
+            s = 0; i += 1
+            while i > 0: s += fen[i]; i -= i & -i
+            return s
+        for t, x in enumerate(tr):
+            if x in last:
+                p = last[x]; dist.append(pre(t - 1) - pre(p)); add(p, -1)
+            else:
+                dist.append(None)
+            last[x] = t; add(t, 1)
+        return dist
+    def misses(dist, cap): return sum(1 for d in dist if d is None or d >= cap)
+    def lru(n, order, b, cap):
+        c = OrderedDict(); m = 0
+        def acc(key):
+            nonlocal m
+            if key in c: c.move_to_end(key)
+            else:
+                m += 1; c[key] = 1
+                if len(c) > cap: c.popitem(last=False)
+        if order == "ijk":
+            for i in range(n):
+                for j in range(n):
+                    for k in range(n): acc((0, i, k)); acc((1, k, j)); acc((2, i, j))
+        else:
+            for ii in range(0, n, b):
+                for jj in range(0, n, b):
+                    for kk in range(0, n, b):
+                        for i in range(ii, ii + b):
+                            for j in range(jj, jj + b):
+                                for k in range(kk, kk + b): acc((0, i, k)); acc((1, k, j)); acc((2, i, j))
+        return m
+    n32 = 32
+    dN = reuse_curve(n32, "ijk", 0); d8 = reuse_curve(n32, "tile", 8); d4 = reuse_curve(n32, "tile", 4); d16 = reuse_curve(n32, "tile", 16)
+    ok = all(misses(dN, c) == lru(n32, "ijk", 0, c) for c in (128, 1100, 1200)) and \
+         all(misses(d8, c) == lru(n32, "tile", 8, c) for c in (192, 512))
+    say("s07", "stack-distance curve (one pass, every capacity at once) == direct LRU simulation at five capacities", ok)
+    mN, m8 = misses(dN, 512), misses(d8, 512)
+    say("s07", f"n = 32 matmul, 512-word LRU store: naive i-j-k fetches {mN:,} words (n^3 + 2n^2 = {n32**3+2*n32**2:,}); "
+        f"8 x 8 tiles fetch {m8:,} (n^2 + 2n^3/b = {n32**2 + 2*n32**3//8:,}); {mN/m8:.2f}x less",
+        mN == n32**3 + 2*n32**2 and m8 == n32**2 + 2*n32**3 // 8)
+    say("s07", f"tile b = 4 at 128 words: {misses(d4,128):,} (formula {n32**2+2*n32**3//4:,}); b = 16 at 1,100 words: "
+        f"{misses(d16,1100):,} (formula {n32**2+2*n32**3//16:,})",
+        misses(d4, 128) == n32**2 + 2*n32**3//4 and misses(d16, 1100) == n32**2 + 2*n32**3//16)
+    say("s07", f"the formula needs slack: b = 8 at exactly 3b^2 = 192 words gives {misses(d8,192):,}, not 9,216; "
+        f"b = 4 at 512 words gives {misses(d4,512):,} (more reuse than the tile alone)",
+        misses(d8, 192) > 9216 and misses(d4, 512) < n32**2 + 2*n32**3//4)
+    cliff = [c for c in range(1024, 1300, 4) if misses(dN, c) == 3 * n32**2]
+    say("s07", f"naive i-j-k falls off its cliff once all of B plus a row each of A and C fits: 3n^2 = {3*n32**2:,} "
+        f"words from capacity {cliff[0]:,} (n^2 + 2n = {n32**2+2*n32})", cliff and n32**2 + 2*n32 <= cliff[0] <= n32**2 + 2*n32 + 64)
+    say("s07", f"tile intensity, C kept: 2b^3 FLOP over 2b^2 floats = b/4 FLOP/B; at n = 32, b = 8: "
+        f"{2*n32**3/(4*m8):.2f} FLOP/B measured from the trace", abs(2*n32**3/(4*m8) - 1.778) < 1e-3)
+    rg = np.random.default_rng(6); best = 0; bestx = None
+    for _ in range(20000):
+        x = rg.random(3) + 0.05; x *= math.sqrt(3 / (x[0]*x[1] + x[1]*x[2] + x[0]*x[2]))
+        v = x.prod()
+        if v > best: best, bestx = v, x
+    say("s07", f"box tile a x b x c with fixed face area ab + bc + ca = 3: largest volume {best:.4f} at "
+        f"({bestx[0]:.2f}, {bestx[1]:.2f}, {bestx[2]:.2f}) -> the cube (volume 1); Lagrange gives a = b = c",
+        best <= 1 + 1e-9 and best > 0.995)
+    say("s07", f"L1 of 32 KiB holds three b x b float tiles while 12 b^2 <= 32768: b <= {int(math.sqrt(32768/12))}",
+        int(math.sqrt(32768/12)) == 52)
+    say("s07", f"a 64-byte line holds 16 floats: a column walk that loses each line before returning uses 1/16 of what was "
+        f"delivered", 64 // 4 == 16)
+
+    # ---------------- s08: Little's law / CONWIP -----------------------------------------------------
+    fma = {}
+    if meas:
+        # throughput runs are sensitive to other work on a shared VM: keep the best of up to three sweeps
+        dots = {}
+        for attempt in range(3):
+            out = run(meas, "fma")
+            for k, v in re.findall(r"fma (\d+) (\S+)", out): fma[int(k)] = max(fma.get(int(k), 0.0), float(v))
+            for k in ("dotal", "dotmis", "dot1"): dots[k] = max(dots.get(k, 0.0), num(k + r" (\S+)", out))
+            if max(fma[10], fma[16]) > 1.8 and attempt >= 1: break
+        out = "dotal %f\ndotmis %f\ndot1 %f\n" % (dots["dotal"], dots["dotmis"], dots["dot1"])
+        lat = 1 / fma[1]; plat = max(fma[10], fma[16])
+        model = {K: min(K / 4, 2) for K in fma}
+        dev = max(abs(fma[K] - model[K]) / model[K] for K in (1, 2, 4, 6))
+        say("s08", "measured FMA chains (vector FMAs per cycle): " + ", ".join(f"K={K}: {fma[K]:.2f}" for K in sorted(fma)) +
+            f"; latency 1/rate(K=1) = {lat:.2f} cycles, plateau {plat:.2f}", 3.3 < lat < 4.8 and 1.4 < plat < 2.2)
+        say("s08", f"CONWIP best case TH = min(K/T0, r_b) with T0 = 4 cycles, r_b = 2: below the knee (K = 1, 2, 4, 6) the "
+            f"worst deviation is {100*dev:.0f}%; above it the rate stops rising ({plat/fma[1]:.1f}x K=1, bound 8x); "
+            f"critical WIP K0 = r_b T0 = 8", dev < 0.15 and 5.0 < plat / fma[1] < 10.0)
+        dal, d1r = num(r"dotal (\S+)", out), num(r"dot1 (\S+)", out)
+        say("s08", f"dot product from L1, 8 accumulators: {fma.get(8,0):.2f} on the FMA chain but "
+            f"{dal:.2f} with two loads per FMA -- the load station, not the FMA station, binds", dal < 0.75 * fma.get(8, 2))
+        say("s08", f"source's one-accumulator dot product (the NEON and AVX2 code): {d1r:.2f} vector FMA "
+            f"per cycle, i.e. the 4-cycle latency chain; its lanes are independent but its iterations are not", d1r < 0.4)
+        al, mi = num(r"dotal (\S+)", out), num(r"dotmis (\S+)", out)
+        say("s10", f"measured in L1: the same dot product misaligned by 4 bytes runs at {mi:.2f} against {al:.2f} aligned "
+            f"({al/mi:.2f}x): half the 32-byte loads split a line", al / mi > 1.4)
+        out = run(meas, "chase")
+        ch = {int(k): float(v) for k, v in re.findall(r"chase (\d+) (\S+)", out)}
+        T0 = ch[1]; rb = 1 / min(ch[16], ch[32])
+        conc = rb * T0
+        say("s08", "measured pointer chase (ns per line, K independent chains): " + ", ".join(f"K={K}: {ch[K]:.1f}" for K in sorted(ch)) +
+            f"; single-chain latency T0 = {T0:.0f} ns", ch[1] / ch[4] > 2.5 and ch[16] / ch[32] < 1.35)
+        say("s08", f"Little's law: plateau {64*rb:.2f} GB/s of random lines x latency {T0:.0f} ns = {conc:.1f} lines in flight "
+            f"(the critical WIP); a core cannot have more misses outstanding than that", 6 < conc < 32)
+        say("s08", f"OoO window needed to hide one DRAM miss: {T0:.0f} ns x {clock:.2f} GHz x 4 IPC = "
+            f"{T0*clock*4:,.0f} instructions, several times any reorder buffer (reported 224 on Skylake-family cores)",
+            T0 * clock * 4 > 448)
+    say("s08", f"Little's law, exact arithmetic: 4-cycle latency x 2 FMA units = 8 accumulators; Golden Cove-class "
+        f"512-entry window vs 300-cycle miss x 4 IPC = 1,200", 4 * 2 == 8 and 300 * 4 == 1200)
+
+    # ---------------- s09: ARM -------------------------------------------------------------------
+    say("s09", f"x0..x30 is {len(range(0,31))} general-purpose registers, not 32 (the 32nd encoding is sp or xzr)",
+        len(range(0, 31)) == 31)
+    say("s09", "NEON lanes: 128/32 = 4 float32, 128/16 = 8 float16/int16, 128/8 = 16 int8",
+        (128 // 32, 128 // 16, 128 // 8) == (4, 8, 16))
+    rg = np.random.default_rng(9)
+    A28 = rg.integers(-128, 128, (2, 8)); B28 = rg.integers(-128, 128, (2, 8)); C22 = rg.integers(-1000, 1000, (2, 2))
+    vec = (C22.reshape(4) + np.array([A28[i] @ B28[j] for i in range(2) for j in range(2)]))
+    say("s09", f"SMMLA model: 2x2 int32 += (2x8 int8)(2x8 int8)^T = {2*2*8} multiply-accumulates per instruction "
+        f"(source: 'an 8-element dot product'); SDOT does 4 x 4 = 16; widening NEON 16 in 4 instructions",
+        np.array_equal(vec.reshape(2, 2), C22 + A28 @ B28.T) and 2*2*8 == 32 and 32 / (16 / 4) == 8)
+    say("s09", f"SME at SVL = 512 bits: a 16 x 16 outer product = {16*16} FMAs per instruction; ZA = 64 x 64 bytes = "
+        f"{64*64:,} B = four 16 x 16 float32 tiles", 16*16 == 256 and 64*64 == 4 * 16 * 16 * 4)
+    say("s09", f"PCIe 4.0 x16 (16 GT/s per lane, reported; 128b/130b coding): 16e9 x 128/130 / 8 x 16 = "
+        f"{16e9*128/130/8*16/1e9:.1f} GB/s each way (source: ~32)", abs(16e9*128/130/8*16/1e9 - 31.5) < 0.05)
+    if clangxx:
+        b2 = blocks(2)
+        def armc(code, march, extra=()):
+            p = os.path.join(tmp16, "arm.cpp"); s = os.path.join(tmp16, "arm.s")
+            code = re.sub(r"#include <(iostream|chrono|vector|cmath)>\n", "", code)
+            i = code.find("int main("); code = code if i < 0 else code[:i]
+            open(p, "w").write("#define INFINITY __builtin_inff()\n" + code)
+            r = subprocess.run([clangxx, "--target=aarch64-linux-gnu", "-ffreestanding", "-O3", "-march=" + march, "-S",
+                                "-o", s, p] + list(extra), capture_output=True, text=True)
+            return r.returncode, (open(s).read() if r.returncode == 0 else r.stderr)
+        rc, asm = armc(b2[2][1], "armv8-a")
+        def fbody(asm, name):
+            m = re.search(r"^_Z\d+" + name + r"\w*:[^\n]*\n(.*?)(?:^\.Lfunc_end|\.cfi_endproc)", asm, re.M | re.S)
+            return m.group(1) if m else ""
+        if rc == 0:
+            neon = fbody(asm, "dot_neon")
+            nf = len(re.findall(r"\bfmla\s+v\d+\.4s", neon))
+            ser = len(re.findall(r"fadd\s+s0, s0, s\d", fbody(asm, "dot_scalar")))
+            say("s09", f"cross-compiled for AArch64: dot_neon's loop is {nf} fmla into one register (one chain); "
+                f"dot_scalar keeps {ser} serial 'fadd s0, s0, ...' per unrolled block (in-order reduction)", nf == 1 and ser >= 4)
+        rc_sme, err = armc(b2[5][1], "armv9.2-a+sme2")
+        say("s09", f"the SME2 snippet as printed does not compile (clang rc {rc_sme}: {'SVL undeclared' if 'SVL' in err else err[:60]})",
+            rc_sme != 0 and "SVL" in err)
+        ok_all = all(armc(b2[k][1], m)[0] == 0 for k, m in ((3, "armv8-a"), (4, "armv8.6-a+i8mm"), (6, "armv8.2-a+sve"),
+                                                            (10, "armv8-a"), (11, "armv8-a"), (12, "armv8-a")))
+        say("s09", "the NEON, I8MM and SVE snippets and the three ARM tasks compile for AArch64 (not run: no ARM CPU here)", ok_all)
+
+    # ---------------- s10: x86 -------------------------------------------------------------------
+    say("s10", f"AMX tile: 16 rows x 64 B = {16*64} B, eight tiles = {8*16*64:,} B; TDPBF16PS on 16x32 by 32x16 = "
+        f"{16*16*32:,} multiply-accumulates = {16*16*32//16} AVX-512 FMAs (source: 'hundreds')",
+        16*16*32 == 8192 and 8192 // 16 == 512)
+    rg = np.random.default_rng(10)
+    Ab = rg.integers(-4, 5, (16, 32)).astype(np.float32); Bb = rg.integers(-4, 5, (32, 16)).astype(np.float32)
+    Bv = np.zeros((16, 32), np.float32)
+    for k in range(32):
+        for j in range(16): Bv[k // 2, 2 * j + (k % 2)] = Bb[k, j]
+    Cv = np.zeros((16, 16), np.float32)
+    for i in range(16):
+        for j in range(16):
+            for kp in range(16): Cv[i, j] += Ab[i, 2*kp] * Bv[kp, 2*j] + Ab[i, 2*kp+1] * Bv[kp, 2*j+1]
+    say("s10", "AMX's B operand is not 32x16 in memory but 16 rows of pairs (VNNI layout); the pair-wise model "
+        "reproduces A @ B exactly", np.array_equal(Cv, Ab @ Bb))
+    say("s10", f"task 3's aligned_alloc(32, 16e6 x 4): size {16_000_000*4:,} is a multiple of 32 as C requires",
+        (16_000_000 * 4) % 32 == 0)
+    if x86ok:
+        VEC = ("#include <immintrin.h>\nvoid add_auto(const float* a,const float* b,float* c,int n){for(int i=0;i<n;i++) c[i]=a[i]+b[i];}\n"
+               "float dot_scalar(const float* a,const float* b,int n){float s=0.0f;for(int i=0;i<n;i++) s+=a[i]*b[i];return s;}\n"
+               "void prefix(float* a,const float* b,int n){for(int i=1;i<n;i++) a[i]=a[i-1]+b[i];}\n")
+        p = os.path.join(tmp16, "vec.cpp"); open(p, "w").write(VEC)
+        r = subprocess.run([gxx, "-O3", "-mavx2", "-mfma", "-c", p, "-o", os.devnull, "-fopt-info-vec-all"], capture_output=True, text=True)
+        rep = r.stderr
+        say("s10", "GCC vectorises add_auto WITHOUT restrict: 'loop versioned for vectorization because of possible "
+            "aliasing' (a runtime overlap check, not a refusal)", "vec.cpp:2" in rep and "versioned for vectorization because of possible aliasing" in rep)
+        say("s10", "the prefix loop a[i] = a[i-1] + b[i] is not vectorised (a true chain)",
+            re.search(r"vec.cpp:4:\d+: missed: couldn't vectorize loop", rep) is not None)
+        r = subprocess.run([gxx, "-O3", "-mavx2", "-mfma", "-S", p, "-o", os.path.join(tmp16, "vec.s")], capture_output=True, text=True)
+        asm = open(os.path.join(tmp16, "vec.s")).read()
+        mds = re.search(r"^_Z10dot_scalarPKfS0_i:\s*$(.*?)\.cfi_endproc", asm, re.M | re.S)
+        dsec = mds.group(1) if mds else ""
+        say("s10", f"dot_scalar at -O3: 'vectorized' in the report, but the asm is vmulps then "
+            f"{len(re.findall(r'vaddss', dsec))} scalar vaddss into one register -- the multiplies go 8-wide, the sum stays a chain",
+            "vmulps" in dsec and len(re.findall(r"vaddss", dsec)) >= 8)
+        if "avx512f" in cpuflags:
+            p = os.path.join(tmp16, "red.cpp")
+            open(p, "w").write("#include <immintrin.h>\nfloat red(__m512 a){return _mm512_reduce_add_ps(a);}\n")
+            subprocess.run([gxx, "-O3", "-mavx512f", "-S", p, "-o", os.path.join(tmp16, "red.s")], capture_output=True)
+            body = open(os.path.join(tmp16, "red.s")).read()
+            ninst = len(re.findall(r"^\s+v\w+", body, re.M)); nadd = len(re.findall(r"vadd", body))
+            say("s10", f"_mm512_reduce_add_ps is not one instruction: GCC emits {ninst} vector instructions, {nadd} of them adds "
+                f"(log2 16 = 4 halvings)", nadd >= 4 and ninst > 4)
+            zg = yg = 0.0
+            for _ in range(2):
+                out = run(meas, "zmm")
+                zg, yg = max(zg, num(r"zmm_gflops (\S+)", out)), max(yg, num(r"ymm_gflops (\S+)", out))
+            say("s10", f"measured: AVX-512 FMA chains deliver {zg:.0f} GFLOP/s per core against AVX2's {yg:.0f}: "
+                f"{zg/yg:.2f}x, not 2x", 1.1 < zg / yg < 2.05)
+
+    if x86ok and "amx_tile" in cpuflags and "amx_bf16" in cpuflags:
+        AMX = r'''
+#include <immintrin.h>
+#include <cstdio>
+#include <cstring>
+#include <cstdint>
+#include <cstdlib>
+#include <unistd.h>
+#include <sys/syscall.h>
+struct Cfg { uint8_t palette, start_row, rsv[14]; uint16_t colsb[16]; uint8_t rows[16]; };
+int main(int argc, char** argv) {
+  bool perm = strchr(argv[1], 'p'), cfg = strchr(argv[1], 'c');
+  if (perm) syscall(SYS_arch_prctl, 0x1023, 18);           /* ARCH_REQ_XCOMP_PERM, XFEATURE_XTILEDATA */
+  alignas(64) uint16_t A[16][32], Bp[16][32]; alignas(64) float C[16][16] = {}; float Af[16][32], Bf[32][16];
+  auto bf = [](float x){ uint32_t u; memcpy(&u, &x, 4); return (uint16_t)(u >> 16); };
+  auto fb = [](uint16_t h){ uint32_t u = (uint32_t)h << 16; float x; memcpy(&x, &u, 4); return x; };
+  unsigned s = 7; auto rnd = [&](){ s = s * 1103515245u + 12345u; return (int)((s >> 16) % 9) - 4; };
+  for (int i = 0; i < 16; i++) for (int k = 0; k < 32; k++) { A[i][k] = bf((float)rnd()); Af[i][k] = fb(A[i][k]); }
+  for (int k = 0; k < 32; k++) for (int j = 0; j < 16; j++) { uint16_t h = bf((float)rnd()); Bf[k][j] = fb(h); Bp[k/2][2*j + k%2] = h; }
+  if (cfg) { Cfg c = {}; c.palette = 1; for (int t = 0; t < 3; t++) { c.rows[t] = 16; c.colsb[t] = 64; } _tile_loadconfig(&c); }
+  _tile_loadd(0, A, 64); _tile_loadd(1, Bp, 64); _tile_zero(2); _tile_dpbf16ps(2, 0, 1); _tile_stored(2, C, 64); _tile_release();
+  double e = 0; for (int i = 0; i < 16; i++) for (int j = 0; j < 16; j++) { double t = 0; for (int k = 0; k < 32; k++) t += Af[i][k] * Bf[k][j]; e = e > fabs(t - C[i][j]) ? e : fabs(t - C[i][j]); }
+  printf("maxerr %g\n", e); return 0; }
+'''.replace("fabs", "__builtin_fabs")
+        ob = build("amx", AMX, ["-O1", "-mamx-tile", "-mamx-bf16"])
+        if ob:
+            rcs = {m: subprocess.run([ob, m], capture_output=True, text=True) for m in ("pc", "p", "c")}
+            okfull = rcs["pc"].returncode == 0 and num(r"maxerr (\S+)", rcs["pc"].stdout) == 0
+            say("s10", f"AMX run on this CPU: with the Linux permission request and a tile configuration, one TDPBF16PS "
+                f"reproduces the 16x16 product exactly; as printed (no configuration) it dies with signal "
+                f"{-rcs['p'].returncode}; without the permission request, signal {-rcs['c'].returncode} (4 = SIGILL)",
+                okfull and rcs["p"].returncode == -4 and rcs["c"].returncode == -4)
+
+    # ---------------- s11: the source's benchmarks, re-run ---------------------------------------------
+    if x86ok and meas:
+        al = runbest(meas, {"lat": r"addlat (\S+)"}, 2, "addlat")["lat"]
+        say("s11", f"measured scalar float-add latency on this core: {al:.2f} cycles (4 on Skylake/Cascade Lake; "
+            f"Golden Cove-class cores have a 2-cycle add, reported)", 1.5 < al < 5)
+        bwn = bwt = 0.0
+        for _ in range(3):
+            out = run(meas, "bw")
+            bwn, bwt = max(bwn, num(r"bw_normal (\S+)", out)), max(bwt, num(r"bw_nt (\S+)", out))
+        say("s11", f"measured add c = a + b, counted 12 B per element: {bwn:.1f} GB/s; with streaming stores {bwt:.1f} "
+            f"({bwt/bwn:.2f}x). A normal store first reads its line (write-allocate), so the bus carries 16 B per 12 counted: "
+            f"4/3 if the bus binds, more if the core's miss concurrency binds", bwt / bwn > 1.15)
+        b1 = blocks(1)
+        o = build("bench01", b1[2][1], ["-O3", "-march=native"])
+        rep = max(num(r"Bandwidth: (\S+)", run(o)) for _ in range(2))
+        say("s11", f"file 01's benchmark prints {rep:,.0f} GB/s; the real figure is {bwn:.1f}. The ratio "
+            f"{rep/bwn:.0f} is the trial count: the optimiser ran 1 of the 100 identical trials",
+            30 < rep / bwn < 300)
+        b3 = blocks(3)
+        o = build("align", b3[12][1], ["-O3", "-mavx2"])
+        out = run(o)
+        ta, tu = num(r"Aligned load\s*: (\S+) ms", out), num(r"Unaligned load: (\S+) ms", out)
+        say("s11", f"file 03 task 3 (alignment) prints {ta:.2g} ms and {tu:.2g} ms per pass over 64 MB: the loop's "
+            f"result is never used, so the compiler deleted it", ta < 1e-3 and tu < 1e-3)
+        o = build("dot03", b3[10][1], ["-O3", "-mavx2", "-mfma"])
+        bd = runbest(o, {"s": r"Scalar: (\S+) ms", "v": r"AVX2  : (\S+) ms"}, 2)
+        tsc, tav = bd["s"], bd["v"]
+        floor = 1e7 * al / clock / 1e6
+        say("s11", f"file 03 task 1: scalar {tsc:.1f} ms against an add-chain floor of 10^7 x {al:.1f} cycles / {clock:.2f} GHz "
+            f"= {floor:.1f} ms; AVX2 {tav:.1f} ms = {8e7/tav/1e6:.1f} GB/s: speedup {tsc/tav:.1f}x, not 8x",
+            tsc / tav < 4.5 and 0.85 < tsc / floor < 3.5)
+        o = build("relu03", b3[11][1], ["-O3", "-mavx2"])
+        br = runbest(o, {"s": r"Scalar\s*: (\S+) ms", "v": r"AVX2\s+: (\S+) ms", "u": r"AVX2 unrolled\s*: (\S+) ms"}, 3)
+        tr = [br["s"], br["v"], br["u"]]
+        say("s11", "file 03 task 2 (ReLU), best of three runs: scalar / AVX2 / unrolled = " + " / ".join(f"{x:.1f}" for x in tr) +
+            " ms: all at the memory station; unrolling had no chain to break", max(tr) / min(tr) < 1.3)
+        b0 = blocks(0)
+        o = build("layout", b0[14][1], ["-O3"])
+        bl = runbest(o, {"r": r"Row-major \(cache-friendly\): (\S+) ms", "c": r"Col-major \(cache-hostile\):\s+(\S+) ms"}, 2)
+        tr_, tc_ = bl["r"], bl["c"]
+        fl_ = 2**24 * al / clock / 1e6
+        say("s11", f"file 00 task 3: row {tr_:.1f} ms, column {tc_:.1f} ms ({tc_/tr_:.1f}x). The row loop is one float add "
+            f"chain: 2^24 x {al:.1f} cycles / {clock:.2f} GHz = {fl_:.1f} ms floor", 0.85 < tr_ / fl_ < 3.5 and tc_ / tr_ > 2)
+    shutil.rmtree(tmp16, ignore_errors=True)
+
+    # ---------------- s12: worked example (fixed inputs) ---------------------------------------------------
+    f_ = 3.17; peak1 = 2 * 8 * 2 * f_; bw1 = 10.0
+    ridge1 = peak1 / bw1; b1_ = math.ceil(4 * ridge1)
+    say("s12", f"one core: peak 2 FMA x 8 lanes x 2 FLOP x {f_} GHz = {peak1:.1f} GFLOP/s, 10 GB/s -> ridge {ridge1:.2f} "
+        f"FLOP/B; tile b >= 4 x ridge = {b1_}; three tiles = {3*b1_**2*4/1024:.1f} KiB <= 32 KiB L1",
+        abs(peak1 - 101.44) < 1e-9 and b1_ == 41 and 3 * b1_**2 * 4 <= 32768)
+    bw4 = 20.0; ridge4 = 4 * peak1 / bw4; b4_ = math.ceil(4 * ridge4)
+    say("s12", f"four cores sharing 20 GB/s: ridge {ridge4:.1f}, tile b >= {b4_}, three tiles = {3*b4_**2*4/1024:.0f} KiB: "
+        f"too big for L1, comfortable in a 1 MiB L2 -- stage at the next level out", b4_ == 82 and 32768 < 3*b4_**2*4 < 2**20)
+    say("s12", f"line view: delivery 10 GB/s x I = machining {peak1:.1f} GFLOP/s balances at I = {ridge1:.2f}; a 41-tile "
+        f"gives I = 41/4 = {41/4:.2f}, machining-bound by {100*(41/4/ridge1-1):.0f}%", 41/4 > ridge1)
 
 _ch16p1()
 # ----- end of Chapter 16 part 1 block -----
