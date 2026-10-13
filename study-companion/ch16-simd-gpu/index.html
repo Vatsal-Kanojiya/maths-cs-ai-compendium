@@ -797,12 +797,12 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     <svg class="svgfig" id="pS" viewBox="0 0 560 300" role="img"
          aria-label="Throughput of n equal-power cores relative to one fast core, against the serial fraction of the work"></svg>
     <div class="ctl">
-      <label for="pN">Cores n</label>
+      <label for="pN">Cores <span class="gk">n</span></label>
       <input type="range" id="pN" min="1" max="16" value="4" step="1">
       <span class="ro-v" id="pNv" style="min-width:32px">4</span>
     </div>
     <div class="ctl">
-      <label for="pSf">Serial fraction s</label>
+      <label for="pSf">Serial fraction <span class="gk">s</span></label>
       <input type="range" id="pSf" min="0" max="1" value="0.25" step="0.01">
       <span class="ro-v" id="pSv" style="min-width:42px">0.25</span>
     </div>
@@ -1058,7 +1058,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
       <button class="btn" data-hw="16" type="button">16 lanes</button>
     </div>
     <div class="ctl">
-      <label for="hN">Holes n</label>
+      <label for="hN">Holes <span class="gk">n</span></label>
       <input type="range" id="hN" min="1" max="40" value="10" step="1">
       <span class="ro-v" id="hNv" style="min-width:32px">10</span>
     </div>
@@ -1285,5 +1285,290 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     prediction: <b>it becomes memory-bound</b>, and the line diagram shows the delivery station
     taking over. <b>No overlap</b> draws the harmonic curve for a core that waits for each delivery;
     it meets the roof only far from the ridge.
+  </div>
+</section>
+
+<section id="staging">
+  <div class="col">
+    <div class="sechead"><span class="secnum">07</span><h2>Staging the material: where Sheet 02&rsquo;s matmul lands</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2016%20-%20SIMD%20and%20GPU%20programming/00.%20why%20C%2B%2B%20and%20how%20ML%20frameworks%20work.md" target="_blank" rel="noopener">src 00. why C++ &#8599;</a>
+    </div>
+    <p>
+      Memory is a ladder of stores, each smaller and closer than the last. On the build machine:
+      registers at the spindle; a 32 KiB <b>L1</b> cache per core, the rack beside the machine; a 1
+      MiB <b>L2</b> per core, the cell&rsquo;s buffer; a 33 MiB shared <b>L3</b>, the shop stores;
+      and main memory (DRAM), the warehouse, about 210 ns away (&sect;08). The cache keeps whatever
+      was used recently and evicts the least recently used line when it is full (<em>LRU</em>);
+      the programmer does not move material by hand, but chooses an order of work that keeps the
+      right material close.
+    </p>
+    <p>
+      <b>Use the whole pallet.</b> File 00&rsquo;s third task sums a \(4096\times4096\) float matrix
+      stored row by row, first along rows, then down columns. Along a row, consecutive floats share
+      a 64-byte line, so each delivery serves 16 additions. Down a column, consecutive floats are
+      16 KiB apart, so each delivery serves one addition unless the line is still in cache when the
+      next column comes past. The source&rsquo;s program printed a <b>6.3&times;</b> slowdown (row
+      28 ms, column 177 ms). But &sect;02 showed its row loop is one float-add chain, whose floor is
+      \(2^{24}\times 4/3.17\ \text{GHz} = 21\) ms; the row time measures the adder, not the
+      memory. A row pass with eight independent accumulators took <b>7.5 ms</b>, so against memory
+      speed the column walk is about <b>22&times;</b> slower. Walking down the columns sixteen at a
+      time, so that every line delivered is used in full, brought it to <b>18&ndash;20 ms</b>.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>The source&rsquo;s 6&times; measures two things at once</div>
+      <p style="margin-bottom:0">
+        Its &ldquo;cache-friendly&rdquo; baseline is slowed by the dependency chain of &sect;08 to
+        three times its memory-limited speed, which hides most of the effect it set out to show.
+        The penalty is not a simple 16 either: a column sweep touches 4,096 lines, 256 KiB, which
+        mostly survives in the 1 MiB L2 until the next column reuses it, so much of the column
+        walk&rsquo;s cost is per-access latency and address translation rather than DRAM bandwidth
+        (<code>[Ch16 s11]</code>).
+      </p>
+    </div>
+    <h3 style="margin-top:28px">Tiling the matrix product</h3>
+    <p>
+      Sheet 02 defined \(C = AB\) by \(c_{ij} = \sum_k a_{ik}b_{kj}\). The work is a cube: one
+      multiply-add for every triple \((i,j,k)\), \(n^3\) of them. The three matrices are the
+      cube&rsquo;s three faces: \(A\) is indexed by \((i,k)\), \(B\) by \((k,j)\), \(C\) by \((i,j)\).
+      A loop order is a path through the cube, and the traffic it causes depends on how much face
+      it must fetch for the volume it covers.
+    </p>
+    <p>
+      <b>Tiling</b> (cache blocking) cuts the cube into \(b\times b\times b\) blocks and finishes
+      each block before moving on. A block needs a \(b\times b\) tile of each face and does
+      \(2b^3\) FLOPs. Keep the \(C\) tile resident while the \(k\)-blocks stream past and each step
+      fetches \(2b^2\) floats, so
+    </p>
+    <div class="mathbox">$$I_{\text{tile}} = \frac{2b^{3}\ \text{FLOP}}{2b^{2}\times 4\ \text{B}} = \frac{b}{4}\ \text{FLOP/B}, \qquad \text{words fetched} \approx n^{2} + \frac{2n^{3}}{b}.$$</div>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: intensity is volume over surface</div>
+      <p style="margin-bottom:0">
+        The work a tile does grows with its volume, the material it needs with its faces: \(I\)
+        is a characteristic length, \(V/A\), the same ratio that sets the Biot number of a lumped
+        body. Double the tile edge and the intensity doubles. And for a block \(a\times b\times c\)
+        with a fixed amount of face that fits in the cache (\(ab + bc + ca\) fixed), the largest
+        volume is the cube \(a = b = c\), by Lagrange multipliers or by the verifier&rsquo;s
+        random search (<code>[Ch16 s07]</code>). A theorem of Loomis and Whitney (reported) makes
+        this general: no traversal of the cube gets more work out of a given amount of face.
+      </p>
+    </div>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same structure: kitting at the machine</div>
+      <p style="margin-bottom:0">
+        Staging a kit at the machine so that many operations happen per trip to the stores is the
+        whole idea. The kit must fit the rack: three float tiles fit a 32 KiB L1 while
+        \(12b^2 \le 32{,}768\), so \(b \le 52\). The intensity it buys must clear the ridge of
+        &sect;06: \(b/4 \ge I^*\), so \(b \ge 4I^*\). &sect;12 does that calculation for the build
+        machine.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where kitting breaks</div>
+      <p style="margin-bottom:0">
+        A kit is consumed; a tile is reused. The same \(A\) tile serves every \(B\) tile in its row,
+        and that reuse is where \(b/4\) comes from. And no planner chooses what leaves the rack: the
+        cache evicts the least recently used line by itself. The lab shows the consequence. At
+        exactly the capacity of three \(8\times8\) tiles (192 words) LRU fetches 12,240 words, not the
+        formula&rsquo;s 9,216, because it sometimes evicts a line it needs next. With room to spare
+        it matches the formula to the word.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Staging the kit</div><div class="lab-tag">Predict, then resize</div></div>
+    <div class="lab-body">
+    <div class="predict">
+      <p style="margin-top:0">
+        A \(32\times32\) matmul and a store that holds 512 floats. The naive \(i\)-\(j\)-\(k\) loop
+        fetches 34,816 words from memory. How many does the same product fetch in \(8\times8\) tiles?
+      </p>
+      <button class="pbtn" data-p5="a" type="button">About 34,000: same work, same words</button>
+      <button class="pbtn" data-p5="b" type="button">About 17,000</button>
+      <button class="pbtn" data-p5="c" type="button">About 9,200</button>
+      <button class="pbtn" data-p5="d" type="button">About 3,000</button>
+      <div class="pverdict" id="pv5"></div>
+    </div>
+    <div class="chartwrap">
+    <svg class="svgfig" id="tS" viewBox="0 0 560 330" role="img"
+         aria-label="Words fetched from memory against store capacity for the naive loop and three tile sizes, from an exact LRU simulation"></svg>
+    </div>
+    <div class="legend" id="tLg"></div>
+    <div class="ctl">
+      <label for="tC">Store capacity</label>
+      <input type="range" id="tC" min="0" max="16" value="8" step="1">
+      <span class="ro-v" id="tCv" style="min-width:60px">512</span>
+    </div>
+    <div class="ctl">
+      <button class="btn" data-tb="4" type="button">4&times;4 tiles</button>
+      <button class="btn on" data-tb="8" type="button">8&times;8 tiles</button>
+      <button class="btn" data-tb="16" type="button">16&times;16 tiles</button>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Naive <span class="gk">i-j-k</span>,<br>simulated</div><div class="ro-v b" id="tN">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Tiled,<br>simulated</div><div class="ro-v a" id="tT">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Formula<br><span class="gk">n&sup2; + 2n&sup3;/b</span></div><div class="ro-v" id="tF">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Intensity<br>FLOP/B</div><div class="ro-v c" id="tI">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Naive over<br>tiled</div><div class="ro-v" id="tR">&mdash;</div></div>
+    </div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    Every curve is computed in your browser from the actual sequence of 98,304 loads, by the LRU
+    stack-distance method: one pass gives the misses at every capacity at once, and the verifier
+    checks it against a direct simulation. At 512 words the \(8\times8\) tiles fetch <b>9,216</b>
+    words, exactly the formula and the answer to the prediction, 3.78&times; fewer than the naive
+    loop. Drag the capacity down to 192 to see LRU need slack; up past 1,124 to see the naive loop
+    fall off its cliff to \(3n^2 = 3{,}072\) once all of \(B\) fits. When everything fits, nobody
+    needs to tile.
+  </div>
+</section>
+
+<section id="little">
+  <div class="col">
+    <div class="sechead"><span class="secnum">08</span><h2>Little&rsquo;s law runs the core</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2016%20-%20SIMD%20and%20GPU%20programming/03.%20x86%20and%20AVX.md" target="_blank" rel="noopener">src 03. x86 and AVX &#8599;</a>
+    </div>
+    <p>
+      Sheet 13 used Little&rsquo;s law, \(L = \lambda W\): average work in process equals throughput
+      times average time in the system. Apply it to a closed line holding \(w\) jobs, each needing a
+      raw process time \(T_0\) when nothing waits, with a bottleneck station of rate \(r_b\). Every
+      job takes at least \(T_0\) to go round, so throughput \(= w/\text{(time in system)} \le w/T_0\).
+      And no line beats its bottleneck, so throughput \(\le r_b\). Together:
+    </p>
+    <div class="mathbox">$$\text{TH}(w) \le \min\!\left(\frac{w}{T_0},\ r_b\right), \qquad w_0 = r_b\,T_0 .$$</div>
+    <p>
+      Below the <b>critical WIP</b> \(w_0\), throughput grows in proportion to the work in
+      process and nothing waits. Above it, throughput is flat and every extra job only lengthens
+      the queue: time in system grows as \(w/r_b\). Hopp and Spearman call the equality case the
+      best-case performance of a CONWIP line (the name is reported; the two lines above are the
+      derivation). Sheet 13 part 2 showed that a counting semaphore is a kanban card count; here
+      the cards are registers and outstanding memory requests.
+    </p>
+    <h3 style="margin-top:24px">Accumulators are the cards in the FMA loop</h3>
+    <p>
+      A dot product adds \(a_ib_i\) into an accumulator with a fused multiply-add. Each FMA on this
+      core takes \(T_0 = 4\) cycles to produce its result, and the core has two FMA units, each
+      accepting a new FMA every cycle: \(r_b = 2\) per cycle. An FMA that adds into an accumulator
+      cannot start until that accumulator&rsquo;s previous FMA has finished. So \(K\) independent
+      accumulators are \(K\) jobs circulating in a closed loop, and
+    </p>
+    <div class="mathbox">$$\text{TH}(K) = \min\!\left(\frac{K}{4},\ 2\right)\ \text{vector FMAs per cycle}, \qquad K_0 = 4 \times 2 = 8 .$$</div>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity, measured: the FMA sweep</div>
+      <p style="margin-bottom:0">
+        On the build machine, \(K\) independent chains of AVX2 FMAs ran at <b>0.26, 0.50, 1.02,
+        1.48, 1.86, 2.04, 2.05, 1.99</b> vector FMAs per cycle for \(K = 1, 2, 4, 6, 8, 10, 12, 16\).
+        Below the knee the law holds to within 4%; above it the rate stops at 2. The knee is rounded:
+        \(K = 8\) gave 1.6&ndash;1.9 across runs against the bound of 2, because the loop&rsquo;s own
+        bookkeeping competes for the same issue slots, just as real lines fall short of the best case
+        near \(w_0\). The second container gave the same picture: 0.24 at \(K=1\), 2.0&ndash;2.1 at the
+        top (<code>[Ch16 s08]</code>).
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>The source&rsquo;s explanation of its NEON dot product is wrong</div>
+      <p style="margin-bottom:0">
+        File 02 says its <code>float32x4_t sum_vec</code> holds &ldquo;4 independent accumulators
+        (one per SIMD lane)&rdquo;, so &ldquo;the CPU can pipeline the FMAs&rdquo;. The four lanes are
+        independent of each other, but they live in one register, and every iteration&rsquo;s FMA
+        needs that register&rsquo;s previous value: \(K = 1\). The same one-register loop, written in
+        AVX2 as file 03 prints it, measured <b>0.30</b> vector FMAs per cycle, the 4-cycle latency.
+        Its lanes make it four times (NEON) or eight times (AVX2) faster than a scalar chain; pipelining needs independent
+        <em>registers</em>, and two FMA units with a 4-cycle latency need eight of them. File 03 gets
+        this right in its &ldquo;data dependencies&rdquo; paragraph, which unrolls into four
+        accumulators; Little&rsquo;s law says why four is half of enough on this core.
+      </p>
+    </div>
+    <p>
+      A dot product has a third station. Every FMA needs two numbers loaded, and this core loads two
+      per cycle, so the load ports cap a dot product at one FMA per cycle however many accumulators
+      it has: measured <b>0.94&ndash;0.97</b> with eight. Matrix multiplication escapes that cap only
+      by reusing loaded values in registers, the register-level version of &sect;07&rsquo;s tile.
+      The compiler will not split a float chain on its own, because float addition is not
+      associative: GCC&rsquo;s report says the scalar dot product was &ldquo;vectorized&rdquo;, and its
+      code does the eight multiplies in one instruction and then <b>eight scalar adds in a row</b>
+      into one register (<code>[Ch16 s10]</code>).
+    </p>
+    <h3 style="margin-top:24px">Outstanding misses are the cards in the memory loop</h3>
+    <p>
+      The same law sets how fast one core can use memory. Follow \(K\) independent chains of
+      pointers through 512 MB in random order: each chain must wait for its load to come back before
+      it knows its next address. One chain took <b>210 ns</b> per step, the round trip to DRAM. More
+      chains overlapped their waits, and the time per line fell as \(210/K\) ns until it stopped near
+      <b>14.4 ns</b>, about 4.4 GB/s of random lines. Past that, each chain&rsquo;s step time grew
+      instead: 237 ns at \(K = 16\), 458 ns at \(K = 32\), which is \(K/r_b\).
+    </p>
+    <div class="mathbox">$$w_0 = r_b\,T_0 = \frac{210\ \text{ns}}{14.4\ \text{ns}} \approx 14.6\ \text{lines in flight}.$$</div>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity, measured: memory-level parallelism</div>
+      <p style="margin-bottom:0">
+        A core can keep only so many cache misses outstanding, a fixed number of buffers for lines
+        on their way in (reported at 10&ndash;12 per core for this family, with more requests issued
+        by the hardware prefetchers). That buffer count is the card count of the loop, and Little&rsquo;s
+        law turns it into a bandwidth: \(\text{BW}_{\text{core}} \le (\text{cards} \times 64\ \text{B})/T_0\).
+        This is why one core streamed only 9&ndash;12 GB/s from a memory system the source quotes at 50:
+        the delivery station of &sect;06 is itself a closed loop with a card limit. The second
+        container gave \(T_0 \approx 207\) ns and about 17 lines in flight (<code>[Ch16 s08]</code>).
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks</div>
+      <p style="margin-bottom:0">
+        The law is a bound. Real stations vary, so measured throughput sits below it near the knee,
+        and a memory system&rsquo;s latency itself rises with load because the controller queues
+        requests, which the simple model folds into \(r_b\). The card count is also not one number:
+        sequential streams draw on prefetcher requests that random chases cannot, which is why the
+        streaming 9&ndash;12 GB/s is higher than the 4.4 GB/s of random lines. The law tells you what
+        to count; it does not count it for you.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Cards in the loop</div><div class="lab-tag">Predict, then add cards</div></div>
+    <div class="lab-body">
+    <div class="predict">
+      <p style="margin-top:0">
+        An FMA takes 4 cycles and the core has two FMA units. How many independent accumulators must
+        a loop keep to run both units flat out?
+      </p>
+      <button class="pbtn" data-p6="a" type="button">1</button>
+      <button class="pbtn" data-p6="b" type="button">2</button>
+      <button class="pbtn" data-p6="c" type="button">4</button>
+      <button class="pbtn" data-p6="d" type="button">8</button>
+      <button class="pbtn" data-p6="e" type="button">16</button>
+      <div class="pverdict" id="pv6"></div>
+    </div>
+    <div class="chartwrap">
+    <svg class="svgfig" id="lS" viewBox="0 0 560 300" role="img"
+         aria-label="Throughput against the number of independent chains: the best-case bound and the build machine's measurements"></svg>
+    </div>
+    <svg class="svgfig" id="lG" viewBox="0 0 560 120" role="img"
+         aria-label="Issue timeline: which chain starts an operation in each slot, and the empty slots"></svg>
+    <div class="ctl">
+      <button class="btn on" data-lm="fma" type="button">FMA chains</button>
+      <button class="btn" data-lm="mem" type="button">Memory misses</button>
+    </div>
+    <div class="ctl">
+      <label for="lK">Independent chains K</label>
+      <input type="range" id="lK" min="1" max="32" value="4" step="1">
+      <span class="ro-v" id="lKv" style="min-width:32px">4</span>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Best-case<br>bound</div><div class="ro-v a" id="lB">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Measured,<br>build machine</div><div class="ro-v b" id="lM">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Critical<br>WIP <span class="gk">w&#8320;</span></div><div class="ro-v c" id="lW">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Time per<br>round trip</div><div class="ro-v" id="lT">&mdash;</div></div>
+    </div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    The solid line is \(\min(K/T_0, r_b)\); the dots are the build machine. In FMA mode the
+    timeline shows two issue rows (one per FMA unit) over 24 cycles: chain \(k\) can issue again
+    only 4 cycles after its last issue, so with 4 chains half the slots are empty. Eight chains
+    fill both rows, the answer to the prediction; more add nothing. In memory mode one row stands for
+    one request issued per 14.4 ns slot, and a chain&rsquo;s round trip is 210 ns, about 15 slots;
+    the dots are the pointer chase, and their knee sits where \(w_0 \approx 14.6\) says it should.
   </div>
 </section>
