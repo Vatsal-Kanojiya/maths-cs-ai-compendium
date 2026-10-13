@@ -4989,7 +4989,431 @@ _ch16p3()
 # Chapter 17 block. Owned by the Chapter 17 run: replace only the body of _ch17() below.
 # Keep every name inside the function so nothing collides with another chapter's block.
 def _ch17():
-    pass
+    # =================================================================
+    # Chapter 17 -- AI inference (files 01-05), one sheet.
+    # Every name lives inside this function so nothing collides.
+    # =================================================================
+    import math, random
+    import numpy as np
+    from scipy.stats import norm as _n17
+    from scipy.integrate import quad as _quad17
+    from scipy.optimize import minimize_scalar as _min17
+    T17 = "[Ch17 %s]"
+    def say(sec, msg, ok=None):
+        tail = "" if ok is None else "   " + P(ok)
+        print(f"{T17 % sec} {msg}{tail}")
+    print()
+
+    # --- s01: memory, not arithmetic -----------------------------------
+    w70 = 70e9
+    say("s01", f"70B params: FP16 {w70*2/1e9:.0f} GB, INT8 {w70/1e9:.0f} GB, INT4 {w70*0.5/1e9:.0f} GB "
+        "(source: 140 / - / 35)", w70*2/1e9 == 140 and w70*0.5/1e9 == 35)
+    r15 = 989/67
+    say("s01", f"source's own figures: 989/67 = {r15:.1f}x, but its 2x-per-halving ladder gives FP8 = 4x FP32; "
+        "the two cannot both describe one kind of FLOP", abs(r15-14.76) < 0.01 and r15 > 4*2)
+    # decode-bound tokens/s = bandwidth / model bytes (source file 04 estimator)
+    est = [(7000, 4, 200), (7000, 8, 200), (70000, 4, 200), (3800, 4, 50), (3000, 4, 50)]
+    tps = [round(1000/((pM*1e6*b/8)/(bw*1e9)*1000)) for pM, b, bw in est]
+    say("s01", f"bandwidth-bound decode rates (source 04 task 2): {tps} tok/s", tps == [57, 29, 6, 26, 33])
+
+    # --- s02: number formats --------------------------------------------
+    fmax = {"FP16": (2-2**-10)*2**15, "BF16": (2-2**-7)*2.0**127, "E4M3": 1.75*2**8, "E5M2": 1.75*2**15}
+    say("s02", f"format maxima: FP16 {fmax['FP16']:.0f}, BF16 {fmax['BF16']:.3e}, E4M3 {fmax['E4M3']:.0f}, "
+        f"E5M2 {fmax['E5M2']:.0f}", fmax["FP16"] == 65504 and fmax["E4M3"] == 448 and fmax["E5M2"] == 57344
+        and abs(fmax["BF16"]/3.4e38-1) < 0.01)
+    sf = {k: (m+1)*math.log10(2) for k, m in [("FP32", 23), ("FP16", 10), ("BF16", 7), ("E4M3", 3), ("E5M2", 2)]}
+    say("s02", "significant figures (mantissa+1 bits x log10 2): " +
+        ", ".join(f"{k} {v:.2f}" for k, v in sf.items()), abs(sf["FP16"]-3.31) < 0.01 and abs(sf["E4M3"]-1.20) < 0.01)
+    i8 = math.log10(255); i8t = math.log10(255/10)
+    say("s02", f"INT8 carries {i8:.2f} figures at full scale and {i8t:.2f} at a tenth of it (constant absolute step)",
+        abs(i8-2.41) < 0.01 and abs(i8t-1.41) < 0.01)
+    mx32 = [e+8/32 for e in (8, 6, 4, 8)]; mx16 = [e+8/16 for e in (8, 6, 4, 8)]
+    say("s02", f"MX bits/element, shared 8-bit exponent: block 32 -> {mx32}, block 16 -> {mx16}; "
+        "MXFP8 and MXINT8 are equal either way (source lists ~8 and ~8.5)", mx32[0] == mx32[3] and mx16[2] == 4.5)
+    q40 = (32*4+16)/32
+    say("s02", f"a 4-bit block of 32 with a 16-bit scale is {q40} bits/weight: 8B -> {8e9*q40/8/1e9:.1f} GB "
+        f"(source table 4.5 GB); 70B -> {70e9*q40/8/1e9:.1f} GB, not 35", q40 == 4.5 and abs(8e9*q40/8/1e9-4.5) < 1e-9)
+    say("s02", f"BitNet: log2 3 = {math.log2(3):.3f} bits; 70B -> {70e9*math.log2(3)/8/1e9:.1f} GB (source ~15)",
+        abs(70e9*math.log2(3)/8/1e9-13.87) < 0.01)
+
+    # --- s03: quantisation noise is Delta^2/12 --------------------------
+    r3 = np.random.default_rng(0)
+    w = (r3.standard_normal((1024, 1024))*0.02).astype(np.float32)
+    s = np.abs(w).max()/127.0
+    rq = np.clip(np.round(w/s), -127, 127).astype(np.float32)*s
+    e = w - rq
+    say("s03", f"source 01 task 1 (numpy port): Delta = {s:.4e}; error variance {e.var():.4e} vs Delta^2/12 "
+        f"{s*s/12:.4e} (ratio {e.var()/(s*s/12):.4f})", abs(e.var()/(s*s/12)-1) < 0.01)
+    say("s03", f"mean |error| {np.abs(e).mean():.4e} vs Delta/4 {s/4:.4e}; max {np.abs(e).max():.4e} vs Delta/2 "
+        f"{s/2:.4e}; relative error {np.abs(e).mean()/np.abs(w).mean():.2%}",
+        abs(np.abs(e).mean()/(s/4)-1) < 0.01 and np.abs(e).max() <= s/2*1.0001)
+    say("s03", f"GUM rectangular: half-width a = Delta/2 -> a/sqrt3 = Delta/sqrt12 = {1/(2*math.sqrt(3)):.6f} Delta "
+        f"= sqrt(1/12) {math.sqrt(1/12):.6f}", abs(1/(2*math.sqrt(3))-math.sqrt(1/12)) < 1e-15)
+    rows = []
+    for ratio in [0.1, 0.25, 0.5, 1.0, 2.0]:
+        x = r3.standard_normal(400000)*ratio
+        er = np.round(x) - x
+        rows.append((ratio, er.var()*12, x.var()/er.var(), 12*ratio**2, (np.round(x) == 0).mean()))
+    say("s03", "sigma/Delta -> MSE/(Delta^2/12), SQNR measured vs 12(sigma/Delta)^2, share rounded to 0: " +
+        "; ".join(f"{a}: {b:.3f}, {c:.2f}/{d:.2f}, {f:.2f}" for a, b, c, d, f in rows),
+        all(abs(r[1]-1) < 0.015 for r in rows if r[0] >= 0.5) and rows[1][1] < 0.7 and rows[0][4] > 0.99)
+
+    # --- s04: granularity and the GEMM ----------------------------------
+    r4 = np.random.default_rng(42)
+    a = r4.standard_normal((32, 512))*0.1
+    a[:, 0] *= 100; a[:, 1] *= 50
+    st = np.abs(a).max()/127
+    qt = np.clip(np.round(a/st), -127, 127)
+    sc = np.abs(a).max(axis=0)/127
+    qc = np.clip(np.round(a/sc), -127, 127)
+    et = np.abs(a-qt*st).mean(); ec = np.abs(a-qc*sc).mean()
+    say("s04", f"source 01 task 2 (numpy port): per-tensor {et:.5f}, per-channel {ec:.6f}, {et/ec:.0f}x",
+        et/ec > 50)
+    nrm = a[:, 2:]; z0 = (qt[:, 2:] == 0).mean(); lv = np.unique(qt[:, 2:]).size
+    used = np.abs(nrm).max()/np.abs(a).max()
+    say("s04", f"normal channels: {z0:.0%} round to zero, {lv} of 255 levels used, {used:.1%} of the range; "
+        f"the printed 'waste' {(510/512):.0%} is the share of channels, not of the range",
+        abs(z0-0.72) < 0.01 and lv == 5 and used < 0.02)
+    en = qt[:, 2:]*st - nrm
+    say("s04", f"normal channels: sigma/Delta = {nrm.std()/st:.3f}; error var {en.var():.5f} vs Delta^2/12 "
+        f"{st*st/12:.5f}; SQNR {nrm.var()/en.var():.2f} vs 12(sigma/Delta)^2 = {12*(nrm.std()/st)**2:.2f}",
+        abs(en.var()/(st*st/12)-1) < 0.05 and abs(nrm.var()/en.var()-12*(nrm.std()/st)**2) < 0.15)
+    Xa = r4.standard_normal((16, 64)); Xa[:, 3] *= 60
+    Wg = r4.standard_normal((64, 32))*0.05
+    q8 = lambda x, sc_: np.clip(np.round(x/sc_), -127, 127)
+    sx = np.abs(Xa).max(1, keepdims=True)/127; sw = np.abs(Wg).max(0, keepdims=True)/127
+    QX, QW = q8(Xa, sx), q8(Wg, sw)
+    fac = np.abs((QX @ QW)*sx*sw - (QX*sx) @ (QW*sw)).max()
+    say("s04", f"per-token X and per-output-channel W scales factor out of the integer GEMM: max diff {fac:.1e}",
+        fac < 1e-12)
+    sk = np.abs(Xa).max(0, keepdims=True)/127; QXk = q8(Xa, sk)
+    Rk = ((QXk*sk) @ (QW*sw))/((QXk @ QW)*sw)
+    spread = np.std(Rk)/abs(np.mean(Rk))
+    say("s04", f"per-input-channel X scales do not: the factor each output would need varies, std/mean {spread:.1f}",
+        spread > 1)
+    Y = Xa @ Wg
+    rel = lambda A: np.linalg.norm(A-Y)/np.linalg.norm(Y)
+    stt = np.abs(Xa).max()/127
+    e_t = rel((q8(Xa, stt)*stt) @ (QW*sw)); e_k = rel((QX*sx) @ (QW*sw)); e_c = rel((QXk*sk) @ (QW*sw))
+    sm = np.sqrt(np.abs(Xa).max(0)/np.abs(Wg).max(1))
+    Xs, Ws = Xa/sm, Wg*sm[:, None]
+    ex = np.abs(Xs @ Ws - Y).max()
+    sxs = np.abs(Xs).max(1, keepdims=True)/127; sws = np.abs(Ws).max(0, keepdims=True)/127
+    e_s = rel((q8(Xs, sxs)*sxs) @ (q8(Ws, sws)*sws))
+    say("s04", f"W8A8 relative error: per-tensor {e_t:.2%}, per-token {e_k:.2%}, per-input-channel {e_c:.2%} "
+        f"(not GEMM-able), SmoothQuant alpha=0.5 {e_s:.2%}; XW unchanged by the migration to {ex:.0e}",
+        e_s < e_k < e_t and ex < 1e-12 and e_s < e_c)
+
+    # --- s05: the gauge range has an optimum ------------------------------
+    def gmse(c, b):
+        qm = 2**(b-1)-1; d = c/qm; tot = 0.0
+        for k in range(-qm, qm+1):
+            lo = -np.inf if k == -qm else (k-0.5)*d
+            hi = np.inf if k == qm else (k+0.5)*d
+            tot += _quad17(lambda x: (x-k*d)**2*_n17.pdf(x), lo, hi)[0]
+        return tot
+    o4 = _min17(lambda c: gmse(c, 4), bounds=(1, 8), method="bounded")
+    o8 = _min17(lambda c: gmse(c, 8), bounds=(1, 8), method="bounded")
+    m4, m8 = gmse(4.9, 4), gmse(4.9, 8)
+    say("s05", f"MSE-optimal clip for N(0,1): 4-bit {o4.x:.2f} sigma (clips {2*_n17.sf(o4.x):.2%}), "
+        f"{m4/o4.fun:.2f}x less error than ranging to 4.9 sigma; 8-bit {o8.x:.2f} sigma, {m8/o8.fun:.2f}x",
+        abs(o4.x-2.47) < 0.02 and abs(m4/o4.fun-3.17) < 0.02 and abs(o8.x-3.92) < 0.03)
+    say("s05", f"max of 1,048,576 N(0,1) draws in s03 = {np.abs(w).max()/0.02:.2f} sigma (the min-max range)",
+        abs(np.abs(w).max()/0.02-5.0) < 0.1)
+
+    # --- s06: GPTQ is a support settlement ------------------------------
+    r6 = np.random.default_rng(3)
+    nin, nout, ns = 64, 48, 512
+    A6 = r6.standard_normal((nin, nin))/math.sqrt(nin) + 0.6*np.eye(nin)
+    Xc = r6.standard_normal((ns, nin)) @ A6
+    Wm = r6.standard_normal((nout, nin))*0.1
+    H = Xc.T @ Xc + 1e-6*np.eye(nin)
+    def gq(bits, mode):
+        Wq = Wm.copy(); qm = 2**(bits-1)-1
+        d = np.abs(Wm).max(1, keepdims=True)/qm
+        for j in range(nin):
+            q = np.clip(np.round(Wq[:, j:j+1]/d), -qm, qm)*d
+            err = Wq[:, j:j+1] - q
+            if j < nin-1 and mode == "gptq":
+                Hi = np.linalg.inv(H[j:, j:]); Wq[:, j+1:] -= err @ (Hi[0:1, 1:]/Hi[0, 0])
+            elif j < nin-1 and mode == "src":
+                Wq[:, j+1:] -= (-err) @ (H[j:j+1, j+1:]/H[j, j])
+            Wq[:, j:j+1] = q
+        return Wq
+    Y0 = Xc @ Wm.T
+    res = {}
+    for bits in (3, 4):
+        for mode in ("rtn", "gptq", "src"):
+            Wq = gq(bits, mode)
+            res[(bits, mode)] = np.linalg.norm(Xc @ Wq.T - Y0)**2/np.linalg.norm(Y0)**2
+    say("s06", "output error ||XW - XQ||^2/||XW||^2, RTN / correct update / source's printed formula: " +
+        "; ".join(f"{b}-bit {res[(b,'rtn')]:.4f} / {res[(b,'gptq')]:.4f} / {res[(b,'src')]:.4f}" for b in (3, 4)),
+        all(res[(b, "gptq")] < 0.55*res[(b, "rtn")] and 0.8*res[(b, "rtn")] < res[(b, "src")] < res[(b, "rtn")]
+            for b in (3, 4)))
+    say("s06", "share of RTN's error removed: correct " +
+        ", ".join(f"{1-res[(b,'gptq')]/res[(b,'rtn')]:.0%}" for b in (3, 4)) + "; printed formula " +
+        ", ".join(f"{1-res[(b,'src')]/res[(b,'rtn')]:.0%}" for b in (3, 4)), True)
+    Hp = Xc.T @ Xc; Hpi = np.linalg.inv(Hp)
+    cond = -np.linalg.solve(Hp[1:, 1:], Hp[1:, 0]); invf = Hpi[1:, 0]/Hpi[0, 0]
+    dd = np.abs(cond-invf).max()
+    say("s06", f"static condensation -K_rr^-1 K_rj == inverse-Hessian form H^-1_rj/H^-1_jj: max diff {dd:.1e}",
+        dd < 1e-9)
+    r6b = np.random.default_rng(9); n6 = 64
+    wv = r6b.uniform(-1, 1, n6); dl = 2/7
+    Hc = np.ones((n6, n6)) + 1e-9*np.eye(n6); wq = wv.copy()
+    for j in range(n6):
+        q = np.clip(np.round(wq[j]/dl), -7, 7)*dl; err = wq[j]-q
+        if j < n6-1:
+            Hi = np.linalg.inv(Hc[j:, j:]); wq[j+1:] -= err*Hi[0, 1:]/Hi[0, 0]
+        wq[j] = q
+    sg = abs(wq.sum()-wv.sum()); sr = abs((np.clip(np.round(wv/dl), -7, 7)*dl).sum()-wv.sum())
+    say("s06", f"identical inputs (H = 11'): compensated total error {sg:.3f} <= Delta/2 {dl/2:.3f}; "
+        f"independent rounding {sr:.3f}", sg <= dl/2+1e-9 and sr > 3*sg)
+
+    # --- s07: the weight-only zoo ---------------------------------------
+    r7 = np.random.default_rng(11)
+    Wo = r7.standard_normal((256, 256)); Wo[7, 19] = 100.0
+    Q1, _ = np.linalg.qr(r7.standard_normal((256, 256))); U1, _ = np.linalg.qr(r7.standard_normal((256, 256)))
+    def i4(M):
+        d = np.abs(M).max()/7; return np.clip(np.round(M/d), -7, 7)*d
+    ep = np.linalg.norm(i4(Wo)-Wo)/np.linalg.norm(Wo)
+    Wr = U1 @ Wo @ Q1.T
+    er_ = np.linalg.norm(U1.T @ i4(Wr) @ Q1 - Wo)/np.linalg.norm(Wo)
+    say("s07", f"incoherence (QuIP): one 100 among N(0,1), INT4 per-tensor error {ep:.0%} -> {er_:.0%} after a random "
+        f"rotation; peak/rms {np.abs(Wo).max()/Wo.std():.0f} -> {np.abs(Wr).max()/Wr.std():.1f}", er_ < 0.25 < 0.9 < ep)
+    tw_ = r7.choice([-1, 0, 1], size=(64, 32)); xv = r7.standard_normal(64)
+    addsub = np.array([xv[tw_[:, j] == 1].sum() - xv[tw_[:, j] == -1].sum() for j in range(32)])
+    say("s07", f"ternary matmul == adds and subtracts only: max diff {np.abs(addsub - xv @ tw_).max():.1e}",
+        np.abs(addsub - xv @ tw_).max() < 1e-12)
+    say("s07", f"AQLM: two 8-bit indices for 8 weights = {2*8/8} bits/weight", 2*8/8 == 2)
+
+    # --- s08: errors stack like tolerances ------------------------------
+    def stream(L, mode, trials=30, d=256, seed=21):
+        r = np.random.default_rng(seed); out = []
+        for _ in range(trials):
+            x = r.standard_normal(d); xq = x.copy(); dl_ = 0.01
+            for _l in range(L):
+                Wl = r.standard_normal((d, d))/math.sqrt(d)*0.1
+                x = x + np.tanh(Wl @ x); y = xq + np.tanh(Wl @ xq)
+                xq = np.round(y/dl_)*dl_ if mode == "round" else np.floor(y/dl_)*dl_
+            out.append(np.sqrt(np.mean((xq-x)**2)))
+        return float(np.mean(out))
+    er4, er16, er64 = (stream(L, "round") for L in (4, 16, 64))
+    ef4, ef16, ef64 = (stream(L, "floor") for L in (4, 16, 64))
+    say("s08", f"residual stream, rounding to 0.01 after every block: RMS error at 4/16/64 blocks "
+        f"{er4:.4f}/{er16:.4f}/{er64:.4f} (x{er16/er4:.2f}, x{er64/er16:.2f} per 4x depth; RSS predicts x2)",
+        1.8 < er16/er4 < 2.4 and 1.8 < er64/er16 < 2.5)
+    say("s08", f"truncating instead (biased): {ef4:.4f}/{ef16:.4f}/{ef64:.4f} (x{ef16/ef4:.2f}, x{ef64/ef16:.2f}; "
+        "linear stacking predicts x4)", 3.6 < ef16/ef4 < 4.5 and 3.6 < ef64/ef16 < 4.6)
+
+    # --- s09: the KV cache ----------------------------------------------
+    kvb = 2*80*64*128*131072*2
+    say("s09", f"70B, 128K, FP16, 64 KV heads: {kvb/1e9:.1f} GB = {kvb/2**30:.0f} GiB; the source's prose says 330 GB "
+        "and its own code prints 343.6", abs(kvb/1e9-343.6) < 0.05 and kvb/2**30 == 320)
+    say("s09", f"with 8 KV heads (GQA, reported for Llama-2-70B): {kvb/8/1e9:.1f} GB", abs(kvb/8/1e9-42.9) < 0.05)
+    say("s09", f"KV per token per layer: 64 heads {2*64*128*2:,} B, 8 heads {2*8*128*2:,} B; x80 layers "
+        f"{2*64*128*2*80/1e6:.2f} MB / {2*8*128*2*80/1e3:.0f} KB (source file 03: ~1.3 KB/layer, ~100 KB)",
+        2*8*128*2*80 == 327680 and 2*64*128*2 == 32768)
+    say("s09", f"2,000-token shared prefix: {2000*100e3/1e6:.0f} MB at the source's 100 KB/token, "
+        f"{2000*327680/1e6:.0f} MB with 8 KV heads, {2000*2621440/1e9:.2f} GB with 64", True)
+
+    # --- s10: less work per token ---------------------------------------
+    n10, w10 = 512, 128
+    cf = n10*(n10+1)//2; win = sum(min(i+1, w10) for i in range(n10))
+    say("s10", f"window 128 on 512 tokens: source compares non-causal n^2 = {n10*n10:,} with n*w = {n10*w10:,} (4.0x); "
+        f"like for like, causal full {cf:,} vs window {win:,} = {cf/win:.2f}x", cf == 131328 and win == 57408
+        and abs(cf/win-2.29) < 0.01)
+    mha, gqa, mqa = (2*k*128*32768*2/1e6 for k in (32, 8, 1))
+    say("s10", f"KV per layer at 32K: MHA {mha:.0f} MB, GQA-8 {gqa:.0f} MB ({mha/gqa:.0f}x), MQA {mqa:.1f} MB "
+        f"({mha/mqa:.0f}x)", round(mha) == 537 and mha/gqa == 4 and mha/mqa == 32)
+
+    # --- s11: MoE is a mixed-model lot -----------------------------------
+    r11 = np.random.default_rng(5)
+    e1 = (46.7-12.9)/6; sh = 12.9-2*e1
+    ok11 = True; parts = []
+    for b in (1, 4, 8, 16):
+        sims = [len(set(sum((r11.choice(8, 2, replace=False).tolist() for _ in range(b)), []))) for _ in range(4000)]
+        pred = 8*(1-(6/8)**b); reads = sh+e1*pred
+        ok11 &= abs(np.mean(sims)-pred) < 0.05
+        parts.append(f"b={b}: {np.mean(sims):.2f}/{pred:.2f} experts, {reads:.1f}B read = {reads/46.7:.0%} of dense")
+    say("s11", "Mixtral-like (46.7B total, 12.9B active, reported), uniform top-2 of 8: " + "; ".join(parts), ok11)
+    say("s11", f"implied split: {e1:.2f}B per expert, {sh:.2f}B shared", abs(e1-5.63) < 0.01)
+
+    # --- s12: pruning task demonstrates nothing --------------------------
+    r12 = np.random.default_rng(0)
+    ho = r12.standard_normal((8, 64, 32)); full = ho.reshape(64, 256)
+    hn = np.linalg.norm(ho, axis=(1, 2)); errs = []
+    for keep in (6, 4, 2):
+        top = np.argsort(hn)[-keep:]; fp = np.zeros_like(ho); fp[top] = ho[top]
+        errs.append(np.linalg.norm(full-fp.reshape(64, 256))/np.linalg.norm(full))
+    say("s12", f"source 02 task 3: keep 6/4/2 heads -> error {errs[0]:.3f}/{errs[1]:.3f}/{errs[2]:.3f} vs "
+        "sqrt(share removed) 0.500/0.707/0.866; head norms span " + f"{hn.min():.1f}-{hn.max():.1f}",
+        all(abs(e_-math.sqrt((8-k)/8)) < 0.02 for e_, k in zip(errs, (6, 4, 2))))
+    say("s12", "its reshape(seq, heads*d) is not the per-token concatenation (transpose first)",
+        not np.allclose(full, ho.transpose(1, 0, 2).reshape(64, 256)))
+
+    # --- s13/s14: the batching model ------------------------------------
+    tw, tk = 20.0, 0.2
+    say("s13", f"illustrative server: 40 GB weights / 2 TB/s = {40/2000*1000:.0f} ms per step; 400 MB KV per "
+        f"sequence / 2 TB/s = {0.4/2000*1000:.1f} ms; 70B at 4.5 bits = {70e9*4.5/8/1e9:.1f} GB; "
+        f"1,250 tokens x 320 KB = {1250*327680/1e6:.0f} MB", abs(1250*327680/1e6-409.6) < 0.1)
+    Xb = lambda b, tk_=tk: b/(tw+b*tk_)*1000
+    say("s14", f"throughput X(b) = b/(t_w + b t_kv): X(1) = {Xb(1):.1f}, X(100) = {Xb(100):.0f}, ceiling 1/t_kv = "
+        f"{1000/tk:.0f} tok/s; one-piece flow uses {Xb(1)/(1000/tk):.1%} of it", abs(Xb(1)-49.5) < 0.05)
+    ok14 = True; rows14 = []
+    for Lam in (1000, 2000, 3000):
+        Tk = 1000/Lam; rho = Lam*tk/1000
+        bmin = tw/(Tk-tk); tpot = tw/(1-rho)
+        ok14 &= abs(tw+bmin*tk-tpot) < 1e-9 and abs(Lam*tpot/1000-bmin) < 1e-9
+        rows14.append(f"{Lam}: takt {Tk:.3f} ms, b_min {bmin:.1f}, TPOT {tpot:.2f} ms")
+    say("s14", "lean minimum lot b = t_w/(takt - t_kv) == Little's b = Lambda x TPOT, TPOT = t_w/(1-rho): " +
+        "; ".join(rows14), ok14)
+    def des(Lam, L=300, steps=30000, bcap=10**9, seed=1):
+        r = np.random.default_rng(seed); act = []; ql = 0
+        sbt = st_ = ntok = 0.0; qs = 0.0
+        for k in range(steps):
+            add = min(ql, bcap-len(act)); act += [L]*add; ql -= add
+            b = len(act); dt = tw+b*tk
+            ql += r.poisson(Lam/L*dt/1000)
+            if k > steps//5:
+                sbt += b*dt; st_ += dt; ntok += b; qs += ql*dt
+            act = [x-1 for x in act if x > 1]
+        return sbt/st_, sbt/ntok, ntok/st_*1000, qs/st_
+    ok14b = True; rows14b = []
+    for Lam in (1000, 2000):
+        rho = Lam*tk/1000; bm, tp, th, _ = des(Lam)
+        ok14b &= abs(bm/(Lam*tw/1000/(1-rho))-1) < 0.03 and abs(tp/(tw/(1-rho))-1) < 0.03 and abs(th/Lam-1) < 0.02
+        rows14b.append(f"{Lam}: b {bm:.1f} (pred {Lam*tw/1000/(1-rho):.1f}), TPOT {tp:.2f} (pred {tw/(1-rho):.2f}), "
+                       f"throughput {th:.0f}")
+    say("s14", "continuous batching simulated, Poisson arrivals, 300 tokens each: " + "; ".join(rows14b), ok14b)
+    bcap = int((80-40)/0.4)
+    _, _, th26, q26 = des(2600, bcap=bcap, steps=20000)
+    say("s14", f"memory cap (80 GB - 40 GB)/0.4 GB = {bcap} sequences -> X = {Xb(bcap):.0f} tok/s; demand 2,600: "
+        f"served {th26:.0f}, queue averaging {q26:.0f} and growing", bcap == 100 and abs(th26-2500) < 5 and q26 > 50)
+    say("s14", f"INT8 KV: t_kv 0.1 ms and cap 200 -> X = {200/(tw+200*0.1)*1000:.0f} tok/s (x2 from one change)",
+        200/(tw+200*0.1)*1000 == 5000)
+    say("s14", "Little's law on the batch: WIP b = throughput x lead time; TPOT/b is the cycle time per token "
+        f"(at 2,000 tok/s: {33.333/66.667:.3f} ms = takt)", abs((tw/(1-0.4))/(tw/(0.5-tk))-0.5) < 1e-9)
+
+    # --- s15: 'more batching cannot hurt' --------------------------------
+    bs = np.arange(1, 2001); xs = bs/(tw+bs*tk)
+    say("s15", "X(b) is strictly increasing in b (throughput never falls with batch, in this model)",
+        bool(np.all(np.diff(xs) > 0)))
+    def static_(reqs, B=8):
+        tt = tkn = 0
+        for i in range(0, len(reqs), B):
+            bb = reqs[i:i+B]; tt += max(bb)*0.01; tkn += sum(bb)
+        return tkn/tt
+    def cont_(reqs, B=8):
+        tt = tkn = 0; act = []; qu = list(reqs)
+        while act or qu:
+            while len(act) < B and qu: act.append(qu.pop(0))
+            act = [x-1 for x in act]; tkn += len(act); tt += 0.01
+            act = [x for x in act if x > 0]
+        return tkn/tt
+    random.seed(42)
+    reqs = [random.randint(10, 500) for _ in range(100)]
+    s_, c_ = static_(reqs), cont_(reqs)
+    say("s15", f"source 03 task 1: static {s_:.0f} tok/s, continuous {c_:.0f} tok/s, {c_/s_:.2f}x "
+        "(source text: 'typically 2-10x')", abs(c_/s_-1.76) < 0.01)
+    say("s15", f"static batch efficiency = mean/E[max of 8] for U[10,500]: {255/(10+490*8/9):.3f}",
+        abs(255/(10+490*8/9)-0.572) < 0.001)
+    r15 = np.random.default_rng(15); lam = 2.0; B = 32; waits = []
+    for _ in range(4000):
+        arr = np.cumsum(r15.exponential(1/lam, B)); waits.extend(arr[-1]-arr)
+    say("s15", f"wait-to-fill a lot of {B} at {lam}/s: mean wait {np.mean(waits):.2f} s vs (B-1)/(2 lambda) = "
+        f"{(B-1)/(2*lam):.2f} s, with no throughput gained below capacity", abs(np.mean(waits)-(B-1)/(2*lam)) < 0.1)
+
+    # --- s16: paging and routing -----------------------------------------
+    pre = 256*4096*100e3/1e9; pg = 256*math.ceil(256/16)*16*100e3/1e9
+    say("s16", f"source 03 task 2 scenario 1: {pre:.1f} GB preallocated vs {pg:.1f} GB paged ({pre/pg:.0f}x)",
+        abs(pre-104.9) < 0.05 and abs(pre/pg-16) < 1e-9)
+    Ls = np.random.default_rng(6).integers(1, 512, 200000); pgs = np.ceil(Ls/16)*16
+    say("s16", f"random lengths 1-511, 16-token pages: {np.mean(pgs-Ls):.2f} tokens/request wasted = "
+        f"{(pgs-Ls).sum()/pgs.sum():.2%} (source's 0% is a mean length that is a multiple of 16)",
+        abs(np.mean(pgs-Ls)-7.5) < 0.05)
+    say("s16", f"routing 80% to a 10x cheaper model: {1-(0.8*0.1+0.2):.0%} saved if routed, {1-(0.1+0.2):.0%} if "
+        "every query tries the small model first (source: ~70%)", abs(1-(0.8*0.1+0.2)-0.72) < 1e-9)
+
+    # --- s17: the edge -----------------------------------------------------
+    say("s17", f"battery: 3-5 W for 30 min = 1.5-2.5 Wh; on an assumed 4,000 mAh x 3.85 V = {4*3.85:.1f} Wh battery "
+        f"that is {1.5/15.4:.0%}-{2.5/15.4:.0%} if generating continuously (source ~5%); 30 min at 15 tok/s = "
+        f"{15*1800:,} tokens", abs(1.5/15.4-0.097) < 0.001 and 15*1800 == 27000)
+    say("s17", f"compression pipeline: source code 0.15 x 0.7 x 8 -> {32/4/(0.15*0.7):.0f}x; its diagram 70B FP32 "
+        f"-> 2 GB = {70e9*4/2e9:.0f}x", abs(32/4/(0.15*0.7)-76.2) < 0.05 and 70e9*4/2e9 == 140)
+    r17 = np.random.default_rng(4); nk = [10, 40, 200]
+    Xk = [r17.standard_normal((n, 3)) for n in nk]
+    yk = [X_ @ np.array([1., -2, .5]) + r17.standard_normal(n)*.1 for X_, n in zip(Xk, nk)]
+    g = lambda w_, X_, y_: 2*X_.T @ (X_ @ w_ - y_)/len(y_)
+    w0 = np.zeros(3); wk = [w0-0.05*g(w0, X_, y_) for X_, y_ in zip(Xk, yk)]
+    wc = w0-0.05*g(w0, np.vstack(Xk), np.concatenate(yk))
+    dw = np.abs(sum(n*w_ for n, w_ in zip(nk, wk))/sum(nk)-wc).max(); du = np.abs(sum(wk)/3-wc).max()
+    say("s17", f"FedAvg, one local step: data-weighted mean == central step (diff {dw:.0e}); the source's plain "
+        f"1/K mean is off by {du:.3f}", dw < 1e-12 and du > 0.01)
+
+    # --- s18: speculative decoding ---------------------------------------
+    Etok = lambda al, k: (1-al**(k+1))/(1-al)
+    ok18 = True; rows18 = []
+    for al, k, c in ((0.8, 5, 0.1), (0.5, 5, 0.1), (0.9, 4, 0.05)):
+        acc = np.random.default_rng(1).random((200000, k)) < al
+        toks = np.where(acc.all(1), k, acc.argmin(1)) + 1
+        ok18 &= abs(toks.mean()-Etok(al, k)) < 0.02
+        rows18.append(f"a={al},k={k}: sim {toks.mean():.3f} vs {Etok(al,k):.3f}; speedup {Etok(al,k)/(k*c+1):.2f} "
+                      f"vs k*a/(kc+1) {k*al/(k*c+1):.2f}")
+    say("s18", "tokens per target pass (1-a^(k+1))/(1-a), c = draft/target cost: " + "; ".join(rows18), ok18)
+    r18 = np.random.default_rng(2); V = 6
+    p = r18.dirichlet(np.ones(V)); q = r18.dirichlet(np.ones(V)); N = 400000
+    xs_ = r18.choice(V, N, p=q); accp = r18.random(N) < np.minimum(1, p[xs_]/q[xs_])
+    resid = np.maximum(p-q, 0); resid /= resid.sum()
+    out = np.where(accp, xs_, r18.choice(V, N, p=resid)); emp = np.bincount(out, minlength=V)/N
+    say("s18", f"accept with min(1,p/q), resample from (p-q)+: output matches p to {np.abs(emp-p).max():.1e}; "
+        f"acceptance {accp.mean():.4f} vs 1 - TV(p,q) = {np.minimum(p,q).sum():.4f}",
+        np.abs(emp-p).max() < 2e-3 and abs(accp.mean()-np.minimum(p, q).sum()) < 3e-3)
+    random.seed(0); its = []
+    for _ in range(100000):
+        tok = 0
+        for _i in range(5):
+            t_ = random.randint(0, 9); pr = 0.9 if t_ % 2 == 0 else 0.1
+            tok += 1
+            if random.random() >= pr: break
+        its.append(tok)
+    mt = sum(its)/len(its)
+    say("s18", f"source 05 task 1 without sleeps: {mt:.3f} tokens per target call, {10/(15/mt):.2f}x at 5x1 ms "
+        "drafts + 10 ms target", abs(mt-1.9375) < 0.02)
+
+    # --- s19: past one server, at the source's level -----------------------
+    r19 = np.random.default_rng(7)
+    X9 = r19.standard_normal((4, 16)); W9 = r19.standard_normal((16, 12))
+    cc = np.abs(np.hstack([X9 @ c_ for c_ in np.split(W9, 2, axis=1)]) - X9 @ W9).max()
+    rr = np.abs(sum(x_ @ w_ for x_, w_ in zip(np.split(X9, 2, axis=1), np.split(W9, 2, axis=0))) - X9 @ W9).max()
+    say("s19", f"column split -> concatenate (all-gather) {cc:.0e}; row split -> sum (all-reduce) {rr:.0e}",
+        cc < 1e-12 and rr < 1e-12)
+    pay = 64*128*2
+    say("s19", f"decode all-reduce payload {pay:,} B/token (d_model 64x128): {pay/900e9*1e9:.0f} ns on 900 GB/s, "
+        f"{pay/32e9*1e6:.2f} us on 32 GB/s; the source's 0.1 ms and 3 ms need {0.1e-3*900e9/pay:,.0f} and "
+        f"{3e-3*32e9/pay:,.0f} tokens per message", pay == 16384 and abs(0.1e-3*900e9/pay-5493) < 1)
+    say("s19", f"100,000 GPUs x $8/h x 8,760 h = ${100000*8*8760/1e9:.2f}B/yr (source: ~$3B, implying "
+        f"${3e9/(100000*8760):.2f}/h)", abs(100000*8*8760/1e9-7.008) < 1e-9)
+    def cost_(PB, bits, gm, gc, tgt):
+        ms = PB*1e9*bits/8/1e9; gpm = max(1, int((ms*1.2)/gm+0.99)); tpg = 500/(PB*bits/16)
+        tot = tpg*gpm; rep = max(1, int(tgt/tot+0.99)); return gpm*rep*gc/(tot*rep*3600/1e6), tot*gpm
+    c70, t70 = cost_(70, 16, 80, 8.0, 1000)
+    say("s19", f"source 05 task 2, 70B FP16 on H100: ${c70:.2f} per 1M tokens against its own table's $0.50 "
+        f"({c70/0.5:.0f}x); the table implies {24/0.5*1e6/3600:,.0f} tok/s from 3 GPUs vs the model's {t70/3:.1f}",
+        abs(c70-311.11) < 0.01)
+
+    # --- s20: worked example ----------------------------------------------
+    Lam = 1800; Tk = 1000/Lam; rho = Lam*tk/1000
+    bm = tw/(Tk-tk); tp = tw/(1-rho); mem = 40+bm*0.4
+    say("s20", f"6 req/s x 300 tokens = {Lam} tok/s: takt {Tk:.3f} ms, min lot {bm:.1f}, TPOT {tp:.2f} ms, "
+        f"memory {mem:.1f} GB of 80", abs(bm-56.25) < 0.01 and abs(tp-31.25) < 1e-9 and mem < 80)
+    lam_slo = (1-tw/50)/tk*1000
+    say("s20", f"TPOT <= 50 ms caps demand at {lam_slo:.0f} tok/s; memory caps it at {Xb(100):.0f}: memory binds; "
+        f"INT8 KV -> SLO cap {(1-tw/50)/0.1*1000:.0f}, memory cap {200/(tw+200*0.1)*1000:.0f}",
+        abs(lam_slo-3000) < 1e-9 and Xb(100) == 2500)
+    bmd, tpd, thd, _ = des(Lam, steps=20000, bcap=100, seed=5)
+    say("s20", f"simulated at {Lam} tok/s with the cap: b {bmd:.1f}, TPOT {tpd:.2f} ms, throughput {thd:.0f}",
+        abs(tpd/tp-1) < 0.04 and abs(thd/Lam-1) < 0.02)
 
 _ch17()
 # ----- end of Chapter 17 block -----
