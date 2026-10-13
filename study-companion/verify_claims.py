@@ -4949,7 +4949,696 @@ _ch14p2()
 # Chapter 15 block. Owned by the Chapter 15 run: replace only the body of _ch15() below.
 # Keep every name inside the function so nothing collides with another chapter's block.
 def _ch15():
-    pass
+    import math, random, itertools, hashlib, os, sys, subprocess, tempfile, time, zlib, stat, json, textwrap
+    from collections import Counter
+    import numpy as np
+    T = "[Ch15 %s]"
+    def say(sec, msg, ok=None):
+        tail = "" if ok is None else "   " + P(ok)
+        print(f"{T % sec} {msg}{tail}")
+    rng15 = random.Random(1515)
+    GENV = dict(os.environ, GIT_AUTHOR_NAME="A", GIT_AUTHOR_EMAIL="a@x", GIT_COMMITTER_NAME="A",
+                GIT_COMMITTER_EMAIL="a@x", GIT_AUTHOR_DATE="2026-01-01T00:00:00+0000",
+                GIT_COMMITTER_DATE="2026-01-01T00:00:00+0000", GIT_CONFIG_GLOBAL=os.devnull,
+                GIT_CONFIG_SYSTEM=os.devnull, GIT_TERMINAL_PROMPT="0", LC_ALL="C")
+    def git(d, *a, raw=False, check=True):
+        r = subprocess.run(["git", *a], cwd=d, env=GENV, capture_output=True, text=True)
+        if raw: return r
+        return r.stdout.strip()
+    def sh(cmd, cwd=None, timeout=20):
+        return subprocess.run(["bash", "-c", cmd], cwd=cwd, capture_output=True, text=True, timeout=timeout, env=GENV)
+    def newrepo():
+        d = tempfile.mkdtemp(prefix="ch15g")
+        git(d, "init", "-q", "-b", "main")
+        return d
+    def wr(path, s):
+        with open(path, "w") as f: f.write(s)
+    here = os.path.dirname(os.path.abspath(__file__)) if "__file__" in globals() else os.getcwd()
+    repo_root = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=here, capture_output=True, text=True).stdout.strip()
+
+    # --- s01: a pipe is a bounded buffer, and sort is a batch station -------------------------
+    print()
+    import fcntl
+    r_, w_ = os.pipe()
+    fl = fcntl.fcntl(w_, fcntl.F_GETFL); fcntl.fcntl(w_, fcntl.F_SETFL, fl | os.O_NONBLOCK)
+    cap = 0
+    try:
+        while True: cap += os.write(w_, b"x" * 4096)
+    except BlockingIOError:
+        pass
+    os.close(r_); os.close(w_)
+    say("s01", f"a pipe holds {cap:,} bytes before the writer is made to wait (Linux default)", cap == 65536)
+    r = sh("yes | head -3 >/dev/null; echo ${PIPESTATUS[0]}")
+    say("s01", f"'yes | head -3' ends: yes (endless) is stopped by SIGPIPE, exit status {r.stdout.strip()} = 128 + 13",
+        r.stdout.strip() == "141")
+    def first_line_delay(stage):
+        p = subprocess.Popen(["bash", "-c", "(printf 'b\\n'; sleep 1; printf 'a\\n') | " + stage],
+                             stdout=subprocess.PIPE, text=True)
+        t0 = time.time(); p.stdout.readline(); dt = time.time() - t0; p.communicate(); return dt
+    dc, ds, dg, dgl = first_line_delay("cat"), first_line_delay("sort"), first_line_delay("grep ."), first_line_delay("grep --line-buffered .")
+    say("s01", f"first line out after: cat {dc:.2f} s, sort {ds:.2f} s, grep {dg:.2f} s, grep --line-buffered {dgl:.2f} s "
+        "(producer pauses 1 s between lines)", dc < 0.5 and ds > 0.9 and dg > 0.9 and dgl < 0.5)
+    say("s01", "  sort cannot emit before end of input; grep into a pipe ships in 4 KiB lots unless told otherwise")
+    r1 = sh("printf 'a\\nb\\na\\n' | uniq -c | wc -l"); r2 = sh("printf 'a\\nb\\na\\n' | sort | uniq -c | wc -l")
+    say("s01", f"uniq -c on a,b,a gives {r1.stdout.strip()} groups; after sort, {r2.stdout.strip()}",
+        r1.stdout.strip() == "3" and r2.stdout.strip() == "2")
+    d = tempfile.mkdtemp(prefix="ch15s")
+    kinds = {"CUDA out of memory": 41, "shape mismatch": 29, "NaN loss": 17, "checkpoint not found": 11,
+             "timeout": 7, "disk full": 5, "bad token": 3, "port in use": 2, "OOM killer": 1}
+    lines = []
+    for k, c in kinds.items(): lines += [f"2026-03-0{1 + i % 9} 12:0{i % 10}:00 ERROR: {k}" for i in range(c)]
+    lines += [f"2026-03-01 12:00:00 INFO: step {i}" for i in range(300)]
+    rng15.shuffle(lines); wr(f"{d}/app.log", "\n".join(lines) + "\n")
+    r = sh("""grep "ERROR" app.log | awk -F': ' '{print $2}' | sort | uniq -c | sort -rn | head -10""", cwd=d)
+    got = [(int(L.split()[0]), L.split(None, 1)[1]) for L in r.stdout.strip().splitlines()]
+    ref = [(c, k) for k, c in Counter({k: c for k, c in kinds.items()}).most_common(10)]
+    say("s01", f"the source's top-errors pipeline == a Python counter on the same log ({len(got)} types, top '{got[0][1]}' x{got[0][0]})",
+        got == ref)
+    wr(f"{d}/t.log", "loss loss\nloss\nepoch\n")
+    r = sh("grep -c loss t.log; grep -o loss t.log | wc -l", cwd=d)
+    a_, b_ = r.stdout.split()
+    say("s01", f"grep -c counts matching lines ({a_}), not occurrences ({b_})", a_ == "2" and b_ == "3")
+
+    # --- s02: redirection order, a header row, a missing newline, permissions ----------------
+    print()
+    r = sh("f() { echo out; echo err >&2; }; f > o1 2>&1; f 2>&1 > o2; cat o1 | wc -l; cat o2 | wc -l", cwd=d)
+    tok = r.stdout.split(); n1, n2 = tok[-2], tok[-1]
+    say("s02", f"'> f 2>&1' puts {n1} lines in the file; '2>&1 > f' puts {n2}, and 'err' lands on the screen "
+        "(stderr went where stdout pointed *before* the file)", n1 == "2" and n2 == "1" and tok[0] == "err")
+    wr(f"{d}/data.csv", "label,x\ncat,1\ndog,2\ncat,3\nbird,4\n")
+    r = sh("cut -d',' -f1 data.csv | sort -u | wc -l", cwd=d)
+    say("s02", f"source's 'count unique values in column 1' returns {r.stdout.strip()} for 3 labels: the header is counted",
+        r.stdout.strip() == "4")
+    with open(f"{d}/nonl.txt", "w") as f: f.write("row1\nrow2")
+    r = sh("wc -l < nonl.txt", cwd=d)
+    say("s02", f"wc -l counts newline characters: a 2-row file with no final newline reports {r.stdout.strip()}",
+        r.stdout.strip() == "1")
+    r = sh("du -sh --max-depth=1 . ; echo rc=$?", cwd=d)
+    say("s02", f"the source's 'du -sh --max-depth=1 .' is refused: {r.stderr.strip().splitlines()[0][:70]}",
+        "rc=1" in r.stdout and "conflict" in r.stderr)
+    r = sh("du -h --max-depth=1 . >/dev/null; echo rc=$?", cwd=d)
+    say("s02", "  without -s it runs", "rc=0" in r.stdout)
+    wr(f"{d}/s.py", "x")
+    os.chmod(f"{d}/s.py", 0o754); m754 = stat.filemode(os.stat(f"{d}/s.py").st_mode)
+    os.chmod(f"{d}/s.py", 0o755); m755 = stat.filemode(os.stat(f"{d}/s.py").st_mode)
+    say("s02", f"-rwxr-xr-- is octal 754 ({m754}); chmod 755 gives {m755}: each digit is three bits r=4 w=2 x=1",
+        m754 == "-rwxr-xr--" and m755 == "-rwxr-xr-x")
+    r = sh("chmod 644 s.py; (umask 022; chmod +x s.py); stat -c %A s.py; chmod 644 s.py; (umask 077; chmod +x s.py); stat -c %A s.py", cwd=d)
+    u22, u77 = r.stdout.split()
+    say("s02", f"'chmod +x' adds x for everyone only under the usual umask: umask 022 -> {u22}, umask 077 -> {u77}",
+        u22 == "-rwxr-xr-x" and u77 == "-rwxr--r--")
+
+    # --- s03: the environment is copied at birth; %1; nohup -------------------------------------
+    print()
+    r = sh('X=1; bash -c \'echo "[$X]"\'; export X; bash -c \'echo "[$X]"\'; bash -c \'export X=2\'; echo "[$X]"')
+    o = r.stdout.split()
+    say("s03", f"unexported variable seen by a child: {o[0]}; exported: {o[1]}; child's change seen by parent: {o[2]} (still 1)",
+        o == ["[]", "[1]", "[1]"])
+    r = sh("sleep 3 & a=$!; sleep 3 & b=$!; echo $a $b $(jobs -p %1) $(jobs -p %%); kill $a $b")
+    a_, b_, j1, jl = r.stdout.split()
+    say("s03", "'kill %1' names job 1, the first started; the most recent is %% (or %+)", j1 == a_ and jl == b_ and a_ != b_)
+    r = sh("nohup sleep 3 >/dev/null 2>&1 & p=$!; sleep 0.3; grep SigIgn /proc/$p/status; kill $p")
+    ign = int(r.stdout.split()[1], 16)
+    r2 = sh("sleep 3 & p=$!; sleep 0.3; grep SigIgn /proc/$p/status; kill $p")
+    ign2 = int(r2.stdout.split()[1], 16)
+    say("s03", f"nohup sets SIGHUP (signal 1) to ignored: SigIgn bit 0 = {ign & 1} under nohup, {ign2 & 1} without",
+        (ign & 1) == 1 and (ign2 & 1) == 0)
+
+    # --- s04: what git stores: snapshots named by their content (debt 2) -------------------------
+    print()
+    d = newrepo()
+    wr(f"{d}/a.txt", "shaft dia 20 h7\n"); wr(f"{d}/b.txt", "shaft dia 20 h7\n")
+    git(d, "add", "."); git(d, "commit", "-qm", "one")
+    c = b"shaft dia 20 h7\n"
+    hb = hashlib.sha1(b"blob %d\0" % len(c) + c).hexdigest()
+    say("s04", f"blob name = SHA-1('blob 16\\0' + content) = {hb[:12]}..., and git agrees", hb == git(d, "hash-object", "a.txt"))
+    nobj = sum(len(fs) for _r, _d, fs in os.walk(f"{d}/.git/objects") if "info" not in _r and "pack" not in _r)
+    say("s04", f"two files with identical content, one commit: {nobj} objects stored (one blob, one tree, one commit)", nobj == 3)
+    raw = subprocess.run(["git", "cat-file", "commit", "HEAD"], cwd=d, env=GENV, capture_output=True).stdout
+    h1 = git(d, "rev-parse", "HEAD")
+    say("s04", f"commit name = SHA-1 of its own text (tree, author, time, message): {h1[:12]}...",
+        hashlib.sha1(b"commit %d\0" % len(raw) + raw).hexdigest() == h1)
+    d2 = newrepo(); wr(f"{d2}/a.txt", "shaft dia 20 h7\n"); wr(f"{d2}/b.txt", "shaft dia 20 h7\n")
+    git(d2, "add", "."); git(d2, "commit", "-qm", "one")
+    say("s04", "an independent repository, same content, author, time and message: same commit name, no registry consulted",
+        git(d2, "rev-parse", "HEAD") == h1)
+    t1, b1 = git(d, "rev-parse", "HEAD^{tree}"), git(d, "rev-parse", "HEAD:a.txt")
+    wr(f"{d}/a.txt", "shaft dia 20 h6\n"); git(d, "commit", "-qam", "two")
+    t2, b2, bb = git(d, "rev-parse", "HEAD^{tree}"), git(d, "rev-parse", "HEAD:a.txt"), git(d, "rev-parse", "HEAD:b.txt")
+    say("s04", f"one character changed (h7 -> h6): blob {b1[:7]} -> {b2[:7]}, tree {t1[:7]} -> {t2[:7]}, untouched b.txt keeps {bb[:7]}",
+        b1 != b2 and t1 != t2 and bb == b1)
+    say("s04", "the new commit records its parent's name inside itself", ("parent " + h1) in git(d, "cat-file", "-p", "HEAD"))
+    # loose objects are whole; packing deltas the OLDER revision against the newer
+    d = newrepo()
+    L_ = [f"line {i}: dimension {i * 0.5:.1f} mm tolerance h7\n" for i in range(1000)]
+    wr(f"{d}/spec.txt", "".join(L_)); git(d, "add", "."); git(d, "commit", "-qm", "r1"); bo = git(d, "rev-parse", "HEAD:spec.txt")
+    L_[500] = "line 500: dimension 250.0 mm tolerance h6\n"
+    wr(f"{d}/spec.txt", "".join(L_)); git(d, "commit", "-qam", "r2"); bn = git(d, "rev-parse", "HEAD:spec.txt")
+    fsz = os.path.getsize(f"{d}/spec.txt")
+    whole = [len(zlib.decompress(open(f"{d}/.git/objects/{b[:2]}/{b[2:]}", "rb").read())) for b in (bo, bn)]
+    say("s04", f"before packing, both revisions are stored whole: {whole[0]:,} and {whole[1]:,} bytes (file {fsz:,} + 11-byte header)",
+        whole == [fsz + 11, fsz + 11])
+    git(d, "gc", "-q", "--aggressive")
+    idx = [f for f in os.listdir(f"{d}/.git/objects/pack") if f.endswith(".idx")][0]
+    vp = {Lp.split()[0]: Lp.split() for Lp in git(d, "verify-pack", "-v", f".git/objects/pack/{idx}").splitlines() if Lp[:40] in (bo, bn)}
+    old_delta = len(vp[bo]) == 7 and vp[bo][6] == bn
+    say("s04", f"after 'git gc': the NEWER revision is whole ({vp[bn][2]} bytes), the OLDER is a {vp[bo][2]}-byte delta against it",
+        old_delta and len(vp[bn]) == 5 and int(vp[bo][2]) < 100)
+
+    # --- s05: what a content name guarantees: the birthday bound ---------------------------------
+    print()
+    def p_coll(n, bits):
+        N = 2.0 ** bits
+        return -math.expm1(sum(math.log1p(-i / N) for i in range(n)))
+    def n_half(bits):
+        lo, hi = 1, 1 << (bits // 2 + 3)
+        while lo < hi:
+            m = (lo + hi) // 2
+            if p_coll(m, bits) >= 0.5: hi = m
+            else: lo = m + 1
+        return lo
+    nh28 = n_half(28)
+    say("s05", f"7 hex digits = 28 bits: 50% chance of some shared prefix after {nh28:,} objects "
+        f"(1.1774 x 2^14 = {1.1774 * 2 ** 14:,.0f})", abs(nh28 - 1.1774 * 2 ** 14) < 3)
+    p1e9 = (1e9) ** 2 / 2 ** 161
+    say("s05", f"full 160-bit names: chance of any accidental collision among 1e9 objects ~ n^2/2^161 = {p1e9:.1e}", p1e9 < 1e-30)
+    say("s05", f"  50% only after 1.1774 x 2^80 = {1.1774 * 2 ** 80:.2e} objects")
+    def first_coll(bits, t):
+        seen = {}; mask = (1 << bits) - 1; i = 0
+        while True:
+            h = int.from_bytes(hashlib.sha1(f"rev-{t}-{i}".encode()).digest()[:8], "big") >> (64 - bits)
+            if h in seen: return i + 1
+            seen[h] = i; i += 1
+    meas24 = [first_coll(24, t) for t in range(400)]
+    pred24 = math.sqrt(math.pi / 2 * 2 ** 24)
+    say("s05", f"truncated SHA-1, 24 bits: first shared name after {np.mean(meas24):,.0f} objects on average (400 runs); "
+        f"birthday prediction sqrt(pi/2 * 2^24) = {pred24:,.0f}", abs(np.mean(meas24) / pred24 - 1) < 0.06)
+    say("s05", f"  spread of those 400 runs: {min(meas24):,} to {max(meas24):,}")
+    lab24 = first_coll(24, 0); lab16 = first_coll(16, 0); lab20 = first_coll(20, 0); lab28 = first_coll(28, 0)
+    say("s05", f"lab rest values (run 0): first collision at object {lab16:,} (16 bits), {lab20:,} (20), {lab24:,} (24), {lab28:,} (28)")
+    meas16 = [first_coll(16, t) for t in range(50)]
+    say("s05", f"lab '50 runs' at 16 bits: mean {np.mean(meas16):.1f} vs prediction {math.sqrt(math.pi / 2 * 2 ** 16):.1f}",
+        abs(np.mean(meas16) / math.sqrt(math.pi / 2 * 2 ** 16) - 1) < 0.15)
+    LAB5 = {"b16": lab16, "b20": lab20, "b24": lab24, "b28": lab28, "m16": round(float(np.mean(meas16)), 1)}
+
+    # --- s06: a diff is a longest common subsequence (debt 1) ------------------------------------
+    print()
+    def lcs_len(a, b):
+        prev = [0] * (len(b) + 1)
+        for x in a:
+            cur = [0]
+            for j, y in enumerate(b): cur.append(prev[j] + 1 if x == y else max(prev[j + 1], cur[j]))
+            prev = cur
+        return prev[-1]
+    def lcs_all(a, b):
+        n, m = len(a), len(b); Ld = [[0] * (m + 1) for _ in range(n + 1)]
+        for i in range(n - 1, -1, -1):
+            for j in range(m - 1, -1, -1):
+                Ld[i][j] = Ld[i + 1][j + 1] + 1 if a[i] == b[j] else max(Ld[i + 1][j], Ld[i][j + 1])
+        from functools import lru_cache
+        @lru_cache(None)
+        def go(i, j):
+            if i == n or j == m: return {""}
+            if a[i] == b[j]: return {a[i] + s for s in go(i + 1, j + 1)}
+            out = set()
+            if Ld[i + 1][j] == Ld[i][j]: out |= go(i + 1, j)
+            if Ld[i][j + 1] == Ld[i][j]: out |= go(i, j + 1)
+            return out
+        return go(0, 0)
+    A_, B_ = "ABCABBA", "CBABAC"
+    al = lcs_all(A_, B_)
+    say("s06", f"ABCABBA vs CBABAC: LCS length {lcs_len(A_, B_)}, shortest edit 7+6-2*4 = {7 + 6 - 2 * lcs_len(A_, B_)}, "
+        f"and {len(al)} different LCS strings {sorted(al)}", lcs_len(A_, B_) == 4 and len(al) == 3)
+    def cnt_git(fa, fb, *opt):
+        r = subprocess.run(["git", "diff", "--no-index", "--numstat", *opt, fa, fb], env=GENV, capture_output=True, text=True)
+        s = r.stdout.split(); return (int(s[0]), int(s[1])) if s else (0, 0)
+    def cnt_gnu(fa, fb, *opt):
+        r = subprocess.run(["diff", "--unchanged-line-format=", "--old-line-format=-\n", "--new-line-format=+\n", *opt, fa, fb],
+                           capture_output=True, text=True)
+        return r.stdout.count("+"), r.stdout.count("-")
+    tools = {"git": (cnt_git, ()), "git --minimal": (cnt_git, ("--minimal",)), "git --patience": (cnt_git, ("--patience",)),
+             "git --histogram": (cnt_git, ("--histogram",)), "GNU diff": (cnt_gnu, ()), "GNU diff -d": (cnt_gnu, ("-d",))}
+    d = tempfile.mkdtemp(prefix="ch15d")
+    eq = {k: 0 for k in tools}; over = {k: 0 for k in tools}; worst = {k: 0 for k in tools}; consistent = True
+    for t in range(300):
+        alph = [f"L{k}" for k in range(rng15.randint(2, 8))]
+        a = [rng15.choice(alph) for _ in range(rng15.randint(0, 40))]; b = list(a)
+        for _ in range(rng15.randint(0, 12)):
+            op = rng15.random()
+            if op < .4 and b: b.pop(rng15.randrange(len(b)))
+            elif op < .8: b.insert(rng15.randint(0, len(b)), rng15.choice(alph))
+            elif b: b[rng15.randrange(len(b))] = rng15.choice(alph)
+        fa, fb = f"{d}/a", f"{d}/b"; wr(fa, "".join(x + "\n" for x in a)); wr(fb, "".join(x + "\n" for x in b))
+        ses = len(a) + len(b) - 2 * lcs_len(a, b)
+        for k, (f, o) in tools.items():
+            p_, m_ = f(fa, fb, *o)
+            consistent &= (len(a) - m_ == len(b) - p_)
+            if p_ + m_ == ses: eq[k] += 1
+            else: over[k] += 1; worst[k] = max(worst[k], p_ + m_ - ses)
+            assert p_ + m_ >= ses
+    say("s06", "300 random file pairs: no tool ever reports fewer changed lines than N + M - 2*LCS (it is a floor)", consistent)
+    for k in tools:
+        say("s06", f"  {k:16s} hits the floor in {eq[k]:3d}/300, exceeds it in {over[k]:3d} (worst by {worst[k]} lines)")
+    say("s06", "  GNU diff -d and git's default always hit it on these; patience and histogram do not",
+        eq["GNU diff -d"] == 300 and eq["git"] == 300 and over["git --patience"] > 0 and over["git --histogram"] > over["git --patience"])
+    D6 = {"eq": eq, "over": over, "worst": worst}
+    def show(rev, path):
+        r = subprocess.run(["git", "show", f"{rev}:{path}"], cwd=repo_root, env=GENV, capture_output=True)
+        return r.stdout if r.returncode == 0 else None
+    real = [("1f32a83", "42d11dc", "study-companion/README.md"), ("42d11dc", "cfbdc1d", "study-companion/HANDOFF.md"),
+            ("45393cd", "1f32a83", "study-companion/HANDOFF.md"), ("23a98c7", "cfbdc1d", "study-companion/NEXT_SESSION_PROMPT.md")]
+    REAL = []
+    for r1_, r2_, pth in real:
+        A, B = show(r1_, pth), show(r2_, pth)
+        assert A is not None and B is not None, ("history missing", r1_, r2_, pth)
+        fa, fb = f"{d}/A", f"{d}/B"; open(fa, "wb").write(A); open(fb, "wb").write(B)
+        a, b = A.splitlines(), B.splitlines(); Lr = lcs_len(a, b); ses = len(a) + len(b) - 2 * Lr
+        res = {k: sum(f(fa, fb, *o)) for k, (f, o) in tools.items()}
+        REAL.append((pth.split("/")[-1], r1_, r2_, len(a), len(b), Lr, ses, res))
+        say("s06", f"real revisions {pth.split('/')[-1]} {r1_}->{r2_}: {len(a)} and {len(b)} lines, LCS {Lr}, floor {ses}; "
+            + ", ".join(f"{k} {v}" for k, v in res.items()), min(res.values()) == ses and res["GNU diff -d"] == ses)
+    hand = REAL[2]
+    say("s06", f"HANDOFF.md 45393cd->1f32a83: git (default and --minimal) report {hand[7]['git']} and {hand[7]['git --minimal']} "
+        f"changed lines against a floor of {hand[6]}", hand[7]["git --minimal"] == 150 and hand[6] == 144)
+    fa, fb = f"{d}/A", f"{d}/B"; open(fa, "wb").write(show("45393cd", real[2][2])); open(fb, "wb").write(show("1f32a83", real[2][2]))
+    r = subprocess.run(["git", "diff", "--no-index", "--unified=0", "--minimal", fa, fb], env=GENV, capture_output=True, text=True)
+    rem, add = Counter(), Counter()
+    for Lx in r.stdout.splitlines()[4:]:
+        if Lx.startswith("@@"): continue
+        if Lx.startswith("+"): add[Lx[1:]] += 1
+        elif Lx.startswith("-"): rem[Lx[1:]] += 1
+    r = subprocess.run(["diff", "-d", "--unchanged-line-format=", "--old-line-format=-%L", "--new-line-format=+%L", fa, fb],
+                       capture_output=True, text=True)
+    rem2, add2 = Counter(), Counter()
+    for Lx in r.stdout.splitlines(): (add2 if Lx.startswith("+") else rem2)[Lx[1:]] += 1
+    xs = (rem - rem2) + (add - add2)
+    nblank = open(fa).read().split("\n").count("")
+    say("s06", f"  every one of git's {sum(xs.values())} extra lines is a blank line, the commonest line in the file ({nblank - 1} of {len(open(fa).read().splitlines())})",
+        set(xs) == {""} and sum(xs.values()) == 6)
+    # renumbering defeats a line diff
+    notes0 = ["1. ALL DIMENSIONS IN MM", "2. MATERIAL EN8", "3. HARDEN TO 45 HRC", "4. BREAK SHARP EDGES", "5. ZINC PLATE"]
+    notes1 = ["1. ALL DIMENSIONS IN MM", "2. MATERIAL EN8", "3. BREAK SHARP EDGES", "4. ZINC PLATE"]
+    strip = lambda ns: [x.split(". ", 1)[1] for x in ns]
+    dn, du = len(notes0) + len(notes1) - 2 * lcs_len(notes0, notes1), len(notes0) + len(notes1) - 2 * lcs_len(strip(notes0), strip(notes1))
+    say("s06", f"delete note 3 of 5 and renumber: the line diff changes {dn} lines; without the numbers it changes {du}",
+        dn == 5 and du == 1)
+    LAB6 = {}
+    presets = {"notes": (["NOTES", "ALL DIMENSIONS IN MM", "MATERIAL EN8", "HARDEN TO 45 HRC", "BREAK SHARP EDGES", "TOL +/-0.1 UNLESS STATED"],
+                         ["NOTES", "ALL DIMENSIONS IN MM", "MATERIAL EN24", "HARDEN TO 45 HRC", "TOL +/-0.1 UNLESS STATED", "ZINC PLATE 8 MICRON"]),
+               "myers": (list("ABCABBA"), list("CBABAC")),
+               "renum": (notes0, notes1)}
+    for k, (a, b) in presets.items():
+        Lk = lcs_len(a, b); LAB6[k] = (len(a), len(b), Lk, len(a) + len(b) - 2 * Lk)
+    say("s06", f"lab presets (N, M, LCS, edits): {LAB6}", LAB6["notes"] == (6, 6, 4, 4) and LAB6["myers"] == (7, 6, 4, 5))
+
+    # --- s07: three-way merge, and which side is which ---------------------------------------------
+    print()
+    base = [f"p{i} = {i}" for i in range(1, 9)]
+    def merge_case(edA, edB):
+        d = newrepo(); wr(f"{d}/f.txt", "\n".join(base) + "\n"); git(d, "add", "."); git(d, "commit", "-qm", "base")
+        git(d, "checkout", "-qb", "side")
+        x = list(base)
+        for i, v in edB.items(): x[i] = v
+        wr(f"{d}/f.txt", "\n".join(x) + "\n"); git(d, "commit", "-qam", "B")
+        git(d, "checkout", "-q", "main"); x = list(base)
+        for i, v in edA.items(): x[i] = v
+        wr(f"{d}/f.txt", "\n".join(x) + "\n"); git(d, "commit", "-qam", "A")
+        r = git(d, "merge", "-q", "--no-edit", "side", raw=True)
+        return "conflict" if r.returncode else "clean"
+    cases = [("lines 2 and 6 changed on the two sides", {1: "p2 = 20"}, {5: "p6 = 60"}, "clean"),
+             ("same line, different values", {2: "p3 = 30"}, {2: "p3 = 31"}, "conflict"),
+             ("same line, same new value", {2: "p3 = 30"}, {2: "p3 = 30"}, "clean"),
+             ("adjacent lines 3 and 4", {2: "p3 = 30"}, {3: "p4 = 40"}, "conflict"),
+             ("lines 3 and 5 (one line between)", {2: "p3 = 30"}, {4: "p5 = 50"}, "clean")]
+    for name, ea, eb, want in cases:
+        got_ = merge_case(ea, eb)
+        say("s07", f"merge, {name}: {got_}", got_ == want)
+    # rebase: HEAD side of the conflict is the upstream, not your branch
+    d = newrepo(); wr(f"{d}/cfg.py", "learning_rate = 0.001\n"); git(d, "add", "."); git(d, "commit", "-qm", "base")
+    git(d, "checkout", "-qb", "feature-x"); wr(f"{d}/cfg.py", "learning_rate = 0.0005\n"); git(d, "commit", "-qam", "mine")
+    git(d, "checkout", "-q", "main"); wr(f"{d}/cfg.py", "learning_rate = 0.002\n"); git(d, "commit", "-qam", "theirs")
+    git(d, "checkout", "-q", "feature-x"); git(d, "rebase", "main", raw=True)
+    txt = open(f"{d}/cfg.py").read()
+    top = txt.split("=======")[0]
+    say("s07", "in a REBASE conflict the block under '<<<<<<< HEAD' is main's line (0.002), not your branch's (0.0005)",
+        "0.002" in top and "0.0005" not in top)
+    git(d, "rebase", "--abort")
+    git(d, "checkout", "-q", "main"); git(d, "merge", "feature-x", raw=True)
+    top = open(f"{d}/cfg.py").read().split("=======")[0]
+    say("s07", "  in a MERGE into main, HEAD is main again: the sides are named by where you stand, not by whose work it is",
+        "0.002" in top)
+
+    # --- s08: branches are pointers; rebase renames; bisect is bisection ---------------------------
+    print()
+    d = newrepo(); wr(f"{d}/x", "1\n"); git(d, "add", "."); git(d, "commit", "-qm", "c1")
+    ref = open(f"{d}/.git/refs/heads/main").read()
+    say("s08", f"a branch is a {len(ref)}-byte file holding one commit name", len(ref) == 41 and ref.strip() == git(d, "rev-parse", "HEAD"))
+    git(d, "checkout", "-qb", "feat")
+    for i in range(3): wr(f"{d}/f{i}", f"{i}\n"); git(d, "add", "."); git(d, "commit", "-qm", f"f{i}")
+    before = git(d, "rev-list", "main..feat").split()
+    pb = sorted(subprocess.run(f"git log -p main..feat | git patch-id --stable", shell=True, cwd=d, env=GENV, capture_output=True, text=True).stdout.split()[0::2])
+    git(d, "checkout", "-q", "main"); wr(f"{d}/y", "2\n"); git(d, "add", "."); git(d, "commit", "-qm", "c2")
+    git(d, "checkout", "-q", "feat"); git(d, "rebase", "-q", "main")
+    after = git(d, "rev-list", "main..feat").split()
+    pa = sorted(subprocess.run(f"git log -p main..feat | git patch-id --stable", shell=True, cwd=d, env=GENV, capture_output=True, text=True).stdout.split()[0::2])
+    say("s08", f"rebase onto a new main: all {len(before)} commits get new names, none kept; the changes they carry are identical (patch-id)",
+        len(after) == 3 and not set(before) & set(after) and pa == pb)
+    d = newrepo(); NC, BAD = 300, 187
+    logf = os.path.join(d, ".git", "calls")
+    for i in range(1, NC + 1):
+        wr(f"{d}/version", f"{i}\n"); git(d, "add", "."); git(d, "commit", "-qm", f"c{i}")
+    wr(f"{d}/.git/t.sh", f"#!/bin/bash\necho x >> {logf}\nv=$(cat version)\n[ $v -lt {BAD} ]\n")
+    os.chmod(f"{d}/.git/t.sh", 0o755)
+    first = git(d, "rev-list", "--max-parents=0", "HEAD")
+    git(d, "bisect", "start", "HEAD", first)
+    r = git(d, "bisect", "run", f"{d}/.git/t.sh", raw=True)
+    culprit = git(d, "show", "-s", "--format=%s", "refs/bisect/bad")
+    calls = open(logf).read().count("x")
+    say("s08", f"git bisect over {NC} commits finds the one that broke it ({culprit}) in {calls} builds; log2({NC - 1}) = {math.log2(NC - 1):.2f}",
+        culprit == f"c{BAD}" and calls <= math.ceil(math.log2(NC - 1)) + 1)
+    BIS = calls
+
+    # --- s09: discipline: the hash in the log, ignored files, large files --------------------------
+    print()
+    d = newrepo(); wr(f"{d}/train.py", "lr = 0.001\n"); git(d, "add", "."); git(d, "commit", "-qm", "c")
+    code = "import subprocess\ngit_hash = subprocess.check_output(['git', 'rev-parse', 'HEAD']).strip()\nprint(f'commit {git_hash}')\n"
+    r = subprocess.run([sys.executable, "-c", code], cwd=d, env=GENV, capture_output=True, text=True)
+    say("s09", f"the source's git_hash line returns bytes, so the log reads: {r.stdout.strip()[:24]}...",
+        r.stdout.startswith("commit b'"))
+    h0 = git(d, "rev-parse", "HEAD"); wr(f"{d}/train.py", "lr = 0.01\n")
+    say("s09", "edit the file without committing: HEAD's name is unchanged, so the logged hash no longer names the code that ran",
+        git(d, "rev-parse", "HEAD") == h0 and git(d, "status", "--porcelain") == "M train.py")
+    git(d, "checkout", "--", "train.py")
+    wr(f"{d}/.env", "KEY=abc123\n"); git(d, "add", ".env"); git(d, "commit", "-qm", "oops")
+    wr(f"{d}/.gitignore", ".env\n"); wr(f"{d}/.env", "KEY=xyz789\n")
+    still = git(d, "status", "--porcelain")
+    git(d, "rm", "-q", "--cached", ".env"); git(d, "add", ".gitignore"); git(d, "commit", "-qm", "untrack")
+    hist = git(d, "show", "HEAD~1:.env")
+    say("s09", f"adding .env to .gitignore after committing it: git still tracks it ('{still.splitlines()[0]}'); after rm --cached "
+        f"the old secret is still in history: '{hist}'", " .env" in still and hist == "KEY=abc123")
+    blob = os.urandom(3000)
+    wr_b = open(f"{d}/w.bin", "wb"); wr_b.write(blob); wr_b.close()
+    r = subprocess.run(["git", "lfs", "pointer", "--file=w.bin"], cwd=d, env=GENV, capture_output=True, text=True)
+    lfs_ok = ("oid sha256:" + hashlib.sha256(blob).hexdigest()) in r.stdout and "size 3000" in r.stdout
+    say("s09", f"a Git LFS pointer is {len(r.stdout.encode())} bytes naming the file by SHA-256 of its content", lfs_ok)
+
+    # --- s10: the source's naming example, and the src layout --------------------------------------
+    print()
+    ns = {}
+    exec(textwrap.dedent("""
+        def update_parameters(parameters, num_steps, learning_rate):
+            for step in range(num_steps):
+                for name, param in parameters.items():
+                    param -= learning_rate * gradients[name]
+        """), ns)
+    ns["gradients"] = {"w": 0.5}
+    pf = {"w": 1.0}; ns["update_parameters"](pf, 1, 0.1)
+    pa_ = {"w": np.array([1.0])}; ns["gradients"] = {"w": np.array([0.5])}; ns["update_parameters"](pa_, 1, 0.1)
+    say("s10", f"the source's GOOD update_parameters: a float weight stays {pf['w']}; a numpy weight becomes {pa_['w'][0]:.2f}",
+        pf["w"] == 1.0 and abs(pa_["w"][0] - 0.95) < 1e-12)
+    say("s10", "  'param -= x' rebinds a local name for an immutable float; it mutates only a mutable array")
+    d = tempfile.mkdtemp(prefix="ch15p")
+    os.makedirs(f"{d}/flat/my_project"); wr(f"{d}/flat/my_project/__init__.py", "X = 1\n")
+    os.makedirs(f"{d}/srcl/src/my_project"); wr(f"{d}/srcl/src/my_project/__init__.py", "X = 1\n")
+    e2 = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}
+    rf = subprocess.run([sys.executable, "-c", "import my_project"], cwd=f"{d}/flat", env=e2, capture_output=True)
+    rs = subprocess.run([sys.executable, "-c", "import my_project"], cwd=f"{d}/srcl", env=e2, capture_output=True)
+    say("s10", f"from the project root, uninstalled: flat layout imports ({rf.returncode == 0}); src layout refuses ({rs.returncode != 0})",
+        rf.returncode == 0 and rs.returncode != 0)
+    def es(seq, patience=5):
+        best, cnt = float("inf"), 0
+        for ep, v in enumerate(seq):
+            if v < best: best, cnt = v, 0
+            else:
+                cnt += 1
+                if cnt >= patience: return ep
+        return None
+    say("s10", "the source's EarlyStopping stops 5 epochs after the best: losses 1.0, 0.9, then five worse -> stop at epoch 6",
+        es([1.0, 0.9, 0.95, 0.96, 0.97, 0.98, 0.99, 0.5]) == 6)
+
+    # --- s11: configuration: YAML reads 3e-4 as text ------------------------------------------------
+    print()
+    import yaml
+    src_yaml = "training:\n  batch_size: 64\n  learning_rate: 3e-4\n  max_epochs: 100\n"
+    cfg = yaml.safe_load(src_yaml)["training"]
+    say("s11", f"PyYAML loads the source's 'learning_rate: 3e-4' as {type(cfg['learning_rate']).__name__} {cfg['learning_rate']!r}",
+        isinstance(cfg["learning_rate"], str))
+    vals = {s: type(yaml.safe_load(f"v: {s}")["v"]).__name__ for s in ("3e-4", "3.0e-4", "1e-3", "2.1e-4", "1.0e3", "1.0e+3")}
+    say("s11", f"  YAML 1.1 floats need a dot and a signed exponent: {vals}",
+        vals == {"3e-4": "str", "3.0e-4": "float", "1e-3": "str", "2.1e-4": "float", "1.0e3": "str", "1.0e+3": "float"})
+    try:
+        _ = 0.5 * cfg["learning_rate"]; err = None
+    except TypeError as e: err = type(e).__name__
+    rep = cfg["learning_rate"] * 2
+    say("s11", f"  float * it raises {err}; but 'lr * num_gpus' with 2 GPUs silently gives {rep!r}", err == "TypeError" and rep == "3e-43e-4")
+    wf = yaml.safe_load("on: [push, pull_request]\n")
+    say("s11", f"the source's CI file read by the same loader: key 'on' becomes {list(wf)[0]!r}", list(wf) == [True])
+
+    # --- s12: logging that does not log -------------------------------------------------------------
+    print()
+    code = textwrap.dedent("""
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.setLevel(logging.INFO)
+        logger.debug("Batch loaded: %d samples", 32)
+        logger.info("Epoch %d: loss=%.4f, lr=%.6f", 3, 0.25, 3e-4)
+        logger.warning("GPU memory >90%%, consider reducing batch size")
+        logger.error("Failed to load checkpoint: %s", "ck.pt")
+        logger.info("training_step", extra={"epoch": 5, "step": 1200, "loss": 0.0342, "lr": 2.1e-4})
+        """)
+    r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+    out = r.stdout + r.stderr
+    say("s12", f"the source's logger, run as printed, emits {len(out.splitlines())} lines: {out.splitlines()}",
+        "Epoch" not in out and "90%%" in out and "Failed to load" in out and "epoch" not in out)
+    say("s12", "  info is dropped (no handler configured; the fallback shows WARNING and up); '%%' stays doubled with no args")
+    r = subprocess.run([sys.executable, "-c", "import logging; logging.basicConfig(level=logging.INFO, format='%(message)s')\n" + code],
+                       capture_output=True, text=True)
+    say("s12", "  with logging.basicConfig the info line appears; the extra= fields still do not, unless a formatter names them",
+        "Epoch 3" in r.stderr and "training_step" in r.stderr and "1200" not in r.stderr)
+
+    # --- s13: packaging: a backend that does not exist; >= admits a major version ---------------------
+    print()
+    import importlib.util
+    def has(mod):
+        try: return importlib.util.find_spec(mod) is not None
+        except ModuleNotFoundError: return False
+    import setuptools
+    say("s13", f"setuptools {setuptools.__version__}: the source's 'setuptools.backends._legacy' exists: {has('setuptools.backends._legacy')}; "
+        f"'setuptools.build_meta' exists: {has('setuptools.build_meta')}", not has("setuptools.backends._legacy") and has("setuptools.build_meta"))
+    d = tempfile.mkdtemp(prefix="ch15k")
+    def build(backend):
+        p = f"{d}/{backend.replace(':', '_').replace('.', '_')}"; os.makedirs(f"{p}/src/my_ml_project")
+        wr(f"{p}/src/my_ml_project/__init__.py", "")
+        wr(f"{p}/pyproject.toml", f'[project]\nname = "my-ml-project"\nversion = "0.1.0"\n\n[build-system]\nrequires = ["setuptools>=64"]\nbuild-backend = "{backend}"\n')
+        r = subprocess.run([sys.executable, "-m", "pip", "wheel", "--no-build-isolation", "--no-deps", "-q", "-w", f"{p}/dist", p],
+                           capture_output=True, text=True, timeout=180)
+        return r.returncode, r.stdout + r.stderr
+    rc_src, out_src = build("setuptools.backends._legacy:_Backend")
+    hook = subprocess.run([sys.executable, "-c", "import setuptools.build_meta as b; print(b.get_requires_for_build_wheel())"],
+                          cwd=f"{d}/setuptools_backends__legacy__Backend", capture_output=True, text=True)
+    say("s13", f"pip on the source's pyproject.toml: rc {rc_src}, "
+        f"{'BackendUnavailable' if 'BackendUnavailable' in out_src else 'other error'}; the standard backend "
+        f"'setuptools.build_meta' loads in the same project and answers its first build hook (rc {hook.returncode})",
+        rc_src != 0 and "BackendUnavailable" in out_src and hook.returncode == 0)
+    from packaging.specifiers import SpecifierSet
+    say("s13", "'torch>=2.0' admits 3.0 (a major version); '~=2.2' admits 2.9 but not 3.0; '==2.2.1' admits only 2.2.1",
+        SpecifierSet(">=2.0").contains("3.0") and SpecifierSet("~=2.2").contains("2.9") and not SpecifierSet("~=2.2").contains("3.0")
+        and not SpecifierSet("==2.2.1").contains("2.2.2"))
+
+    # --- s14: the productivity arithmetic -------------------------------------------------------------
+    print()
+    say("s14", f"the source's own numbers: 10 min generating + 120 min debugging = 130 min against 30 min by hand, {130 / 30:.1f}x slower",
+        abs(130 / 30 - 4.33) < 0.01)
+
+    # --- s15: a test is a gauge, and the source's test passes a broken function ------------------------
+    print()
+    img = np.array([0, 128, 255], dtype=np.uint8)
+    impls = {
+        "as printed (uint8 arithmetic)": lambda x, m, s: (x - m) / s,
+        "correct (convert first)": lambda x, m, s: (x.astype(np.float64) - m) / s,
+        "sign reversed": lambda x, m, s: (m - x.astype(np.float64)) / s,
+        "returns zeros": lambda x, m, s: np.zeros(x.shape),
+        "forgot to divide": lambda x, m, s: (x.astype(np.float64) - m),
+        "off by one in mean": lambda x, m, s: (x.astype(np.float64) - (m - 1)) / s,
+    }
+    def t_range(f):
+        r = f(img, 128, 128); return bool(r.min() >= -1.0 and r.max() <= 1.0 and abs(r[1]) < 1e-6)
+    def t_empty(f):
+        return len(f(np.array([], dtype=np.uint8), 128, 128)) == 0
+    def t_exact(f):
+        return bool(np.allclose(f(img, 128, 128), [-1.0, 0.0, 127 / 128]))
+    def t_round(f):
+        x = np.array([0, 7, 128, 200, 255], dtype=np.uint8); return bool(np.allclose(f(x, 128, 128) * 128 + 128, x))
+    printed = impls["as printed (uint8 arithmetic)"](img, 128, 128)
+    say("s15", f"normalise_image as printed, on uint8 [0, 128, 255]: {printed.tolist()} (correct: [-1.0, 0.0, 0.9921875])",
+        printed.tolist() == [1.0, 0.0, 0.9921875])
+    KM = {}
+    for k, f in impls.items():
+        KM[k] = (t_range(f), t_empty(f), t_exact(f), t_round(f))
+        say("s15", f"  {k:30s} passes: range {KM[k][0]!s:5s} empty {KM[k][1]!s:5s} exact {KM[k][2]!s:5s} round-trip {KM[k][3]!s:5s}")
+    say("s15", "the source's two tests pass the printed (wrong) function, a sign error and a function returning zeros",
+        all(KM[k][0] and KM[k][1] for k in ("as printed (uint8 arithmetic)", "sign reversed", "returns zeros")))
+    say("s15", "an exact-value test passes only the correct function", [k for k in KM if KM[k][2]] == ["correct (convert first)"])
+    say("s15", f"  (measured with NumPy {np.__version__}; an unsigned 8-bit 0 - 128 wraps to 128)")
+
+    # --- s16: sampling: the c = 0 plan, the rule of three, and the flaky suite -------------------------
+    print()
+    for n in (30, 300, 3000):
+        ex = 1 - 0.05 ** (1 / n)
+        say("s16", f"n = {n:4d} passing random tests: 95% upper bound on the failing fraction {ex:.5f} vs rule of three 3/n = {3 / n:.5f}",
+            abs(ex / (3 / n) - 1) < 0.06)
+    th, n = 0.01, 300
+    sim = np.mean((np.random.default_rng(15).random((20000, n)) < th).any(axis=1))
+    say("s16", f"a bug hit by 1% of inputs, 300 random inputs: detected with prob 1-(0.99)^300 = {1 - 0.99 ** 300:.4f}; simulated {sim:.4f}",
+        abs(sim - (1 - 0.99 ** 300)) < 0.01)
+    pe = 1 - (1 - 2.0 ** -32) ** 1000
+    say("s16", f"a bug at exactly one 32-bit input (say zero), 1,000 random inputs: found with prob {pe:.2e}; one boundary test finds it always",
+        pe < 3e-7)
+    a1000 = 1 - 0.999 ** 1000
+    say("s16", f"1,000 tests each flaky 0.1%: a correct change goes red {a1000:.1%} of the time (series system, Sheet 05)",
+        abs(a1000 - 0.632) < 0.001)
+    a_retry = 1 - (1 - 0.001 ** 2) ** 1000
+    say("s16", f"  rerun a failure once: false red falls to {a_retry:.2e}; a bug that fails half the time now escapes {0.5 ** 2:.0%} per test",
+        a_retry < 1.1e-3 and abs(0.5 ** 2 - 0.25) < 1e-12)
+    OC = {"alpha_default": 1 - (1 - 0.001) ** 1000, "beta_default": (1 - 0.001) ** 1000 * (1 - 0.01) ** 300}
+    say("s16", f"lab rest: N=1000, f=0.1%, n=300: producer's risk {OC['alpha_default']:.3f}; P(green) on a 1% bug {OC['beta_default']:.4f}")
+
+    # --- s17: tolerances and vacuous tests ------------------------------------------------------------
+    print()
+    a, b = 1.0, 1.0 + 1.00001e-5
+    say("s17", f"np.isclose is not symmetric: isclose(a, b) = {np.isclose(a, b, rtol=1e-5, atol=0)}, isclose(b, a) = {np.isclose(b, a, rtol=1e-5, atol=0)}",
+        bool(np.isclose(a, b, rtol=1e-5, atol=0)) and not bool(np.isclose(b, a, rtol=1e-5, atol=0)))
+    say("s17", f"the source's isclose(out, 0.5, atol=1e-5) also carries rtol=1e-5: it accepts 0.5 + 1.4e-5 ({np.isclose(0.5 + 1.4e-5, 0.5, atol=1e-5)})",
+        bool(np.isclose(0.5 + 1.4e-5, 0.5, atol=1e-5)) and not bool(np.isclose(0.5 + 1.6e-5, 0.5, atol=1e-5)))
+    say("s17", f"0.5 is exact in binary (0.25 + 0.25 == 0.5: {0.25 + 0.25 == 0.5}); 0.1 + 0.2 == 0.3 is {0.1 + 0.2 == 0.3}",
+        0.25 + 0.25 == 0.5 and 0.1 + 0.2 != 0.3)
+    W = np.random.default_rng(3).normal(size=(4, 4)); xin = np.ones(4)
+    det_model = lambda x: W @ x
+    def drop_model(x): return (W @ x) * (np.random.random(4) > 0.5)
+    def det_test(model, seeded):
+        if seeded: np.random.seed(42)
+        o1 = model(xin)
+        if seeded: np.random.seed(42)
+        o2 = model(xin); return bool(np.allclose(o1, o2))
+    say("s17", f"the determinism test on a model with no randomness passes with the seed ({det_test(det_model, True)}) and without it "
+        f"({det_test(det_model, False)}): it cannot see a broken set_seed", det_test(det_model, True) and det_test(det_model, False))
+    say("s17", f"  on a model with dropout active it has teeth: seeded {det_test(drop_model, True)}, unseeded {det_test(drop_model, False)}",
+        det_test(drop_model, True) and not det_test(drop_model, False))
+
+    # --- s19: containers: the interpreter's version is part of the path ---------------------------------
+    print()
+    import site
+    usp = site.getusersitepackages()
+    vtag = f"python{sys.version_info.major}.{sys.version_info.minor}"
+    say("s19", f"pip install --user writes to {usp.replace(os.path.expanduser('~'), '~')}: the interpreter version is in the path",
+        vtag in usp)
+    d = tempfile.mkdtemp(prefix="ch15c")
+    os.makedirs(f"{d}/app/src/my_project"); os.makedirs(f"{d}/app/src/scripts"); os.makedirs(f"{d}/app/configs")
+    wr(f"{d}/app/src/my_project/__init__.py", "")
+    wr(f"{d}/app/src/scripts/serve.py", "import my_project\nprint('serving')\n")
+    r = subprocess.run([sys.executable, "src/scripts/serve.py"], cwd=f"{d}/app", env=e2, capture_output=True, text=True)
+    say("s19", f"the source's CMD with a src-layout package and no install: {r.stderr.strip().splitlines()[-1]}",
+        "ModuleNotFoundError" in r.stderr)
+
+    # --- s20: layer order is a sequencing rule ---------------------------------------------------------
+    print()
+    def exp_cost(order, c, p):
+        tot, surv = 0.0, 1.0
+        for i in order:
+            surv *= (1 - p[i]); tot += c[i] * (1 - surv)
+        return tot
+    def ratio_order(c, p): return sorted(range(len(c)), key=lambda i: p[i] / (c[i] * (1 - p[i])))
+    okx, freq_wins, gaps = True, 0, []
+    for _t in range(300):
+        k = rng15.randint(2, 6)
+        c = [rng15.choice([1, 2, 5, 10, 30, 60, 120, 300, 600]) * rng15.uniform(0.5, 1.5) for _ in range(k)]
+        p = [rng15.uniform(0.01, 0.9) for _ in range(k)]
+        best = min(exp_cost(o, c, p) for o in itertools.permutations(range(k)))
+        rr = exp_cost(ratio_order(c, p), c, p)
+        fo = exp_cost(sorted(range(k), key=lambda i: p[i]), c, p)
+        okx &= abs(rr - best) < 1e-9 * max(1, best)
+        if fo > best + 1e-9: freq_wins += 1; gaps.append(fo / best)
+    say("s20", "ordering by p / (c (1 - p)), smallest first, == the best of every permutation, 300 random Dockerfiles of 2-6 steps", okx)
+    say("s20", f"  'least often changed first' alone is worse in {freq_wins}/300 of them (worst {max(gaps):.2f}x the optimum)", freq_wins > 0)
+    steps = ["apt-get system libs", "pip install requirements", "download model weights", "COPY configs/", "COPY src/"]
+    c5 = [120, 240, 600, 1, 2]; p5 = [0.01, 0.05, 0.30, 0.20, 0.80]
+    src_o = [0, 1, 2, 3, 4]; freq_o = sorted(range(5), key=lambda i: p5[i]); rat_o = ratio_order(c5, p5)
+    rev_o = [4, 3, 2, 1, 0]
+    best5 = min(exp_cost(o, c5, p5) for o in itertools.permutations(range(5)))
+    LAB20 = {"src": exp_cost(src_o, c5, p5), "freq": exp_cost(freq_o, c5, p5), "ratio": exp_cost(rat_o, c5, p5),
+             "rev": exp_cost(rev_o, c5, p5), "best": best5, "never": sum(c5)}
+    say("s20", f"lab Dockerfile: expected rebuild per build {LAB20['ratio']:.1f} s by the ratio rule (order {rat_o}), "
+        f"{LAB20['freq']:.1f} s by change-frequency (order {freq_o}), {LAB20['rev']:.1f} s reversed, {LAB20['never']} s with no cache",
+        abs(LAB20["ratio"] - best5) < 1e-9 and LAB20["freq"] > LAB20["ratio"] and rat_o == [0, 1, 2, 3, 4] and freq_o == [0, 1, 3, 2, 4])
+    def keys(contents):
+        out, k = [], b"base"
+        for s in contents:
+            k = hashlib.sha256(k + s.encode()).digest(); out.append(k.hex()[:8])
+        return out
+    k0 = keys(["apt:libgl", "req:torch==2.2.1", "weights:v3", "cfg:a", "src:v1"])
+    k1 = keys(["apt:libgl", "req:torch==2.2.1", "weights:v3", "cfg:b", "src:v1"])
+    say("s20", f"chained cache keys: edit layer 4 of 5 and keys 4-5 change, 1-3 survive ({sum(x == y for x, y in zip(k0, k1))} reused)",
+        k0[:3] == k1[:3] and k0[3] != k1[3] and k0[4] != k1[4])
+
+    # --- s21: tracking: the best-model save that never updates its best -------------------------------
+    print()
+    losses = [0.90, 0.80, 0.85, 0.70, 0.75, 0.72]
+    best_loss = float("inf"); saved_src = [e for e, v in enumerate(losses) if v < best_loss]
+    saved_ok, bl = [], float("inf")
+    for e, v in enumerate(losses):
+        if v < bl: bl = v; saved_ok.append(e)
+    say("s21", f"the source's W&B loop never updates best_loss: it saves at epochs {saved_src}; updating it saves at {saved_ok}",
+        saved_src == [0, 1, 2, 3, 4, 5] and saved_ok == [0, 1, 3])
+
+    # --- s22: tails and drift ---------------------------------------------------------------------------
+    print()
+    fan = {k: 1 - 0.99 ** k for k in (1, 10, 100)}
+    lat = np.random.default_rng(22).lognormal(np.log(80), 0.6, size=(20000, 100))
+    p99 = np.quantile(lat, 0.99)
+    pages = np.mean((lat > p99).any(axis=1))
+    say("s22", f"p99 is a fraction of requests: a page that makes 100 requests meets at least one beyond p99 with prob "
+        f"{fan[100]:.3f} (simulated {pages:.3f}); 10 requests {fan[10]:.3f}", abs(pages - fan[100]) < 0.01)
+    okp = True
+    rr = np.random.default_rng(23)
+    for _t in range(200):
+        e = rr.dirichlet(np.ones(10)); a = rr.dirichlet(np.ones(10))
+        psi = np.sum((a - e) * np.log(a / e)); kl = np.sum(a * np.log(a / e)) + np.sum(e * np.log(e / a))
+        okp &= abs(psi - kl) < 1e-12
+    say("s22", "PSI = sum (a - e) ln(a/e) == KL(a||e) + KL(e||a), the symmetrised divergence, 200 random histograms", okp)
+
+    # --- s24: worked example: bisect with a flaky test ----------------------------------------------------
+    print()
+    def p_correct(N, f, r):
+        fe = f ** r; tot = 0.0; steps_all = []
+        for cul in range(N):
+            lo, hi, need, steps = 0, N - 1, 0, 0
+            while lo < hi:
+                m = (lo + hi) // 2; steps += 1
+                if m >= cul: hi = m
+                else: lo = m + 1; need += 1
+            tot += (1 - fe) ** need; steps_all.append(steps)
+        return tot / N, np.mean(steps_all), max(steps_all)
+    w1 = p_correct(300, 0.05, 1); w2 = p_correct(300, 0.05, 2); w3 = p_correct(300, 0.05, 3)
+    say("s24", f"bisect 300 commits: {w1[1]:.2f} builds on average, at most {w1[2]}; ceil(log2 300) = {math.ceil(math.log2(300))}",
+        w1[2] == 9 and abs(w1[1] - 8.2) < 0.1)
+    say("s24", f"test falsely fails a good build 5% of the time: right culprit with prob {w1[0]:.3f} (one run per step), "
+        f"{w2[0]:.4f} (fail only if 2 runs fail), {w3[0]:.5f} (3 runs)", w1[0] < 0.85 and w2[0] > 0.98)
+    rng_w = np.random.default_rng(24); hits = 0
+    for _t in range(20000):
+        cul = int(rng_w.integers(300)); lo, hi = 0, 299
+        while lo < hi:
+            m = (lo + hi) // 2
+            bad = m >= cul or rng_w.random() < 0.05
+            if bad: hi = m
+            else: lo = m + 1
+        hits += lo == cul
+    say("s24", f"  Monte Carlo, 20,000 bisections with the flaky test: {hits / 20000:.3f}", abs(hits / 20000 - w1[0]) < 0.01)
+    say("s24", f"  linear search through the ECN log instead: {300 / 2:.0f} builds on average, and 1-(0.95)^k compounding over k good builds")
+    say("s24", f"  expected builds with 2 runs per step: {2 * w2[1]:.1f}, vs 150 for the linear search")
+
+    print()
+    say("summary", "Ch15 numbers for the page: " + json.dumps({"LAB5": LAB5, "LAB6": LAB6, "LAB20": {k: round(v, 2) for k, v in LAB20.items()},
+                                                             "OC": {k: round(v, 4) for k, v in OC.items()}, "bisect_calls": BIS}))
 
 _ch15()
 # ----- end of Chapter 15 block -----
