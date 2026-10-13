@@ -6777,7 +6777,639 @@ _ch17()
 # Chapter 18 block. Owned by the Chapter 18 run: replace only the body of _ch18() below.
 # Keep every name inside the function so nothing collides with another chapter's block.
 def _ch18():
-    pass
+    # =================================================================
+    # Chapter 18 -- ML systems design (files 01-05), one sheet.
+    # The plant view: capacity, redundancy, the tail, training at scale.
+    # Every name lives inside this function so nothing collides.
+    # =================================================================
+    import math, random, bisect
+    import numpy as np
+    from scipy.stats import norm as _n18
+    T18 = "[Ch18 %s]"
+    def say(sec, msg, ok=None):
+        tail = "" if ok is None else "   " + P(ok)
+        print(f"{T18 % sec} {msg}{tail}")
+    print()
+    g18 = np.random.default_rng(1818)
+
+    # ---------- shared queueing helpers (stable Erlang B -> C) ----------
+    def erl_b(c, a):
+        b = 1.0
+        for k in range(1, c+1):
+            b = a*b/(k + a*b)
+        return b
+    def erl_c(c, a):
+        if a >= c: return 1.0
+        b = erl_b(c, a)
+        return c*b/(c - a*(1-b))
+    def mmc_wq(c, a, s):          # mean wait in queue, service time s
+        if a >= c: return float('inf')
+        return erl_c(c, a)*s/(c - a)
+    def mmc_resp_q(c, a, s, q):   # q-quantile of response = wait + Exp(s) service
+        if a >= c: return float('inf')
+        pw = erl_c(c, a); mu = 1/s; th = c*mu - a*mu
+        def surv(t):
+            sn = math.exp(-mu*t)
+            sw = math.exp(-mu*t)*(1+mu*t) if abs(th-mu) < 1e-12 else (th*math.exp(-mu*t) - mu*math.exp(-th*t))/(th-mu)
+            return (1-pw)*sn + pw*sw
+        lo, hi = 0.0, s
+        while surv(hi) > 1-q: hi *= 2
+        for _ in range(100):
+            m = (lo+hi)/2
+            if surv(m) > 1-q: lo = m
+            else: hi = m
+        return hi
+
+    # --- s01: Little's law sizes everything --------------------------------
+    off = {"user-embedding replicas": (10000, 0.005, 50), "ANN index replicas": (10000, 0.002, 20),
+           "ranking GPUs (source: ~10)": (10000, 0.100, 1000), "text classifiers": (12000, 0.005, 60),
+           "image classifiers": (12000, 0.020, 240), "hash matchers": (12000, 0.001, 12)}
+    ok = all(abs(l*s - L) < 1e-9 for l, s, L in off.values())
+    say("s01", "offered load L = lambda x W for every sizing in file 05: " +
+        "; ".join(f"{k} {l:,}/s x {s*1e3:g} ms = {l*s:g}" for k, (l, s, L) in off.items()), ok)
+    say("s01", f"1e9 posts/day = {1e9/86400:,.0f} per second (source: ~12K)", abs(1e9/86400 - 11574.07) < 0.01)
+    say("s01", f"ads: 100,000 auctions/s x 10 ms = {100000*0.010:,.0f} predictions in flight at any instant",
+        abs(100000*0.010 - 1000) < 1e-9)
+    # Little's law by simulation on an M/D/c system (no distribution assumed by the law)
+    lam, s, c = 40.0, 1.0, 50
+    t = 0.0; arr = []
+    while t < 4000:
+        t += g18.exponential(1/lam); arr.append(t)
+    free = [0.0]*c; import heapq as _hq18; _hq18.heapify(free); dep = []
+    for a in arr:
+        f = _hq18.heappop(free); st = max(a, f); _hq18.heappush(free, st + s); dep.append(st + s)
+    arr = np.array(arr); dep = np.array(dep); Tend = 3000.0; m = arr < Tend
+    W = (np.minimum(dep[m], Tend) - arr[m]).sum()/Tend  # time-average number in system over [0,Tend]
+    lam_hat = m.sum()/Tend; Wbar = (dep[m] - arr[m]).mean()
+    say("s01", f"Little by simulation (M/D/50, 40/s, 1 s): L = {W:.3f}, lambda W = {lam_hat*Wbar:.3f}",
+        abs(W - lam_hat*Wbar)/W < 0.01)
+
+    # --- s02: sizing at 100% utilisation: the cliff --------------------------
+    a = 50.0; s = 0.005
+    rows = []
+    for cc in (50, 51, 52, 55, 58, 60, 65):
+        rows.append((cc, a/cc, erl_c(cc, a) if cc > a else 1.0, mmc_wq(cc, a, s)*1e3, mmc_resp_q(cc, a, s, 0.99)*1e3))
+    say("s02", "M/M/c at 10,000/s, 5 ms (a = 50 Erlangs): " + "; ".join(
+        f"c={r[0]} rho={r[1]:.3f} Pwait={r[2]:.3f} Wq={r[3]:.3f}ms p99={r[4]:.1f}ms" for r in rows),
+        rows[0][3] == float('inf') and abs(rows[1][2] - 0.8397) < 1e-3 and abs(rows[1][3] - 4.199) < 0.01
+        and abs(rows[3][3] - 0.385) < 0.002 and abs(rows[5][3] - 0.0587) < 0.001)
+    say("s02", f"one replica beyond the offered load: 50 -> 51 takes mean wait from infinite to {rows[1][3]:.2f} ms; "
+        f"55 -> {rows[3][3]:.2f} ms, 60 -> {rows[5][3]:.3f} ms", True)
+    say("s02", f"exponential service alone has p99 = s ln 100 = {s*math.log(100)*1e3:.2f} ms; queueing adds "
+        f"{rows[1][4]-s*math.log(100)*1e3:.1f} ms at c=51 and {rows[3][4]-s*math.log(100)*1e3:.2f} ms at c=55",
+        abs(rows[6][4] - s*math.log(100)*1e3) < 0.05)
+    # Pollaczek-Khinchine: deterministic service halves M/M/1 wait
+    rho = 0.9; mm1 = rho/(1-rho); md1 = rho/(2*(1-rho))
+    say("s02", f"P-K at rho=0.9: M/M/1 wait {mm1:.2f} service times, M/D/1 {md1:.2f} (half): exponential is pessimistic",
+        abs(md1*2 - mm1) < 1e-12)
+    # ranking stage: Little says 1,000 busy
+    say("s02", f"ranking: 10,000/s x 100 ms = {10000*0.1:,.0f} GPU-seconds per second = 1,000 GPUs busy, not 10; "
+        f"10 GPUs need {10000*0.1/10:.0f} requests in flight each (= {10000*0.1/10*1000:,.0f} candidates)",
+        10000*0.1 == 1000)
+    say("s02", f"at the source's $1.00/h A10G: 10 GPUs ${10*1.0*730:,.0f}/month; 1,000 GPUs ${1000*1.0*730:,.0f}/month",
+        10*730 == 7300 and 1000*730 == 730000)
+
+    # --- s03: safety capacity is safety stock ---------------------------------
+    # M/G/infinity occupancy is Poisson(a) whatever the service distribution
+    lam, Tsim = 50.0, 20000.0
+    for name, gen in (("deterministic", lambda n: np.full(n, 1.0)),
+                      ("lognormal cv 1", lambda n: g18.lognormal(-0.5*math.log(2), math.sqrt(math.log(2)), n))):
+        n = g18.poisson(lam*Tsim); at = np.sort(g18.uniform(0, Tsim, n)); en = np.sort(at + gen(n))
+        probes = np.linspace(100, Tsim-100, 4000)
+        busy = np.searchsorted(at, probes, side='right') - np.searchsorted(en, probes, side='right')
+        say("s03", f"M/G/inf occupancy ({name} service, a = 50): mean {busy.mean():.2f}, variance {busy.var():.2f} "
+            "(Poisson: both 50)", abs(busy.mean()-50) < 1.5 and abs(busy.var()/busy.mean() - 1) < 0.2)
+    # square-root staffing, Halfin-Whitt limit
+    hw = 1/(1 + 1.0*_n18.cdf(1.0)/_n18.pdf(1.0))
+    sq = []
+    for aa in (5, 50, 500, 5000):
+        cc = math.ceil(aa + math.sqrt(aa)); sq.append((aa, cc, aa/cc, erl_c(cc, aa)))
+    say("s03", "c = a + 1*sqrt(a): " + "; ".join(f"a={x[0]} c={x[1]} rho={x[2]:.3f} Pwait={x[3]:.3f}" for x in sq)
+        + f"; Halfin-Whitt limit {hw:.3f}", all(abs(x[3] - hw) < 0.06 for x in sq) and sq[-1][2] > 0.98 and sq[0][2] < 0.65)
+    # reorder point identity: ROP = mu + z sigma, sigma = sqrt(mu) for Poisson demand
+    mu = 50.0; z = 1.6449
+    rop = mu + z*math.sqrt(mu); from scipy.stats import poisson as _po18
+    say("s03", f"reorder point for Poisson demand mean 50 at z = 1.645: {rop:.2f}; P(demand > {math.ceil(rop)}) = "
+        f"{1-_po18.cdf(math.ceil(rop), mu):.4f} (normal approx 0.05)", abs(1-_po18.cdf(math.ceil(rop), mu) - 0.05) < 0.02)
+    # continuous batching occupancy (Sheet 17 server): t_w 20 ms, t_kv 0.2 ms, 300-token requests
+    def cb_sim(Lam, steps=60000, cap=10**9, tw=0.020, tkv=0.0002, L=300, seed=7):
+        # continuous batching: finished sequences leave, queued requests join, each needs L steps
+        r = np.random.default_rng(seed); fin = {}; b = 0; q = 0; hist = []
+        for k in range(steps):
+            b -= fin.pop(k, 0)
+            j = q if cap >= 10**9 else min(q, cap - b)
+            if j > 0:
+                fin[k+L] = fin.get(k+L, 0) + j; b += j; q -= j
+            if k > 3000: hist.append(b)
+            q += r.poisson(Lam/L*(tw + b*tkv))
+        return np.array(hist)
+    h1 = cb_sim(1800.0)
+    pred_b = 1800*0.020/(1-1800*0.0002)
+    disp = h1.var()/h1.mean()
+    say("s03", f"Sheet 17 server at 1,800 tok/s, uncapped: batch mean {h1.mean():.1f} (Little: {pred_b:.1f}), "
+        f"sd {h1.std():.2f} against sqrt(mean) {math.sqrt(h1.mean()):.2f}; dispersion {disp:.2f}",
+        abs(h1.mean()/pred_b - 1) < 0.03 and 0.8 < disp < 2.5)
+    # the batch's variance-to-mean ratio is 1/(1 - rho): linear-noise approximation, checked by simulation
+    dl = []
+    for Lam in (1000, 1800, 3000):
+        ds_ = []
+        for sd_ in range(6):
+            hh = cb_sim(float(Lam), steps=120000, seed=100+sd_); ds_.append(hh.var()/hh.mean())
+        rr_ = Lam*0.0002
+        dl.append((Lam, rr_, float(np.mean(ds_)), 1/(1-rr_)))
+    say("s03", "batch dispersion (variance/mean, 6 runs each) against 1/(1 - rho): " + "; ".join(
+        f"{x[0]}/s rho {x[1]:.2f}: {x[2]:.3f} vs {x[3]:.3f}" for x in dl), all(abs(x[2]/x[3] - 1) < 0.08 for x in dl))
+    # analytic planning capacity: mean + z sqrt(mean/(1-rho)) = cap
+    def plan_an(z, cap=100):
+        lo, hi = 100.0, 2500.0
+        for _ in range(60):
+            mid = (lo+hi)/2; rr_ = mid*0.0002; bm = mid*0.02/(1-rr_)
+            if bm + z*math.sqrt(bm/(1-rr_)) < cap: lo = mid
+            else: hi = mid
+        return lo
+    pa = plan_an(_n18.ppf(0.99))
+    say("s03", f"safety-stock rule with that spread, z = 2.326 (1%): planning capacity {pa:,.0f} tok/s per server", 1950 < pa < 2200)
+    # planning capacity per server: keep P(batch >= 100) small
+    plan = []
+    for Lam in (2000, 2100, 2200, 2300, 2400):
+        hh = cb_sim(float(Lam), steps=60000, seed=11)
+        plan.append((Lam, hh.mean(), np.mean(hh >= 100)))
+    say("s03", "uncapped batch vs the 100-sequence memory cap: " + "; ".join(
+        f"{x[0]}/s mean {x[1]:.1f}, P(>=100) {x[2]:.3f}" for x in plan),
+        plan[0][2] < 0.02 and plan[-1][2] > 0.15)
+    ex = {x[0]: x for x in plan}
+    say("s03", f"nameplate 2,500/s is the cap at the mean; at 2,200/s the batch exceeds the cap {ex[2200][2]*100:.1f}% of steps "
+        f"(Poisson z-rule: mean {2200*0.02/(1-2200*0.0002):.1f} + 2.33 sqrt -> {2200*0.02/(1-2200*0.0002)+2.33*math.sqrt(2200*0.02/(1-2200*0.0002)):.1f})",
+        ex[2200][2] < 0.05)
+
+    # --- s04: pooling -------------------------------------------------------
+    pool = []
+    for cc in (2, 10, 50):
+        aa = 0.8*cc; sep = 0.8/(1-0.8); pooled = erl_c(cc, aa)/(cc - aa)
+        pool.append((cc, sep, pooled, sep/pooled))
+    say("s04", "rho = 0.8, wait in service times: " + "; ".join(
+        f"{x[0]} separate queues {x[1]:.2f} vs one shared {x[2]:.4f} ({x[3]:.1f}x)" for x in pool),
+        abs(pool[1][3] - 19.6) < 0.2 and pool[2][3] > 400)
+    # routing rules by simulation: random, round robin, join-shortest-queue, central queue (c=10, rho=0.8)
+    def route_sim(rule, c=10, rho=0.8, N=200000, seed=3):
+        r = np.random.default_rng(seed); lam = rho*c
+        at = np.cumsum(r.exponential(1/lam, N)); sv = r.exponential(1.0, N)
+        waits = np.empty(N)
+        if rule == "central":
+            free = [0.0]*c
+            for i in range(N):
+                f = _hq18.heappop(free); st = max(at[i], f); waits[i] = st - at[i]; _hq18.heappush(free, st + sv[i])
+            return waits[N//10:].mean()
+        lastfree = np.zeros(c); deps = [[] for _ in range(c)]
+        for i in range(N):
+            if rule == "random": k = r.integers(c)
+            elif rule == "rr": k = i % c
+            else:  # JSQ: fewest jobs present (in service + waiting)
+                cnt = [0]*c
+                for j in range(c):
+                    d = deps[j]
+                    while d and d[0] <= at[i]: d.pop(0)
+                    cnt[j] = len(d)
+                k = int(np.argmin(cnt))
+            st = max(at[i], lastfree[k]); waits[i] = st - at[i]; lastfree[k] = st + sv[i]
+            if rule == "jsq": deps[k].append(lastfree[k])
+        return waits[N//10:].mean()
+    rs = {k: route_sim(k, N=60000) for k in ("random", "rr", "jsq", "central")}
+    say("s04", "routing 10 servers at rho 0.8, mean wait (service times): " +
+        ", ".join(f"{k} {v:.3f}" for k, v in rs.items()),
+        abs(rs["random"] - 4.0) < 0.5 and rs["rr"] < rs["random"] and rs["jsq"] < rs["rr"] and abs(rs["central"] - 0.2046) < 0.05)
+
+    # --- s05: consistent hashing ------------------------------------------
+    def ring_loads(n, v, rr):
+        pts = sorted((rr.random(), s_) for s_ in range(n) for _ in range(v))
+        L = [0.0]*n
+        for i, (p, s_) in enumerate(pts):
+            prev = pts[i-1][0] if i > 0 else pts[-1][0] - 1.0
+            L[s_] += p - prev
+        return L
+    rr = random.Random(55)
+    cvrow = []
+    for v in (1, 10, 100):
+        cvs = [np.std(ring_loads(10, v, rr))*10 for _ in range(400)]
+        cvrow.append((v, math.sqrt(np.mean(np.square(cvs))), math.sqrt(9/(10*v+1))))
+    say("s05", "load spread on the ring, 10 servers (coefficient of variation): " + "; ".join(
+        f"v={x[0]} measured {x[1]:.4f}, sqrt((n-1)/(nv+1)) = {x[2]:.4f}" for x in cvrow),
+        all(abs(x[1]/x[2] - 1) < 0.06 for x in cvrow))
+    mx = [max(ring_loads(10, 1, rr))*10 for _ in range(3000)]
+    Hn = sum(1/k for k in range(1, 11))
+    say("s05", f"one point per server: mean largest share {np.mean(mx):.3f} x fair, harmonic number H_10 = {Hn:.3f}",
+        abs(np.mean(mx)/Hn - 1) < 0.03)
+    # keys moved
+    def owner(pts, x):
+        i = bisect.bisect_left(pts, (x, -1)); return pts[i % len(pts)][1]
+    r5 = random.Random(5); n, v = 10, 100
+    p1 = sorted((r5.random(), s_) for s_ in range(n) for _ in range(v))
+    p2 = sorted(p1 + [(r5.random(), n) for _ in range(v)])
+    ks = [r5.random() for _ in range(40000)]
+    moved = sum(owner(p1, x) != owner(p2, x) for x in ks)/len(ks)
+    moved_to_new = sum(owner(p1, x) != owner(p2, x) and owner(p2, x) == n for x in ks)/len(ks)
+    say("s05", f"add an 11th server: consistent hashing moves {moved:.4f} of keys (1/11 = {1/11:.4f}), all of them "
+        f"to the new server ({moved_to_new:.4f})", abs(moved - 1/11) < 0.02 and moved == moved_to_new)
+    r9 = random.Random(9); ik = [r9.getrandbits(64) for _ in range(100000)]
+    mm = [(n_, sum((k % n_) != (k % (n_+1)) for k in ik)/len(ik)) for n_ in (3, 10, 100)]
+    say("s05", "hash mod n -> n+1 moves: " + ", ".join(f"n={x[0]} {x[1]:.4f} (n/(n+1) {x[0]/(x[0]+1):.4f})" for x in mm),
+        all(abs(x[1] - x[0]/(x[0]+1)) < 0.01 for x in mm))
+
+    # --- s06: sharding and read replicas -----------------------------------
+    rg = np.random.default_rng(66); E = 200000; nsh = 8
+    u = rg.integers(0, 10**6, E); w = rg.integers(0, 10**6, E)
+    h = lambda x: (x*2654435761) % 2**32 % nsh
+    cutf = np.mean(h(u) != h(w))
+    say("s06", f"hash-sharding a graph over 8 machines cuts {cutf:.4f} of edges (1 - 1/8 = 0.875)", abs(cutf - 0.875) < 0.005)
+    def rep_speed(N, wf):   # total throughput / one machine, every replica applies every write
+        return N/((1-wf) + N*wf)
+    amd = lambda p, N: 1/((1-p) + p/N)
+    err = max(abs(rep_speed(N, wf) - amd(1-wf, N)) for N in range(1, 200) for wf in (0.01, 0.05, 0.2))
+    say("s06", f"read replicas with write fraction w == Amdahl with serial fraction w: max diff {err:.1e}", err < 1e-12)
+    say("s06", f"w = 5%: 10 replicas {rep_speed(10, .05):.2f}x, 20 replicas {rep_speed(20, .05):.2f}x, ceiling {1/.05:.0f}x",
+        abs(rep_speed(10, .05) - 6.897) < 1e-3 and abs(rep_speed(20, .05) - 10.256) < 1e-3)
+    # IVF: k + n/k is an EOQ
+    nvec = 1e8; kstar = math.sqrt(nvec); cost = 2*math.sqrt(nvec)
+    kk = np.logspace(2, 6, 4001); cc_ = kk + nvec/kk
+    say("s06", f"IVF with one probe: k + n/k minimised at k = sqrt(n) = {kstar:,.0f}, cost {cost:,.0f} distance "
+        f"computations vs {nvec:,.0f} for flat ({nvec/cost:,.0f}x fewer)", abs(kk[np.argmin(cc_)]/kstar - 1) < 0.01)
+
+    # --- s07: nines ---------------------------------------------------------
+    dt = [(k, (10**-k)*8760, (10**-k)*525600, (10**-k)*43200) for k in (2, 3, 4, 5)]
+    say("s07", "downtime: " + "; ".join(f"{x[0]} nines {x[1]:.2f} h/yr = {x[2]:.1f} min/yr, {x[3]:.1f} min per 30-day month"
+        for x in dt), abs(dt[1][3] - 43.2) < 1e-9 and abs(dt[2][2] - 52.56) < 1e-9)
+    say("s07", f"source's 43 min: 0.1% of a 30-day month is {0.001*43200:.1f} min, of an average month {0.001*30.4375*1440:.1f}",
+        True)
+    say("s07", f"request path of 5 services at 99.9%: {0.999**5*100:.3f}%; 7 services {0.999**7*100:.3f}%; "
+        "logging moved behind a queue leaves 5", abs(0.999**5 - 0.99501) < 1e-5)
+
+    # --- s08: quorums --------------------------------------------------------
+    kofn = lambda k, n_, p: sum(math.comb(n_, j)*p**j*(1-p)**(n_-j) for j in range(k, n_+1))
+    maj = {n_: kofn(n_//2+1, n_, 0.99) for n_ in range(1, 8)}
+    say("s08", "majority quorum at a = 0.99: " + ", ".join(f"n={k} {v:.6f}" for k, v in maj.items()),
+        abs(maj[3] - 0.999702) < 1e-6 and maj[4] < maj[3] and maj[6] < maj[5])
+    unav = lambda k, n_, p: sum(math.comb(n_, j)*p**j*(1-p)**(n_-j) for j in range(0, k))
+    worse = all(unav(k+1, 2*k, p) > unav(k, 2*k-1, p) for k in range(1, 8) for p in np.linspace(0.5, 0.9999, 300)[1:])
+    say("s08", "an even cluster 2k is less available than the odd 2k-1 below it, k=1..7, every a in (0.5, 0.9999] (unavailabilities compared)", worse)
+    d43 = 3*0.99**2*0.01**2
+    say("s08", f"2-of-3 minus 3-of-4 = 3a^2(1-a)^2 = {d43:.3e} at a = 0.99", abs((maj[3]-maj[4]) - d43) < 1e-15)
+    inter = all(2*(n_//2+1) > n_ for n_ in range(1, 1000))
+    say("s08", "two majorities of the same cluster always share a member (2(floor(n/2)+1) > n, n < 1000)", inter)
+    say("s08", "tolerates floor((n-1)/2) failures: " + ", ".join(f"n={n_}:{(n_-1)//2}" for n_ in range(1, 8)),
+        [(n_-1)//2 for n_ in range(1, 8)] == [n_ - (n_//2+1) for n_ in range(1, 8)])
+
+    # --- s09: common cause --------------------------------------------------
+    def bq(N, q, beta):
+        return 1 - (1 - beta*q)*(1 - ((1-beta)*q)**N)
+    row = [bq(N, 0.01, 0.05) for N in (1, 2, 3, 4, 8)]
+    say("s09", "unavailability, q = 0.01 per replica, beta = 0.05: " + ", ".join(f"N={N} {x:.3e}" for N, x in zip((1, 2, 3, 4, 8), row))
+        + f"; floor beta*q = {0.05*0.01:.0e}", abs(row[-1] - 5e-4) < 1e-6 and abs(row[1] - 5.9025e-4) < 1e-6)
+    say("s09", f"the floor in nines: 1 - 5e-4 = 99.95% = {-math.log10(5e-4):.2f} nines, whatever N",
+        abs(-math.log10(5e-4) - 3.30) < 0.01)
+    # Monte Carlo of beta model
+    rg = np.random.default_rng(99); Tm = 2_000_000
+    common = rg.random(Tm) < 0.05*0.01
+    ind = rg.random((Tm, 3)) < 0.95*0.01
+    down3 = common | ind.all(axis=1)
+    say("s09", f"Monte Carlo, 3 replicas: {down3.mean():.2e} unavailable vs model {bq(3, 0.01, 0.05):.2e}",
+        abs(down3.mean()/bq(3, 0.01, 0.05) - 1) < 0.1)
+
+    # --- s10: a queue between services is a buffer between stations ---------
+    def line(B, f, r, cycles=600000, seed=1):
+        rgl = np.random.default_rng(seed); up = [True, True]; buf = 0; out = 0
+        U = rgl.random((cycles, 2))
+        for t_ in range(cycles):
+            if B == 0:
+                both = up[0] and up[1]
+                if both:
+                    out += 1
+                    for i in (0, 1):
+                        if U[t_, i] < f[i]: up[i] = False
+                else:
+                    for i in (0, 1):
+                        if not up[i] and U[t_, i] < r[i]: up[i] = True
+                continue
+            w0 = up[0] and buf < B
+            w1 = up[1] and buf > 0
+            if w1: buf -= 1; out += 1
+            if w0: buf += 1
+            for i, wk in ((0, w0), (1, w1)):
+                if up[i]:
+                    if wk and U[t_, i] < f[i]: up[i] = False
+                else:
+                    if U[t_, i] < r[i]: up[i] = True
+        return out/cycles
+    f = (0.01, 0.02); r = (0.19, 0.18)
+    e = [r[i]/(r[i]+f[i]) for i in (0, 1)]
+    E0 = 1/(1 + f[0]/r[0] + f[1]/r[1])
+    eff = {B: line(B, f, r, cycles=300000) for B in (0, 5, 20, 100, 400)}
+    say("s10", f"two stations, isolated efficiencies {e[0]:.3f} and {e[1]:.3f}: no buffer {eff[0]:.4f} "
+        f"(1/(1+sum f/r) = {E0:.4f}); buffer 5 {eff[5]:.4f}, 20 {eff[20]:.4f}, 100 {eff[100]:.4f}, 400 {eff[400]:.4f} "
+        f"-> min = {min(e):.4f}", abs(eff[0]/E0 - 1) < 0.01 and eff[5] > eff[0] and eff[100] > eff[20] and abs(eff[400] - min(e)) < 0.01)
+
+    # --- s11: protective devices -------------------------------------------
+    # token bucket: accepted in any window of length T <= b + r T
+    rg = np.random.default_rng(111); bcap, rate = 20.0, 5.0; tok = bcap; acc = []
+    t_ = 0.0; times = []
+    for _ in range(20000):
+        gap = rg.exponential(1/12.0) if rg.random() < 0.7 else rg.exponential(1/0.5)
+        t_ += gap; times.append(t_)
+    last = 0.0
+    for tt in times:
+        tok = min(bcap, tok + rate*(tt - last)); last = tt
+        if tok >= 1: tok -= 1; acc.append(tt)
+    acc = np.array(acc); worst = 0.0
+    for Tw in (0.5, 1, 2, 5, 10, 50):
+        j = np.searchsorted(acc, acc + Tw, side='left') - np.arange(len(acc))
+        worst = max(worst, (j.max() - (bcap + rate*Tw)))
+    say("s11", f"token bucket b = 20, r = 5/s on bursty arrivals: accepted in any window never exceeds b + rT "
+        f"(worst margin {worst:+.1f}); long-run accepted rate {len(acc)/acc[-1]:.2f}/s", worst <= 1e-9 and len(acc)/acc[-1] <= rate + 0.05)
+    # retries: synchronised vs jittered
+    Ncl = 1000; rgj = np.random.default_rng(12)
+    sync = np.concatenate([np.full(Ncl, 2.0**k) for k in range(4)])
+    jit = np.concatenate([rgj.uniform(0, 2.0**k, Ncl) + (2.0**k - 1) for k in range(4)])
+    pk = lambda x: np.histogram(x, bins=np.arange(0, 20.0001, 0.1))[0].max()
+    say("s11", f"1,000 clients retrying at 1, 2, 4, 8 s: peak {pk(sync)} arrivals in one 0.1 s bin; with full jitter "
+        f"{pk(jit)}; total wait after four tries 1+2+4+8 = 15 s", pk(sync) == 1000 and pk(jit) < 150)
+
+    # --- s12: fan-out tail and hedging ---------------------------------------
+    pany = {n_: 1 - 0.99**n_ for n_ in (1, 10, 100)}
+    say("s12", "P(request slower than a shard's p99) = 1 - 0.99^n: " + ", ".join(f"n={k} {v:.4f}" for k, v in pany.items()),
+        abs(pany[100] - 0.63397) < 1e-4)
+    mu_, sg = math.log(10), 0.5
+    p99s = math.exp(mu_ + sg*_n18.ppf(0.99)); p95s = math.exp(mu_ + sg*_n18.ppf(0.95))
+    fo = []
+    for n_ in (1, 10, 100):
+        x = g18.lognormal(mu_, sg, (20000, n_)).max(axis=1)
+        fo.append((n_, np.median(x), np.quantile(x, 0.99), np.mean(x > p99s)))
+    say("s12", f"lognormal shards (median 10 ms, sigma 0.5, shard p99 {p99s:.1f} ms): " + "; ".join(
+        f"n={x[0]} median {x[1]:.1f} p99 {x[2]:.1f} frac>shard-p99 {x[3]:.3f}" for x in fo),
+        all(abs(x[3] - pany[x[0]]) < 0.015 for x in fo))
+    # exact quantile of the max: F^n
+    q99n = math.exp(mu_ + sg*_n18.ppf(0.99**(1/100)))
+    say("s12", f"exact p99 of the max of 100: shard quantile 0.99^(1/100) = {0.99**0.01:.6f} -> {q99n:.1f} ms",
+        abs(q99n - fo[2][2]) < 2.0)
+    zz = g18.normal(10, 2, (400000, 2)).max(axis=1).mean()
+    say("s12", f"Sheet 14's merge bias, same object: E max of two N(10, 2^2) = {zz:.3f} vs 10 + 2/sqrt(pi) = {10+2/math.sqrt(math.pi):.3f}",
+        abs(zz - (10 + 2/math.sqrt(math.pi))) < 0.01)
+    def hedge(n_, d, pc=0.0, extra=40.0, trials=20000, seed=5):
+        rh = np.random.default_rng(seed)
+        a1 = rh.lognormal(mu_, sg, (trials, n_)); a2 = d + rh.lognormal(mu_, sg, (trials, n_))
+        hot = rh.random((trials, n_)) < pc
+        a1 = a1 + hot*extra; a2 = a2 + hot*extra
+        lat = np.minimum(a1, np.where(a1 > d, a2, np.inf)).max(axis=1)
+        return np.quantile(lat, 0.99), np.mean(a1 > d)
+    h0 = np.quantile(np.random.default_rng(5).lognormal(mu_, sg, (20000, 100)).max(axis=1), 0.99)
+    hp, frac = hedge(100, p95s)
+    say("s12", f"100 shards, hedge each after the shard p95 ({p95s:.1f} ms): request p99 {h0:.1f} -> {hp:.1f} ms "
+        f"for {frac*100:.1f}% extra shard requests", hp < 0.75*h0 and abs(frac - 0.05) < 0.005)
+    # common cause defeats hedging
+    hc0 = hedge(100, 1e9, pc=0.002)[0]; hc1 = hedge(100, p95s, pc=0.002)[0]
+    say("s12", f"if 0.2% of shard slowness is in the shard itself (+40 ms on both copies): p99 {hc0:.1f} -> {hc1:.1f} ms with hedging",
+        hc1 > 0.85*hc0)
+    # series/parallel for on-time: P(on time) = 0.99^n; hedge sent at once: P(slow) = 0.01^2 per shard
+    say("s12", f"duplicate sent at once (parallel pair): shard slow with p = 0.0001, 100 shards on time {(1-1e-4)**100:.4f} "
+        f"vs {0.99**100:.4f} unhedged (De Morgan, Sheet 13)", abs((1-1e-4)**100 - 0.99005) < 1e-4)
+
+    # --- s13: the day's load ------------------------------------------------
+    # source: 10 GPUs at peak, 2 at night saves ~60%
+    for hpk in (12, 6):
+        avg = (10*hpk + 2*(24-hpk))/24
+        say("s13", f"{hpk} h at 10 GPUs, {24-hpk} h at 2: mean {avg:.2f}, saving 1 - mean/peak = {1-avg/10:.0%}",
+            abs((1-avg/10) - (0.4 if hpk == 12 else 0.6)) < 1e-12)
+    hwk = (4*168 - 2*48 - 5*48)/(5*8)
+    say("s13", f"weekends at 2: saving 60% needs {hwk:.1f} peak hours per weekday", abs(hwk - 8.4) < 1e-9)
+    # autoscaling saving == 1 - load factor on any profile (integer units)
+    rp = np.random.default_rng(13); ok = True
+    for _ in range(200):
+        d_ = rp.integers(1, 40, 168)
+        sav = 1 - d_.sum()/(d_.max()*len(d_)); lf = d_.mean()/d_.max()
+        ok &= abs(sav - (1 - lf)) < 1e-12
+    say("s13", "perfect autoscaling saves exactly 1 - load factor (200 random weekly profiles)", ok)
+    # three regions 8 h apart: three-phase
+    th = np.linspace(0, 2*np.pi, 1000)
+    s3 = sum(1 + 0.6*np.sin(th + 2*np.pi*k/3) for k in range(3))
+    df = 3*1.6/s3.max()
+    say("s13", f"three regions, each 1 + 0.6 sin, 8 h apart: sum is constant {s3.min():.6f}..{s3.max():.6f}, "
+        f"diversity factor {df:.3f}", abs(s3.max() - 3) < 1e-9 and abs(df - 1.6) < 1e-9)
+    s3h = sum(1 + 0.6*np.sin(th + 2*np.pi*k/3) + 0.2*np.sin(3*(th + 2*np.pi*k/3)) for k in range(3))
+    say("s13", f"add a third harmonic (period 8 h, amplitude 0.2): ripple of the sum {s3h.max()-s3h.min():.3f} = 3 x 2 x 0.2; "
+        "triplen harmonics add, as in a three-phase neutral", abs((s3h.max()-s3h.min()) - 1.2) < 1e-3)
+
+    # --- s14: reserved vs on-demand (screening curve) -------------------------
+    def best_reserved(dem, r_, o_):
+        best = None
+        for R in range(0, dem.max()+1):
+            cost = R*r_*len(dem) + o_*np.maximum(dem - R, 0).sum()
+            if best is None or cost < best[1] - 1e-9: best = (R, cost)
+        return best
+    ok = True
+    for _ in range(100):
+        hrs = np.arange(168)
+        dem = np.maximum(0, np.round(20 + 12*np.sin(2*np.pi*hrs/24) + rp.normal(0, 3, 168))).astype(int)
+        disc = rp.uniform(0.3, 0.6); r_, o_ = (1-disc)*8.0, 8.0
+        R, _ = best_reserved(dem, r_, o_)
+        frac = [np.mean(dem >= k) for k in range(dem.max()+2)]
+        rule = max([k for k in range(1, dem.max()+1) if frac[k] > (1 - disc)] or [0])
+        ok &= (R == rule) or abs(best_reserved(dem, r_, o_)[1] - (rule*r_*168 + o_*np.maximum(dem-rule, 0).sum())) < 1e-6
+    say("s14", "reserve unit k iff demand >= k for more than (1 - discount) of hours: matches brute force on 100 weekly profiles", ok)
+    own = 30000/0.75; ownh = own/(3*8760)
+    say("s14", f"source's own figures: $30K GPU at 75% of cost -> ${own:,.0f} per GPU over 3 years = ${ownh:.2f}/h at full use; "
+        f"cloud $8.00 is {8/ownh:.1f}x; reserved at 30-60% off is {8*0.7/ownh:.1f}x-{8*0.4/ownh:.1f}x (source: 2-3x)",
+        abs(ownh - 1.522) < 0.01 and 2.0 < 8*0.4/ownh < 2.2)
+    say("s14", f"break-even utilisation, owned vs on-demand: {ownh/8:.0%}", abs(ownh/8 - 0.19) < 0.01)
+    say("s14", f"64 x $8 = ${64*8}/h (source ~$500); 720 h -> ${64*8*720:,} (source ~$360,000 = 720 x $500)",
+        64*8 == 512 and 500*720 == 360000)
+    say("s14", f"checkpoint hoard: 10 GB x 100 x 50 = {10*100*50/1000:.0f} TB x $0.023/GB = ${10*100*50*0.023:,.0f}/month",
+        abs(10*100*50*0.023 - 1150) < 1e-9)
+    say("s14", f"140 GB at 1 GB/s = {140/60:.2f} min (source ~2.5)", abs(140/60 - 2.333) < 0.001)
+    def hav(a1, o1, a2, o2):
+        R_ = 6371.0; p1_, p2_ = math.radians(a1), math.radians(a2); dl = math.radians(o2-o1); dp = p2_ - p1_
+        x = math.sin(dp/2)**2 + math.cos(p1_)*math.cos(p2_)*math.sin(dl/2)**2
+        return 2*R_*math.asin(math.sqrt(x))
+    dsf = hav(35.68, 139.69, 37.77, -122.42); dva = hav(35.68, 139.69, 39.04, -77.49)
+    vf = 299792.458/1.468
+    say("s14", f"Tokyo-San Francisco {dsf:,.0f} km, Tokyo-N. Virginia {dva:,.0f} km: fibre round-trip floor "
+        f"{2*dsf/vf*1e3:.0f} and {2*dva/vf*1e3:.0f} ms (source ~150 ms is 1.4-1.8x the floor)",
+        70 < 2*dsf/vf*1e3 < 90 and 100 < 2*dva/vf*1e3 < 115)
+
+    # --- s15: a training job is a series system --------------------------------
+    mtbf_job = 54*24/466; per = mtbf_job*16384
+    say("s15", f"466 interruptions in 54 days: job MTBF {mtbf_job:.2f} h; x 16,384 GPUs = {per:,.0f} h = {per/8760:.1f} years per GPU "
+        "if every interruption were one GPU's", abs(mtbf_job - 2.781) < 0.001 and abs(per/8760 - 5.2) < 0.05)
+    rgs = np.random.default_rng(15); lifes = rgs.exponential(per, (20000, 64)).min(axis=1)
+    say("s15", f"series of 64 exponential parts, mean life {per:,.0f} h: system mean {lifes.mean():,.0f} h vs MTBF/64 {per/64:,.0f}",
+        abs(lifes.mean()/(per/64) - 1) < 0.03)
+    say("s15", f"P(54 days with no interruption at that rate) = exp(-466) = {math.exp(-466):.1e}", math.exp(-466) < 1e-200)
+
+    # --- s16: checkpoint interval is an EOQ -----------------------------------
+    M = mtbf_job*60
+    for dl in (1.0, 5.0, 10/60):
+        tau = math.sqrt(2*dl*M); wst = math.sqrt(2*dl/M)
+        say("s16", f"M = {M:.1f} min, checkpoint write {dl*60:.0f} s: Young tau* = sqrt(2 delta M) = {tau:.1f} min, waste {wst:.1%}", True)
+    # EOQ identity and flat bottom
+    C = lambda tau, dl, M_: dl/tau + tau/(2*M_)
+    ok = all(abs(C(k*math.sqrt(2*1.0*M), 1.0, M)/C(math.sqrt(2*1.0*M), 1.0, M) - (k + 1/k)/2) < 1e-12 for k in (0.5, 2, 3))
+    say("s16", "cost at k x optimum = (k + 1/k)/2 x minimum: 1.25 at k = 2 or 1/2 (EOQ's flat bottom)", ok)
+    # simulation: exponential failures, fixed interval, measure useful fraction
+    def ckpt_sim(tau, dl, M_, R_=0.0, horizon=2e6, seed=16):
+        rc = np.random.default_rng(seed); t_ = 0.0; useful = 0.0; nextf = rc.exponential(M_)
+        while t_ < horizon:
+            seg = tau + dl
+            if t_ + seg <= nextf:
+                t_ += seg; useful += tau
+            else:
+                t_ = nextf + R_; nextf = t_ + rc.exponential(M_)
+        return useful/t_
+    taus = [5, 10, 15, 18.3, 22, 30, 45, 60]
+    fr = [ckpt_sim(tt, 1.0, M) for tt in taus]
+    best = taus[int(np.argmax(fr))]
+    say("s16", "simulated useful fraction, delta = 1 min: " + ", ".join(f"tau {a_:g} -> {b_:.3f}" for a_, b_ in zip(taus, fr))
+        + f"; best of these {best}", best in (15, 18.3, 22) and abs(max(fr) - (1 - math.sqrt(2/M))) < 0.02)
+    # checkpoint size
+    P70 = 70e9
+    say("s16", f"70B with Adam: source 70B x 4 x 2 = {P70*8/1e9:.0f} GB; fp32 master + m + v = 12 B/param = {P70*12/1e9:.0f} GB; "
+        f"with a bf16 copy 14 B = {P70*14/1e9:.0f} GB", P70*8/1e9 == 560 and P70*12/1e9 == 840)
+    say("s16", f"hourly for 90 days = {90*24:,} checkpoints: x 560 GB = {90*24*0.56:,.0f} TB (source 1.1 PB for ~2000); "
+        f"x 840 GB = {90*24*0.84:,.0f} TB", abs(2000*0.56 - 1120) < 1e-9)
+    say("s16", f"840 GB at 100 GB/s = {840/100:.1f} s; at 10 GB/s = {840/10:.0f} s", True)
+
+    # --- s17: the fabric ----------------------------------------------------
+    pcie5 = 32e9*16*128/130/8/1e9; pcie4 = pcie5/2
+    say("s17", f"PCIe 5.0 x16 = 32 GT/s x 16 x 128/130 / 8 = {pcie5:.1f} GB/s each way; NVLink 900 GB/s total = 450 each way: "
+        f"{450/pcie5:.1f}x like for like; 900 vs PCIe 4.0 one way = {900/pcie4:.1f}x (source: 30x)",
+        abs(pcie5 - 63.0) < 0.1 and abs(450/pcie5 - 7.1) < 0.1 and abs(900/pcie4 - 28.6) < 0.1)
+    say("s17", f"8 x 400 Gb/s = {8*400/8:.0f} GB/s per node, 50 GB/s per GPU: NVLink inside the node is {450/50:.0f}x the network",
+        8*400/8 == 400)
+    k_ = 64
+    say("s17", f"fat tree of {k_}-port switches: two tiers {k_**2//2:,} hosts, three tiers {k_**3//4:,}: 16,384 GPUs need three",
+        k_**2//2 == 2048 and k_**3//4 == 65536)
+    def ring_allreduce(N, S=12):
+        rng_ = np.random.default_rng(N); data = rng_.normal(size=(N, N*S)); chunks = data.reshape(N, N, S).copy()
+        sent = np.zeros(N)
+        for step in range(N-1):                  # reduce-scatter
+            new = chunks.copy()
+            for i in range(N):
+                c_ = (i - step) % N; new[(i+1) % N, c_] += chunks[i, c_]; sent[i] += S
+            chunks = new
+        for step in range(N-1):                  # all-gather
+            new = chunks.copy()
+            for i in range(N):
+                c_ = (i + 1 - step) % N; new[(i+1) % N, c_] = chunks[i, c_]; sent[i] += S
+            chunks = new
+        ok_ = np.allclose(chunks.reshape(N, N*S), data.sum(axis=0)[None, :])
+        return ok_, sent[0]/(N*S)
+    ar = {N: ring_allreduce(N) for N in (2, 4, 8, 16)}
+    say("s17", "ring all-reduce simulated: sums correct and bytes sent per node / message = " +
+        ", ".join(f"N={N} {v[1]:.4f} (2(N-1)/N {2*(N-1)/N:.4f})" for N, v in ar.items()),
+        all(v[0] and abs(v[1] - 2*(N-1)/N) < 1e-12 for N, v in ar.items()))
+    for Pm, nm in ((405e9, "405B"), (70e9, "70B")):
+        tps = 16384*989e12*0.40/(6*Pm)
+        say("s17", f"{nm} on 16,384 GPUs at 40% of 989 TFLOPS: {tps:,.0f} tokens/s = {tps*4/1e6:.0f} MB/s of 4-byte tokens "
+            f"({100e9/(tps*4):,.0f}x below 100 GB/s)", tps*4 < 1e8)
+
+    # --- s18: training cost from 6ND ------------------------------------------
+    rate = 989e12*0.40
+    for D, nm in ((1.4e12, "Chinchilla 1.4T"), (15e12, "15T")):
+        fl = 6*70e9*D; gh = fl/rate/3600
+        say("s18", f"70B, {nm} tokens: 6ND = {fl:.2e} FLOP, {gh/1e6:.2f}M GPU-h at 40% of 989 TF: ${gh*8/1e6:.1f}M at $8/h, "
+            f"${gh*ownh/1e6:.2f}M at ${ownh:.2f}/h", True)
+    fl405 = 6*405e9*15e12; gh405 = fl405/rate/3600
+    say("s18", f"405B, 15T tokens: {gh405/1e6:.1f}M GPU-h: ${gh405*8/1e6:.0f}M at $8/h, ${gh405*ownh/1e6:.0f}M at ${ownh:.2f}/h "
+        f"(source: $50-100M); {gh405/16384/24:.0f} days on 16,384 GPUs", 30 < gh405*ownh/1e6 < 60)
+    say("s18", f"$30K x 16,000 = ${30000*16000/1e6:.0f}M", 30000*16000 == 480_000_000)
+    say("s18", f"$2M buys {2e6/8:,.0f} GPU-h at $8 = {2e6/8*3600*rate:.2e} FLOP = {2e6/8*3600*rate/(6*70e9)/1e12:.2f}T tokens for 70B",
+        True)
+
+    # --- s19: lifecycle: A/B sample size, PSI, Bayes, delay ---------------------
+    za, zb = _n18.ppf(0.975), _n18.ppf(0.80)
+    def nab(p, d): return (za+zb)**2*2*p*(1-p)/d**2
+    for p in (0.01, 0.02, 0.05):
+        say("s19", f"CTR {p:.0%}: relative +0.1% needs {nab(p, p*0.001):.2e} per arm; absolute +0.1 point needs {nab(p, 0.001):,.0f} per arm", True)
+    say("s19", "source's 'millions of impressions': relative 0.1% at 2% CTR needs 1.5e9 in total; absolute 0.1 pt needs 0.6e6",
+        abs(2*nab(0.02, 2e-5)/1.54e9 - 1) < 0.02 and abs(2*nab(0.02, 0.001)/6.15e5 - 1) < 0.02)
+    # PSI = KL(a||e) + KL(e||a); normal shift d -> Jeffreys d^2
+    rp2 = np.random.default_rng(19); ok = True
+    for _ in range(100):
+        aa = rp2.dirichlet(np.ones(10)); ee = rp2.dirichlet(np.ones(10))
+        psi = np.sum((aa-ee)*np.log(aa/ee)); kl = np.sum(aa*np.log(aa/ee)) + np.sum(ee*np.log(ee/aa))
+        ok &= abs(psi - kl) < 1e-12
+    say("s19", "PSI == KL(a||e) + KL(e||a) (Jeffreys divergence), 100 random histograms", ok)
+    edges = _n18.ppf(np.linspace(0, 1, 11)); edges[0], edges[-1] = -np.inf, np.inf
+    for dsh in (0.316, 0.5):
+        aa = np.diff(_n18.cdf(edges - dsh)); ee = np.full(10, 0.1)
+        say("s19", f"mean shift {dsh} sigma binned in deciles: PSI {np.sum((aa-ee)*np.log(aa/ee)):.3f} (unbinned d^2 = {dsh**2:.3f})",
+            abs(np.sum((aa-ee)*np.log(aa/ee)) - dsh**2) < 0.03)
+    prec = 0.99*0.001/(0.99*0.001 + 0.01*0.999)
+    say("s19", f"fraud at 0.1%, detector 99% sensitive and 99% specific: precision {prec:.1%} (Sheet 05's alarm)",
+        abs(prec - 0.0902) < 0.001)
+    cfp, cfn = 5.0, 500.0
+    say("s19", f"flag when P(fraud) > C_FP/(C_FP + C_FN): costs $5 and $500 -> threshold {cfp/(cfp+cfn):.4f}",
+        abs(cfp/(cfp+cfn) - 0.0099) < 1e-4)
+    ok = True
+    for K in (0.1, 0.2, 0.3, 0.5, 0.9, 1.1):
+        rts = np.roots([1, -1, K]); cplx = np.iscomplexobj(rts) and np.any(np.abs(rts.imag) > 1e-12)
+        ok &= (cplx == (K > 0.25)) and ((np.max(np.abs(rts)) > 1) == (K > 1))
+    say("s19", "correction acting on last cycle's error, x(k+1) = x(k) - K x(k-1): oscillates for K > 1/4, diverges for K > 1", ok)
+
+    # --- s20: the design examples, recomputed ---------------------------------
+    emb = 100e6*256*2
+    say("s20", f"100M x 256 x 2 B = {emb/1e9:.1f} GB (source 50 GB)", abs(emb/1e9 - 51.2) < 1e-9)
+    for Mh in (16, 32):
+        say("s20", f"HNSW M = {Mh}: 2M = {2*Mh} links x 4 B = {2*Mh*4} B per vector against 512 B: +{2*Mh*4/512:.0%} "
+            "(source: ~2x, which needs M = 64)", True)
+    img = 1e9*512*2; links = 1e9*32*4
+    say("s20", f"image index: 1B x 512 x 2 B = {img/1e12:.3f} TB of vectors + {links/1e9:.0f} GB of links (M = 16); "
+        f"source's 128 GB equals the links alone; PQ at 64 B/vector = {1e9*64/1e9:.0f} GB",
+        img/1e12 == 1.024 and links/1e9 == 128)
+    say("s20", f"recommendation latency 5 + 2 + 100 = 107 ms within 200; search 100 + 200 + 100 = 400 within 500", True)
+    say("s20", f"moderation: 2% of 1e9 = {0.02*1e9:,.0f} reviews/day / 100 = {0.02*1e9/100:,.0f} reviewers; "
+        f"0.1% = {0.001*1e9:,.0f}; 600 frames x 20 ms = {600*0.02:.0f} s", 0.02*1e9/100 == 200000)
+    stream = 20e6/450; perpage = 10000*math.ceil((2000-50)/450)
+    say("s20", f"RAG chunks: one stream 20M/450 = {stream:,.0f}; page by page 10,000 x ceil(1950/450) = {perpage:,} "
+        f"(source ~44K)", abs(stream - 44444.4) < 1 and perpage == 50000)
+    say("s20", f"index 44,444 x 768 x 2 B = {44444*768*2/1e6:.1f} MB = {44444*768*2/2**20:.1f} MiB; 10M chunks {1e7*768*2/1e9:.2f} GB",
+        abs(44444*768*2/2**20 - 65.1) < 0.1)
+    say("s20", f"API: 1,000 x 2,000 tokens x $3/M = ${1000*2000*3/1e6:.0f}/day; at 1M/day ${1e6*2000*3/1e6:,.0f}; "
+        f"2 A10G x $1 x 24 = ${2*24}; ratio {1e6*2000*3/1e6/48:.0f}x", 1e6*2000*3/1e6/48 == 125)
+    need = 2*7e9*2e9/86400
+    say("s20", f"2e9 tokens/day = {2e9/86400:,.0f} tokens/s x 2 x 7e9 FLOP = {need/1e12:.0f} TFLOP/s sustained; "
+        f"at 40% of a 125-TFLOPS card that is {need/(0.4*125e12):.1f} cards, not 2", abs(need/1e12 - 324) < 1)
+
+    # --- s21: worked example: the help desk becomes a plant --------------------
+    tw, tkv = 0.020, 0.0002
+    X = lambda b: b/(tw + b*tkv)
+    mean_dem = 18000.0; peak = 1.8*mean_dem
+    # planning capacity per server from s03 simulation: first load with P(batch >= 100) <= 1%
+    plan_cap = None
+    for Lam in range(1800, 2501, 50):
+        hh = cb_sim(float(Lam), steps=40000, seed=21)
+        if np.mean(hh >= 100) > 0.01: break
+        plan_cap = Lam
+    say("s21", f"per-server planning capacity (batch over the 100-sequence cap on <= 1% of steps): {plan_cap} tok/s "
+        f"(nameplate X(100) = {X(100):,.0f})", plan_cap is not None and 1900 <= plan_cap <= 2300)
+    nserv = math.ceil(peak/plan_cap)
+    pk_ok = lambda N, k, a_: kofn(k, N, a_)
+    av = 0.99; Ntot = nserv
+    while pk_ok(Ntot, nserv, av) < 0.999: Ntot += 1
+    say("s21", f"peak {peak:,.0f} tok/s / {plan_cap} = {peak/plan_cap:.2f} -> {nserv} servers; with each up 99% of the time, "
+        f"P(>= {nserv} of N up) >= 0.999 needs N = {Ntot} (N={nserv+1}: {pk_ok(nserv+1, nserv, av):.4f}, N={Ntot}: {pk_ok(Ntot, nserv, av):.4f})",
+        Ntot >= nserv + 1)
+    naive = math.ceil(mean_dem/X(100))
+    say("s21", f"the source's method (mean demand / nameplate, no spare): {mean_dem:,.0f}/{X(100):,.0f} = {mean_dem/X(100):.1f} -> {naive} servers",
+        naive == 8)
+    per_srv = peak/nserv; rho_ = per_srv*tkv; tpot = tw/(1-rho_)
+    say("s21", f"at peak each of {nserv} carries {per_srv:,.0f} tok/s: rho {rho_:.3f}, TPOT {tpot*1e3:.1f} ms (target 50)", tpot < 0.050)
+    hrs = np.arange(24); prof = mean_dem*(1 + 0.8*np.cos(2*np.pi*(hrs-14)/24))
+    need_h = np.array([math.ceil(d/plan_cap) for d in prof])
+    spare = np.array([next(N for N in range(n_, n_+10) if pk_ok(N, n_, av) >= 0.999) for n_ in need_h])
+    fixed = Ntot*24*8.0; scaled = spare.sum()*8.0
+    say("s21", f"profile 1 + 0.8 cos (peak {prof.max():,.0f}, trough {prof.min():,.0f}): fixed fleet {Ntot} x 24 h = ${fixed:,.0f}/day; "
+        f"autoscaled with spares {spare.sum()} server-hours = ${scaled:,.0f}/day ({1-scaled/fixed:.0%} less)",
+        abs(prof.max() - 32400) < 1e-6 and scaled < fixed)
+    R_ = best_reserved(spare, 0.6*8.0, 8.0)[0]
+    say("s21", f"at a 40% reservation discount, reserve {R_} servers (on duty more than 60% of hours); "
+        f"day cost ${R_*24*4.8 + 8*np.maximum(spare-R_,0).sum():,.0f}", True)
 
 _ch18()
 # ----- end of Chapter 18 block -----
