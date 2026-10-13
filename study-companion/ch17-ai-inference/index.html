@@ -1670,3 +1670,264 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     </p>
   </div>
 </section>
+
+<section id="edge">
+  <div class="col">
+    <div class="sechead"><span class="secnum">17</span><h2>The edge is one-piece flow by necessity</h2>
+      <a class="srcref" href="@SRC@chapter%2017%20-%20AI%20inference/04.%20edge%20inference.md" target="_blank" rel="noopener">src 04. edge inference &#8599;</a>
+    </div>
+    <p>
+      <b>Edge inference</b> runs the model on the user&rsquo;s own device: a phone, a laptop, a
+      sensor. The source&rsquo;s reasons are latency, cost, privacy and working offline. Its table of
+      devices (reported) runs from an 80 GB accelerator drawing 700 W to a microcontroller with
+      520 KB of memory drawing 0.1 W.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same role: one user means a lot of one, so the setup must shrink</div>
+      <p style="margin-bottom:0">
+        A phone serves one person. There is no batch to share the weight read with, so every token
+        pays the whole setup and &sect;01&rsquo;s bound applies in full: tokens per second is at
+        most bandwidth over model bytes. The source&rsquo;s own estimates are this bound: 57 tokens/s
+        for a 4-bit 7B model at 200 GB/s, 26 for a 4-bit 3.8B model at 50 GB/s
+        (<code>[Ch17 s01]</code>). Since the lot cannot grow, the only lever is the setup itself, and
+        quantisation is the SMED of this chapter: at the edge it is not an optimisation but the
+        price of running at all. (One row of that estimate, a 4-bit 70B model on a laptop chip with
+        200 GB/s, describes a model of 35&ndash;39 GB on a machine reported to hold at most 32 GB.)
+      </p>
+    </div>
+    <p>
+      The source&rsquo;s <b>compression pipeline</b> applies distillation, then pruning, then
+      quantisation, then compilation. Its arithmetic is assumed rather than derived, and the two
+      versions disagree: the diagram goes from 70B in FP32 to 2 GB, 140 times smaller; the code
+      multiplies 0.15 by 0.7 by 8 and gets 76 times (<code>[Ch17 s17]</code>). The compiler step&rsquo;s
+      biggest gain, <b>operator fusion</b>, combines several operations so their intermediate
+      results never go back to memory: several operations in one clamping, rather than
+      re-fixturing between them. <b>Memory planning</b> lets tensors whose lifetimes do not overlap
+      share one buffer, as parts whose stays do not overlap can share one staging bay.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>The battery figure assumes the model is idle most of the time</div>
+      <p style="margin-bottom:0">
+        The source: a 3B model at 15 tokens/s draws 3&ndash;5 W, and &ldquo;a 30-minute conversation
+        drains ~5% of a typical phone battery&rdquo;. Thirty minutes at 3&ndash;5 W is 1.5&ndash;2.5 Wh.
+        Taking a typical battery as 4,000 mAh at 3.85 V, 15.4 Wh (an assumed figure), that is
+        10&ndash;16% if the model generates throughout (<code>[Ch17 s17]</code>). It cannot, in fact,
+        generate throughout: 30 minutes at 15 tokens/s is 27,000 tokens, far past the 2&ndash;4K
+        context the same paragraph gives phones. The 5% holds if the model is generating about a
+        third of the time, which is a fair description of a conversation and should be said.
+      </p>
+    </div>
+    <p>
+      <b>Thermal throttling</b> (the source reports 30&ndash;50% slower after 30 seconds) is a duty
+      rating: the chip, like a motor, has a short-time rating above its continuous one.
+      <b>Early exit</b> returns an answer from a middle layer when the model is already confident,
+      which is an inspection station that passes clear cases early and sends doubtful ones on.
+    </p>
+    <p>
+      <b>Federated learning</b> trains across many devices without collecting their data: each
+      device takes some training steps on its own data and the server averages the results.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>The average must be weighted by data</div>
+      <p style="margin-bottom:0">
+        The source writes the average as \(\frac1K\sum_k W_k\). Pooling sample means of different
+        sizes needs a size-weighted mean, and so does this. Three devices with 10, 40 and 200
+        examples each take one gradient step: weighting each result by its share of the data
+        reproduces the step a central server would take on all 250 examples, to
+        \(10^{-16}\); the plain mean is off by 0.058 (<code>[Ch17 s17]</code>). The plain mean lets
+        the 10-example device count as much as the 200-example one.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="spec">
+  <div class="col">
+    <div class="sechead"><span class="secnum">18</span><h2>Speculative decoding is branch prediction</h2>
+      <a class="srcref" href="@SRC@chapter%2017%20-%20AI%20inference/05.%20scaling%20and%20deployment.md" target="_blank" rel="noopener">src 05. scaling and deployment &#8599;</a>
+    </div>
+    <p>
+      A small, fast <b>draft</b> model guesses the next \(k\) tokens. The large <b>target</b> model
+      then checks all \(k\) in a single step, keeps the guesses up to the first one it disagrees
+      with, and supplies one token of its own at that point. If every guess is kept, it supplies
+      the next token instead. Either way, one target step yields between 1 and \(k+1\) tokens.
+    </p>
+  </div>
+  <figure class="col">
+    <div class="paper"><img src="img/speculative_decoding.svg" alt="A draft model proposes five tokens; the target model checks them in one pass, accepts three, rejects the fourth and supplies a replacement" width="560"></div>
+    <figcaption><b>Fig. 17.6</b> &mdash; Five drafted tokens, three accepted, one replaced: four tokens for 15 ms against 40 ms one at a time. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+  <div class="col">
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same structure: speculative execution in a CPU</div>
+      <p>
+        Sheet 13 part 1 &sect;14 described a processor that guesses which way a branch will go, runs
+        ahead on the guess, and discards everything after a wrong one. This is the same procedure
+        with tokens. Why checking is cheap is the &sect;13 model: checking \(k\) tokens is one target
+        step over \(k+1\) positions, so the 20 ms weight read is shared across them. Speculative
+        decoding is batching along one request&rsquo;s own future, which is why it matters most where
+        there is only one request to serve (&sect;17).
+      </p>
+      <p style="margin-bottom:0">
+        If each guess is accepted with probability \(\alpha\), independently, the target step yields
+        \(1 + \alpha + \alpha^2 + \dots + \alpha^k\) tokens on average, and with each draft step
+        costing a fraction \(c\) of a target step,
+      </p>
+      <div class="mathbox">$$\mathbb{E}[\text{tokens per target step}] = \frac{1-\alpha^{k+1}}{1-\alpha}, \qquad \text{speedup} = \frac{1-\alpha^{k+1}}{(1-\alpha)(kc+1)}$$</div>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>The source&rsquo;s speedup formula errs both ways</div>
+      <p style="margin-bottom:0">
+        The source gives speedup \(\approx k \times \text{acceptance}/\text{cost ratio}\). Reading the
+        cost ratio as \(kc + 1\), it overcounts because acceptance stops at the first rejection, and
+        undercounts because it leaves out the target&rsquo;s own token. Simulated against the formula
+        above (<code>[Ch17 s18]</code>): at \(\alpha = 0.8\), \(k = 5\), \(c = 0.1\), 3.69 tokens per
+        step and a speedup of 2.46 where the source&rsquo;s form gives 2.67; at \(\alpha = 0.5\),
+        1.31 against 1.67; at \(\alpha = 0.9\), \(k = 4\), \(c = 0.05\), 3.41 against 3.00. Read
+        literally, with the draft-to-target ratio \(c\) as the denominator, it gives 40&times;. The
+        figure&rsquo;s 2.7&times; is one lucky case, not an average.
+      </p>
+    </div>
+    <p>
+      The source says the method is lossless, and it is, because of a specific acceptance rule.
+      Let \(q\) be the draft&rsquo;s probabilities and \(p\) the target&rsquo;s. Accept a drafted token
+      \(x\) with probability \(\min(1, p(x)/q(x))\); on rejection, draw a replacement from
+      \(\max(0, p-q)\), normalised. The tokens that come out are distributed exactly as \(p\). On a
+      six-word vocabulary with 400,000 draws the output matches \(p\) to \(5.5\times10^{-4}\), and
+      the acceptance rate is \(\sum_x \min(p(x), q(x))\), one minus the total variation distance
+      between the two models: 0.7492 measured, 0.7487 predicted (<code>[Ch17 s18]</code>). A draft
+      that agrees with the target more is accepted more, by exactly that overlap.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where the CPU analogy breaks: identical in distribution, not in result</div>
+      <p style="margin-bottom:0">
+        A processor that speculates produces exactly the result it would have produced without
+        speculating. Speculative decoding produces output with exactly the same <em>probabilities</em>
+        as the target alone, and any one run differs from what the target would have written on
+        its own. The rule that achieves this, rejection sampling, has no counterpart in your
+        training. Learn it as it is. The source&rsquo;s coding task does not use it: it accepts by
+        fixed probabilities and &ldquo;resamples&rdquo; by adding 1, so it times the procedure without
+        being lossless. Without its sleeps it yields 1.93 tokens per target call, 1.28&times; at its
+        own timings (<code>[Ch17 s18]</code>).
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Draft, verify, accept</div><div class="lab-tag">Predict, then draft</div></div>
+    <div class="predict">
+      <p style="margin-top:0">
+        Each drafted token is accepted with probability 0.8 and the draft model proposes 5. On
+        average, how many tokens does one step of the large model produce?
+      </p>
+      <button class="pbtn" data-p3="a" type="button">4.0, that is 5 &times; 0.8</button>
+      <button class="pbtn" data-p3="b" type="button">About 3.7</button>
+      <button class="pbtn" data-p3="c" type="button">5</button>
+      <button class="pbtn" data-p3="d" type="button">About 2.7</button>
+      <div class="pverdict" id="pv3"></div>
+    </div>
+    <svg class="stage" id="sS" viewBox="0 0 480 280" role="img"
+         aria-label="Speedup against the number of drafted tokens k, for the chosen acceptance rate and draft cost: the exact curve, the source's formula as a dashed line, and simulated points. The current k is marked.">
+      <g id="sGrid"></g><g id="sPlot"></g><g id="sLab"></g>
+    </svg>
+    <div class="ctl">
+      <label for="sA">Acceptance <span class="gk">&alpha;</span></label>
+      <input type="range" id="sA" min="0.3" max="0.95" value="0.8" step="0.05">
+      <span class="ro-v" id="sAV" style="min-width:44px">0.80</span>
+    </div>
+    <div class="ctl">
+      <label for="sK">Drafted tokens k</label>
+      <input type="range" id="sK" min="1" max="12" value="5" step="1">
+      <span class="ro-v" id="sKV" style="min-width:44px">5</span>
+    </div>
+    <div class="ctl">
+      <label for="sC">Draft cost c</label>
+      <input type="range" id="sC" min="0.02" max="0.3" value="0.1" step="0.01">
+      <span class="ro-v" id="sCV" style="min-width:44px">0.10</span>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Tokens per step,<br>simulated</div><div class="ro-v a" id="sTs">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Tokens per step,<br>formula</div><div class="ro-v a" id="sTf">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Speedup,<br>exact</div><div class="ro-v c" id="sSp">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Source&rsquo;s form<br><span class="gk">k&alpha;/(kc+1)</span></div><div class="ro-v b" id="sSr">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Best k<br>at this <span class="gk">&alpha;</span>, c</div><div class="ro-v" id="sBk">&mdash;</div></div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    The green curve is the exact speedup against \(k\); the dashed orange line is the source&rsquo;s
+    \(k\alpha/(kc+1)\); the dots are simulated, 20,000 target steps each. At \(\alpha = 0.8\) and
+    \(k = 5\) one target step yields <b>3.69</b> tokens, which answers the prediction:
+    \(5\times0.8\) ignores that the first rejection ends the run and leaves out the target&rsquo;s own
+    token. The exact curve rises, peaks and falls, because each extra draft costs \(c\) whether or
+    not it survives; the source&rsquo;s line never turns down. At these settings the best \(k\) is 6. Lower
+    \(\alpha\) to 0.5 and the best \(k\) drops to 2, while the source&rsquo;s form keeps climbing.
+  </div>
+</section>
+
+<section id="scale">
+  <div class="col">
+    <div class="sechead"><span class="secnum">19</span><h2>Past one server, at the source&rsquo;s level</h2>
+      <a class="srcref" href="@SRC@chapter%2017%20-%20AI%20inference/05.%20scaling%20and%20deployment.md" target="_blank" rel="noopener">src 05. scaling and deployment &#8599;</a>
+    </div>
+    <p>
+      File 05 moves from one server to many. Sheet 18 owns that ground (capacity planning,
+      redundancy, system design), so this section covers the file at the depth it goes itself and
+      corrects what can be computed.
+    </p>
+    <p>
+      <b>Tensor parallelism</b> splits each weight matrix across devices. Split \(W\) by columns
+      and each device computes some of the output columns, which are then placed side by side;
+      split it by rows and each device computes a partial sum of every output, and the partial sums
+      are added. Both are exact (<code>[Ch17 s19]</code>). The source names the first split and the
+      second operation: &ldquo;an all-reduce aggregates&rdquo; (adds) and then writes \(Y =
+      \text{concat}(Y_1,\dots,Y_N)\). Concatenating is an all-gather; adding is the all-reduce, and it
+      belongs to the row split. Megatron-style layers pair a column split with a row split so that
+      only one addition is needed per pair (reported).
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>The quoted link delays are for messages 5,500 tokens long</div>
+      <p style="margin-bottom:0">
+        The source charges 0.1 ms per layer on a 900 GB/s link and 3 ms on 32 GB/s. In decode, one
+        token&rsquo;s message is its 8,192-wide activation in 16 bits: 16,384 bytes, which takes 18 ns
+        at 900 GB/s and 0.51 &micro;s at 32 GB/s. The quoted figures need 5,493 and 5,859 tokens per
+        message (<code>[Ch17 s19]</code>), which is prefill of a long prompt, not decode. In decode
+        the fixed start-up time of each message dominates (reported to be microseconds), and the
+        source&rsquo;s conclusion, that a fast link matters, holds for prefill.
+      </p>
+    </div>
+    <p>
+      <b>Pipeline parallelism</b> gives each device a span of layers. Sheet 13 part 1 &sect;13
+      already has its law: latency is the sum of stage times and throughput is one over the
+      slowest. One token must pass every stage, so pipelining never shortens a single request; it
+      raises throughput only when several requests are in flight to fill the stages.
+      <b>Prefix caching</b> computes a shared prompt&rsquo;s cache once and reuses it (&sect;09 has
+      the corrected sizes). <b>KV-cache eviction</b> methods such as H2O keep the recent tokens and
+      the few &ldquo;heavy hitters&rdquo; that have drawn most attention so far, which is ABC
+      classification of an inventory by usage; its weakness is the same, past usage is only a
+      forecast of future usage. The frameworks table is reported and dates quickly.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Two cost figures that the source&rsquo;s own numbers contradict</div>
+      <p>
+        &ldquo;100,000 GPUs, costing ~$3 billion per year&rdquo;: at the $8 per GPU-hour the same file
+        uses for this GPU, it is \(100{,}000 \times 8 \times 8{,}760 = \$7.0\) billion. The $3 billion
+        implies $3.42 an hour (<code>[Ch17 s19]</code>).
+      </p>
+      <p style="margin-bottom:0">
+        The file&rsquo;s cost model prices a 70B model in FP16 on three such GPUs at $311 per million
+        tokens. Its own table of prices, two screens up, says $0.50 for the same setup: 622 times
+        less, which implies about 13,000 tokens/s from the three GPUs against the model&rsquo;s 21.4
+        (<code>[Ch17 s19]</code>). The cost model has no batch in it. &sect;14&rsquo;s lot of tens to
+        hundreds of sequences is most of that factor; the table&rsquo;s prices are reported and the
+        rest of the gap is assumption on both sides. It is the clearest demonstration in the
+        chapter that batching is not an optimisation of serving cost but most of it.
+      </p>
+    </div>
+    <p>
+      <b>Monitoring</b> in the source means tracking TTFT and TPOT at the 50th, 95th and 99th
+      percentiles and alerting when the 99th crosses its target: a control chart on lead time.
+      Where those targets come from, and how many servers it takes to hold them through failures
+      and peaks, is Sheet 18.
+    </p>
+  </div>
+</section>

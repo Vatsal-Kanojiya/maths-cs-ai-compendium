@@ -6063,6 +6063,12 @@ def _ch17():
         rows18.append(f"a={al},k={k}: sim {toks.mean():.3f} vs {Etok(al,k):.3f}; speedup {Etok(al,k)/(k*c+1):.2f} "
                       f"vs k*a/(kc+1) {k*al/(k*c+1):.2f}")
     say("s18", "tokens per target pass (1-a^(k+1))/(1-a), c = draft/target cost: " + "; ".join(rows18), ok18)
+    bestk = {}
+    for al, c in ((0.8, 0.1), (0.5, 0.1)):
+        sp = [Etok(al, k)/(k*c+1) for k in range(1, 13)]
+        bestk[al] = sp.index(max(sp))+1
+    say("s18", f"best k (c = 0.1): alpha 0.8 -> {bestk[0.8]}, alpha 0.5 -> {bestk[0.5]}; k*a/(kc+1) rises with k for ever",
+        bestk[0.8] == 6 and bestk[0.5] == 2)
     r18 = np.random.default_rng(2); V = 6
     p = r18.dirichlet(np.ones(V)); q = r18.dirichlet(np.ones(V)); N = 400000
     xs_ = r18.choice(V, N, p=q); accp = r18.random(N) < np.minimum(1, p[xs_]/q[xs_])
