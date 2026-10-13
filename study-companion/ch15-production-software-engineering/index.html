@@ -1267,3 +1267,297 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     </div>
   </div>
 </section>
+
+<section id="design">
+  <div class="col">
+    <div class="sechead"><span class="secnum">10</span><h2>Names, registries and interfaces</h2>
+      <a class="srcref" href="@F3@" target="_blank" rel="noopener">src 03. codebase design &#8599;</a>
+    </div>
+    <p>
+      File 03 is about arranging code so that a change stays cheap as the project grows. Its
+      project layout keeps importable code under <code>src/my_project/</code>, entry-point
+      scripts under <code>scripts/</code>, tests under <code>tests/</code> and settings under
+      <code>configs/</code>. The reason it gives for the <code>src/</code> folder is checkable:
+      from the project root, with nothing installed, a flat layout imports the package and a
+      <code>src/</code> layout refuses (<code>[Ch15 s10]</code>). That refusal is the point.
+      With a flat layout, Python quietly imports whatever folder sits in the current directory,
+      so tests pass against your working copy even if the installed package is broken. The
+      <code>src/</code> layout forces you to install the package and test what you would ship,
+      the way a first-article inspection takes a part off the production line rather than the
+      prototype off the bench.
+    </p>
+    <p>
+      The source says naming is the single most useful habit, and shows a badly named update
+      loop beside a well-named one. The advice is right. The well-named code does nothing:
+    </p>
+    <ul>
+      <li>With a weight stored as a Python number, <code>{"w": 1.0}</code>, and a gradient of
+        0.5, one step at learning rate 0.1 leaves the weight at <b>1.0</b>. With the weight
+        stored as a NumPy array it becomes 0.95 (<code>[Ch15 s10]</code>).</li>
+      <li>The reason: <code>for name, param in parameters.items(): param -= &hellip;</code>
+        computes a new number and points the loop&rsquo;s local name <code>param</code> at
+        it. The dictionary still holds the old number. An array is changed in place by
+        <code>-=</code>, so the dictionary sees the change. The badly named version has the
+        same bug, and both read a global <code>gradients</code> they were never given.</li>
+    </ul>
+    <p>
+      It is a bug of exactly the kind file 04 says ML code hides: nothing crashes, the model
+      quietly fails to learn. A test that checked the weight moved would have caught it, which
+      is &sect;15&rsquo;s subject.
+    </p>
+    <p>
+      The design patterns the source lists are lookup tables and connections. A
+      <b>registry</b> maps a name in the configuration file to the code that builds it:
+      <code>MODEL_REGISTRY["transformer"]</code> returns the transformer class, and adding a
+      model adds one line. That is a part catalogue: the order names a part number, the
+      catalogue returns the part, and a number not in the catalogue is refused at once (here,
+      with a <code>KeyError</code>). A <b>callback</b> is code the training loop calls at fixed
+      events; the source&rsquo;s early-stopping callback is correct, stopping five epochs after
+      the best loss (<code>[Ch15 s10]</code>).
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same structure: an interface control drawing</div>
+      <p style="margin-bottom:0">
+        <b>Dependency injection</b> means a component is handed the things it uses instead of
+        building them itself: <code>Trainer(logger)</code> rather than a trainer that creates
+        its own W&amp;B logger inside. An interface control drawing specifies only the mating
+        features of a part, so any supplier&rsquo;s part that meets them will fit. A trainer
+        that accepts any object with a <code>log</code> method can be tested with a fake one,
+        which is a dummy part made to the interface drawing so the assembly can be checked
+        without the real supplier.
+      </p>
+    </div>
+    <p>
+      The rest of the section (short functions, single responsibility, &ldquo;extract it on
+      the third copy, not the first&rdquo;, named constants instead of bare numbers) is sound
+      practice and judgment rather than anything computable. A named constant is the software
+      form of a general note on a drawing, <code>ALL FILLETS R2 UNLESS STATED</code>: one
+      place to read the value and one place to change it.
+    </p>
+  </div>
+</section>
+
+<section id="config">
+  <div class="col">
+    <div class="sechead"><span class="secnum">11</span><h2>Configuration is a tabulated drawing</h2>
+      <a class="srcref" href="@F3@" target="_blank" rel="noopener">src 03. codebase design &#8599;</a>
+    </div>
+    <p>
+      Hyperparameters, paths and model settings go in a configuration file rather than in the
+      code, usually <b>YAML</b>: indented <code>key: value</code> lines. The source&rsquo;s best
+      practice is a base file holding every default plus one small file per experiment that
+      overrides only what changes.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same structure: a tabulated drawing</div>
+      <p style="margin-bottom:0">
+        A tabulated drawing defines a family of parts once and lists, for each dash number,
+        only the dimensions that differ. A base config with per-experiment overrides is the
+        same document. The source&rsquo;s rule &ldquo;track every experiment&rsquo;s config
+        alongside its results&rdquo; is marking the dash number on the part.
+      </p>
+    </div>
+    <p>
+      The source&rsquo;s example YAML contains a bug that will not announce itself. Loaded
+      with PyYAML, the most common Python reader, <code>learning_rate: 3e-4</code> becomes the
+      text <code>'3e-4'</code>, not a number (<code>[Ch15 s11]</code>). PyYAML follows version 1.1
+      of the YAML rules, under which a number in exponent form must contain a decimal
+      point and a signed exponent:
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>What PyYAML 6.0.1 makes of six ways to write a small number.</caption>
+      <thead><tr><th>Written</th><th class="mono">3e-4</th><th class="mono">1e-3</th><th class="mono">1.0e3</th><th class="mono">3.0e-4</th><th class="mono">2.1e-4</th><th class="mono">1.0e+3</th></tr></thead>
+      <tbody>
+        <tr><td>Loaded as</td><td><span class="flag bad">text</span></td><td><span class="flag bad">text</span></td><td><span class="flag bad">text</span></td><td><span class="flag ok">number</span></td><td><span class="flag ok">number</span></td><td><span class="flag ok">number</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      What happens next depends on luck. <code>0.5 * lr</code> raises a <code>TypeError</code>,
+      which is the good outcome. <code>lr * num_gpus</code> with two GPUs silently gives the
+      text <code>'3e-43e-4'</code>, because multiplying text by a whole number repeats it. The
+      same reader turns the key <code>on</code> in the source&rsquo;s CI file (&sect;18) into
+      the value <code>True</code>, since the old rules read on/off and yes/no as true and false
+      (<code>[Ch15 s11]</code>). GitHub reads its own workflow files with a parser that does not
+      do this (reported), which is why the file works there. The remedies are to write
+      <code>3.0e-4</code>, or better, to check types when the file is loaded, which the
+      Pydantic models of file 03&rsquo;s API section do.
+    </p>
+    <p>
+      One more mismatch, found by reading rather than running: the source&rsquo;s Hydra example
+      overrides <code>training.lr=1e-3</code>, but its YAML calls the key
+      <code>learning_rate</code>. An override must name a key that exists; Hydra refuses an
+      unknown key unless it is marked as an addition (reported).
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where the analogy breaks</div>
+      <p style="margin-bottom:0">
+        A tabulated drawing is read by people who share the conventions of the drawing office;
+        <code>3e-4</code> is a number to every one of them. A configuration file is read by a
+        parser whose rules you did not write and may not know. The checker of a tabulated
+        drawing would never think to ask whether a dimension will be read as a dimension; the
+        checker of a config file has to.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="logging">
+  <div class="col">
+    <div class="sechead"><span class="secnum">12</span><h2>Logging that actually logs</h2>
+      <a class="srcref" href="@F3@" target="_blank" rel="noopener">src 03. codebase design &#8599;</a>
+    </div>
+    <p>
+      A <b>log</b> is the running record a program keeps of what it did. Python&rsquo;s
+      <code>logging</code> module gives each message a level (DEBUG, INFO, WARNING, ERROR,
+      CRITICAL) so that routine messages can be filtered out in production, and sends messages
+      to <b>handlers</b> that write them somewhere. The source&rsquo;s reasons for preferring
+      it to <code>print</code> are right. Its example, run exactly as printed, produces two
+      lines (<code>[Ch15 s12]</code>):
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>The source&rsquo;s logging example, run as printed.</caption>
+      <thead><tr><th>Call</th><th>Printed</th></tr></thead>
+      <tbody>
+        <tr><td><code>logger.info("Epoch %d: loss=%.4f, lr=%.6f", &hellip;)</code></td><td>nothing</td></tr>
+        <tr><td><code>logger.warning("GPU memory &gt;90%%, &hellip;")</code></td><td><code>GPU memory &gt;90%%, consider reducing batch size</code></td></tr>
+        <tr><td><code>logger.error("Failed to load checkpoint: %s", path)</code></td><td><code>Failed to load checkpoint: ck.pt</code></td></tr>
+        <tr><td><code>logger.info("training_step", extra={"epoch": 5, &hellip;})</code></td><td>nothing</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <ul>
+      <li><b>The INFO lines vanish.</b> <code>setLevel(INFO)</code> lets INFO messages through
+        the logger, but no handler was ever attached, so Python falls back to a last-resort
+        handler that prints WARNING and above only. The &ldquo;normal operation&rdquo; message,
+        the one you most want in a training log, is the one that disappears.</li>
+      <li><b>The doubled percent sign stays doubled.</b> <code>%%</code> becomes
+        <code>%</code> only when the message is formatted, and it is formatted only when
+        arguments are passed. This call passes none.</li>
+      <li><b>The structured fields never appear.</b> <code>extra=</code> attaches the values to
+        the log record, but nothing prints them unless the output format names them. Even with
+        <code>logging.basicConfig(level=logging.INFO)</code>, which brings the INFO lines back,
+        the line reads <code>training_step</code> and nothing else. Machine-readable JSON needs
+        a formatter that writes it.</li>
+    </ul>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same structure: a data-acquisition channel</div>
+      <p style="margin-bottom:0">
+        A test rig&rsquo;s acquisition system has channels with thresholds and recorders
+        assigned to them. Setting a channel&rsquo;s threshold does nothing if no recorder is
+        assigned; the signal passes the threshold and goes nowhere. The source&rsquo;s logger
+        is that channel. The fix is one line at program start,
+        <code>logging.basicConfig(level=logging.INFO, format=&hellip;)</code>, which assigns
+        the recorder, and a check on the first run that the log file actually contains an INFO
+        line.
+      </p>
+    </div>
+    <p>
+      The API material that follows in file 03 (REST endpoints, FastAPI, gRPC) is where a
+      trained model becomes a service. Serving is Sheet 17&rsquo;s subject; the source&rsquo;s
+      FastAPI example is a fair minimal sketch and is not repeated here. Its claim that gRPC is
+      faster than REST for service-to-service calls is reported, not measured.
+    </p>
+  </div>
+</section>
+
+<section id="packaging">
+  <div class="col">
+    <div class="sechead"><span class="secnum">13</span><h2>Packaging, pinning, and interchangeability</h2>
+      <a class="srcref" href="@F3@" target="_blank" rel="noopener">src 03. codebase design &#8599;</a>
+    </div>
+    <p>
+      A <b>package</b> is code made installable, so that other code imports it by name. Its
+      description lives in <code>pyproject.toml</code>: name, version, dependencies, and a
+      <code>[build-system]</code> table naming the <b>build backend</b>, the program pip calls
+      to turn the source into an installable file. The source names
+      <code>setuptools.backends._legacy:_Backend</code>. In setuptools 68.1.2 that module does
+      not exist; pip, given the source&rsquo;s file, stops with <code>BackendUnavailable</code>
+      (exit status 2). The standard backend, <code>setuptools.build_meta</code>, loads in the same
+      project and answers pip&rsquo;s first request (<code>[Ch15 s13]</code>). Copy the
+      source&rsquo;s file and nothing installs.
+    </p>
+    <p>
+      A dependency is declared with a version rule, and the rules mean different things
+      (<code>[Ch15 s13]</code>, checked with Python&rsquo;s own <code>packaging</code>
+      library): <code>torch&gt;=2.0</code> accepts 3.0; <code>torch~=2.2</code> accepts 2.9
+      but not 3.0; <code>torch==2.2.1</code> accepts 2.2.1 and nothing else.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same structure: form, fit and function</div>
+      <p>
+        A drawing office keeps a part&rsquo;s number through a change that preserves form, fit
+        and function, and only raises its revision; a change that breaks interchangeability
+        gets a new part number. Semantic versioning, a convention most Python packages follow
+        (reported), says the same with three numbers: <code>MAJOR.MINOR.PATCH</code>, where a
+        new MAJOR number announces that something no longer fits.
+      </p>
+      <p style="margin-bottom:0">
+        Read the rules that way. <code>&gt;=2.0</code> is &ldquo;revision 2 or any later one,
+        including one that no longer fits&rdquo;. <code>~=2.2</code> is &ldquo;any later revision
+        of the same part number&rdquo;. <code>==2.2.1</code> is &ldquo;this revision
+        only&rdquo;. The file <code>pip freeze</code> writes, every package at one exact
+        version, is the as-built record of an environment.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where the analogy breaks</div>
+      <p style="margin-bottom:0">
+        A change board enforces form-fit-function. Semantic versioning is a promise each
+        package&rsquo;s authors make about their own releases, and the source itself warns that
+        a minor version can change numerical results. So the two jobs separate. A library
+        declares a range, saying what it is compatible with; an experiment or a deployment pins
+        exact versions, saying what it was built with. The source&rsquo;s advice to pin is right
+        for the second job and wrong for the first: a library that pins exactly cannot be
+        installed beside any other library that pins differently.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="agents">
+  <div class="col">
+    <div class="sechead"><span class="secnum">14</span><h2>Coding agents: drawn, checked, approved</h2>
+      <a class="srcref" href="@F3@" target="_blank" rel="noopener">src 03. codebase design &#8599;</a>
+    </div>
+    <p>
+      File 03 closes with advice on AI coding agents: use them for boilerplate, tests,
+      mechanical refactoring and first drafts; do not hand them architecture, security or
+      code you cannot explain; read every line; let tests, type checks and linters catch what
+      review misses. This is judgment, not something a calculation can confirm, and it is
+      marked here as the source&rsquo;s opinion. It is sensible. Its one piece of arithmetic is
+      illustrative: 10 minutes generating plus 120 minutes debugging is 130 minutes, 4.3 times
+      the 30 minutes of writing it by hand (<code>[Ch15 s14]</code>).
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same roles: the title block</div>
+      <p style="margin-bottom:0">
+        A drawing&rsquo;s title block has three signatures: drawn, checked, approved. The
+        draftsman can be fast and junior; the checker answers for the drawing being right; the
+        approver answers for it being the right drawing. The source&rsquo;s mental model,
+        &ldquo;you are the senior engineer, the agent is the junior&rdquo;, puts the agent in the
+        first box and you in the other two. Nobody signs as checker for a drawing they have not
+        read.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks</div>
+      <p style="margin-bottom:0">
+        A junior draftsman&rsquo;s mistakes tend to be consistent and explainable: the same
+        misread convention, every time. An agent can produce fluent text that cites a function
+        or an option that does not exist, which the source calls a hallucinated API, and nothing
+        in the prose looks different. The source also says code that passes your tests is more
+        likely correct. That holds only if the tests can fail, and &sect;15 shows a test from
+        this very chapter that cannot. This sheet was itself drafted by an AI agent; every
+        number on it was then recomputed by running code, which is the source&rsquo;s advice
+        taken literally.
+      </p>
+    </div>
+  </div>
+</section>
