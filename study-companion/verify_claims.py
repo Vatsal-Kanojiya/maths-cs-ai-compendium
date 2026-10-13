@@ -5534,6 +5534,29 @@ def _ch15():
     say("s17", f"  on a model with dropout active it has teeth: seeded {det_test(drop_model, True)}, unseeded {det_test(drop_model, False)}",
         det_test(drop_model, True) and not det_test(drop_model, False))
 
+    # --- s18: a fail-fast pipeline is a sequential inspection: order by c/p -------------------------------
+    print()
+    def ff_cost(order, c, p):
+        tot, reach = 0.0, 1.0
+        for i in order:
+            tot += reach * c[i]; reach *= (1 - p[i])
+        return tot
+    okf = True; naive_worse = 0
+    for _t in range(300):
+        k = rng15.randint(2, 6)
+        c = [rng15.uniform(1, 600) for _ in range(k)]; p = [rng15.uniform(0.01, 0.6) for _ in range(k)]
+        best = min(ff_cost(o, c, p) for o in itertools.permutations(range(k)))
+        okf &= abs(ff_cost(sorted(range(k), key=lambda i: c[i] / p[i]), c, p) - best) < 1e-9 * best
+        naive_worse += ff_cost(sorted(range(k), key=lambda i: c[i]), c, p) > best + 1e-9
+    say("s18", "fail-fast checks (stop at the first failure): ordering by cost / P(fail), smallest first, == the best "
+        "permutation, 300 random pipelines", okf)
+    say("s18", f"  'cheapest first' alone is worse in {naive_worse}/300", naive_worse > 0)
+    c3, p3 = [5, 60, 600], [0.20, 0.05, 0.10]
+    ci_o = sorted(range(3), key=lambda i: c3[i] / p3[i])
+    say("s18", f"lint 5 s fails 20%, types 60 s fails 5%, tests 600 s fails 10%: best order {ci_o}, expected "
+        f"{ff_cost(ci_o, c3, p3):.0f} s vs {ff_cost([2, 1, 0], c3, p3):.0f} s tests-first",
+        ci_o == [0, 1, 2] and abs(ff_cost([0, 1, 2], c3, p3) - (5 + 0.8 * 60 + 0.8 * 0.95 * 600)) < 1e-9)
+
     # --- s19: containers: the interpreter's version is part of the path ---------------------------------
     print()
     import site

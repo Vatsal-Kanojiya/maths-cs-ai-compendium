@@ -1561,3 +1561,388 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     </div>
   </div>
 </section>
+
+<section id="gauge">
+  <div class="col">
+    <div class="sechead"><span class="secnum">15</span><h2>A test is a gauge, and this one is too wide</h2>
+      <a class="srcref" href="@F4@" target="_blank" rel="noopener">src 04. testing and QA &#8599;</a>
+    </div>
+    <p>
+      A <b>test</b> is a small program that runs a piece of code on chosen inputs and checks
+      the result with an <code>assert</code>, a statement that stops with a failure if its
+      condition is false. <b>pytest</b> runs every function whose name starts with
+      <code>test_</code> and reports which ones failed. The source&rsquo;s test pyramid, many
+      fast unit tests, fewer integration tests, a handful of slow end-to-end tests, is
+      receiving, in-process and final inspection: check components cheaply and often, check
+      the assembly less often, and run the full functional test rarely because it is slow.
+    </p>
+    <p>
+      Here is the source&rsquo;s first unit test, for the <code>normalise_image</code>
+      function file 03 defined as <code>(image - mean) / std</code>:
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>The source&rsquo;s test, abridged. The comment is the source&rsquo;s.</caption>
+      <tbody>
+        <tr><td class="mono">image = np.array([0, 128, 255], dtype=np.uint8)<br>result = normalise_image(image, mean=128, std=128)<br>assert result.min() &gt;= -1.0<br>assert result.max() &lt;= 1.0<br>assert abs(result[1]) &lt; 1e-6  # 128 normalised by mean=128 should be ~0</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      The correct answer is \([-1,\ 0,\ 0.9921875]\). The function, run as printed on these
+      8-bit pixels, returns \([+1.0,\ 0,\ 0.9921875]\): black comes out as the brightest
+      possible value (<code>[Ch15 s15]</code>). The pixels are stored as unsigned 8-bit
+      integers, which hold 0 to 255 and wrap around like an odometer, so \(0-128\) gives 128,
+      and 128/128 is 1. The test checks that every value lies between &minus;1 and 1 and that
+      the middle one is 0. All three hold. <b>The test passes.</b>
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: an assertion is a limit gauge</div>
+      <p style="margin-bottom:0">
+        A GO / NOT GO gauge answers one question, inside the limits or not, and an
+        <code>assert</code> answers the same question about a computed value. The rule for
+        gauges carries over exactly: the gauge&rsquo;s acceptance band must sit inside the
+        tolerance, or it accepts bad parts. The source&rsquo;s test is a gauge with limits of
+        &minus;1 and +1 applied to values whose specification is three exact numbers. It is a
+        Ø20&nbsp;h7 shaft checked with a gauge that accepts anything from 19 to 21 mm.
+      </p>
+    </div>
+    <p>
+      How wide is it? The way to measure a gauge is to present it with parts whose status you
+      already know. The verification script wrote six versions of the normaliser, one correct
+      and five wrong in ways that happen in practice, and put each through the source&rsquo;s
+      two tests and two others: an exact-value test, which compares all three outputs with the
+      correct numbers, and a round-trip test, which undoes the normalisation and checks that the
+      pixels come back (<code>[Ch15 s15]</code>).
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Which tests catch which version. &ldquo;Caught&rdquo; means the test failed, as it should for a wrong version.</caption>
+      <thead><tr><th>Version</th><th>Output on [0, 128, 255]</th><th>Source: range</th><th>Source: empty</th><th>Exact values</th><th>Round trip</th></tr></thead>
+      <tbody>
+        <tr><td>Correct (convert to float first)</td><td class="mono">&minus;1, 0, 0.992</td><td>passes</td><td>passes</td><td>passes</td><td>passes</td></tr>
+        <tr><td>As printed (8-bit arithmetic)</td><td class="mono">1, 0, 0.992</td><td><span class="flag bad">missed</span></td><td><span class="flag bad">missed</span></td><td><span class="flag ok">caught</span></td><td><span class="flag ok">caught</span></td></tr>
+        <tr><td>Sign reversed</td><td class="mono">1, 0, &minus;0.992</td><td><span class="flag bad">missed</span></td><td><span class="flag bad">missed</span></td><td><span class="flag ok">caught</span></td><td><span class="flag ok">caught</span></td></tr>
+        <tr><td>Returns zeros</td><td class="mono">0, 0, 0</td><td><span class="flag bad">missed</span></td><td><span class="flag bad">missed</span></td><td><span class="flag ok">caught</span></td><td><span class="flag ok">caught</span></td></tr>
+        <tr><td>Forgot to divide by std</td><td class="mono">&minus;128, 0, 127</td><td><span class="flag ok">caught</span></td><td><span class="flag bad">missed</span></td><td><span class="flag ok">caught</span></td><td><span class="flag ok">caught</span></td></tr>
+        <tr><td>Mean off by one</td><td class="mono">&minus;0.992, 0.008, 1</td><td><span class="flag ok">caught</span></td><td><span class="flag bad">missed</span></td><td><span class="flag ok">caught</span></td><td><span class="flag ok">caught</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      The source&rsquo;s two tests let three of five faults through, including a function that
+      ignores its input entirely. Either of the value tests catches all five. Measuring a test
+      suite this way, by planting known faults and counting how many it catches, has a name in
+      software, <b>mutation testing</b>, and it is not in the source. It is the attribute-gauge
+      study of measurement system analysis: reference parts of known status, presented to the
+      gauge, to find out what it actually accepts.
+    </p>
+    <p>
+      The conclusion the source draws is still right. Silent bugs that make a model
+      &ldquo;quietly worse&rdquo; are the expensive ones, and tests are how you find them. The
+      example shows the condition the source left out: a test finds them only if it can fail.
+      (Measured with NumPy 2.5.3. The source&rsquo;s pyramid description also calls the same
+      function&rsquo;s output range [0, 1]; with mean 128 and std 128 it is [&minus;1, 1].)
+    </p>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Which gauge sees which fault</div><div class="lab-tag">Predict, then test</div></div>
+    <div class="predict">
+      <p style="margin-top:0">
+        The pixels 0, 128 and 255 are stored as unsigned 8-bit integers and put through
+        <code>(image - 128) / 128</code> exactly as printed. What comes out?
+      </p>
+      <button class="pbtn" data-p3="a" type="button">&minus;1, 0, 0.992</button>
+      <button class="pbtn" data-p3="b" type="button">1, 0, 0.992</button>
+      <button class="pbtn" data-p3="c" type="button">An error: 0 &minus; 128 is negative</button>
+      <button class="pbtn" data-p3="d" type="button">0, 0, 0</button>
+      <div class="pverdict" id="pv3"></div>
+    </div>
+    <svg class="stage" id="tS" viewBox="0 0 480 260" role="img"
+         aria-label="The chosen version's three outputs on a number line against the correct values and the source test's acceptance band from minus one to one, and a grid of which tests catch the chosen version">
+      <g id="tLine"></g><g id="tGrid"></g>
+    </svg>
+    <div class="ctl">
+      <button class="btn" data-tv="printed" type="button">As printed</button>
+      <button class="btn" data-tv="correct" type="button">Correct</button>
+      <button class="btn" data-tv="sign" type="button">Sign reversed</button>
+      <button class="btn" data-tv="zeros" type="button">Returns zeros</button>
+      <button class="btn" data-tv="nodiv" type="button">Forgot std</button>
+      <button class="btn" data-tv="off1" type="button">Mean off by 1</button>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Output for<br>pixel 0</div><div class="ro-v a" id="tO">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Correct<br>value</div><div class="ro-v" id="tC">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Source&rsquo;s tests</div><div class="ro-v" id="tSrc">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Value tests</div><div class="ro-v" id="tVal">&mdash;</div></div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    The shaded band is the source test&rsquo;s acceptance zone, &minus;1 to +1. Hollow rings
+    are the correct outputs; filled dots are what the chosen version returns, with a value
+    off the scale shown as an arrow at the edge. The grid below scores the chosen version
+    against all four tests. The page computes everything itself, including the 8-bit
+    wrap-around, and agrees with the table above. Set <b>As printed</b>: the dot for pixel 0
+    sits at +1, inside the band, at the opposite end from its ring. That is the answer to the
+    prediction.
+  </div>
+</section>
+
+<section id="sampling">
+  <div class="col">
+    <div class="sechead"><span class="secnum">16</span><h2>Testing is not lot sampling, except when it is</h2>
+      <span class="srcref nolink" title="Added material: the source has no inspection theory">beyond the source</span>
+    </div>
+    <p>
+      Sheet 04 &sect;06 showed that a hypothesis test is an acceptance-sampling plan, and
+      &sect;07 named its two errors producer&rsquo;s risk and consumer&rsquo;s risk. It is
+      tempting to carry the whole apparatus over to software testing. Most of it does not
+      carry, for a reason &sect;04 has already measured: every copy of a program is
+      bit-identical, down to its name.
+    </p>
+    <p>
+      Acceptance sampling exists because units from one process vary, and you cannot afford
+      to inspect them all. A program has no unit-to-unit variation. Test one copy and you have
+      tested every copy; run a fixed test twice on the same code and you get the same answer.
+      Every software defect is therefore a <b>design defect</b>, and a test suite is not lot
+      sampling but <b>design verification</b>: first-article inspection of the one article
+      there is.
+    </p>
+    <p>
+      Sampling comes back in through a different door. A program is run on <em>inputs</em>,
+      and the inputs are where the variation lives. Random testing (the industry name is
+      property-based testing, which the source does not mention) draws \(n\) inputs at random
+      and checks a property of each output. If a bug spoils a fraction \(\theta\) of all
+      inputs, the chance that \(n\) random inputs all miss it is exactly the operating
+      characteristic of a single sampling plan with acceptance number zero:
+    </p>
+  </div>
+  <div class="mathbox col">$$P(\text{all pass}) = (1-\theta)^n, \qquad \theta_{95} = 1-0.05^{1/n} \approx \frac{3}{n}$$</div>
+  <div class="col">
+    <p>
+      The second expression inverts the first: after \(n\) passing random tests, you can say
+      with 95% confidence that \(\theta\) is below \(1-0.05^{1/n}\). That is the <b>rule of
+      three</b>, and it is close: 0.0950 against 3/30, 0.00994 against 3/300, 0.00100 against
+      3/3000 (<code>[Ch15 s16]</code>). A bug that touches 1% of inputs is found by 300 random
+      inputs with probability \(1-0.99^{300} = 0.951\); simulated, 0.949.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: a zero-failure demonstration test</div>
+      <p style="margin-bottom:0">
+        Reliability engineering has the same calculation as a hand procedure: to demonstrate
+        reliability \(R\) at confidence \(C\) with no failures allowed, test
+        \(n = \ln(1-C)/\ln R\) units. Put \(R = 1-\theta\) and \(C = 0.95\) and it is the rule
+        of three. The formulas are the same and so is the sentence that goes with them:
+        &ldquo;we saw no failures in \(n\) trials, so the failure rate is probably below about
+        \(3/n\)&rdquo;.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks: bugs are not scattered at random</div>
+      <p style="margin-bottom:0">
+        The formula assumes the bug is spread through the inputs like defectives through a
+        lot. Bugs cluster at boundaries: zero, empty, the largest value, the first and last
+        element. A bug triggered by exactly one 32-bit input is found by 1,000 random inputs
+        with probability \(2.3\times10^{-7}\), and by one deliberate test of that input with
+        certainty (<code>[Ch15 s16]</code>). So most of a good test suite is chosen, not drawn:
+        boundary values first, which is what the source&rsquo;s empty-input test is doing, and
+        random inputs as a supplement that finds what nobody thought to choose.
+      </p>
+    </div>
+    <p>
+      The two risks do carry over, renamed. A test that sometimes fails on correct code is
+      called <b>flaky</b>: it is producer&rsquo;s risk, rejecting a good change. A bug that gets
+      through is consumer&rsquo;s risk. And a test suite is a <b>series system</b> in Sheet 05
+      &sect;03&rsquo;s sense, because a single red test stops the change. With \(N\) tests each
+      flaky with probability \(f\):
+    </p>
+  </div>
+  <div class="mathbox col">$$\alpha_{\text{suite}} = 1-(1-f)^N$$</div>
+  <div class="col">
+    <p>
+      A thousand tests, each flaky one time in a thousand, turn a correct change red
+      <b>63.2%</b> of the time (<code>[Ch15 s16]</code>). That is why teams rerun failures.
+      Rerunning once and passing if either run passes cuts the false-alarm rate to about
+      \(1.0\times10^{-3}\), and a deterministic bug still fails both runs. But a bug that fails
+      half the time now slips through each test with probability \(0.5^2 = 25\%\) instead of
+      50%. The same trade as Sheet 04 &sect;07: with nothing else changed, lowering one risk
+      raises the other; only better information, here a test that is not flaky, lowers both.
+    </p>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Both risks on one curve</div><div class="lab-tag">Predict, then move</div></div>
+    <div class="predict">
+      <p style="margin-top:0">
+        A suite of 1,000 tests, each flaky 0.1% of the time. A change with no bug at all is
+        pushed. How often does the suite go red?
+      </p>
+      <button class="pbtn" data-p4="a" type="button">0.1% of the time</button>
+      <button class="pbtn" data-p4="b" type="button">About 10%</button>
+      <button class="pbtn" data-p4="c" type="button">About 63%</button>
+      <button class="pbtn" data-p4="d" type="button">Never: there is no bug</button>
+      <div class="pverdict" id="pv4"></div>
+    </div>
+    <svg class="stage" id="oS" viewBox="0 0 480 270" role="img"
+         aria-label="Operating characteristic curve: probability the suite goes green against the fraction of inputs a bug spoils, on a logarithmic axis. The gap at the left is producer's risk; the height at one percent is consumer's risk.">
+      <g id="oGrid"></g><g id="oCurve"></g><g id="oLab"></g>
+    </svg>
+    <div class="ctl">
+      <label for="oN">Tests in suite N</label>
+      <input type="range" id="oN" min="0" max="6" value="4" step="1">
+      <span class="ro-v" id="oNv" style="min-width:56px">1000</span>
+    </div>
+    <div class="ctl">
+      <label for="oF">Flake rate f, %</label>
+      <input type="range" id="oF" min="0" max="7" value="4" step="1">
+      <span class="ro-v" id="oFv" style="min-width:56px">0.10</span>
+    </div>
+    <div class="ctl">
+      <label for="on">Random inputs n</label>
+      <input type="range" id="on" min="0" max="10" value="6" step="1">
+      <span class="ro-v" id="onv" style="min-width:56px">300</span>
+    </div>
+    <div class="ctl">
+      <button class="btn" data-or="1" type="button">Run each test once</button>
+      <button class="btn" data-or="2" type="button">Rerun a failure once</button>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Producer&rsquo;s risk<br>(good change red)</div><div class="ro-v a" id="oA">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Green with a<br>1% bug</div><div class="ro-v" id="oB">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">95% bound<br>1 &minus; 0.05<sup>1/n</sup></div><div class="ro-v" id="oX">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Rule of three<br>3/n</div><div class="ro-v" id="o3">&mdash;</div></div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    The curve is the probability the whole suite goes green, \((1-f_{\text{eff}})^N(1-\theta)^n\),
+    against the fraction \(\theta\) of inputs a bug spoils. A perfect gauge would start at 1 on
+    the left and drop to 0. This one starts at \(0.368\) for the default settings: that gap is
+    producer&rsquo;s risk, 63.2%, the answer to the prediction. The height at \(\theta = 1\%\),
+    marked, is consumer&rsquo;s risk, 0.0180 (<code>[Ch15 s16]</code>). <b>Rerun a failure
+    once</b> replaces \(f\) by \(f^2\) and lifts the left end almost to 1, leaving the right side
+    alone; it models a bug that fails every time, so it does not show the intermittent bug that
+    reruns let through. More random inputs push the drop to the left.
+  </div>
+</section>
+
+<section id="mltests">
+  <div class="col">
+    <div class="sechead"><span class="secnum">17</span><h2>Tolerances, and tests with no teeth</h2>
+      <a class="srcref" href="@F4@" target="_blank" rel="noopener">src 04. testing and QA &#8599;</a>
+    </div>
+    <p>
+      The source&rsquo;s advice for testing ML code is sound: fix the random seeds, compare
+      floating-point results within a tolerance, check output shapes, check that gradients
+      reach every parameter, check that the model can memorise one batch, and validate the
+      data. Its details need three corrections.
+    </p>
+    <p>
+      First, &ldquo;exact comparison fails due to floating point&rdquo; is true of most values
+      and false of the one in its example. 0.5 is exactly representable in binary, and
+      <code>0.25 + 0.25 == 0.5</code> is true; <code>0.1 + 0.2 == 0.3</code> is false
+      (<code>[Ch15 s17]</code>; Sheet 13 part 1 &sect;10 explains why). The habit of comparing
+      with a tolerance is right either way.
+    </p>
+    <p>
+      Second, the tolerance is not where it appears to be. <code>np.isclose(a, b)</code>
+      passes when
+    </p>
+  </div>
+  <div class="mathbox col">$$|a-b| \le \text{atol} + \text{rtol}\cdot|b|$$</div>
+  <div class="col">
+    <p>
+      with a default <code>rtol</code> of \(10^{-5}\) that the source&rsquo;s call
+      <code>np.isclose(model_output, 0.5, atol=1e-5)</code> does not mention. Its effective
+      band is \(\pm1.5\times10^{-5}\), so it accepts \(0.5 + 1.4\times10^{-5}\) and rejects
+      \(0.5 + 1.6\times10^{-5}\). And the band is built around the <em>second</em> argument
+      only, so the comparison is not symmetric: with \(a = 1\) and \(b = 1 + 1.00001\times
+      10^{-5}\) and <code>rtol=1e-5</code>, <code>isclose(a, b)</code> is true and
+      <code>isclose(b, a)</code> is false (<code>[Ch15 s17]</code>).
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same structure: tolerance on the nominal</div>
+      <p style="margin-bottom:0">
+        A tolerance is stated about a nominal, not about a pair of measurements. 20&nbsp;&plusmn;0.02
+        means the band sits around 20. <code>np.isclose</code> treats its second argument as
+        the nominal and builds the relative part of the band from it, so put the expected value
+        second, always. <code>math.isclose</code>, in Python&rsquo;s standard library, uses the
+        larger of the two magnitudes and is symmetric (reported).
+      </p>
+    </div>
+    <p>
+      Third, the determinism test. It sets the seed, runs the model, sets the seed again, runs
+      it again, and checks the two outputs match. On a model with no randomness in its forward
+      pass, which is every model in evaluation mode, the outputs match whether or not the seed
+      is set: the test passes with <code>set_seed</code> removed entirely
+      (<code>[Ch15 s17]</code>). It only has teeth when randomness is active, as with dropout
+      in training mode, where the unseeded version does fail. Sheet 13 part 1 &sect;03 called
+      this vacuous truth, and an acceptance criterion that no part can fail is not inspecting
+      anything.
+    </p>
+    <p>
+      The source&rsquo;s other ML tests are good inspections. <b>Overfit one batch</b> is a
+      capability check on the easiest possible job: a machine that cannot hold tolerance on one
+      part will not hold it on a lot. The <b>gradient-flow</b> test can raise false alarms,
+      since a parameter that a particular batch never uses (an embedding row for a word absent
+      from the batch) legitimately has zero gradient. <b>Mocking</b> replaces an outside
+      service with a stand-in that answers through the same interface, a dummy load on a test
+      rig; the source&rsquo;s rule to mock at the boundaries and test your own logic directly
+      is right. And a pytest <b>fixture</b>, the setup a test needs, earns its name honestly:
+      a test fixture holds the item in a known state before it is measured.
+    </p>
+  </div>
+</section>
+
+<section id="ci">
+  <div class="col">
+    <div class="sechead"><span class="secnum">18</span><h2>Continuous integration is jidoka</h2>
+      <a class="srcref" href="@F4@" target="_blank" rel="noopener">src 04. testing and QA &#8599;</a>
+    </div>
+    <p>
+      <b>Continuous integration</b> (CI) means a server runs the checks automatically on every
+      push and every pull request: the source&rsquo;s workflow installs the package, runs the
+      linter <code>ruff</code>, the type checker <code>mypy</code> and the tests. A
+      <b>linter</b> checks code against rules without running it, as a checker reads a drawing
+      against the drafting standard. A <b>type checker</b> confirms that values of the right
+      kind flow into each place, which Sheet 13 part 3 &sect;02 showed is dimensional
+      homogeneity for programs.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same structure: jidoka and poka-yoke</div>
+      <p style="margin-bottom:0">
+        Jidoka is the Toyota principle that a machine stops itself when it makes a defect, so a
+        defect is never passed down the line. CI with required checks is jidoka for code: a
+        red check stops the merge, and the fault is fixed where it was made. A <b>pre-commit
+        hook</b>, which runs the linter on your own machine before git will even record the
+        commit, is poka-yoke at the operator&rsquo;s station: the mistake is caught before it
+        leaves the bench. The source&rsquo;s review labels, <code>blocking:</code>,
+        <code>suggestion:</code>, <code>nit:</code>, are defect classification: critical,
+        major, minor.
+      </p>
+    </div>
+    <p>
+      The source says that if the tests fail, &ldquo;the PR cannot be merged&rdquo;. Read the
+      workflow file: it runs the checks and reports the result, and contains no rule about
+      merging. Blocking the merge is a separate setting on the repository that makes the check
+      required (reported; GitHub calls it branch protection). Without that setting, a red check
+      is an andon lamp that nobody wired to the line stop.
+    </p>
+    <p>
+      The order of the checks matters once you see that the pipeline stops at the first
+      failure. A check costing \(c_i\) runs only if every check before it passed, so the
+      expected cost is \(\sum_i c_i \prod_{j&lt;i}(1-p_j)\), where \(p_j\) is the chance check
+      \(j\) fails. Swapping two neighbours and comparing gives the rule: run checks in
+      increasing order of \(c_i/p_i\). That is the classical result for sequencing
+      inspections that stop at the first reject, and it matched an exhaustive search on 300
+      random pipelines, where &ldquo;cheapest first&rdquo; alone was worse in 196
+      (<code>[Ch15 s18]</code>). For a linter taking 5 s that fails 20% of the time, type
+      checks taking 60 s that fail 5%, and tests taking 600 s that fail 10%, the rule gives the
+      source&rsquo;s order, with an expected 509 s per run against 658 s with the tests first.
+    </p>
+  </div>
+</section>
