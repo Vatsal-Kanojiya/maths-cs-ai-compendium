@@ -399,6 +399,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
 .mnote{font-family:var(--f-disp); font-size:12.5px; color:var(--ink-3); margin:-8px 0 16px}
 .svgfig{width:100%; height:auto; display:block; color:var(--ink)}
 .chartwrap{overflow-x:auto}
+.col p code, .col li code, .lab-foot code{overflow-wrap:anywhere}
 .sel{appearance:auto; font-family:var(--f-disp); font-size:12px; padding:5px 8px; border:1px solid var(--rule-strong);
   border-radius:2px; background:var(--sheet); color:var(--ink)}
 </style>
@@ -781,7 +782,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
   </div>
 
   <div class="lab col">
-    <div class="lab-h"><div class="lab-t">One fast core or n slow ones, same power</div><div class="lab-tag">Predict, then split</div></div>
+    <div class="lab-h"><div class="lab-t">One fast core or <span class="gk">n</span> slow ones, same power</div><div class="lab-tag">Predict, then split</div></div>
     <div class="lab-body">
     <div class="predict">
       <p style="margin-top:0">
@@ -807,10 +808,10 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
       <span class="ro-v" id="pSv" style="min-width:42px">0.25</span>
     </div>
     <div class="readout">
-      <div class="ro"><div class="ro-k">Clock per core<br>(GHz)</div><div class="ro-v" id="pF">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Clock per core<br>(<span class="gk">GHz</span>)</div><div class="ro-v" id="pF">&mdash;</div></div>
       <div class="ro"><div class="ro-k">Gain if fully<br>parallel</div><div class="ro-v a" id="pG">&mdash;</div></div>
       <div class="ro"><div class="ro-k">Break-even<br>serial fraction</div><div class="ro-v b" id="pX">&mdash;</div></div>
-      <div class="ro"><div class="ro-k">Gain at<br>your s</div><div class="ro-v c" id="pR">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Gain at<br>your <span class="gk">s</span></div><div class="ro-v c" id="pR">&mdash;</div></div>
       <div class="ro"><div class="ro-k">Power vs<br>one fast core</div><div class="ro-v" id="pP">&mdash;</div></div>
     </div>
     </div>
@@ -914,7 +915,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
       <button class="btn" id="bStart" type="button">Start weak N</button>
     </div>
     <div class="ctl">
-      <label for="bL">Loop length / P(taken)</label>
+      <label for="bL">Loop length / <span class="gk">P(taken)</span></label>
       <input type="range" id="bL" min="2" max="20" value="10" step="1">
       <span class="ro-v" id="bLv" style="min-width:42px">10</span>
     </div>
@@ -1257,12 +1258,12 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
       <span class="ro-v" id="rCv" style="min-width:32px">1</span>
     </div>
     <div class="ctl">
-      <label for="rB">Bandwidth GB/s</label>
+      <label for="rB">Bandwidth <span class="gk">GB/s</span></label>
       <input type="range" id="rB" min="10" max="100" value="50" step="1">
       <span class="ro-v" id="rBv" style="min-width:32px">50</span>
     </div>
     <div class="ctl">
-      <label for="rG">Clock GHz</label>
+      <label for="rG">Clock <span class="gk">GHz</span></label>
       <input type="range" id="rG" min="2" max="5" value="4" step="0.1">
       <span class="ro-v" id="rGv" style="min-width:32px">4.0</span>
       <button class="btn" data-rw="4" type="button">4 lanes</button>
@@ -1270,9 +1271,9 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
       <button class="btn" data-rw="16" type="button">16 lanes</button>
     </div>
     <div class="readout">
-      <div class="ro"><div class="ro-k">Peak<br>GFLOP/s</div><div class="ro-v a" id="rP">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Peak<br><span class="gk">GFLOP/s</span></div><div class="ro-v a" id="rP">&mdash;</div></div>
       <div class="ro"><div class="ro-k">Ridge<br>FLOP/B</div><div class="ro-v b" id="rR">&mdash;</div></div>
-      <div class="ro"><div class="ro-k">Attainable<br>GFLOP/s</div><div class="ro-v c" id="rA">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Attainable<br><span class="gk">GFLOP/s</span></div><div class="ro-v c" id="rA">&mdash;</div></div>
       <div class="ro"><div class="ro-k">Binding<br>station</div><div class="ro-v" id="rK">&mdash;</div></div>
     </div>
     </div>
@@ -2160,3 +2161,639 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
 
 </main>
 </div>
+
+<script>
+(function(){
+  'use strict';
+  var root=document.documentElement;
+  function dk(){var t=root.getAttribute('data-theme');
+    return t?t==='dark':(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);}
+  try{var sv=localStorage.getItem('ch16-theme'); if(sv==='dark'||sv==='light') root.setAttribute('data-theme',sv);}catch(e){}
+  var tb=document.getElementById('themebtn');
+  if(tb) tb.addEventListener('click',function(){var n=dk()?'light':'dark';
+    root.setAttribute('data-theme',n); try{localStorage.setItem('ch16-theme',n);}catch(e){}});
+  function $(id){return document.getElementById(id);}
+  function comma(n){return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,',');}
+  function predict(attr,vid,ans){
+    document.querySelectorAll('['+attr+']').forEach(function(b){
+      b.addEventListener('click',function(){
+        document.querySelectorAll('['+attr+']').forEach(function(o){o.classList.remove('picked');});
+        b.classList.add('picked');
+        var v=$(vid); v.innerHTML=ans[b.getAttribute(attr)]; v.classList.add('show');
+      });
+    });
+  }
+  function rng(seed){var s=seed>>>0; return function(){s=(s+0x6D2B79F5)>>>0; var t=s;
+    t=Math.imul(t^(t>>>15),t|1); t^=t+Math.imul(t^(t>>>7),t|61); return ((t^(t>>>14))>>>0)/4294967296;};}
+  function f1(v){return (+v).toFixed(1);}
+  function txt(x,y,s,st,anchor){return '<text x="'+f1(x)+'" y="'+f1(y)+'"'+(anchor?' text-anchor="'+anchor+'"':'')+
+    ' style="'+(st||'')+'">'+s+'</text>';}
+  function ln(x1,y1,x2,y2,st){return '<line x1="'+f1(x1)+'" y1="'+f1(y1)+'" x2="'+f1(x2)+'" y2="'+f1(y2)+'" style="'+(st||'')+'"/>';}
+  function onBtn(attr,val){document.querySelectorAll('['+attr+']').forEach(function(b){b.classList.toggle('on',b.getAttribute(attr)===String(val));});}
+  var ST={
+    tick:'font-family:var(--f-mono);font-size:10.5px;fill:var(--ink-3)',
+    lab:'font-family:var(--f-disp);font-size:12px;fill:var(--ink-2);font-weight:600',
+    small:'font-family:var(--f-disp);font-size:11px;fill:var(--ink-2)',
+    grid:'stroke:var(--rule);stroke-width:1',
+    axis:'stroke:var(--rule-strong);stroke-width:1'
+  };
+  window.__c16={$:$,comma:comma,predict:predict,rng:rng,txt:txt,ln:ln,onBtn:onBtn,ST:ST,f1:f1};
+})();
+</script>
+
+<script>
+/* ===== LAB 1 -- equal power: one fast core or n slow ones ===== */
+(function(){
+  'use strict';
+  var U=window.__c16, $=U.$, ST=U.ST;
+  var X0=62, X1=540, Y0=262, Y1=24;
+  function R(n,s){return Math.pow(n,-1/3)/(s+(1-s)/n);}
+  function draw(){
+    var n=+$('pN').value, s=+$('pSf').value;
+    $('pNv').textContent=n; $('pSv').textContent=s.toFixed(2);
+    var g=Math.pow(n,2/3), ymax=Math.max(2,Math.ceil(g+0.3));
+    function X(v){return X0+(X1-X0)*v;}
+    function Y(v){return Y0-(Y0-Y1)*v/ymax;}
+    var h='', i, step=ymax<=8?1:2;
+    for(i=0;i<=ymax;i+=step){h+=U.ln(X0,Y(i),X1,Y(i),ST.grid)+U.txt(X0-8,Y(i)+4,i+'&#215;',ST.tick,'end');}
+    for(i=0;i<=10;i+=2){var v=i/10; h+=U.ln(X(v),Y0,X(v),Y0+5,ST.axis)+U.txt(X(v),Y0+18,v.toFixed(1),ST.tick,'middle');}
+    h+=U.ln(X0,Y0,X1,Y0,ST.axis)+U.ln(X0,Y0,X0,Y1,ST.axis);
+    h+=U.txt((X0+X1)/2,Y0+34,'serial fraction s of the work',ST.lab,'middle');
+    h+=U.txt(X0+6,Y1-8,'work per second, relative to one 4.5 GHz core',ST.small);
+    h+=U.ln(X0,Y(1),X1,Y(1),'stroke:var(--ink-3);stroke-width:1.5;stroke-dasharray:5 4');
+    h+=U.txt(X1-4,Y(1)-6,'one 4.5 GHz core',ST.small,'end');
+    var pts=[]; for(i=0;i<=100;i++){var ss=i/100; pts.push(U.f1(X(ss))+','+U.f1(Y(R(n,ss))));}
+    h+='<polyline points="'+pts.join(' ')+'" style="fill:none;stroke:var(--c2);stroke-width:2.2"/>';
+    h+=U.txt(X(0.02)+4,Y(R(n,0))-8,n+' cores at '+(4.5/Math.pow(n,1/3)).toFixed(2)+' GHz',ST.lab);
+    var xs=null;
+    if(n>1){ xs=(Math.pow(n,-1/3)-1/n)/(1-1/n);
+      h+=U.ln(X(xs),Y0,X(xs),Y(1),'stroke:var(--c1);stroke-width:1.5;stroke-dasharray:3 3');
+      h+='<circle cx="'+U.f1(X(xs))+'" cy="'+U.f1(Y(1))+'" r="4.5" style="fill:var(--c1)"/>';
+      h+=U.txt(X(xs)+7,Y(1)+16,'break-even s* = '+xs.toFixed(3),ST.small); }
+    h+='<circle cx="'+U.f1(X(s))+'" cy="'+U.f1(Y(R(n,s)))+'" r="6" style="fill:var(--c3);stroke:var(--sheet);stroke-width:2"/>';
+    $('pS').innerHTML=h;
+    var f=4.5/Math.pow(n,1/3);
+    $('pF').textContent=f.toFixed(3);
+    $('pG').textContent=g.toFixed(2)+'×';
+    $('pX').textContent=xs===null?'none, n = 1':xs.toFixed(3);
+    $('pR').textContent=R(n,s).toFixed(2)+'×';
+    $('pP').textContent=(n*f*f*f/Math.pow(4.5,3)).toFixed(3)+'×';
+  }
+  ['pN','pSf'].forEach(function(id){$(id).addEventListener('input',draw);});
+  U.predict('data-p1','pv1',{
+    a:'<b>Not quite.</b> Four cores, yes, but each must slow to 4.5/4<sup>1/3</sup> = 2.835 GHz to keep the power equal. 4 &times; 2.835 / 4.5 = <b>2.52&times;</b>.',
+    b:'<b>Right.</b> Under the cube law each core runs at 4.5/4<sup>1/3</sup> = 2.835 GHz, so the total is 4<sup>2/3</sup> = 2.52&times;. The source&rsquo;s &ldquo;4&times;&rdquo; forgets the slowdown.',
+    c:'<b>Too low.</b> 1.59 is 4<sup>1/3</sup>, the factor each core slows by. The count of cores wins back more: 4 / 1.59 = <b>2.52&times;</b>.',
+    d:'<b>No.</b> That would be true if power grew in proportion to frequency. It grows as its cube, so slower cores buy a lot of power: <b>2.52&times;</b>.'});
+  draw();
+})();
+</script>
+
+<script>
+/* ===== LAB 2 -- making to forecast: 1-bit and 2-bit predictors ===== */
+(function(){
+  'use strict';
+  var U=window.__c16, $=U.$, ST=U.ST;
+  var mode='loop', bits=2, weakN=false;
+  function pattern(len){
+    var v=+$('bL').value, out=new Array(len), r=U.rng(16), i;
+    for(i=0;i<len;i++){
+      if(mode==='loop') out[i]=(i%v)!==v-1;
+      else if(mode==='alt') out[i]=(i%2)===0;
+      else out[i]=r()<v/20;
+    }
+    return out;
+  }
+  function run(pat){
+    var top=(1<<bits)-1, thr=(top+1)/2, st=bits===2?(weakN?1:2):(weakN?0:1), miss=0, pred=[], states=[];
+    for(var i=0;i<pat.length;i++){
+      var p=st>=thr; pred.push(p); states.push(st);
+      if(p!==pat[i]) miss++;
+      st=pat[i]?Math.min(top,st+1):Math.max(0,st-1);
+    }
+    return {miss:miss/pat.length, pred:pred, last:st};
+  }
+  function theory(){
+    var v=+$('bL').value;
+    if(mode==='loop'){
+      if(bits===1) return Math.min(1,2/v);
+      if(v===2&&weakN) return 1;
+      return 1/v;
+    }
+    if(mode==='alt') return (bits===1||weakN)?1:0.5;
+    return null;
+  }
+  function draw(){
+    var v=+$('bL').value;
+    $('bLv').textContent=mode==='rand'?(v*5)+'%':(mode==='alt'?'— n/a':v);
+    var pat=pattern(10000), res=run(pat), h='', i;
+    /* states */
+    var ns=bits===2?4:2, names=bits===2?['strong N','weak N','weak T','strong T']:['predict N','predict T'];
+    var cx0=bits===2?95:190, dx=bits===2?123:180;
+    for(i=0;i<ns;i++){
+      var cx=cx0+i*dx, on=i===res.last;
+      if(i<ns-1){
+        h+=U.ln(cx+24,44,cx+dx-24,44,'stroke:var(--ink-3);stroke-width:1.2');
+        h+=U.txt(cx+dx/2,38,'T →',ST.tick,'middle');
+        h+=U.ln(cx+24,62,cx+dx-24,62,'stroke:var(--ink-3);stroke-width:1.2');
+        h+=U.txt(cx+dx/2,76,'← N',ST.tick,'middle');
+      }
+      var predT=bits===2?i>=2:i===1;
+      h+='<circle cx="'+cx+'" cy="53" r="20" style="fill:'+(on?'var(--accent-soft)':'var(--sheet)')+';stroke:'+(predT?'var(--c2)':'var(--ink-3)')+';stroke-width:'+(on?3:1.5)+'"/>';
+      h+=U.txt(cx,58,String(i),'font-family:var(--f-mono);font-size:14px;font-weight:600;fill:var(--ink)','middle');
+      h+=U.txt(cx,96,names[i],ST.small,'middle');
+    }
+    h+=U.txt(10,118,'Ring = state after 10,000 branches; blue ring = predicts taken.',ST.tick);
+    /* strip of the first 48 */
+    var x0=86, w=9.5, gap=0.9;
+    h+=U.txt(x0-8,152,'actual',ST.small,'end')+U.txt(x0-8,184,'predicted',ST.small,'end');
+    for(i=0;i<48;i++){
+      var x=x0+i*(w+gap);
+      h+='<rect x="'+U.f1(x)+'" y="142" width="'+w+'" height="13" rx="1.5" style="'+(pat[i]?'fill:var(--c2)':'fill:var(--sheet);stroke:var(--ink-3);stroke-width:1')+'"/>';
+      h+='<rect x="'+U.f1(x)+'" y="174" width="'+w+'" height="13" rx="1.5" style="'+(res.pred[i]?'fill:var(--c2);opacity:.55':'fill:var(--sheet);stroke:var(--ink-3);stroke-width:1')+'"/>';
+      if(res.pred[i]!==pat[i]) h+='<rect x="'+U.f1(x+2)+'" y="194" width="'+(w-4)+'" height="9" style="fill:var(--brk)"/>';
+    }
+    h+=U.txt(x0,226,'first 48 branches; orange tick = miss',ST.tick);
+    $('bS').innerHTML=h;
+    var th=theory();
+    $('bM').textContent=(100*res.miss).toFixed(1)+'%';
+    $('bT').textContent=th===null?('≥ '+(100*Math.min(v/20,1-v/20)).toFixed(1)+'%'):(100*th).toFixed(1)+'%';
+    $('bC1').textContent=(res.miss*24).toFixed(2);
+    $('bC2').textContent=(res.miss*15).toFixed(2);
+  }
+  document.querySelectorAll('[data-bp]').forEach(function(b){b.addEventListener('click',function(){
+    mode=b.getAttribute('data-bp'); U.onBtn('data-bp',mode); draw();});});
+  document.querySelectorAll('[data-bk]').forEach(function(b){b.addEventListener('click',function(){
+    bits=+b.getAttribute('data-bk'); U.onBtn('data-bk',bits); draw();});});
+  $('bStart').addEventListener('click',function(){weakN=!weakN; $('bStart').classList.toggle('on',weakN); draw();});
+  $('bL').addEventListener('input',draw);
+  U.predict('data-p2','pv2',{
+    a:'<b>No.</b> The exit is a surprise every time: the counter sits at &ldquo;strong taken&rdquo; and the tenth branch is not taken. <b>10%</b>.',
+    b:'<b>Right.</b> One miss per ten, at the exit. The exit only moves the counter from 3 to 2, which still predicts taken, so the re-entry is caught.',
+    c:'<b>That is the 1-bit predictor.</b> It flips on the exit, so it also misses the first branch of the next pass: 2 in 10. The 2-bit counter&rsquo;s hysteresis halves it to <b>10%</b>.',
+    d:'<b>No.</b> The pattern is regular; nine in ten go one way. <b>10%</b>.'});
+  draw();
+})();
+</script>
+
+<script>
+/* ===== LAB 3 -- the drilling head: strokes, masks, divergence, pallets ===== */
+(function(){
+  'use strict';
+  var U=window.__c16, $=U.$, ST=U.ST;
+  var W=8;
+  function deep(i,n,d){return Math.floor((i+1)*d/n)>Math.floor(i*d/n);}
+  function draw(){
+    var n=+$('hN').value; $('hD').max=n; if(+$('hD').value>n) $('hD').value=n;
+    var d=+$('hD').value, o=+$('hO').value;
+    $('hNv').textContent=n; $('hDv').textContent=d; $('hOv').textContent=o;
+    var G=Math.ceil(n/W), boxes=[], g, j, i;
+    for(g=0;g<G;g++){
+      var hs=[]; var hasS=false, hasD=false;
+      for(j=0;j<W;j++){ i=g*W+j; if(i<n){var dp=deep(i,n,d); hs.push(dp?2:1); if(dp) hasD=true; else hasS=true;} else hs.push(0); }
+      if(hasS&&hasD){ boxes.push({g:g,hs:hs,cut:1}); boxes.push({g:g,hs:hs,cut:2}); }
+      else boxes.push({g:g,hs:hs,cut:hasD?2:1});
+    }
+    var K2=boxes.length, slots=K2*W, gapB=8, avail=530-(K2-1)*gapB, cell=Math.min(20,avail/slots), h='';
+    var x=15+Math.max(0,(530-(slots*cell+(K2-1)*gapB))/2), r=Math.max(1.8,cell*0.34);
+    h+=U.txt(15,16,'strokes of the head ('+W+' spindles each)',ST.small);
+    boxes.forEach(function(b,k){
+      var bw=W*cell;
+      h+='<rect x="'+U.f1(x-1)+'" y="28" width="'+U.f1(bw+2)+'" height="'+U.f1(Math.max(26,cell+12))+'" rx="2" style="fill:var(--sheet-2);stroke:var(--rule-strong);stroke-width:1"/>';
+      for(j=0;j<W;j++){
+        var cx=x+cell*(j+0.5), cy=28+Math.max(26,cell+12)/2, kind=b.hs[j];
+        if(kind===b.cut) h+='<circle cx="'+U.f1(cx)+'" cy="'+U.f1(cy)+'" r="'+U.f1(r)+'" style="fill:'+(kind===2?'var(--c2)':'var(--ink-2)')+'"/>';
+        else h+='<circle cx="'+U.f1(cx)+'" cy="'+U.f1(cy)+'" r="'+U.f1(r)+'" style="fill:none;stroke:var(--ink-3);stroke-width:1;stroke-dasharray:2 2"/>';
+      }
+      if(K2<=12||k%2===0) h+=U.txt(x+bw/2,28+Math.max(26,cell+12)+14,String(k+1),ST.tick,'middle');
+      x+=bw+gapB;
+    });
+    /* pallets */
+    var c0=24, cw=8.1, y0=150, nf=64, L=Math.ceil(n/W), split=0;
+    h+=U.txt(15,y0-14,'the same floats in memory: 64-byte lines of 16 floats, starting '+o+' float'+(o===1?'':'s')+' in',ST.small);
+    for(i=0;i<nf;i++){
+      var used=i>=o&&i<o+n;
+      h+='<rect x="'+U.f1(c0+i*cw)+'" y="'+y0+'" width="'+U.f1(cw-1)+'" height="16" style="fill:'+(used?'var(--accent-soft)':'var(--sheet)')+';stroke:var(--rule);stroke-width:0.8"/>';
+    }
+    for(i=0;i<=4;i++) h+=U.ln(c0+i*16*cw-0.5,y0-6,c0+i*16*cw-0.5,y0+24,'stroke:var(--ink);stroke-width:2');
+    for(g=0;g<L;g++){
+      var a=o+g*W, b2=a+W-1, sp=Math.floor(a/16)!==Math.floor(b2/16); if(sp) split++;
+      var yb=y0+30+(g%2)*14;
+      h+=U.ln(c0+a*cw+1,yb,c0+(b2+1)*cw-2,yb,'stroke:'+(sp?'var(--brk)':'var(--c3)')+';stroke-width:3');
+      h+=U.ln(c0+a*cw+1,yb-5,c0+a*cw+1,yb,'stroke:'+(sp?'var(--brk)':'var(--c3)')+';stroke-width:1.5');
+      h+=U.ln(c0+(b2+1)*cw-2,yb-5,c0+(b2+1)*cw-2,yb,'stroke:'+(sp?'var(--brk)':'var(--c3)')+';stroke-width:1.5');
+    }
+    h+=U.txt(15,y0+84,'bracket = one '+(4*W)+'-byte load; orange = it straddles two lines',ST.tick);
+    $('hS').innerHTML=h;
+    $('hK').textContent=G;
+    $('hK2').textContent=K2;
+    $('hU').textContent=(100*n/(K2*W)).toFixed(1)+'%';
+    $('hSp').textContent=split+' of '+L+' ('+Math.round(100*split/L)+'%)';
+    $('hSq').textContent=(o%W===0)?'0% (aligned)':Math.round(100*4*W/64)+'%';
+  }
+  document.querySelectorAll('[data-hw]').forEach(function(b){b.addEventListener('click',function(){
+    W=+b.getAttribute('data-hw'); U.onBtn('data-hw',W); draw();});});
+  ['hN','hD','hO'].forEach(function(id){$(id).addEventListener('input',draw);});
+  U.predict('data-p3','pv3',{
+    a:'<b>No.</b> One stroke cuts at most 8 holes. Two are needed, and the second has 6 spindles idle: <b>2 strokes, 62.5%</b>.',
+    b:'<b>Right.</b> &lceil;10/8&rceil; = 2 strokes, 16 spindle-strokes, 10 of them cutting. The idle six are the masked lanes.',
+    c:'<b>Half right.</b> Two strokes, but the second cuts only 2 holes; 6 of its 8 spindles are idle. 10/16 = <b>62.5%</b>.',
+    d:'<b>That is the scalar machine,</b> one spindle doing ten strokes. The head does it in <b>2</b>.'});
+  draw();
+})();
+</script>
+
+<script>
+/* ===== LAB 4 -- the roofline as a two-station line ===== */
+(function(){
+  'use strict';
+  var U=window.__c16, $=U.$, ST=U.ST;
+  var lanes=8, fmaFlops=2, noOverlap=false;
+  var OPS=[[0.125,'ReLU'],[0.25,'naive matmul'],[0.625,'layer norm'],[2,'8×8 tiles'],[16,'64×64 tiles'],[139.64,'conv 3×3']];
+  var X0=62, X1=540, Y0=290, Y1=18, LX0=-4, LX1=9, LY0=0, LY1=12;
+  function X(I){return X0+(X1-X0)*(Math.log2(I)-LX0)/(LX1-LX0);}
+  function Y(P){return Y0-(Y0-Y1)*(Math.log2(Math.max(P,1))-LY0)/(LY1-LY0);}
+  function draw(){
+    var C=+$('rC').value, B=+$('rB').value, G=+$('rG').value, op=+$('rOp').value;
+    $('rCv').textContent=C; $('rBv').textContent=B; $('rGv').textContent=G.toFixed(1);
+    var peak=C*G*lanes*2*fmaFlops, ridge=peak/B, h='', i;
+    function att(I){return noOverlap?1/(1/peak+1/(B*I)):Math.min(peak,B*I);}
+    [1,4,16,64,256,1024,4096].forEach(function(p){h+=U.ln(X0,Y(p),X1,Y(p),ST.grid)+U.txt(X0-7,Y(p)+4,p>=1000?U.comma(p):String(p),ST.tick,'end');});
+    [[0.125,'1/8'],[0.5,'1/2'],[2,'2'],[8,'8'],[32,'32'],[128,'128'],[512,'512']].forEach(function(t){
+      h+=U.ln(X(t[0]),Y0,X(t[0]),Y0+5,ST.axis)+U.txt(X(t[0]),Y0+17,t[1],ST.tick,'middle');});
+    h+=U.ln(X0,Y0,X1,Y0,ST.axis)+U.ln(X0,Y0,X0,Y1,ST.axis);
+    h+=U.txt((X0+X1)/2,Y0+33,'arithmetic intensity I, FLOP per byte (log scale)',ST.lab,'middle');
+    h+=U.txt(X0+6,Y1+12,'GFLOP/s (log scale)',ST.small);
+    /* roof */
+    var Imin=Math.pow(2,LX0), Imax=Math.pow(2,LX1);
+    h+='<polyline points="'+U.f1(X(Imin))+','+U.f1(Y(B*Imin))+' '+U.f1(X(ridge))+','+U.f1(Y(peak))+' '+U.f1(X(Imax))+','+U.f1(Y(peak))+'" style="fill:none;stroke:var(--ink);stroke-width:2.2"/>';
+    if(noOverlap){ var pts=[]; for(i=0;i<=120;i++){var I=Math.pow(2,LX0+(LX1-LX0)*i/120); pts.push(U.f1(X(I))+','+U.f1(Y(att(I))));}
+      h+='<polyline points="'+pts.join(' ')+'" style="fill:none;stroke:var(--c1);stroke-width:2;stroke-dasharray:6 4"/>'; }
+    h+=U.ln(X(ridge),Y0,X(ridge),Y(peak),'stroke:var(--ink-3);stroke-width:1;stroke-dasharray:3 3');
+    var rl=X(ridge)+6>X1-70?X(ridge)-6:X(ridge)+6;
+    h+=U.txt(rl,Y0-8,'ridge '+ridge.toFixed(2),ST.small,X(ridge)+6>X1-70?'end':'start');
+    h+=U.txt(X1-2,Y(peak)-7,'peak '+U.comma(peak),ST.small,'end');
+    OPS.forEach(function(o,k){
+      var sel=Math.abs(o[0]-op)<1e-9, px=X(o[0]), py=Y(att(o[0]));
+      h+='<circle cx="'+U.f1(px)+'" cy="'+U.f1(py)+'" r="'+(sel?7:4.5)+'" style="fill:'+(sel?'var(--c2)':'var(--ink-3)')+';stroke:var(--sheet);stroke-width:2"/>';
+      var below=k%2===1;
+      h+=U.txt(px,py+(below?20:-11),o[1],sel?ST.lab:ST.tick,'middle');
+    });
+    $('rS').innerHTML=h;
+    /* the line */
+    var deliv=B*op, mach=peak, bind=deliv<mach?'d':'m', L='';
+    function box(x,title,val,isB){
+      return '<rect x="'+x+'" y="14" width="200" height="60" rx="3" style="fill:'+(isB?'var(--brk-soft)':'var(--sheet)')+';stroke:'+(isB?'var(--brk)':'var(--rule-strong)')+';stroke-width:'+(isB?2:1)+'"/>'+
+        U.txt(x+100,36,title,ST.lab,'middle')+U.txt(x+100,58,val,'font-family:var(--f-mono);font-size:12px;fill:var(--ink)','middle');}
+    L+=box(40,'delivery: BW × I',U.comma(deliv)+' GFLOP/s',bind==='d');
+    L+=box(320,'machining: peak',U.comma(mach)+' GFLOP/s',bind==='m');
+    L+=U.ln(242,44,316,44,'stroke:var(--ink-3);stroke-width:1.5')+'<path d="M316,39 L324,44 L316,49 z" style="fill:var(--ink-3)"/>';
+    L+=U.txt(281,36,'material',ST.tick,'middle');
+    L+=U.txt(bind==='d'?140:420,88,'constraint',('font-family:var(--f-disp);font-size:11px;font-weight:700;fill:var(--brk)'),'middle');
+    $('rL').innerHTML=L;
+    $('rP').textContent=U.comma(peak);
+    $('rR').textContent=ridge.toFixed(2);
+    $('rA').textContent=att(op)>=100?U.comma(att(op)):att(op).toFixed(2);
+    $('rK').textContent=bind==='d'?'delivery':'machining';
+  }
+  ['rC','rB','rG'].forEach(function(id){$(id).addEventListener('input',draw);});
+  $('rOp').addEventListener('change',draw);
+  document.querySelectorAll('[data-rf]').forEach(function(b){b.addEventListener('click',function(){
+    fmaFlops=+b.getAttribute('data-rf'); U.onBtn('data-rf',fmaFlops); draw();});});
+  document.querySelectorAll('[data-rw]').forEach(function(b){b.addEventListener('click',function(){
+    lanes=+b.getAttribute('data-rw'); U.onBtn('data-rw',lanes); draw();});});
+  $('rOv').addEventListener('click',function(){noOverlap=!noOverlap; $('rOv').classList.toggle('on',noOverlap); draw();});
+  U.predict('data-p4','pv4',{
+    a:'<b>No.</b> More cores raise the roof but not the bandwidth, so the ridge moves from 2.56 to 20.48 FLOP/B, past the tile&rsquo;s 16. It becomes <b>memory-bound</b>.',
+    b:'<b>Right.</b> Eight cores: peak 1,024, ridge 1,024/50 = 20.48 &gt; 16. The delivery station is now the constraint, at 50 &times; 16 = 800 GFLOP/s.',
+    c:'<b>Not here.</b> A faster clock moves the ridge further right, which makes it worse. At 4 GHz it is already memory-bound on eight cores: ridge 20.48 &gt; 16.'});
+  draw();
+})();
+</script>
+
+<script>
+/* ===== LAB 5 -- staging the kit: exact LRU traffic by stack distance ===== */
+(function(){
+  'use strict';
+  var U=window.__c16, $=U.$, ST=U.ST;
+  var N=32, CAPS=[32,48,64,96,128,192,256,384,512,768,1024,1124,1200,1536,2048,3072,4096];
+  var SER=[{k:'naive',b:0,c:'var(--c1)',name:'naive i-j-k'},{k:'b4',b:4,c:'var(--c2)',name:'4×4 tiles'},
+           {k:'b8',b:8,c:'var(--c3)',name:'8×8 tiles'},{k:'b16',b:16,c:'var(--c4)',name:'16×16 tiles'}];
+  var bSel=8, SUF={};
+  /* the load sequence of C[i][j] += A[i][k]*B[k][j], naive or tiled (ii, jj, kk, i, j, k) */
+  function trace(b){
+    var T=new Int32Array(3*N*N*N), t=0, i, j, k, ii, jj, kk;
+    function push(i,j,k){T[t++]=i*N+k; T[t++]=N*N+k*N+j; T[t++]=2*N*N+i*N+j;}
+    if(!b){ for(i=0;i<N;i++) for(j=0;j<N;j++) for(k=0;k<N;k++) push(i,j,k); }
+    else for(ii=0;ii<N;ii+=b) for(jj=0;jj<N;jj+=b) for(kk=0;kk<N;kk+=b)
+      for(i=ii;i<ii+b;i++) for(j=jj;j<jj+b;j++) for(k=kk;k<kk+b;k++) push(i,j,k);
+    return T;
+  }
+  /* LRU stack distance with a Fenwick tree over access times: one pass gives misses at every capacity */
+  function suffix(T){
+    var n=T.length, fen=new Int32Array(n+1), last=new Int32Array(3*N*N).fill(-1), hist=new Int32Array(3*N*N+1), cold=0, t;
+    function add(i,v){for(i++;i<=n;i+=i&-i) fen[i]+=v;}
+    function pre(i){var s=0; for(i++;i>0;i-=i&-i) s+=fen[i]; return s;}
+    for(t=0;t<n;t++){
+      var x=T[t], p=last[x];
+      if(p<0) cold++; else { hist[pre(t-1)-pre(p)]++; add(p,-1); }
+      last[x]=t; add(t,1);
+    }
+    var suf=new Float64Array(hist.length+1);
+    for(var d=hist.length-1;d>=0;d--) suf[d]=suf[d+1]+hist[d];
+    return {cold:cold, suf:suf};
+  }
+  function misses(s,cap){return s.cold+(cap<s.suf.length?s.suf[cap]:0);}
+  SER.forEach(function(s){SUF[s.k]=suffix(trace(s.b));});
+  var X0=66, X1=540, Y0=280, Y1=20, LX0=5, LX1=12, LY0=11, LY1=17;
+  function X(c){return X0+(X1-X0)*(Math.log2(c)-LX0)/(LX1-LX0);}
+  function Y(m){return Y0-(Y0-Y1)*(Math.log2(m)-LY0)/(LY1-LY0);}
+  function draw(){
+    var cap=CAPS[+$('tC').value]; $('tCv').textContent=U.comma(cap)+' words';
+    var h='';
+    [2048,4096,8192,16384,32768,65536,131072].forEach(function(m){h+=U.ln(X0,Y(m),X1,Y(m),ST.grid)+U.txt(X0-7,Y(m)+4,U.comma(m),ST.tick,'end');});
+    [32,64,128,256,512,1024,2048,4096].forEach(function(c){h+=U.ln(X(c),Y0,X(c),Y0+5,ST.axis)+U.txt(X(c),Y0+17,U.comma(c),ST.tick,'middle');});
+    h+=U.ln(X0,Y0,X1,Y0,ST.axis)+U.ln(X0,Y0,X0,Y1,ST.axis);
+    h+=U.txt((X0+X1)/2,Y0+33,'store capacity, floats (log scale)',ST.lab,'middle');
+    h+=U.txt(X0+6,Y1-6,'words fetched from memory (log scale)',ST.small);
+    /* formula band for the selected tile: valid once the tile set fits with slack */
+    var fm=N*N+2*N*N*N/bSel, fx0=X(Math.max(32,3*bSel*bSel));
+    h+=U.ln(fx0,Y(fm),X(1024),Y(fm),'stroke:var(--ink-3);stroke-width:1.2;stroke-dasharray:4 3');
+    h+=U.txt(X(1024)+4,Y(fm)+4,'n² + 2n³/b',ST.tick);
+    SER.forEach(function(s){
+      var pts=[], i;
+      for(i=0;i<=140;i++){var c=Math.round(Math.pow(2,LX0+(LX1-LX0)*i/140)); pts.push(U.f1(X(c))+','+U.f1(Y(Math.max(2048,misses(SUF[s.k],c)))));}
+      var on=s.b===0||s.b===bSel;
+      h+='<polyline points="'+pts.join(' ')+'" style="fill:none;stroke:'+s.c+';stroke-width:'+(on?2.4:1.4)+';opacity:'+(on?1:0.45)+'"/>';
+    });
+    h+=U.ln(X(cap),Y0,X(cap),Y1,'stroke:var(--ink);stroke-width:1;stroke-dasharray:2 3');
+    var mn=misses(SUF.naive,cap), mt=misses(SUF['b'+bSel],cap);
+    h+='<circle cx="'+U.f1(X(cap))+'" cy="'+U.f1(Y(mn))+'" r="5" style="fill:var(--c1);stroke:var(--sheet);stroke-width:2"/>';
+    h+='<circle cx="'+U.f1(X(cap))+'" cy="'+U.f1(Y(mt))+'" r="5" style="fill:'+SER.filter(function(s){return s.b===bSel;})[0].c+';stroke:var(--sheet);stroke-width:2"/>';
+    $('tS').innerHTML=h;
+    $('tN').textContent=U.comma(mn);
+    $('tT').textContent=U.comma(mt);
+    $('tF').textContent=U.comma(fm);
+    $('tI').textContent=(2*N*N*N/(4*mt)).toFixed(2);
+    $('tR').textContent=(mn/mt).toFixed(2)+'×';
+  }
+  $('tLg').innerHTML=SER.map(function(s){return '<span class="lg"><i style="background:'+s.c+'"></i>'+s.name+'</span>';}).join('')+
+    '<span class="lg"><i style="background:var(--ink-3);height:1px"></i>formula, selected tile</span>';
+  $('tC').addEventListener('input',draw);
+  document.querySelectorAll('[data-tb]').forEach(function(b){b.addEventListener('click',function(){
+    bSel=+b.getAttribute('data-tb'); U.onBtn('data-tb',bSel); draw();});});
+  U.predict('data-p5','pv5',{
+    a:'<b>No.</b> The multiply-adds are the same, but each tile is reused while it sits in the store. <b>9,216</b> words, 3.78&times; fewer.',
+    b:'<b>That is the 4&times;4 tile</b> (\(n^2 + 2n^3/4 = 17{,}408\)). An 8&times;8 tile halves the second term: <b>9,216</b>.',
+    c:'<b>Right.</b> \(n^2 + 2n^3/b = 1{,}024 + 8{,}192 = 9{,}216\), and the LRU simulation lands on it exactly.',
+    d:'<b>That is the floor</b>, \(3n^2\): every word fetched once. It needs all of \(B\) in the store, over 1,100 words. With 512, <b>9,216</b>.'});
+  draw();
+})();
+</script>
+
+<script>
+/* ===== LAB 6 -- cards in the loop: the closed-line bound, FMA and memory ===== */
+(function(){
+  'use strict';
+  var U=window.__c16, $=U.$, ST=U.ST;
+  var mode='fma';
+  /* build machine (Cascade Lake class), best of five runs */
+  var MF={1:0.258,2:0.495,4:1.019,6:1.483,8:1.859,10:2.041,12:2.050,16:1.994};
+  var MNS={1:210.35,2:97.67,4:47.00,6:32.45,8:23.09,10:20.36,12:16.99,16:14.79,20:14.70,24:14.56,32:14.32};
+  var X0=60, X1=540, Y0=262, Y1=22;
+  function P(){return mode==='fma'?{T0:4,rb:2,ymax:2.4,unit:'per cycle',w0:8}:{T0:210,rb:1/14.4,ymax:5,unit:'GB/s',w0:210/14.4};}
+  function draw(){
+    var K=+$('lK').value, p=P(); $('lKv').textContent=K;
+    function X(k){return X0+(X1-X0)*k/32;}
+    function Y(v){return Y0-(Y0-Y1)*v/p.ymax;}
+    function th(k){var t=Math.min(k/p.T0,p.rb); return mode==='fma'?t:t*64;}
+    var h='', i, gs=mode==='fma'?[0,0.5,1,1.5,2]:[0,1,2,3,4,5];
+    gs.forEach(function(v){h+=U.ln(X0,Y(v),X1,Y(v),ST.grid)+U.txt(X0-7,Y(v)+4,String(v),ST.tick,'end');});
+    [0,4,8,12,16,20,24,28,32].forEach(function(k){h+=U.ln(X(k),Y0,X(k),Y0+5,ST.axis)+U.txt(X(k),Y0+17,String(k),ST.tick,'middle');});
+    h+=U.ln(X0,Y0,X1,Y0,ST.axis)+U.ln(X0,Y0,X0,Y1,ST.axis);
+    h+=U.txt((X0+X1)/2,Y0+33,'independent chains K (the cards in the loop)',ST.lab,'middle');
+    h+=U.txt(X0+6,Y1-8,mode==='fma'?'vector FMAs per cycle':'GB/s of random 64-byte lines',ST.small);
+    h+='<polyline points="'+U.f1(X(0))+','+U.f1(Y(0))+' '+U.f1(X(p.w0))+','+U.f1(Y(th(p.w0)))+' '+U.f1(X(32))+','+U.f1(Y(th(32)))+'" style="fill:none;stroke:var(--c2);stroke-width:2.2"/>';
+    h+=U.ln(X(p.w0),Y0,X(p.w0),Y(th(p.w0)),'stroke:var(--c2);stroke-width:1;stroke-dasharray:3 3');
+    h+=U.txt(X(p.w0)+6,Y0-8,'w₀ = '+(mode==='fma'?'8':p.w0.toFixed(1)),ST.small);
+    var M=mode==='fma'?MF:MNS;
+    Object.keys(M).forEach(function(k){var v=mode==='fma'?M[k]:64/M[k];
+      h+='<circle cx="'+U.f1(X(+k))+'" cy="'+U.f1(Y(v))+'" r="5" style="fill:var(--c1);stroke:var(--sheet);stroke-width:1.5"/>';});
+    h+=U.ln(X(K),Y0,X(K),Y1,'stroke:var(--ink);stroke-width:1;stroke-dasharray:2 3');
+    h+='<circle cx="'+U.f1(X(K))+'" cy="'+U.f1(Y(th(K)))+'" r="6" style="fill:none;stroke:var(--ink);stroke-width:2"/>';
+    h+='<circle cx="'+(X1-150)+'" cy="'+(Y0-46)+'" r="5" style="fill:var(--c1)"/>'+U.txt(X1-140,Y0-42,'measured, build machine',ST.small);
+    h+=U.ln(X1-156,Y0-26,X1-144,Y0-26,'stroke:var(--c2);stroke-width:2.2')+U.txt(X1-140,Y0-22,'bound min(K/T₀, r_b)',ST.small);
+    $('lS').innerHTML=h;
+    /* issue timeline */
+    var L=mode==='fma'?4:15, units=mode==='fma'?2:1, slots=24, ready=[], g='', cw=21, x0=40, t, u;
+    for(i=0;i<K;i++) ready.push(0);
+    var rr=0;
+    g+=U.txt(x0-6,mode==='fma'?36:48,mode==='fma'?'unit 1':'issue',ST.tick,'end');
+    if(mode==='fma') g+=U.txt(x0-6,62,'unit 2',ST.tick,'end');
+    for(t=0;t<slots;t++){
+      for(u=0;u<units;u++){
+        var pick=-1;
+        for(var q=0;q<K;q++){var c=(rr+q)%K; if(ready[c]<=t){pick=c; break;}}
+        var y=(mode==='fma'?24:36)+u*26;
+        if(pick>=0){ ready[pick]=t+L; rr=(pick+1)%K;
+          g+='<rect x="'+(x0+t*cw)+'" y="'+y+'" width="'+(cw-2)+'" height="20" rx="2" style="fill:var(--c2)"/>';
+          g+=U.txt(x0+t*cw+(cw-2)/2,y+14,String(pick+1),'font-family:var(--f-mono);font-size:9.5px;fill:var(--sheet)','middle');
+        } else g+='<rect x="'+(x0+t*cw+0.5)+'" y="'+(y+0.5)+'" width="'+(cw-3)+'" height="19" rx="2" style="fill:none;stroke:var(--rule-strong);stroke-dasharray:2 2"/>';
+      }
+    }
+    g+=U.txt(x0,104,mode==='fma'?'24 cycles; a chain can issue again 4 cycles after it last issued; empty box = idle unit':
+                               '24 slots of 14.4 ns; a chain waits about 15 slots (210 ns) for its line; empty = idle',ST.tick);
+    $('lG').innerHTML=g;
+    var b=th(K);
+    $('lB').textContent=mode==='fma'?b.toFixed(2)+' per cycle':b.toFixed(2)+' GB/s';
+    $('lM').textContent=M[K]===undefined?'not measured':(mode==='fma'?M[K].toFixed(2):(64/M[K]).toFixed(2)+' GB/s');
+    $('lW').textContent=mode==='fma'?'8':p.w0.toFixed(1);
+    $('lT').textContent=mode==='fma'?Math.max(4,K/2).toFixed(0)+' cycles':Math.round(Math.max(210,K*14.4))+' ns';
+  }
+  $('lK').addEventListener('input',draw);
+  document.querySelectorAll('[data-lm]').forEach(function(b){b.addEventListener('click',function(){
+    mode=b.getAttribute('data-lm'); U.onBtn('data-lm',mode); draw();});});
+  U.predict('data-p6','pv6',{
+    a:'<b>No.</b> One accumulator is the source&rsquo;s loop: each FMA waits 4 cycles for the last. 0.25 per cycle, an eighth of the machine. <b>8</b>.',
+    b:'<b>Not enough.</b> Two chains keep one unit a quarter busy each: 0.5 per cycle. You need latency &times; units = 4 &times; 2 = <b>8</b>.',
+    c:'<b>Half enough.</b> Four chains fill one unit&rsquo;s worth of slots, 1.0 per cycle; the second unit idles. <b>8</b>.',
+    d:'<b>Right.</b> Little&rsquo;s law: work in process = throughput &times; time in system = 2 per cycle &times; 4 cycles = 8.',
+    e:'<b>More than needed.</b> Past 8 the units are saturated and extra chains only queue: measured 1.99 at 16, against 1.86 at 8.'});
+  draw();
+})();
+</script>
+
+<script>
+/* Contents rail: mark the section currently in view (desktop only). */
+(function(){
+  'use strict';
+  var links=Array.prototype.slice.call(document.querySelectorAll('.rail a'));
+  if(!links.length||!window.IntersectionObserver) return;
+  var map={}; links.forEach(function(a){map[a.getAttribute('href').slice(1)]=a;});
+  var seen={};
+  var io=new IntersectionObserver(function(es){
+    es.forEach(function(e){seen[e.target.id]=e.isIntersecting;});
+    var ids=Object.keys(map),act=null;
+    for(var i=0;i<ids.length;i++) if(seen[ids[i]]){act=ids[i];break;}
+    if(!act) return;
+    links.forEach(function(a){a.classList.toggle('on',a===map[act]);});
+  },{rootMargin:'-70px 0px -65% 0px',threshold:0});
+  Object.keys(map).forEach(function(id){var el=document.getElementById(id); if(el) io.observe(el);});
+})();
+</script>
+
+<script>
+/* Safety net: if the MathJax bundle cannot be reached, degrade the TeX to
+   readable Unicode instead of leaving raw backslash markup on the page. */
+(function () {
+  'use strict';
+  var GREEK = { theta:'θ', sigma:'σ', delta:'δ', mu:'μ', pi:'π',
+                infty:'∞', alpha:'α', beta:'β', lambda:'λ' };
+  var SUB = { '1':'₁','2':'₂','3':'₃','i':'ᵢ','j':'ⱼ','n':'ₙ','p':'ₚ','x':'ₓ','y':'ᵧ' };
+  var SUP = { '2':'²','3':'³','n':'ⁿ','p':'ᵖ','*':'*' };
+
+  function degrade(t) {
+    t = t.replace(/\$\$/g, '').replace(/\\[()[\]]/g, '');
+    t = t.replace(/\\(?:left|right|textstyle|displaystyle|!|,|;|:)/g, '');
+    t = t.replace(/\\q?quad/g, ' ');
+    t = t.replace(/\\mathbb\{R\}/g, 'ℝ').replace(/\\mathbb\{Z\}/g, 'ℤ')
+         .replace(/\\mathbb\{N\}/g, 'ℕ').replace(/\\mathbb\{Q\}/g, 'ℚ');
+    t = t.replace(/\\(?:mathbf|mathrm|text|textbf|operatorname)\{([^{}]*)\}/g, '$1');
+    t = t.replace(/\\hat\{([^{}]*)\}/g, '$1̂').replace(/\\bar\{([^{}]*)\}/g, '$1̄');
+    t = t.replace(/\\sqrt\{([^{}]*)\}/g, '√($1)');
+    t = t.replace(/\\t?frac\{([^{}]*)\}\{([^{}]*)\}/g, '($1)/($2)');
+    t = t.replace(/\\binom\{([^{}]*)\}\{([^{}]*)\}/g, 'C($1,$2)');
+    t = t.replace(/\\([a-zA-Z]+)/g, function (m, w) {
+      if (GREEK[w]) return GREEK[w];
+      switch (w) {
+        case 'cdot': return '·';
+        case 'times': return '×';
+        case 'le': case 'leq': return '≤';
+        case 'ge': case 'geq': return '≥';
+        case 'neq': return '≠';
+        case 'approx': return '≈';
+        case 'in': return '∈';
+        case 'pm': return '±';
+        case 'to': case 'rightarrow': return '→';
+        case 'Rightarrow': return '⇒';
+        case 'iff': return '⇔';
+        case 'parallel': return '∥';
+        case 'perp': return '⊥';
+        case 'sum': return 'Σ';
+        case 'langle': return '⟨';
+        case 'rangle': return '⟩';
+        case 'wedge': return '∧';
+        case 'ast': return '*';
+        case 'cdots': case 'ldots': case 'dots': return '…';
+        case 'max': case 'min': case 'cos': case 'sin': case 'log': case 'exp': return w;
+        default: return w;
+      }
+    });
+    t = t.replace(/\\\|/g, '‖').replace(/\|\|/g, '‖');
+    t = t.replace(/_\{?([0-9ijnpxy])\}?/g, function (m, c) { return SUB[c] || ('_' + c); });
+    t = t.replace(/\^\{?([23np*])\}?/g, function (m, c) { return SUP[c] || ('^' + c); });
+    t = t.replace(/[{}]/g, '');
+    return t.replace(/[ \t]{2,}/g, ' ');
+  }
+
+  function run() {
+    if (window.MathJax && window.MathJax.startup && window.MathJax.startup.document) return;
+    var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+      acceptNode: function (n) {
+        if (!n.nodeValue || n.nodeValue.indexOf('\\') < 0 && n.nodeValue.indexOf('$$') < 0)
+          return NodeFilter.FILTER_REJECT;
+        var p = n.parentNode;
+        while (p && p !== document.body) {
+          var tag = p.nodeName;
+          if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'CODE' || tag === 'PRE')
+            return NodeFilter.FILTER_REJECT;
+          p = p.parentNode;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    var hits = [], n;
+    while ((n = walker.nextNode())) hits.push(n);
+    hits.forEach(function (node) { node.nodeValue = degrade(node.nodeValue); });
+    document.querySelectorAll('.mathbox').forEach(function (el) {
+      el.style.fontFamily = "'IBM Plex Mono', monospace";
+      el.style.fontSize = '15px';
+      el.style.textAlign = 'center';
+      el.style.padding = '10px 0';
+    });
+  }
+  setTimeout(run, 6000);
+})();
+</script>
+<script>
+/* Long display equations can be wider than their container - especially inside a
+   callout box, which is narrower than the main column. After the typesetter
+   finishes, measure each one and shrink it just enough to fit. Only ever shrinks,
+   never grows, and never below a readable floor - so the worst case is the
+   scrollbar we already had. */
+(function () {
+  'use strict';
+  var MIN_SCALE = 0.70;   /* below this, scrolling beats illegible text */
+
+  function fitOne(box) {
+    try {
+      var c = box.querySelector('mjx-container[display="true"]');
+      if (!c) return;
+      var svg = c.querySelector('svg');
+      if (!svg) return;
+      c.style.fontSize = '';
+      var avail = box.clientWidth;
+      if (!avail) return;
+      var w = svg.getBoundingClientRect().width;
+      if (!w || w <= avail) return;
+      var k = Math.max(MIN_SCALE, (avail / w) * 0.98);
+      c.style.fontSize = (k * 100).toFixed(1) + '%';
+      var w2 = svg.getBoundingClientRect().width;      /* one refinement pass */
+      if (w2 > avail) {
+        k = Math.max(MIN_SCALE, k * (avail / w2) * 0.98);
+        c.style.fontSize = (k * 100).toFixed(1) + '%';
+      }
+    } catch (e) { /* leave the equation exactly as it was */ }
+  }
+
+  /* Inline math cannot wrap and is not inside a scrollable .mathbox, so a long
+     inline expression pushes the whole page sideways.  Shrink any that is wider
+     than the text column it sits in; the ex-based sizing keeps the baseline. */
+  function fitInline(c) {
+    try {
+      var svg = c.querySelector('svg'); if (!svg) return;
+      c.style.fontSize = '';
+      var host = c.parentElement; if (!host) return;
+      var avail = host.clientWidth; if (!avail) return;
+      var w = svg.getBoundingClientRect().width;
+      if (!w || w <= avail) return;
+      c.style.fontSize = (Math.max(MIN_SCALE, (avail / w) * 0.98) * 100).toFixed(1) + '%';
+    } catch (e) { /* leave the expression exactly as it was */ }
+  }
+
+  function fitAll() {
+    try { document.querySelectorAll('.mathbox').forEach(fitOne); } catch (e) {}
+    try {
+      document.querySelectorAll('mjx-container:not([display="true"])').forEach(fitInline);
+    } catch (e) {}
+  }
+
+  function start() {
+    fitAll();
+    var t;
+    window.addEventListener('resize', function () {
+      clearTimeout(t); t = setTimeout(fitAll, 160);
+    });
+  }
+
+  function waitForTypesetter(n) {
+    if (window.MathJax && window.MathJax.startup && window.MathJax.startup.promise) {
+      window.MathJax.startup.promise.then(start, start);
+      return;
+    }
+    if (n > 60) return;            /* typesetter never arrived - nothing to fit */
+    setTimeout(function () { waitForTypesetter(n + 1); }, 200);
+  }
+  waitForTypesetter(0);
+})();
+</script>
