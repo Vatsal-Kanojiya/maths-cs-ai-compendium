@@ -662,3 +662,358 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     </p>
   </div>
 </section>
+
+<section id="noise">
+  <div class="col">
+    <div class="sechead"><span class="secnum">03</span><h2>Quantisation noise is &Delta;&sup2;/12, and the source&rsquo;s code measures it</h2>
+      <a class="srcref" href="@SRC@chapter%2017%20-%20AI%20inference/01.%20quantisation.md" target="_blank" rel="noopener">src 01. quantisation &#8599;</a>
+    </div>
+    <p>
+      Round a reading to the nearest division \(\Delta\) and the error lies somewhere in
+      \([-\Delta/2, +\Delta/2]\). If the reading spans many divisions, nothing favours any part of
+      that interval, so the error is uniform on it. A uniform distribution of width \(\Delta\) has
+    </p>
+  </div>
+  <div class="mathbox col">$$\mathbb{E}[e]=0,\qquad \mathbb{E}|e| = \frac{\Delta}{4},\qquad \operatorname{Var}(e)=\frac{1}{\Delta}\int_{-\Delta/2}^{\Delta/2} e^2\,de=\frac{\Delta^2}{12}$$</div>
+  <div class="col">
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: this is the reading uncertainty of a gauge</div>
+      <p>
+        The rule for a measurement whose only knowledge is &ldquo;somewhere within &plusmn;a&rdquo;
+        is to treat it as rectangular and quote a standard uncertainty of \(a/\sqrt3\). With
+        \(a = \Delta/2\) that is \(\Delta/\sqrt{12} = 0.2887\,\Delta\), the square root of
+        \(\Delta^2/12\) exactly (<code>[Ch17 s03]</code>). Sheet 09 &sect;03 met the same 1/12 in an
+        audio converter. It is one fact about rounding, and it holds wherever rounding happens.
+      </p>
+      <p style="margin-bottom:0">
+        The source&rsquo;s first coding task measures it without saying so. It quantises a
+        1024&times;1024 matrix of weights drawn with standard deviation 0.02 to INT8. Ported to
+        numpy, the step is \(\Delta = 7.87\times10^{-4}\), the measured error variance is
+        \(5.157\times10^{-8}\) against \(\Delta^2/12 = 5.163\times10^{-8}\), the mean absolute
+        error is \(\Delta/4\) to 0.1%, and the largest error is \(\Delta/2\) (<code>[Ch17 s03]</code>).
+        The relative error it prints, 1.23%, is just \(\Delta/4\) divided by the mean size of a
+        weight.
+      </p>
+    </div>
+    <p>
+      The useful quantity is the signal-to-noise ratio, the signal&rsquo;s variance over the error&rsquo;s.
+      With the uniform model it is \(12(\sigma/\Delta)^2\): set by how many divisions one standard
+      deviation spans, and by nothing else. That is the whole of quantisation in one ratio, and
+      the next section is about keeping \(\sigma/\Delta\) large.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks: a reading smaller than one division</div>
+      <p>
+        The uniform model assumes the reading spans many divisions. Sample Gaussian readings and
+        compare (<code>[Ch17 s03]</code>):
+      </p>
+      <ul>
+        <li>\(\sigma/\Delta \ge 0.5\): measured error variance within 1% of \(\Delta^2/12\), and the
+          signal-to-noise ratio equals \(12(\sigma/\Delta)^2\) to two decimals.</li>
+        <li>\(\sigma/\Delta = 0.25\): 95% of readings round to zero and the error variance is only
+          0.65 of \(\Delta^2/12\).</li>
+        <li>\(\sigma/\Delta = 0.1\): every reading rounds to zero. The error <em>is</em> the
+          signal, so the ratio is exactly 1, whatever the model says.</li>
+      </ul>
+      <p style="margin-bottom:0">
+        So the failure is not that the error grows past \(\Delta^2/12\). It is that the reading
+        has gone below the least count, and the gauge reports zero.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="granularity">
+  <div class="col">
+    <div class="sechead"><span class="secnum">04</span><h2>A gauge range for every feature</h2>
+      <a class="srcref" href="@SRC@chapter%2017%20-%20AI%20inference/01.%20quantisation.md" target="_blank" rel="noopener">src 01. quantisation &#8599;</a>
+    </div>
+    <p>
+      A tensor gets one scale, or one per row, or one per block. The source calls this
+      <b>granularity</b>: per-tensor, per-channel, per-group, per-token. The reason it matters is
+      the reason a metrology lab does not measure a 0.1 mm runout with a gauge ranged for 25 mm.
+      One large reading sets the range; every small reading on the same scale loses its figures.
+    </p>
+  </div>
+  <figure class="col">
+    <div class="paper"><img src="img/quantisation_granularity.svg" alt="Per-tensor, per-channel and per-group scales on a small weight matrix with one outlier" width="560"></div>
+    <figcaption><b>Fig. 17.2</b> &mdash; One scale for the matrix, one per column, or one per small block. The outlier sets the range for everything that shares its scale. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+  <div class="col">
+    <p>
+      The source&rsquo;s second coding task makes this concrete. Activations for 32 tokens across
+      512 channels have standard deviation 0.1, except channel 0 (scaled 100&times;) and channel 1
+      (50&times;). One scale for the whole tensor gives a mean error of 0.0535; one scale per
+      channel gives 0.0006, 89 times smaller (<code>[Ch17 s04]</code>). The measurement model
+      explains the number. The shared step is \(\Delta = 0.218\), so a normal channel has
+      \(\sigma/\Delta = 0.46\): just inside the range where \(\Delta^2/12\) holds. Measured, its error
+      variance is 0.00385 against a predicted 0.00397, and its signal-to-noise ratio is 2.61
+      against \(12(0.46)^2 = 2.53\). The model predicted the damage. It is not noise. The normal
+      channels are being read on a gauge one division of which is twice their spread.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>The task prints the wrong measure of waste</div>
+      <p style="margin-bottom:0">
+        Its last line reads &ldquo;Outlier channels waste 100% of the quantisation range for 0.4% of
+        channels&rdquo;. The 100% (99.6% before rounding) is \(510/512\), the share of channels that
+        are <em>not</em> outliers. What it means to say is measured directly: the normal channels
+        use 5 of the 255 levels, \(-2\) to \(+2\), which is 1.6% of the range, and 72% of their
+        values round to zero (<code>[Ch17 s04]</code>). The conclusion survives. The number printed
+        under it measures something else.
+      </p>
+    </div>
+    <p>
+      So per-channel scales look like the answer. For weights they are: each output channel of a
+      weight matrix gets its own scale, as Fig. 17.2 shows. For activations, which is what the
+      task scales per channel, there is a catch the source does not mention, and it is the whole
+      reason the next method exists.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where the gauge analogy breaks: you cannot add readings taken on different ranges</div>
+      <p>
+        A layer computes \(y_{ij} = \sum_k x_{ik} w_{kj}\): it <em>adds up</em> products over the
+        channel index \(k\). The point of integer arithmetic is to do that sum in integers and
+        convert once at the end. Write \(x_{ik} = a_i\,q_{ik}\) with one scale per token (row) and
+        \(w_{kj} = b_j\,r_{kj}\) with one scale per output column:
+      </p>
+      <div class="mathbox">$$y_{ij} = a_i\, b_j \sum_k q_{ik}\, r_{kj}$$</div>
+      <p>
+        Both scales come outside the sum, and the script confirms the integer product then
+        rescaled matches to \(5\times10^{-15}\). Now give the activations one scale per
+        <em>channel</em>, \(x_{ik} = c_k\,q_{ik}\). The scale sits inside the sum,
+        \(\sum_k c_k\,q_{ik} r_{kj}\), and there is no single factor per output that recovers it:
+        the factor each output would need varies with a spread 22 times its mean
+        (<code>[Ch17 s04]</code>). Readings from gauges on different ranges must each be converted
+        before they can be added, and converting each one is the multiplication integer arithmetic
+        was meant to remove.
+      </p>
+      <p style="margin-bottom:0">
+        Per-channel scales are free on the dimensions that are <em>not</em> summed (tokens, output
+        channels) and cost a multiply per term on the one that is.
+      </p>
+    </div>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>SmoothQuant moves the range switch to where it is free</div>
+      <p>
+        The source gives SmoothQuant one line. Divide activation channel \(k\) by \(s_k\) and multiply
+        row \(k\) of the weights by the same \(s_k\). The product is unchanged, because
+        \(X\,\mathrm{diag}(s)^{-1}\,\mathrm{diag}(s)\,W = XW\), to \(2\times10^{-15}\). The outlier
+        channel arrives already shrunk, and the extra size lands in one row of the weights, where
+        a per-output-column weight scale absorbs it. With \(s_k = \sqrt{\max|x_k| / \max|w_k|}\) on
+        a 16&times;64 example with one channel 60&times; the rest, the relative output error at
+        8 bits is (<code>[Ch17 s04]</code>):
+      </p>
+      <ul style="margin-bottom:0">
+        <li>one scale for all activations: 4.20%;</li>
+        <li>one scale per token: 2.32%, because every token contains the outlier channel;</li>
+        <li>one scale per activation channel, not runnable in an integer product: 0.79%;</li>
+        <li>SmoothQuant, then per token and per output column: <b>0.38%</b>.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">A gauge range for every feature</div><div class="lab-tag">Predict, then rescale</div></div>
+    <div class="predict">
+      <p style="margin-top:0">
+        Channel 0 runs 100 times larger than the other 31. With INT8 and one scale for the whole
+        tensor, what share of the other channels&rsquo; readings round to zero?
+      </p>
+      <button class="pbtn" data-p1="a" type="button">Under 5%</button>
+      <button class="pbtn" data-p1="b" type="button">About a third</button>
+      <button class="pbtn" data-p1="c" type="button">About two thirds</button>
+      <button class="pbtn" data-p1="d" type="button">All of them</button>
+      <div class="pverdict" id="pv1"></div>
+    </div>
+    <svg class="stage" id="qS" viewBox="0 0 480 300" role="img"
+         aria-label="Top: readings of one normal channel for 24 tokens, with the quantisation grid drawn as tick marks on each row and a stroke from each reading to where rounding puts it. Bottom: signal-to-noise ratio for each of the 32 channels in decibels.">
+      <g id="qTop"></g><g id="qBot"></g>
+    </svg>
+    <div class="ctl">
+      <label for="qOut">Outlier channel</label>
+      <input type="range" id="qOut" min="1" max="100" value="100" step="1">
+      <span class="ro-v" id="qOutV" style="min-width:48px">100&times;</span>
+    </div>
+    <div class="ctl">
+      <button class="btn" data-qb="8" type="button">INT8</button>
+      <button class="btn" data-qb="6" type="button">INT6</button>
+      <button class="btn" data-qb="4" type="button">INT4</button>
+    </div>
+    <div class="ctl">
+      <button class="btn" data-qg="tensor" type="button">Per tensor</button>
+      <button class="btn" data-qg="token" type="button">Per token</button>
+      <button class="btn" data-qg="channel" type="button">Per channel</button>
+      <button class="btn" data-qg="smooth" type="button">SmoothQuant</button>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k"><span class="gk">&sigma;</span>/<span class="gk">&Delta;</span>,<br>normal channels</div><div class="ro-v" id="qD">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Rounded<br>to zero</div><div class="ro-v b" id="qZ">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Error variance,<br>measured</div><div class="ro-v a" id="qVar">&mdash;</div></div>
+      <div class="ro"><div class="ro-k"><span class="gk">&Delta;</span>&sup2;/12,<br>predicted</div><div class="ro-v a" id="qVarP">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Signal/noise,<br>measured</div><div class="ro-v c" id="qSq">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">12(<span class="gk">&sigma;</span>/<span class="gk">&Delta;</span>)&sup2;,<br>predicted</div><div class="ro-v c" id="qSqP">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Layer output<br>error</div><div class="ro-v" id="qY">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Runs as an<br>integer product?</div><div class="ro-v" id="qG">&mdash;</div></div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    The data are 64 tokens by 32 channels with standard deviation 0.1, channel 0 scaled by the
+    slider, multiplied into a fixed 32&times;16 weight matrix quantised per output column. The
+    top panel shows channel 1 for 24 of the tokens: each dot is a reading, each row&rsquo;s ticks
+    are the divisions that row is read on, and the stroke is where rounding moves it. The bars are
+    each channel&rsquo;s signal-to-noise ratio in decibels; channel 0 is the orange bar. At 100&times;,
+    INT8, <b>Per tensor</b>, about two thirds of the normal readings land on zero, which answers the
+    prediction, and the measured and predicted signal-to-noise ratios agree because
+    \(\sigma/\Delta\) is still near 0.5. Switch to <b>INT4</b> and they part: the prediction drops
+    below 1 while the measurement sits at exactly 1, the &sect;03 break. <b>Per token</b> barely
+    helps, since every token contains channel 0. <b>Per channel</b> fixes the readings and cannot
+    run as an integer product. <b>SmoothQuant</b> gets the accuracy and keeps the integer product.
+  </div>
+</section>
+
+<section id="clipping">
+  <div class="col">
+    <div class="sechead"><span class="secnum">05</span><h2>Range against resolution, and the calibration optimum</h2>
+      <a class="srcref" href="@SRC@chapter%2017%20-%20AI%20inference/01.%20quantisation.md" target="_blank" rel="noopener">src 01. quantisation &#8599;</a>
+    </div>
+    <p>
+      <b>Post-training quantisation</b> (PTQ) quantises a finished model without retraining. A
+      <b>calibration set</b> of a few hundred sample inputs is run through it to see how large each
+      tensor&rsquo;s values get, and the scales are chosen from that. The source lists four rules:
+      min-max (range to the largest value seen), a percentile such as the 99.99th, the clip that
+      minimises mean squared error, and a rule that matches distributions (KL divergence).
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: choosing a gauge range is choosing a clip</div>
+      <p>
+        Range a gauge too wide and you waste divisions; too narrow and readings go off scale. A
+        quantiser has the same two errors. Inside the range the error is \(\Delta^2/12\), which
+        grows with the range; outside it, values are clipped to the end level and the error is
+        whatever sticks out. The total has a minimum, and for Gaussian data it can be computed
+        (<code>[Ch17 s05]</code>):
+      </p>
+      <ul>
+        <li><b>4 bits:</b> clip at \(2.47\sigma\). That clips 1.34% of values, and gives 3.17 times
+          less error than ranging to the largest of a million samples, which sits at \(5.0\sigma\).</li>
+        <li><b>8 bits:</b> clip at \(3.92\sigma\), for 1.41 times less error than min-max.</li>
+      </ul>
+      <p style="margin-bottom:0">
+        The fewer divisions you have, the more it pays to let the rare reading go off scale. That
+        is why min-max is fine at 8 bits and poor at 4, and why the source finds PTQ &ldquo;works
+        well for INT8&rdquo; and &ldquo;drops significantly&rdquo; at INT4.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks: the calibration set is a sample</div>
+      <p style="margin-bottom:0">
+        A gauge is ranged for a part whose size you know. A model is ranged on a few hundred inputs
+        and then serves millions it has not seen. Weights are fixed, so their range is known
+        exactly. Activations change with every input, so a static scale is a forecast; the
+        source&rsquo;s <b>dynamic quantisation</b> measures the range afresh for each input, at the
+        cost of a pass over the data first.
+      </p>
+    </div>
+    <p>
+      <b>Quantisation-aware training</b> (QAT) rounds the weights during training so the model
+      learns around the rounding. Rounding is a staircase with zero slope almost everywhere, which
+      would stop gradient descent dead, so the backward pass pretends the staircase is the line
+      \(y = x\): the <b>straight-through estimator</b>. It is not the derivative of anything, and
+      that it works is an empirical result (reported). The source&rsquo;s cost argument is a
+      setup-and-run argument: QAT is a large one-time cost, worth it when the quantised model will
+      be run a very large number of times.
+    </p>
+  </div>
+</section>
+
+<section id="gptq">
+  <div class="col">
+    <div class="sechead"><span class="secnum">06</span><h2>GPTQ is a support settlement</h2>
+      <a class="srcref" href="@SRC@chapter%2017%20-%20AI%20inference/01.%20quantisation.md" target="_blank" rel="noopener">src 01. quantisation &#8599;</a>
+    </div>
+    <p>
+      Rounding each weight to its nearest level (&ldquo;round to nearest&rdquo;, RTN) treats the
+      weights as independent. They are not. A layer&rsquo;s output is \(Xw\) for a row of weights
+      \(w\) and a matrix \(X\) of calibration inputs, so a change \(\delta\) in the weights changes
+      the output by \(X\delta\), and the squared output error is
+    </p>
+  </div>
+  <div class="mathbox col">$$E(\delta) = \lVert X\delta\rVert^2 = \delta^{\mathsf T} H\,\delta, \qquad H = X^{\mathsf T}X$$</div>
+  <div class="col">
+    <p>
+      \(H\) is symmetric and positive semi-definite, and \(E\) is a quadratic form in \(\delta\). You
+      have met that object as \(\tfrac12 u^{\mathsf T}Ku\): \(H\) is a stiffness matrix and \(E\) is
+      twice a strain energy. When two inputs are correlated, the off-diagonal term couples their
+      weights, as a member couples two joints.
+    </p>
+    <p>
+      <b>GPTQ</b> quantises one column of weights at a time. Rounding weight \(j\) <em>prescribes</em>
+      its error, \(\delta_j = q_j - w_j\). The weights not yet quantised are still free, so GPTQ moves
+      them to whatever minimises \(E\) given that prescribed value. Minimising a quadratic energy with
+      one displacement prescribed is a problem you have solved by hand:
+    </p>
+  </div>
+  <div class="mathbox col">$$\delta_r = -H_{rr}^{-1}H_{rj}\,\delta_j \;=\; \frac{\big[H^{-1}\big]_{rj}}{\big[H^{-1}\big]_{jj}}\,\delta_j$$</div>
+  <div class="col">
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: this is a support settlement, solved by static condensation</div>
+      <p>
+        A support of an indeterminate structure settles by \(\delta_j\); the free joints displace
+        by \(-K_{rr}^{-1}K_{rj}\,\delta_j\), the static response that minimises strain energy with that
+        displacement held. The first form above is exactly that, with \(H\) for \(K\). It is the
+        same condensation Sheet 10 &sect;09 met as Guyan reduction. The second form, with the
+        inverse matrix, is the same vector written through a Schur-complement identity; the script
+        confirms the two agree to \(5\times10^{-12}\) (<code>[Ch17 s06]</code>). The inverse form
+        is the one GPTQ uses, because it can be updated cheaply as columns are fixed one after
+        another.
+      </p>
+      <p style="margin-bottom:0">
+        On a layer with 64 correlated inputs and 48 outputs, the output error relative to the
+        output is (<code>[Ch17 s06]</code>): 3-bit, RTN 0.0602 against compensated 0.0309; 4-bit,
+        0.0112 against 0.0059. Letting the free weights settle removes 48&ndash;49% of the error.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>The source prints the update with the wrong matrix</div>
+      <p>
+        The source writes the update as
+        \(W_{:,j+1:} \mathrel{-}= (\hat W_{:,j}-W_{:,j})\,H_{j,j+1:}/H_{jj}\): the coupling row of
+        \(H\) itself, divided by the stiffness of the settled support. Check it on two weights,
+        \(H = \begin{bmatrix}a&b\\b&c\end{bmatrix}\). Minimising
+        \(a\delta_1^2 + 2b\delta_1\delta_2 + c\delta_2^2\) over \(\delta_2\) gives
+        \(\delta_2 = -b\,\delta_1/c\), divided by the <em>free</em> joint&rsquo;s stiffness. The
+        printed rule gives \(-b\,\delta_1/a\). The sign is right and the denominator belongs to the
+        wrong joint; with more weights it also ignores how the free weights couple to each other.
+      </p>
+      <p style="margin-bottom:0">
+        Run as printed on the same layer, it removes 13% of RTN&rsquo;s error at 3 bits and 16% at
+        4, against 49% and 48% for the correct update (<code>[Ch17 s06]</code>). It helps a little,
+        because it pushes the error in the right direction, and it is not GPTQ.
+      </p>
+    </div>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>When every input agrees: baseline dimensioning</div>
+      <p style="margin-bottom:0">
+        Take the extreme case where every input carries the same signal, so the output is just the
+        sum of the weights and \(H = \mathbf{1}\mathbf{1}^{\mathsf T}\). Rounding 64 weights
+        independently to a step of 2/7 leaves the sum wrong by 1.005, the chain-dimensioning
+        result where every rounding stacks. With compensation, each rounding error is absorbed by
+        the weights still free, and the total ends within half a step: 0.138 against a bound of
+        0.143 (<code>[Ch17 s06]</code>). That is baseline dimensioning, every feature located from
+        the datum so errors cannot accumulate, and the same point Sheet 04 &sect;05 made about
+        tolerance stacks.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where the structure analogy breaks</div>
+      <p style="margin-bottom:0">
+        A structure&rsquo;s stiffness comes from its geometry and is known. \(H\) is assembled from a
+        calibration sample and is only as good as that sample. When an input is always zero, or
+        two inputs always move together, \(H\) is singular: the structure has a mechanism. GPTQ
+        adds a small number to the diagonal before inverting (reported), which is grounding every
+        joint with a weak spring so the stiffness matrix can be inverted. And the energy being
+        minimised is the error at this layer&rsquo;s output on the sample, not the error of the
+        whole model.
+      </p>
+    </div>
+  </div>
+</section>
