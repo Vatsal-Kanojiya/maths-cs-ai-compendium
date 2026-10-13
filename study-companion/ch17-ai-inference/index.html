@@ -1339,3 +1339,334 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     </div>
   </div>
 </section>
+
+<section id="phases">
+  <div class="col">
+    <div class="sechead"><span class="secnum">13</span><h2>Prefill and decode: a step is a furnace load</h2>
+      <a class="srcref" href="@SRC@chapter%2017%20-%20AI%20inference/03.%20serving%20and%20batching.md" target="_blank" rel="noopener">src 03. serving and batching &#8599;</a>
+    </div>
+    <p>
+      A request has two phases. <b>Prefill</b> reads the whole prompt in one pass: every prompt
+      token is known, so they all go through together as one large matrix product, and the
+      arithmetic units are the limit. Its result is the first output token and the request&rsquo;s
+      KV cache; the delay is the <b>time to first token</b> (TTFT). <b>Decode</b> then produces one
+      token per step, each step reading all the weights (&sect;01) and the request&rsquo;s cache; the
+      interval is the <b>time per output token</b> (TPOT). The source&rsquo;s users tolerate a TTFT
+      of a second or more and want a TPOT of 30&ndash;100 ms (reported).
+    </p>
+    <p>
+      A server serves many requests at once, so one decode step advances a <b>batch</b> of \(b\)
+      sequences by one token each. Its duration is two terms:
+    </p>
+  </div>
+  <div class="mathbox col">$$t_{\text{step}}(b) = t_w + b\,t_{kv}, \qquad t_w = \frac{\text{weight bytes}}{\text{bandwidth}},\quad t_{kv} = \frac{\text{KV bytes per sequence}}{\text{bandwidth}}$$</div>
+  <div class="col">
+    <p>
+      The weights are read once and shared by the whole batch; each sequence&rsquo;s cache is read for
+      that sequence alone. Put numbers to it for the server used through the rest of this sheet.
+      A 70B model at 4.5 bits per weight is 39.4 GB, call it 40. At a memory bandwidth of 2 TB/s
+      (a round figure; current data-centre parts are reported at 2&ndash;3.35 TB/s), reading it
+      takes \(t_w = 20\) ms. A sequence with 1,250 tokens of context at 328 KB per token holds
+      410 MB of cache, call it 0.4 GB, which takes \(t_{kv} = 0.2\) ms (<code>[Ch17 s13]</code>).
+      The device holds 80 GB.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity in the algebra: a lot with a setup</div>
+      <p>
+        Lot time = setup + quantity &times; time per piece is \(t_w + b\,t_{kv}\), term for term. The
+        physical picture is a heat-treatment furnace rather than a press. A press handles pieces
+        one after another; a furnace load is treated together, its cycle is mostly fixed, and each
+        extra part adds a little. A decode step is a furnace load: all \(b\) tokens come out at the
+        same moment, so every sequence in the batch waits the whole step.
+      </p>
+      <p style="margin-bottom:0">
+        Prefill is the opposite kind of operation. A 2,000-token prompt is 2,000 pieces through one
+        weight read, so the setup is spread thin and the arithmetic per piece is what costs. One
+        operation is setup-dominated and one is work-dominated, and &sect;16 separates them onto
+        different machines.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where the furnace model is too simple</div>
+      <p style="margin-bottom:0">
+        \(t_{kv}\) is not a constant: a conversation&rsquo;s cache grows one token per step, so each
+        sequence costs more the longer it runs, and this sheet uses an average. At large batches the
+        arithmetic catches up with the memory traffic, and past that point (Sheet 16&rsquo;s
+        roofline ridge) each extra sequence costs arithmetic time as well. And prefill work mixed
+        into a decode step lengthens that step for everyone in it. The two-term model is the first
+        approximation every serving system starts from, not the whole story.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="takt">
+  <div class="col">
+    <div class="sechead"><span class="secnum">14</span><h2>Batching to takt: continuous batching finds the minimum lot by itself</h2>
+      <a class="srcref" href="@SRC@chapter%2017%20-%20AI%20inference/03.%20serving%20and%20batching.md" target="_blank" rel="noopener">src 03. serving and batching &#8599;</a>
+    </div>
+    <p>
+      Three quantities from the shop floor, defined carefully, because the bridge bank for this
+      sheet paired them wrongly:
+    </p>
+    <dl class="kv">
+      <dt>Takt time \(T\)</dt><dd>Available time divided by demand. For a demand of \(\Lambda\) tokens per second, \(T = 1/\Lambda\). It belongs to the customer, not the machine.</dd>
+      <dt>Cycle time</dt><dd>The interval between finished pieces. A step makes \(b\) tokens, so it is \(t_{\text{step}}/b\).</dd>
+      <dt>Lead time</dt><dd>How long one piece spends being made. Each of a request&rsquo;s tokens takes one whole step: that is the TPOT, \(t_{\text{step}}\).</dd>
+    </dl>
+    <p>
+      Throughput is one over cycle time: \(X(b) = b/(t_w + b\,t_{kv})\). For the example server,
+      \(X(1) = 49.5\) tokens per second and the ceiling, as \(b\) grows, is \(1/t_{kv} = 5{,}000\).
+      A batch of one uses 1.0% of what the machine can do (<code>[Ch17 s14]</code>). To keep up
+      with demand, the cycle time must not exceed takt:
+    </p>
+  </div>
+  <div class="mathbox col">$$\frac{t_w}{b} + t_{kv} \;\le\; T \quad\Longleftrightarrow\quad b \;\ge\; b_{\min} = \frac{t_w}{T - t_{kv}}$$</div>
+  <div class="col">
+    <p>
+      That is the planner&rsquo;s minimum lot size: setup time divided by what takt leaves after the
+      per-piece time. Nothing about it is specific to computers. Now look at how a server actually
+      chooses \(b\).
+    </p>
+    <p>
+      <b>Continuous batching</b>, the method the source recommends and every modern server uses,
+      works step by step: finished sequences leave the batch at the end of every step and waiting
+      requests join at the start of the next. Nobody sets a batch size. Whoever is in the system is
+      in the batch. Apply Little&rsquo;s law (Sheet 13 part 2 &sect;06): the number in the system
+      equals the arrival rate times the time each spends there. Requests of \(L\) tokens arriving at
+      \(\Lambda/L\) per second each spend \(L\) steps, so
+    </p>
+  </div>
+  <div class="mathbox col">$$b = \frac{\Lambda}{L}\times L\,t_{\text{step}} = \Lambda\,(t_w + b\,t_{kv}) \quad\Longrightarrow\quad b = \frac{\Lambda\,t_w}{1-\Lambda\,t_{kv}} = \frac{t_w}{T - t_{kv}}$$</div>
+  <div class="col">
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: the batch is the minimum lot that meets takt</div>
+      <p>
+        The two expressions are the same number. Continuous batching settles at exactly
+        \(b_{\min}\): the smallest lot that keeps up, with no planner choosing it. Little&rsquo;s law
+        forces it, because a larger batch would finish requests faster than they arrive and shrink,
+        and a smaller one would fall behind and grow. Checked at three demands
+        (<code>[Ch17 s14]</code>):
+      </p>
+      <ul>
+        <li>1,000 tokens/s: takt 1.000 ms, lot 25.0, TPOT 25.00 ms;</li>
+        <li>2,000 tokens/s: takt 0.500 ms, lot 66.7, TPOT 33.33 ms;</li>
+        <li>3,000 tokens/s: takt 0.333 ms, lot 150.0, TPOT 50.00 ms.</li>
+      </ul>
+      <p style="margin-bottom:0">
+        A simulation with random (Poisson) arrivals and 300-token requests lands on them: a mean
+        batch of 25.1 and TPOT of 25.19 ms at 1,000; 66.8 and 33.53 ms at 2,000, serving 995 and
+        1,991 tokens/s. The small excess is arrival randomness, under 1%.
+      </p>
+    </div>
+    <p>
+      The same algebra gives the lead time. Write \(\rho = \Lambda\,t_{kv}\), the share of the ceiling
+      that demand uses. Then
+    </p>
+  </div>
+  <div class="mathbox col">$$\text{TPOT} = t_w + b\,t_{kv} = \frac{t_w}{1-\rho}$$</div>
+  <div class="col">
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>The utilisation cliff again, with no randomness in it</div>
+      <p style="margin-bottom:0">
+        Sheet 13 part 2 &sect;06 showed an M/M/1 queue&rsquo;s time in system as \(S/(1-\rho)\), and
+        Sheet 14 part 1 &sect;13 found a steeper version in a hash table. This is a third, and it needs
+        no randomness at all. Every extra sequence lengthens the step, which keeps every sequence in
+        the batch longer, which makes the batch larger: a feedback loop whose fixed point is
+        \(t_w/(1-\rho)\). At \(\rho = 0.2\), TPOT is 25 ms; at 0.6, 50 ms; at 0.8, 100 ms. Same curve,
+        same lesson: the last points of utilisation cost the most.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>A correction to the bridge bank: latency is lead time, not cycle time</div>
+      <p style="margin-bottom:0">
+        The bank for this sheet paired &ldquo;latency versus throughput&rdquo; with &ldquo;cycle time
+        versus takt time&rdquo;. Cycle time and takt are both rates of output, one the machine&rsquo;s
+        and one the customer&rsquo;s; neither is a latency. Latency is lead time, as Sheet 13 part 1
+        &sect;13 and part 2 &sect;09 already found. Little&rsquo;s law ties all three: work in
+        progress \(b\) = throughput &times; lead time, so cycle time = TPOT/\(b\). At 2,000 tokens/s
+        that is \(33.33/66.67 = 0.500\) ms, which is the takt (<code>[Ch17 s14]</code>). In steady
+        state the machine cycles at exactly takt, and the lead time is whatever the work in progress
+        makes it.
+      </p>
+    </div>
+    <p>
+      One thing stops the batch growing: memory. Each sequence holds its cache (&sect;09), so the
+      lot can be no larger than the free memory divided by the cache per sequence:
+      \((80 - 40)/0.4 = 100\). At that batch the server delivers \(X(100) = 2{,}500\) tokens per
+      second, half the bandwidth ceiling. Ask for 2,600 and the simulation serves 2,500 while the
+      queue of waiting requests grows without limit (<code>[Ch17 s14]</code>). The constraint is
+      the stores, not the machine. Store the cache in 8 bits and both terms move: \(t_{kv}\) halves
+      to 0.1 ms and the cap doubles to 200, so capacity doubles to 5,000. That is the exact content of
+      the source&rsquo;s &ldquo;multiplicatively beneficial&rdquo;.
+    </p>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Lot size against takt</div><div class="lab-tag">Predict, then load it</div></div>
+    <div class="predict">
+      <p style="margin-top:0">
+        The example server runs at 1,000 tokens per second with a time per output token of 25 ms.
+        Demand doubles to 2,000. With continuous batching, what is the time per output token now?
+      </p>
+      <button class="pbtn" data-p2="a" type="button">25 ms: batching absorbs it</button>
+      <button class="pbtn" data-p2="b" type="button">About 33 ms</button>
+      <button class="pbtn" data-p2="c" type="button">50 ms: it doubles</button>
+      <button class="pbtn" data-p2="d" type="button">100 ms</button>
+      <div class="pverdict" id="pv2"></div>
+    </div>
+    <svg class="stage" id="tS" viewBox="0 0 480 320" role="img"
+         aria-label="Top panel: throughput against batch size, with the demand line and the memory cap. Bottom panel: time per output token against batch size, with a 50 millisecond target line. The operating batch is marked on both.">
+      <g id="tGrid"></g><g id="tPlot"></g><g id="tLab"></g>
+    </svg>
+    <div class="ctl">
+      <label for="tLam">Demand, tokens/s</label>
+      <input type="range" id="tLam" min="200" max="6000" value="2000" step="100">
+      <span class="ro-v" id="tLamV" style="min-width:52px">2000</span>
+    </div>
+    <div class="ctl">
+      <button class="btn" data-tk="16" type="button">KV cache FP16</button>
+      <button class="btn" data-tk="8" type="button">KV cache INT8</button>
+      <button class="btn" data-tk="4" type="button">KV cache INT4</button>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Takt,<br>ms per token</div><div class="ro-v" id="tT">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Minimum lot<br><span class="gk">t<sub>w</sub>/(T &minus; t<sub>kv</sub>)</span></div><div class="ro-v b" id="tB">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Batch,<br>simulated</div><div class="ro-v b" id="tBs">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">TPOT predicted<br><span class="gk">t<sub>w</sub>/(1 &minus; &rho;)</span></div><div class="ro-v c" id="tP">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">TPOT,<br>simulated</div><div class="ro-v c" id="tPs">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Served,<br>tokens/s</div><div class="ro-v a" id="tX">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Memory cap,<br>sequences</div><div class="ro-v" id="tC">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Memory<br>in use</div><div class="ro-v" id="tM">&mdash;</div></div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    The server: 40 GB of weights read in \(t_w = 20\) ms, 0.4 GB of FP16 cache per sequence read
+    in \(t_{kv} = 0.2\) ms, 80 GB of memory. The blue curve is throughput against batch size and
+    the orange line is demand; where they cross is the minimum lot, marked on both panels. The
+    green line below is the time per output token, \(t_w + b\,t_{kv}\), against a dashed 50 ms
+    target. The shaded band is beyond the memory cap. The simulated readouts come from 12,000
+    steps of continuous batching with Poisson arrivals of 300-token requests. At 2,000 tokens/s
+    the lot is 66.7 and TPOT is 33.3 ms, which answers the prediction: doubling demand cost a
+    third, not a doubling, because the larger lot shares the same 20 ms. Push demand past 2,500
+    and the crossing moves beyond the cap; the simulation then serves 2,500 and its queue grows.
+    <b>KV cache INT8</b> halves \(t_{kv}\) and doubles the cap, and the crossing comes back.
+  </div>
+</section>
+
+<section id="morebatch">
+  <div class="col">
+    <div class="sechead"><span class="secnum">15</span><h2>&ldquo;More batching cannot hurt&rdquo;, tested</h2>
+      <a class="srcref" href="@SRC@chapter%2017%20-%20AI%20inference/03.%20serving%20and%20batching.md" target="_blank" rel="noopener">src 03. serving and batching &#8599;</a>
+    </div>
+    <p>
+      The source&rsquo;s file 03 reads as a case for batching, and the claim it leaves behind is
+      that more of it is always better. Test it the way Sheet 13 part 1 &sect;16 tested &ldquo;more buffer cannot
+      hurt&rdquo;: one clause at a time.
+    </p>
+    <ul>
+      <li><b>Throughput: true, in this model.</b> \(X(b) = b/(t_w + b\,t_{kv})\) rises with \(b\) at
+        every batch size the script tried, 1 to 2,000 (<code>[Ch17 s15]</code>). At saturation, a
+        bigger lot always delivers more.</li>
+      <li><b>Lead time: false.</b> Every sequence in a step waits the whole step, so TPOT rises by
+        \(t_{kv}\) for every sequence added.</li>
+      <li><b>Below capacity: no gain at all.</b> If demand is below what the server can do, the
+        server delivers the demand, whatever its lot size: flow is conserved. A server that holds
+        requests until it has a lot of 32, at 2 requests per second, adds a mean wait of
+        \((32-1)/(2\times 2) = 7.75\) s, measured 7.73 s, and gains nothing
+        (<code>[Ch17 s15]</code>). That is batch-and-queue in its plainest form.</li>
+      <li><b>Past the memory cap: impossible.</b> The lot cannot exceed the stores (&sect;14).</li>
+      <li><b>For a mixture of experts: the setup itself grows with the lot</b> (&sect;11).</li>
+    </ul>
+    <p>
+      The source&rsquo;s own comparison is between two ways of batching. <b>Static batching</b>
+      collects a lot, runs it until its longest request finishes, and only then admits more.
+      <b>Continuous batching</b> swaps finished sequences for waiting ones every step.
+    </p>
+  </div>
+  <figure class="col">
+    <div class="paper"><img src="img/static_vs_continuous_batching.svg" alt="Four batch slots over time: static batching leaves slots idle until the longest request ends; continuous batching refills each slot as soon as it frees" width="560"></div>
+    <figcaption><b>Fig. 17.4</b> &mdash; Static batching leaves slots idle until the longest request finishes; continuous batching refills a slot the step it frees. The utilisation figures in the drawing are illustrative. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+  <div class="col">
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Static batching is a furnace that opens when the slowest part is done</div>
+      <p style="margin-bottom:0">
+        A load of eight parts with soak times spread evenly between 10 and 500 minutes keeps the
+        door shut for the longest, about 446 on average, while the parts need 255 on average: the
+        furnace is 57% used (<code>[Ch17 s15]</code>). The source&rsquo;s simulation of 100 such
+        requests in lots of 8 gives 430 tokens/s for static batching and 756 for continuous, a
+        factor of 1.76. The text&rsquo;s &ldquo;typically 2&ndash;10&times;&rdquo; is reported, and
+        its own example does not reach it. Continuous batching is possible only because opening this
+        furnace costs nothing: no heat escapes when a sequence leaves.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where lean breaks: one-piece flow loses here</div>
+      <p style="margin-bottom:0">
+        Lean manufacturing argues for a lot of one, and the argument has a precondition: cut the
+        setup towards zero first (SMED), and then small lots cost nothing in capacity. This setup is
+        the weight read, and it cannot go to zero. Quantisation cuts it by four (&sect;02), and a lot
+        of one still uses 1% of the machine (&sect;14). So the lean prescription survives in its
+        general form, <em>the smallest lot that meets takt</em>, and that lot is in the tens or
+        hundreds. Continuous batching delivers it without being asked. What lean gets right is the
+        warning: every token above that lot is work in progress, and it shows up as lead time.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="paging">
+  <div class="col">
+    <div class="sechead"><span class="secnum">16</span><h2>Paging, scheduling and routing</h2>
+      <a class="srcref" href="@SRC@chapter%2017%20-%20AI%20inference/03.%20serving%20and%20batching.md" target="_blank" rel="noopener">src 03. serving and batching &#8599;</a>
+    </div>
+    <p>
+      Since the stores are the constraint (&sect;14), how they are allocated matters. Reserving
+      space for the longest possible request wastes most of it. <b>PagedAttention</b> cuts the cache
+      into fixed pages of 16 tokens and hands them out as a request grows, with a table recording
+      where each request&rsquo;s pages sit. It is Sheet 13 part 1 &sect;16&rsquo;s virtual memory
+      applied to the cache, and the source says so.
+    </p>
+  </div>
+  <figure class="col">
+    <div class="paper"><img src="img/paged_attention.svg" alt="Each request's logical cache pages mapped through a page table to scattered physical pages, with free pages between" width="560"></div>
+    <figcaption><b>Fig. 17.5</b> &mdash; Logical pages per request, mapped to physical pages anywhere in memory. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+  <div class="col">
+    <p>
+      The source&rsquo;s second task compares the two for 256 requests of mean length 256 against a
+      maximum of 4,096: 104.9 GB reserved against 6.6 GB paged, 16 times less
+      (<code>[Ch17 s16]</code>). Its gigabytes inherit the &sect;09 slip; its ratios do not. It prints
+      the paged waste as 0%, which is an accident of its mean length being a multiple of 16. With
+      lengths spread from 1 to 511, the last page of each request is half empty on average: 7.5
+      tokens, or 2.85% of the pages (<code>[Ch17 s16]</code>). Requests that share a system prompt
+      can share its pages until they diverge, as orders share a common sub-assembly.
+    </p>
+    <ul>
+      <li><b>Scheduling.</b> First come, first served; shortest job first; priorities; preemption
+        that parks a request&rsquo;s cache in slower memory. Sheet 13 part 2 &sect;04 showed shortest
+        job first is the SPT dispatching rule, and that it needs job lengths nobody knows. Here the
+        unknown is how many tokens a request will produce, so the rule runs on a guess.</li>
+      <li><b>Disaggregated serving</b> runs prefill and decode on different machines. One is
+        work-dominated, one setup-dominated (&sect;13), which is why roughing and finishing go to
+        different machines: a rigid powerful one for metal removal, a precise one for the last
+        cut. The cost is moving the work in progress between them, here the whole KV cache.</li>
+      <li><b>LoRA serving</b> keeps one base model and many small adapters, swapped per request: one
+        machine, quick-change fixtures.</li>
+      <li><b>Constrained generation</b> masks every token that would break a grammar, so the output
+        cannot be malformed: a poka-yoke fixture that will not accept a part the wrong way round.
+        Masking renormalises the probabilities one token at a time, which is not the same as asking
+        for the most likely valid output as a whole.</li>
+      <li><b>Routing.</b> Send 80% of queries to a model ten times cheaper and the cost falls by 72%;
+        let every query try the small model first and escalate 20%, and it falls by 70%, the
+        source&rsquo;s figure (<code>[Ch17 s16]</code>).</li>
+    </ul>
+    <p>
+      The source&rsquo;s metrics table (TTFT, TPOT, throughput, the slowest 1% of requests, cost per
+      token, the share of requests meeting their target) is the dashboard of one server. Running
+      many servers against those targets, with spare capacity and failures, is Sheet 18&rsquo;s
+      subject.
+    </p>
+  </div>
+</section>
