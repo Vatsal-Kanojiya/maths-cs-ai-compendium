@@ -1,0 +1,713 @@
+<title>SIMD and the CPU</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(', '\\)']], displayMath: [['$$', '$$']], processEscapes: true },
+  svg: { fontCache: 'global', scale: 1.0 },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-svg.js" id="MathJax-script" async></script>
+
+<style>
+/* ============ TOKENS: light is complete and authoritative ============ */
+:root{
+  --ground:#F0F2F1;
+  --sheet:#FBFCFB;
+  --sheet-2:#F4F6F5;
+  --ink:#14181A;
+  --ink-2:#4E575B;
+  --ink-3:#77838A;
+  --rule:#D3DAD7;
+  --rule-strong:#A8B4B0;
+  --accent:#12507E;
+  --accent-ink:#0E4267;
+  --accent-soft:#E4EEF6;
+  --bridge:#1F8A4C;
+  --bridge-soft:#E4F2EA;
+  --brk:#A8500F;
+  --brk-soft:#FAEBDF;
+  --s1:#BF5B00;
+  --s2:#0F74C7;
+  --s3:#1F8A4C;
+  --paper:#FFFFFF;            /* pasted-drawing ground, both themes */
+  --paper-ink:#1b1b1b;
+  --shadow:0 1px 2px rgba(20,24,26,.06), 0 6px 18px rgba(20,24,26,.05);
+  --f-disp:'Archivo Narrow', 'Arial Narrow', Helvetica, sans-serif;
+  --f-body:'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --f-mono:'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+    --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+    --rule:#293134; --rule-strong:#3F494C;
+    --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+    --bridge:#35AC63; --bridge-soft:#11281B;
+    --brk:#E0913F; --brk-soft:#2E2012;
+    --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+  --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+  --rule:#293134; --rule-strong:#3F494C;
+  --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+  --bridge:#35AC63; --bridge-soft:#11281B;
+  --brk:#E0913F; --brk-soft:#2E2012;
+  --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:var(--f-body); font-size:17px; line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ============ TITLE BLOCK (engineering drawing header) ============ */
+.titleblock{
+  position:sticky; top:env(safe-area-inset-top,0px); z-index:40;
+  background:var(--sheet); border-bottom:1px solid var(--rule-strong);
+}
+.tb-in{
+  max-width:1240px; margin:0 auto; padding:0 16px;
+  display:flex; align-items:stretch; gap:0; min-height:46px;
+}
+.tb-cell{
+  display:flex; flex-direction:column; justify-content:center;
+  padding:5px 14px; border-right:1px solid var(--rule);
+  font-family:var(--f-disp);
+}
+.tb-cell:first-child{padding-left:0}
+.tb-cell:last-child{border-right:0; margin-left:auto; padding-right:0}
+.tb-k{
+  font-size:8.5px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); line-height:1.4;
+}
+.tb-v{font-size:13px; font-weight:700; letter-spacing:.02em; color:var(--ink); line-height:1.3}
+.tb-v.accent{color:var(--accent)}
+.tb-hide{display:none}
+@media (min-width:680px){ .tb-hide{display:flex} }
+
+.themebtn{
+  appearance:none; background:transparent; border:1px solid var(--rule-strong);
+  color:var(--ink-2); font-family:var(--f-disp); font-size:10px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:6px 10px; border-radius:2px;
+  cursor:pointer; align-self:center; white-space:nowrap;
+}
+.themebtn:hover{border-color:var(--accent); color:var(--accent)}
+.themebtn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+/* ============ SHELL ============ */
+.shell{max-width:1240px; margin:0 auto; padding:0 16px; padding-block:0 64px}
+@media (min-width:1080px){
+  .shell{display:grid; grid-template-columns:212px minmax(0,1fr); gap:44px; align-items:start}
+}
+.rail{display:none}
+@media (min-width:1080px){
+  .rail{
+    display:block; position:sticky; top:calc(env(safe-area-inset-top,0px) + 70px);
+    padding-block:28px; font-family:var(--f-disp); font-size:12.5px;
+  }
+}
+.rail-h{
+  font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-3);
+  padding-bottom:8px; border-bottom:1px solid var(--rule); margin-bottom:10px;
+}
+.rail a{
+  display:flex; gap:9px; padding:4px 0; color:var(--ink-2); text-decoration:none;
+  border-left:2px solid transparent; padding-left:9px; margin-left:-11px; line-height:1.35;
+}
+.rail a:hover{color:var(--accent)}
+.rail a.on{color:var(--accent); border-left-color:var(--accent); font-weight:700}
+.rail a .n{font-family:var(--f-mono); font-size:10.5px; color:var(--ink-3); flex:none; padding-top:1px}
+.rail a.on .n{color:var(--accent)}
+
+main{min-width:0; padding-block:0 0}
+.col{max-width:70ch}
+
+/* ============ TYPE ============ */
+h1,h2,h3,h4{font-family:var(--f-disp); text-wrap:balance; margin:0; line-height:1.14}
+h1{font-size:clamp(34px,7vw,58px); font-weight:700; letter-spacing:-.015em}
+h2{font-size:clamp(25px,4.2vw,34px); font-weight:700; letter-spacing:-.01em}
+h3{font-size:19px; font-weight:700; letter-spacing:.005em; margin-top:2px}
+h4{font-size:14px; font-weight:700; letter-spacing:.06em; text-transform:uppercase}
+p{margin:0 0 1.05em}
+a{color:var(--accent-ink)}
+strong{font-weight:600}
+em{font-style:italic}
+code{font-family:var(--f-mono); font-size:.87em; background:var(--sheet-2); padding:1px 5px; border-radius:2px; border:1px solid var(--rule)}
+.lead{font-size:19.5px; line-height:1.56; color:var(--ink-2)}
+.eyebrow{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--ink-3); margin:0 0 10px;
+}
+.srcref{
+  font-family:var(--f-mono); font-size:11px; color:var(--ink-3);
+  border:1px solid var(--rule); border-radius:2px; padding:2px 7px; display:inline-block;
+  background:var(--sheet-2); white-space:nowrap;
+}
+
+/* ============ SECTION ============ */
+section{padding-block:38px 0; scroll-margin-top:calc(env(safe-area-inset-top,0px) + 62px)}
+.sechead{display:flex; align-items:baseline; gap:13px; margin-bottom:6px; flex-wrap:wrap}
+.secnum{
+  font-family:var(--f-mono); font-size:12px; font-weight:600; color:var(--accent);
+  border:1px solid var(--accent); border-radius:2px; padding:2px 7px; flex:none;
+  background:var(--accent-soft);
+}
+.rule-h{border:0; border-top:1px solid var(--rule); margin:0 0 22px}
+.rule-d{border:0; border-top:1px dashed var(--rule-strong); margin:34px 0}
+
+/* ============ CALLOUTS ============ */
+.note{
+  border:1px solid var(--rule); border-left:3px solid var(--accent);
+  background:var(--sheet); border-radius:2px; padding:16px 18px; margin:22px 0;
+}
+/* Greek letters must never be uppercased: text-transform turns beta into
+   a capital Beta, which is the Latin letter B on screen -- likewise eta->H,
+   kappa->K, lambda->A-shape.  Any Greek inside an uppercased label wears .gk. */
+.gk{text-transform:none}
+.note.bridge{border-left-color:var(--bridge); background:var(--bridge-soft)}
+.note.brk{border-left-color:var(--brk); background:var(--brk-soft)}
+.note-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; margin-bottom:7px; display:flex; align-items:center; gap:8px;
+}
+.note.bridge .note-h{color:var(--bridge)}
+.note.brk .note-h{color:var(--brk)}
+.note .note-h{color:var(--accent)}
+.note p:last-child, .note ul:last-child{margin-bottom:0}
+.note-h .ic{
+  width:15px; height:15px; border-radius:50%; border:1.5px solid currentColor; flex:none;
+  display:grid; place-items:center; font-size:9.5px; font-weight:700; font-family:var(--f-mono);
+}
+ul,ol{margin:0 0 1.05em; padding-left:1.25em}
+li{margin-bottom:.4em}
+li::marker{color:var(--ink-3)}
+
+/* ============ DEFINITION BLOCK ============ */
+.defn{
+  background:var(--sheet); border:1px solid var(--rule); border-radius:3px;
+  padding:18px 20px; margin:22px 0; box-shadow:var(--shadow);
+}
+.defn-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:10px;
+  padding-bottom:8px; border-bottom:1px solid var(--rule);
+}
+.defn p:last-child{margin-bottom:0}
+
+/* ============ TABLES ============ */
+.tw{overflow-x:auto; margin:22px 0; border:1px solid var(--rule); border-radius:3px; background:var(--sheet)}
+table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:480px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule); vertical-align:top}
+thead th{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); background:var(--sheet-2); font-weight:700; white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:0}
+td.mono,th.mono{font-family:var(--f-mono); font-size:13px; font-variant-numeric:tabular-nums}
+.tw caption{
+  caption-side:bottom; text-align:left; padding:9px 14px; font-size:12.5px;
+  color:var(--ink-3); border-top:1px solid var(--rule); font-family:var(--f-disp);
+}
+
+/* ============ FIGURES ============ */
+figure{margin:24px 0}
+.paper{
+  background:var(--paper); border:1px solid var(--rule-strong); border-radius:3px;
+  padding:16px; display:flex; justify-content:center; box-shadow:var(--shadow);
+}
+.paper img{max-width:100%; height:auto; display:block}
+figcaption{
+  font-family:var(--f-disp); font-size:12.5px; color:var(--ink-3); margin-top:9px;
+  line-height:1.45; padding-left:2px;
+}
+figcaption b{color:var(--ink-2); font-weight:700; letter-spacing:.04em}
+
+/* ============ INTERACTIVE PANELS ============ */
+.lab{
+  background:var(--sheet); border:1px solid var(--rule-strong); border-radius:3px;
+  margin:26px 0; overflow:hidden; box-shadow:var(--shadow);
+}
+.lab-h{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:11px 16px; border-bottom:1px solid var(--rule); background:var(--sheet-2);
+}
+.lab-t{font-family:var(--f-disp); font-size:13px; font-weight:700; letter-spacing:.05em; text-transform:uppercase}
+.lab-tag{
+  font-family:var(--f-mono); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--accent); border:1px solid var(--accent); border-radius:2px; padding:2px 6px;
+  margin-left:auto; white-space:nowrap;
+}
+.lab-body{padding:16px}
+.lab-foot{
+  padding:11px 16px; border-top:1px solid var(--rule); background:var(--sheet-2);
+  font-size:13.5px; color:var(--ink-2); line-height:1.5;
+}
+.lab-foot b{color:var(--ink)}
+.stage{width:100%; max-width:560px; height:auto; display:block; margin-inline:auto; touch-action:none; cursor:grab}
+.stage.drag{cursor:grabbing}
+
+/* Dividers are drawn as cell borders rather than as 1px grid gaps over a grey
+   backdrop: when the item count does not fill the last row, a gap-based grid
+   leaves the backdrop showing as an empty grey block. */
+.readout{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr)); gap:0;
+  background:var(--sheet); border:1px solid var(--rule); border-radius:2px;
+  margin-top:14px; overflow:hidden;
+}
+.ro{background:var(--sheet); padding:8px 11px;
+  border-right:1px solid var(--rule); border-bottom:1px solid var(--rule)}
+.ro-k{
+  font-family:var(--f-disp); font-size:9px; letter-spacing:.13em; text-transform:uppercase;
+  color:var(--ink-3); margin-bottom:2px;
+  /* was white-space:nowrap, which clipped the longer keys instead of wrapping */
+  white-space:normal; overflow-wrap:break-word; line-height:1.3; min-height:2.6em;
+}
+.ro-v{
+  font-family:var(--f-mono); font-size:15px; font-weight:500; font-variant-numeric:tabular-nums;
+  color:var(--ink); line-height:1.25;
+}
+.ro-v.a{color:var(--s2)} .ro-v.b{color:var(--s1)} .ro-v.c{color:var(--s3)}
+
+.ctl{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:14px}
+.ctl label{
+  font-family:var(--f-disp); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-2); white-space:nowrap;
+}
+input[type=range]{
+  -webkit-appearance:none; appearance:none; height:22px; background:transparent;
+  flex:1 1 160px; min-width:130px; cursor:pointer;
+}
+input[type=range]:focus-visible{outline:2px solid var(--accent); outline-offset:3px}
+input[type=range]::-webkit-slider-runnable-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-moz-range-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:16px; height:16px; border-radius:50%;
+  background:var(--accent); border:2px solid var(--sheet); margin-top:-6.5px;
+}
+input[type=range]::-moz-range-thumb{
+  width:16px; height:16px; border-radius:50%; background:var(--accent);
+  border:2px solid var(--sheet);
+}
+.btn{
+  appearance:none; font-family:var(--f-disp); font-size:11px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:7px 13px; border-radius:2px;
+  border:1px solid var(--rule-strong); background:var(--sheet); color:var(--ink-2); cursor:pointer;
+}
+.btn:hover{border-color:var(--accent); color:var(--accent)}
+.btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.btn.on{background:var(--accent); border-color:var(--accent); color:var(--sheet)}
+
+.legend{display:flex; gap:16px; flex-wrap:wrap; margin-top:12px}
+.lg{display:flex; align-items:center; gap:7px; font-family:var(--f-disp); font-size:12px; color:var(--ink-2)}
+.lg i{width:15px; height:3px; border-radius:2px; flex:none; display:block}
+
+/* ============ MISC ============ */
+.mathbox{overflow-x:auto; overflow-y:hidden; margin:18px 0}
+mjx-container[display="true"]{margin:0 !important}
+.kv{display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:15px; margin:16px 0}
+.kv dt{font-family:var(--f-mono); font-size:13px; color:var(--accent); white-space:nowrap}
+.kv dd{margin:0; color:var(--ink-2)}
+
+details.q{
+  border:1px solid var(--rule); border-radius:3px; background:var(--sheet);
+  margin-bottom:9px; overflow:hidden;
+}
+details.q summary{
+  cursor:pointer; padding:12px 15px; font-weight:600; list-style:none;
+  display:flex; gap:11px; align-items:flex-start; font-size:15.5px;
+}
+details.q summary::-webkit-details-marker{display:none}
+details.q summary::after{
+  content:'+'; margin-left:auto; font-family:var(--f-mono); color:var(--accent);
+  font-size:17px; line-height:1; flex:none; padding-top:2px;
+}
+details.q[open] summary::after{content:'\2212'}
+details.q summary:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
+details.q summary .qn{
+  font-family:var(--f-mono); font-size:12px; color:var(--ink-3); flex:none; padding-top:3px;
+}
+details.q .ans{padding:0 15px 14px 41px; font-size:15.5px; color:var(--ink-2); border-top:1px solid var(--rule); padding-top:13px}
+details.q .ans p:last-child{margin-bottom:0}
+
+.endnote{
+  margin-top:44px; padding-top:20px; border-top:1px solid var(--rule-strong);
+  font-size:13.5px; color:var(--ink-3); font-family:var(--f-disp); line-height:1.55;
+}
+.endnote a{color:var(--accent)}
+
+.srcref{text-decoration:none}
+a.srcref{color:var(--ink-2); transition:none}
+
+</style>
+<style>
+.srcref{text-decoration:none}
+a.srcref{color:var(--ink-2)}
+a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(--accent-soft)}
+.srcref.nolink{opacity:.75; font-style:italic}
+.pv{font-family:var(--f-disp); font-size:9.5px; font-weight:700; letter-spacing:.1em;
+    text-transform:uppercase; padding:2px 7px; border-radius:2px; white-space:nowrap}
+.pv.ok{background:var(--bridge-soft); color:var(--bridge)}
+.pv.add{background:var(--accent-soft); color:var(--accent)}
+.pv.corr{background:var(--brk-soft); color:var(--brk)}
+.flag{display:inline-block; padding:1px 7px; border-radius:2px; font-family:var(--f-disp);
+      font-size:10px; letter-spacing:.1em; text-transform:uppercase; font-weight:700}
+.flag.ok{background:var(--bridge-soft); color:var(--bridge)}
+.flag.bad{background:var(--brk-soft); color:var(--brk)}
+.predict{border:1px solid var(--rule-strong); border-left:3px solid var(--brk);
+  background:var(--brk-soft); border-radius:2px; padding:13px 15px; margin:0 0 14px}
+.predict-h{font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--brk); margin-bottom:6px}
+.predict p{margin:0 0 10px; font-size:15px}
+.predict .opts{display:flex; gap:8px; flex-wrap:wrap}
+.pbtn{appearance:none; font-family:var(--f-disp); font-size:12px; font-weight:600;
+  padding:6px 12px; border-radius:2px; border:1px solid var(--rule-strong);
+  background:var(--sheet); color:var(--ink-2); cursor:pointer}
+.pbtn:hover{border-color:var(--brk); color:var(--brk)}
+.pbtn.picked{background:var(--brk); border-color:var(--brk); color:var(--sheet)}
+.pverdict{margin-top:10px; font-size:14.5px; color:var(--ink-2); display:none}
+.pverdict.show{display:block}
+.pverdict b{color:var(--ink)}
+.gap{border:1px solid var(--rule); border-left:3px solid var(--ink-3); background:var(--sheet-2);
+  border-radius:2px; padding:14px 16px; margin:18px 0}
+.gap-h{font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:7px}
+</style>
+<style>
+/* Sheet 16 part 1. Categorical series palette copied from Sheet 12, where it was validated
+   with dataviz/validate_palette.js in both modes: light band L 0.43-0.77, dark band
+   L 0.48-0.67, chroma floor, adjacent-pair CVD separation, normal-vision floor and
+   contrast all PASS. Never pair --s1 with --brk (both orange). */
+:root{--c1:#BF5B00; --c2:#0F74C7; --c3:#1F8A4C; --c4:#7A4FBF; --c5:#C2185B}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --c1:#D9782B; --c2:#4A97D6; --c3:#35AC63; --c4:#9575D0; --c5:#D65A82}
+}
+:root[data-theme="dark"]{
+  --c1:#D9782B; --c2:#4A97D6; --c3:#35AC63; --c4:#9575D0; --c5:#D65A82}
+.ro-v.d{color:var(--c4)}
+.mnote{font-family:var(--f-disp); font-size:12.5px; color:var(--ink-3); margin:-8px 0 16px}
+.svgfig{width:100%; height:auto; display:block; color:var(--ink)}
+.chartwrap{overflow-x:auto}
+.sel{appearance:auto; font-family:var(--f-disp); font-size:12px; padding:5px 8px; border:1px solid var(--rule-strong);
+  border-radius:2px; background:var(--sheet); color:var(--ink)}
+</style>
+
+<header class="titleblock">
+  <div class="tb-in">
+    <div class="tb-cell"><div class="tb-k">Chapter</div><div class="tb-v accent">16 &middot; SIMD and GPU Programming</div></div>
+    <div class="tb-cell tb-hide"><div class="tb-k">Sheet</div><div class="tb-v">16 of 20, part 1 of 3</div></div>
+    <div class="tb-cell tb-hide"><div class="tb-k">Reader</div><div class="tb-v">B.E. Mechanical</div></div>
+    <div class="tb-cell tb-hide"><div class="tb-k">Prerequisite</div><div class="tb-v">Sheet 14 part 2</div></div>
+    <div class="tb-cell"><button class="themebtn" id="themebtn" type="button" aria-label="Switch colour theme">Theme</button></div>
+  </div>
+</header>
+
+<div class="shell">
+
+<nav class="rail" aria-label="Chapter contents">
+  <div class="rail-h">Contents</div>
+  <a href="#bridge" class="on"><span class="n">00</span><span>The bridge</span></a>
+  <a href="#stack"><span class="n">01</span><span>Planner and machines</span></a>
+  <a href="#cpp"><span class="n">02</span><span>C++ in shop terms</span></a>
+  <a href="#power"><span class="n">03</span><span>The cube law</span></a>
+  <a href="#core"><span class="n">04</span><span>Inside one core</span></a>
+  <a href="#simd"><span class="n">05</span><span>A multi-spindle head</span></a>
+  <a href="#roofline"><span class="n">06</span><span>A two-station line</span></a>
+  <a href="#staging"><span class="n">07</span><span>Staging the material</span></a>
+  <a href="#little"><span class="n">08</span><span>Little&rsquo;s law</span></a>
+  <a href="#arm"><span class="n">09</span><span>ARM and NEON</span></a>
+  <a href="#x86"><span class="n">10</span><span>x86, AVX and AMX</span></a>
+  <a href="#bench"><span class="n">11</span><span>What the benchmarks measured</span></a>
+  <a href="#worked"><span class="n">12</span><span>Worked example</span></a>
+  <a href="#notcovered"><span class="n">13</span><span>Not covered</span></a>
+  <a href="#recall"><span class="n">14</span><span>Question bank</span></a>
+  <a href="#map"><span class="n">15</span><span>The map</span></a>
+  <a href="#next"><span class="n">16</span><span>What part 2 owes</span></a>
+  <a href="#provenance"><span class="n">A</span><span>Provenance</span></a>
+</nav>
+
+<main>
+
+<section id="top" style="padding-top:44px">
+  <div class="col">
+    <p class="eyebrow">Maths, CS &amp; AI Compendium &middot; Chapter 16, part 1 of 3</p>
+    <h1>Two Shop-Floor Laws Run the Core</h1>
+    <p class="lead" style="margin-top:18px">
+      Every speed limit inside a processor is one you have already solved on paper. A line
+      runs at the rate of its slowest station. Work in process equals throughput times lead
+      time. The first law is the roofline. The second tells you how many partial sums a dot
+      product must keep in the air, and why one core cannot use its own memory bandwidth.
+    </p>
+    <p>
+      Chapter 16 is split in three at its natural seams. This part is the CPU: why Python
+      hands its arithmetic to C++ (source file 00), how a modern core executes and what limits
+      it (file 01), and vector programming on ARM (file 02) and x86 (file 03). Part 2 is the
+      GPU, part 3 portability and the edge. Sheet 02 introduced matrix multiplication as an
+      operation on paper; this is where it meets the machine, and &sect;07 shows that the
+      trick every fast matmul uses is staging material at the machine.
+    </p>
+    <p>
+      The headline is &sect;08. Industrial engineering has a two-line result for a closed
+      line with \(w\) jobs in it, a raw process time \(T_0\) and a bottleneck rate
+      \(r_b\): throughput can never exceed \(\min(w/T_0,\ r_b)\). It follows from Little&rsquo;s
+      law, which Sheet 13 used. The build machine obeys it twice over, at scales a million times
+      apart. A chain of fused multiply-adds with \(K\) independent accumulators rose as \(K/4\)
+      per cycle and flattened at 2, with the knee at \(K = 4 \times 2 = 8\). A chase through
+      memory with \(K\) independent pointers rose as \(K/(210\ \text{ns})\) and flattened near
+      15 lines in flight. The roofline of &sect;06 is the \(r_b\) half of the same inequality.
+    </p>
+    <p>
+      The bridge bank said &ldquo;SIMD is multi-spindle machining&rdquo;. That holds only for one
+      member of the family. A multi-spindle <em>drilling head</em> (one feed, many identical tools)
+      is SIMD, masks and all. A multi-spindle <em>automatic lathe</em> indexes each part through
+      stations, which is a pipeline, Sheet 13&rsquo;s other bridge (&sect;05).
+    </p>
+    <p class="mnote">
+      Measured on the build machine: a 4-vCPU virtual machine on an Intel Xeon of the Cascade Lake
+      class (family 6, model 85), running at about 3.17 GHz, 32 KiB of L1 data cache per core and
+      33 MiB of L3. Two results were taken on a second container of the Sapphire Rapids class
+      (model 207, with AMX), and say so. Your numbers will differ. The laws should not.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Corrections to the source in this part. Each is recomputed or re-run by <code>verify_claims.py</code> under <code>[Ch16 sNN]</code>.</caption>
+      <thead><tr><th>Source says</th><th>Computed or measured</th><th>Where</th></tr></thead>
+      <tbody>
+        <tr><td>A \(4096^2\) matmul takes ~10 ms in optimised C++, 180,000&times; faster than Python</td><td>10 ms needs 13.7 TFLOP/s: 107 AVX2 cores at 4 GHz at 100% of peak. The build machine took 0.35 s; pure Python extrapolates to about 55 min, a ratio near 9,300.</td><td>&sect;01</td></tr>
+        <tr><td>NumPy&rsquo;s <code>a * b</code> &ldquo;uses SIMD + multithreading internally&rdquo;</td><td>It ran on one thread: 1.00 CPU-second per wall-second. Only the BLAS matmul used all four CPUs (3.9).</td><td>&sect;01</td></tr>
+        <tr><td>&ldquo;A 4-core chip at 3 GHz uses similar power to a single core at 4.5 GHz but can do 4&times; the parallel work&rdquo;</td><td>Under its own \(P \propto CV^2f\) with \(V \propto f\): 1.19&times; the power for 2.67&times; the work. At equal power, 2.52&times;.</td><td>&sect;03</td></tr>
+        <tr><td>Peak \(= 4\times10^9 \times 8 \times 2 = 64\) GFLOPS</td><td>That counts a fused multiply-add as one operation, while the matmul count \(2n^3\) counts it as two. Consistent peak: 128 GFLOP/s; ridge 2.56 FLOP/B, not 1.28.</td><td>&sect;06</td></tr>
+        <tr><td>The NEON dot product&rsquo;s 4 lanes are 4 accumulators, so &ldquo;the CPU can pipeline the FMAs&rdquo;</td><td>One register is one dependency chain: measured 0.26&ndash;0.30 vector FMAs per cycle, the 4-cycle latency. Pipelining needs 8 independent registers.</td><td>&sect;08</td></tr>
+        <tr><td>Without <code>restrict</code> the compiler must assume overlap, &ldquo;preventing vectorisation&rdquo;</td><td>GCC vectorises it anyway and adds a run-time overlap check (&ldquo;loop versioned for vectorization because of possible aliasing&rdquo;).</td><td>&sect;09</td></tr>
+        <tr><td>&ldquo;32 general-purpose registers (x0&ndash;x30)&rdquo;</td><td>x0 to x30 is 31 registers.</td><td>&sect;09</td></tr>
+        <tr><td>I8MM&rsquo;s <code>SMMLA</code> does &ldquo;an 8-element dot product&rdquo; in one instruction</td><td>Four of them: a 2&times;2 block of 8-long dot products, 32 multiply-accumulates.</td><td>&sect;09</td></tr>
+        <tr><td>The SME2 outer-product kernel</td><td>Does not compile as printed (<code>SVL</code> is undeclared), and lacks the streaming and ZA attributes its intrinsics need.</td><td>&sect;09</td></tr>
+        <tr><td>AMX does &ldquo;hundreds of FMA operations at once&rdquo;; the four-line snippet</td><td>8,192 multiply-accumulates per instruction. The snippet as printed dies with an illegal-instruction signal: it needs a tile configuration and, on Linux, a permission request. Run on the second container.</td><td>&sect;10</td></tr>
+        <tr><td><code>_mm512_reduce_add_ps</code>: &ldquo;built-in horizontal sum (no manual reduction!)&rdquo;</td><td>GCC expands it into 9 instructions, 4 of them adds.</td><td>&sect;10</td></tr>
+        <tr><td>File 01&rsquo;s bandwidth benchmark (it printed about 1,000 GB/s here)</td><td>The optimiser ran one of the 100 identical trials. The real figure is 10.7&ndash;11.7 GB/s.</td><td>&sect;11</td></tr>
+        <tr><td>File 03&rsquo;s alignment benchmark</td><td>Prints about \(10^{-6}\) ms: the loop&rsquo;s result is unused, so it was deleted. Measured properly, misalignment halves an L1-bound dot product and does nothing to a memory-bound one.</td><td>&sect;&sect;10, 11</td></tr>
+        <tr><td>Unroll the ReLU &ldquo;to hide FMA latency&rdquo;</td><td>ReLU has no chain to break. Scalar, AVX2 and unrolled all ran at 12.5 ms, the memory rate.</td><td>&sect;11</td></tr>
+        <tr><td>File 00&rsquo;s layout task shows a 6&times; column-major slowdown</td><td>Its row-major loop is a single float-add chain (21 ms floor). Against a row pass that runs at memory speed (7.5 ms) the column walk is about 22&times; slower.</td><td>&sect;07</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="bridge">
+  <div class="col">
+    <div class="sechead"><span class="secnum">00</span><h2>The bridge</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2016%20-%20SIMD%20and%20GPU%20programming/01.%20hardware%20fundamentals.md" target="_blank" rel="noopener">src 01. hardware fundamentals &#8599;</a>
+    </div>
+    <p>
+      The verdict column uses the series&rsquo; convention. <b>Identity</b> means the same
+      formula or count, checked numerically. <b>Same structure</b> means the parts correspond
+      one for one but the physics differs. <b>Breaks</b> means the correspondence fails in
+      substance, and the section says where.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>What a GATE-prepared mechanical engineer already owns, and what this part calls it.</caption>
+      <thead><tr><th>What you already know</th><th>What this part calls it</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td>Fan and pump affinity laws, \(P \propto N^3\)</td><td>Dynamic power \(P \propto CV^2 f\) with \(V \propto f\)</td><td><b style="color:var(--bridge)">Same exponents,</b> different physics. See &sect;03.</td></tr>
+        <tr><td>A dispatcher who starts any job whose material has arrived</td><td>Out-of-order execution</td><td><b style="color:var(--bridge)">Same structure.</b> See &sect;04.</td></tr>
+        <tr><td>Making to forecast before the order is confirmed</td><td>Branch prediction and speculation</td><td><b style="color:var(--bridge)">Same structure;</b> the scrapped WIP is the pipeline flush. See &sect;04.</td></tr>
+        <tr><td>A hysteresis band; a two-strikes rule</td><td>The 2-bit saturating branch predictor</td><td><b style="color:var(--bridge)">Identity.</b> See &sect;04.</td></tr>
+        <tr><td>A multi-spindle drilling head</td><td>SIMD lanes, masks, divergence</td><td><b style="color:var(--bridge)">Same structure,</b> with an exact stroke count. Breaks at reductions. See &sect;05.</td></tr>
+        <tr><td>A multi-spindle automatic lathe</td><td>A pipeline, not SIMD</td><td><b style="color:var(--brk)">Breaks</b> as the bank stated it. See &sect;05.</td></tr>
+        <tr><td>Material delivered in pallets of fixed size</td><td>64-byte cache lines; alignment</td><td><b style="color:var(--bridge)">Identity</b> in the count: a \(W\)-byte load splits on \(W/64\) of loads. See &sect;05.</td></tr>
+        <tr><td>A two-station serial line; output set by the slower station</td><td>The roofline</td><td><b style="color:var(--bridge)">Identity.</b> See &sect;06.</td></tr>
+        <tr><td>Goldratt&rsquo;s fifth step: the constraint moves (Sheet 13 part 3)</td><td>The ridge point moves when cores are added</td><td><b style="color:var(--bridge)">Identity.</b> See &sect;06.</td></tr>
+        <tr><td>Kitting: staging material at the machine</td><td>Cache blocking (tiling)</td><td><b style="color:var(--bridge)">Same structure;</b> the traffic count is exact. See &sect;07.</td></tr>
+        <tr><td>Volume over surface; the lumped body&rsquo;s characteristic length</td><td>Arithmetic intensity of a tile, \(b/4\) FLOP per byte</td><td><b style="color:var(--bridge)">Identity</b> for the tile cube. See &sect;07.</td></tr>
+        <tr><td>Little&rsquo;s law and a CONWIP line</td><td>Accumulators needed; memory-level parallelism</td><td><b style="color:var(--bridge)">Identity,</b> measured at both scales. See &sect;08.</td></tr>
+        <tr><td>Done-in-one machining: no trip back to stores between operations</td><td>Kernel fusion</td><td><b style="color:var(--bridge)">Same structure;</b> the bytes saved are exact. See &sect;01.</td></tr>
+        <tr><td>A tabulated drawing with dash numbers</td><td>A C++ template</td><td><b style="color:var(--bridge)">Same structure.</b> See &sect;02.</td></tr>
+        <tr><td>A bin location; a grid reference</td><td>A pointer</td><td><b style="color:var(--bridge)">Same structure.</b> See &sect;02.</td></tr>
+        <tr><td>&mdash;</td><td>Horizontal reductions and lane shuffles</td><td><b style="color:var(--brk)">No counterpart</b> on a drilling head. The nearest relative is Sheet 09&rsquo;s FFT butterfly. See &sect;05.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="stack">
+  <div class="col">
+    <div class="sechead"><span class="secnum">01</span><h2>The planner and the machines</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2016%20-%20SIMD%20and%20GPU%20programming/00.%20why%20C%2B%2B%20and%20how%20ML%20frameworks%20work.md" target="_blank" rel="noopener">src 00. why C++ &#8599;</a>
+    </div>
+    <p>
+      Every <code>np.dot</code>, <code>torch.matmul</code> and <code>jnp.matmul</code> in the
+      earlier sheets ran in compiled C, C++ or CUDA. Python described the work; something else
+      did it. The source draws the stack as a ladder: your Python code, the framework&rsquo;s
+      Python API, a dispatcher or compiler (<code>torch.compile</code>, XLA), a C++ kernel library
+      (ATen, BLAS), a hardware back end (MKL, cuBLAS, oneDNN), and the hardware.
+    </p>
+    <p>
+      The reason for two languages is the reason a shop has a planning office and a floor. The
+      planner works fast in a flexible medium and changes the plan often. The floor works in a
+      rigid medium that is set up once and then runs at the rate of the machine. Python is quick
+      to write and slow to run, roughly a hundred times slower than compiled code per simple
+      operation. C++ is slow to write, gives control over every byte, and reaches the vector units.
+    </p>
+    <p>
+      The source&rsquo;s example is a \(4096 \times 4096\) matrix product. Each of the \(n^2\)
+      outputs is a dot product of length \(n\): \(n\) multiplies and \(n-1\) adds, conventionally
+      counted as \(2n\) floating-point operations (FLOPs). So
+    </p>
+    <div class="mathbox">$$2n^3 = 2 \times 4096^3 = 137{,}438{,}953{,}472 \ \text{FLOP},$$</div>
+    <p>
+      the source&rsquo;s &ldquo;~137 billion&rdquo;. Its timings are another matter. It says pure
+      Python takes about 30 minutes and optimised C++ about 10 ms, a ratio of
+      \(1800/0.010 = 180{,}000\). The arithmetic is right; the 10 ms is not plausible for a CPU.
+    </p>
+    <div class="mathbox">$$\frac{137.4\times10^{9}\ \text{FLOP}}{0.010\ \text{s}} = 13.7\ \text{TFLOP/s}$$</div>
+    <p>
+      Using the source&rsquo;s own peak formula, corrected in &sect;06 to count a fused
+      multiply-add as two operations, one AVX2 core at 4 GHz peaks at 128 GFLOP/s. Ten
+      milliseconds would take 107 such cores, or 54 AVX-512 cores, every one at 4 GHz and 100%
+      of peak. On the build machine NumPy took <b>0.35 s</b> in float32 on 4 cores (395 GFLOP/s,
+      through its BLAS). A pure-Python triple loop timed at \(n = 64\) and \(n = 128\) and scaled
+      by \(n^3\) extrapolates to <b>about 55 minutes</b>. The real ratio on this machine is near
+      9,300, which is still the point: no amount of Python cleverness closes it.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>NumPy&rsquo;s elementwise arithmetic is not multithreaded</div>
+      <p style="margin-bottom:0">
+        File 01&rsquo;s second task labels <code>c = a * b</code> &ldquo;Parallel (NumPy, uses SIMD +
+        multithreading internally)&rdquo;. The way to check is to compare CPU time with wall-clock
+        time: a program using four threads accumulates four CPU-seconds per second. For
+        <code>a * b</code> on 20 million floats the ratio was <b>1.00</b>. For a 2048 matmul it was
+        <b>3.9</b> on 4 CPUs. NumPy&rsquo;s elementwise operations (its <em>ufuncs</em>) use SIMD on
+        one thread; only calls that reach BLAS fan out across cores (<code>[Ch16 s01]</code>).
+      </p>
+    </div>
+    <h3 style="margin-top:28px">Fusion is done-in-one machining</h3>
+    <p>
+      The source&rsquo;s strongest reason to write a custom kernel is <b>fusion</b>. A layer such as
+      <code>relu(layernorm(matmul(x, W) + b))</code> runs as separate kernels by default. Each one
+      reads its input array from main memory and writes its output back, so the intermediate
+      result makes a round trip to memory between every pair of operations. A fused kernel keeps
+      the intermediate values in registers and writes only the final answer.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same structure: parts that go back to stores between operations</div>
+      <p style="margin-bottom:0">
+        An unfused pipeline is a part that returns to the stores after every operation and is
+        issued again for the next one. Fusion is done-in-one machining on a mill-turn centre:
+        one setup, every operation, one trip out. The traffic count is exact. After the matmul
+        writes its output once, each of \(k\) elementwise steps reads and writes that output-sized
+        array again, so unfused traffic is \((1+2k)\) arrays against 1 fused. For the
+        source&rsquo;s three steps (bias, layer norm, ReLU) that is <b>7 against 1</b>.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks</div>
+      <p style="margin-bottom:0">
+        A done-in-one machine needs a fixture that holds every feature at once. A fused kernel
+        needs every intermediate value to fit in registers or on-chip memory at once, and layer
+        norm needs a whole row before it can normalise any element of it. So fusion is easy for a
+        chain of elementwise steps and hard across a reduction. The source also says fusion turns
+        &ldquo;three memory-bound operations into one compute-bound operation&rdquo;. It removes their
+        traffic; whether the fused kernel is compute-bound depends on the matmul inside it, which
+        &sect;06 shows is not automatic.
+      </p>
+    </div>
+    <p>
+      The rest of file 00 is plumbing, summarised here and not re-run: <b>pybind11</b> wraps a C++
+      function as a Python module; <b>PyTorch C++ extensions</b> compile one on the fly with
+      <code>torch.utils.cpp_extension.load</code>; JAX uses XLA custom calls or, more
+      conveniently, Pallas (part 2). Neither pybind11 nor PyTorch is installed on the build
+      machine, so those two examples are reported, not run. Write custom code only for an
+      operation the framework lacks, a fusion it misses, a memory saving, or new hardware.
+    </p>
+  </div>
+</section>
+
+<section id="cpp">
+  <div class="col">
+    <div class="sechead"><span class="secnum">02</span><h2>C++ in shop terms</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2016%20-%20SIMD%20and%20GPU%20programming/00.%20why%20C%2B%2B%20and%20how%20ML%20frameworks%20work.md" target="_blank" rel="noopener">src 00. why C++ &#8599;</a>
+    </div>
+    <p>
+      You need enough C++ to read a kernel, not to write a library. Four ideas carry most of it.
+    </p>
+    <p>
+      <b>Explicit types.</b> <code>int</code> is a 32-bit integer, <code>float</code> a 32-bit
+      floating-point number, <code>double</code> a 64-bit one. A variable cannot change type, and
+      the compiler checks every use, which is Sheet 13 part 3&rsquo;s point that a type is a unit
+      and type checking is dimensional homogeneity.
+    </p>
+    <p>
+      <b>Pointers.</b> A pointer is a variable holding a memory address. <code>float* ptr =
+      weights;</code> stores where the array starts; <code>ptr[42]</code> means &ldquo;the float
+      42 places along&rdquo;, and the machine computes its address as
+    </p>
+    <div class="mathbox">$$\text{address} = \text{base} + 42 \times 4\ \text{bytes}.$$</div>
+    <p>
+      That is the fixed-pitch calculation of Sheet 14 part 1 &sect;12: an array is a row of
+      equal bins, so any bin is one multiplication away. A pointer is a bin location written on a
+      requisition slip. The danger is the same as with a slip: nothing stops you writing a
+      location past the end of the rack, and C++ will fetch whatever is there.
+    </p>
+    <p>
+      <b>Stack and heap.</b> Small, short-lived arrays go on the <em>stack</em>, typically 1&ndash;8
+      MB per thread, created when a function starts and cleared when it returns. Large arrays go
+      on the <em>heap</em>, booked out with <code>new</code> and returned with <code>delete</code>.
+      The stack is the workbench, cleared at the end of every job. The heap is the stores, where
+      material booked out and never returned is a <em>memory leak</em>.
+      <code>std::make_unique</code> attaches the return slip to the job, so the material goes back
+      automatically when the job ends.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same structure: a template is a tabulated drawing</div>
+      <p style="margin-bottom:0">
+        A tabulated drawing shows one geometry and a table of dash numbers, each a real part with
+        its own dimensions. A C++ <em>template</em> such as <code>template &lt;typename T&gt; T
+        add(T a, T b)</code> is one piece of code with the number type left open; the compiler
+        produces a separate, fully specified function for each type you actually use
+        (<code>add&lt;float&gt;</code>, <code>add&lt;int&gt;</code>). This is how ATen writes one
+        kernel and gets float16, float32 and float64 versions. <b>Where it breaks:</b> each dash
+        number really is separate code in the program, so a template used with many types makes
+        the program larger, which a drawing sheet never does.
+      </p>
+    </div>
+    <h3 style="margin-top:28px">The source&rsquo;s first program, run</h3>
+    <p>
+      Task 1 fills ten million floats with \(0.001\,i\) and adds them into a <code>float</code>
+      accumulator. It prints <b>Sum 4.83701e+10</b>. The exact sum of the same stored values is
+      \(4.99999974\times10^{10}\), so the program is <b>3.26% low</b>. This is Sheet 13&rsquo;s
+      floating-point lesson at scale: a float carries a constant <em>relative</em> error, so once
+      the running total reaches \(10^{10}\) its spacing is 1,024, and each addend of a few thousand
+      is rounded to that spacing before it is added. A <code>double</code> accumulator, or adding in
+      a tree of partial sums, fixes it (<code>[Ch16 s02]</code>).
+    </p>
+    <p>
+      The program also prints a &ldquo;Throughput&rdquo; of about 2.3 GB/s. That is not a memory
+      speed. The loop is one long chain in which every addition waits for the previous result, and
+      a floating-point add on this core takes 4 cycles. Ten million of them at 3.17 GHz take
+      \(10^7 \times 4 / 3.17\times10^9 = 12.6\) ms; the loop measured 12.7 ms when timed on its
+      own (16&ndash;17 ms single-shot, as printed). The compiler is not allowed to split the chain,
+      because float addition is not associative (Sheet 13 again), and &sect;08 shows what splitting
+      it buys.
+    </p>
+    <p>
+      Task 3 sums a \(4096 \times 4096\) matrix of ones. That is \(2^{24} = 16{,}777{,}216\)
+      ones, exactly the last integer a float can count to one at a time: \(2^{24} + 1\) rounds back
+      to \(2^{24}\). Both of its sums print correctly by the luck of the size. One more row and both
+      would be wrong. &sect;07 returns to what that task measures.
+    </p>
+  </div>
+</section>
