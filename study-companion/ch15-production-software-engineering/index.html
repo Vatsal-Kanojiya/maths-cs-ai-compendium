@@ -920,8 +920,8 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     <div class="readout">
       <div class="ro"><div class="ro-k">Run 0: first<br>repeat at</div><div class="ro-v a" id="hN">&mdash;</div></div>
       <div class="ro"><div class="ro-k">Mean of<br>100 runs</div><div class="ro-v" id="hM">&mdash;</div></div>
-      <div class="ro"><div class="ro-k">Predicted<br>&#8730;(<span class="gk">&#960;</span>/2&middot;2<sup>b</sup>)</div><div class="ro-v" id="hP">&mdash;</div></div>
-      <div class="ro"><div class="ro-k">50% point<br>1.1774&middot;2<sup>b/2</sup></div><div class="ro-v" id="hH">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Predicted<br>&#8730;(<span class="gk">&#960;</span>/2&middot;2<sup><span class="gk">b</span></sup>)</div><div class="ro-v" id="hP">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">50% point<br>1.1774&middot;2<sup><span class="gk">b</span>/2</sup></div><div class="ro-v" id="hH">&mdash;</div></div>
     </div>
   </div>
   <div class="lab-foot col">
@@ -1005,7 +1005,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
   <div class="tw col">
     <table>
       <caption>Changed lines reported for real revisions. Bold marks a count above the floor.</caption>
-      <thead><tr><th>File, revisions</th><th>Lines</th><th>Floor</th><th>git</th><th>--minimal</th><th>patience</th><th>histogram</th><th>GNU</th><th>GNU -d</th></tr></thead>
+      <thead><tr><th>File, revisions</th><th>Lines</th><th>Floor</th><th>git</th><th><span class="gk">--minimal</span></th><th>patience</th><th>histogram</th><th>GNU</th><th>GNU <span class="gk">-d</span></th></tr></thead>
       <tbody>
         <tr><td>README.md 1f32a83&rarr;42d11dc</td><td class="mono">163 / 171</td><td class="mono">14</td><td class="mono">14</td><td class="mono">14</td><td class="mono">14</td><td class="mono">14</td><td class="mono">14</td><td class="mono">14</td></tr>
         <tr><td>HANDOFF.md 42d11dc&rarr;cfbdc1d</td><td class="mono">987 / 977</td><td class="mono">50</td><td class="mono">50</td><td class="mono">50</td><td class="mono">50</td><td class="mono">50</td><td class="mono">50</td><td class="mono">50</td></tr>
@@ -1368,7 +1368,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
   <div class="tw col">
     <table>
       <caption>What PyYAML 6.0.1 makes of six ways to write a small number.</caption>
-      <thead><tr><th>Written</th><th class="mono">3e-4</th><th class="mono">1e-3</th><th class="mono">1.0e3</th><th class="mono">3.0e-4</th><th class="mono">2.1e-4</th><th class="mono">1.0e+3</th></tr></thead>
+      <thead><tr><th>Written</th><th class="mono"><span class="gk">3e-4</span></th><th class="mono"><span class="gk">1e-3</span></th><th class="mono"><span class="gk">1.0e3</span></th><th class="mono"><span class="gk">3.0e-4</span></th><th class="mono"><span class="gk">2.1e-4</span></th><th class="mono"><span class="gk">1.0e+3</span></th></tr></thead>
       <tbody>
         <tr><td>Loaded as</td><td><span class="flag bad">text</span></td><td><span class="flag bad">text</span></td><td><span class="flag bad">text</span></td><td><span class="flag ok">number</span></td><td><span class="flag ok">number</span></td><td><span class="flag ok">number</span></td></tr>
       </tbody>
@@ -1798,12 +1798,12 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
       <span class="ro-v" id="oNv" style="min-width:56px">1000</span>
     </div>
     <div class="ctl">
-      <label for="oF">Flake rate f, %</label>
+      <label for="oF">Flake rate <span class="gk">f</span>, %</label>
       <input type="range" id="oF" min="0" max="7" value="4" step="1">
       <span class="ro-v" id="oFv" style="min-width:56px">0.10</span>
     </div>
     <div class="ctl">
-      <label for="on">Random inputs n</label>
+      <label for="on">Random inputs <span class="gk">n</span></label>
       <input type="range" id="on" min="0" max="10" value="6" step="1">
       <span class="ro-v" id="onv" style="min-width:56px">300</span>
     </div>
@@ -1814,8 +1814,8 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     <div class="readout">
       <div class="ro"><div class="ro-k">Producer&rsquo;s risk<br>(good change red)</div><div class="ro-v a" id="oA">&mdash;</div></div>
       <div class="ro"><div class="ro-k">Green with a<br>1% bug</div><div class="ro-v" id="oB">&mdash;</div></div>
-      <div class="ro"><div class="ro-k">95% bound<br>1 &minus; 0.05<sup>1/n</sup></div><div class="ro-v" id="oX">&mdash;</div></div>
-      <div class="ro"><div class="ro-k">Rule of three<br>3/n</div><div class="ro-v" id="o3">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">95% bound<br>1 &minus; 0.05<sup>1/<span class="gk">n</span></sup></div><div class="ro-v" id="oX">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Rule of three<br>3/<span class="gk">n</span></div><div class="ro-v" id="o3">&mdash;</div></div>
     </div>
   </div>
   <div class="lab-foot col">
@@ -2645,6 +2645,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
 .tkb{fill:var(--ink-2); font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600}
 .tkn{fill:var(--ink); font-family:'IBM Plex Mono',monospace; font-size:10px}
 #hS, #dS, #tS, #oS, #lS{cursor:default}
+.col p code, .col li code, .lab-foot code{overflow-wrap:anywhere}
 </style>
 
 <script>
@@ -2738,7 +2739,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     $('hRug').innerHTML=rug;
     var over=runs.filter(function(v){return v>xmax;}).length;
     $('hLab').innerHTML=T('tk',X(mean)+4,Y1+10,'mean of 100 runs','start')+
-      T('tk',X(half)+4,Y(0.5)-5,'50% point','start')+
+      T('tk',X(half)-6,Y(0.5)-6,'50% point','end')+
       (over?T('tk',X1,Y0-14,over+' run'+(over>1?'s':'')+' beyond the axis','end'):'');
     $('hVal').textContent=bits;
     $('hN').textContent=H.comma(runs[0]); $('hM').textContent=H.comma(mean,1);
@@ -2783,8 +2784,9 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
         if(!(s in out)){out[s]=steps; order.push(s);} return;
       }
       if(a[i-1]===b[j-1]){ acc.push(['k',i,j]); walk(i-1,j-1,acc); acc.pop(); return; }
-      if(Lt[i-1][j]===Lt[i][j]){ acc.push(['d',i,j]); walk(i-1,j,acc); acc.pop(); }
+      /* insertion tried first when walking back, so a changed line prints as - then + */
       if(Lt[i][j-1]===Lt[i][j]){ acc.push(['i',i,j]); walk(i,j-1,acc); acc.pop(); }
+      if(Lt[i-1][j]===Lt[i][j]){ acc.push(['d',i,j]); walk(i-1,j,acc); acc.pop(); }
     }
     walk(a.length,b.length,[]);
     return order.map(function(s){return out[s];});
@@ -2804,7 +2806,8 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     }
     for(j=1;j<=m;j++) g+=T('tk',gx+j*cs+cs/2,gy-6,p.lab==='char'?b[j-1]:'b'+j,'middle');
     for(i=1;i<=n;i++) g+=T('tk',gx-5,gy+i*cs+cs/2+3.5,p.lab==='char'?a[i-1]:'a'+i,'end');
-    g+=T('tk',gx,14,'old rows, new columns; green box = lines equal','start');
+    g+=T('tk',gx,gy+(n+1)*cs+16,'rows: old, columns: new','start');
+    g+=T('tk',gx,gy+(n+1)*cs+30,'green box: lines equal; blue: path','start');
     $('dGrid').innerHTML=g;
     var lx=gx+(m+1)*cs+16, ly=gy+8, lines='', rowH=Math.min(18,Math.floor(250/Math.max(1,path.length)));
     lines+=T('tkb',lx,14,'shortest diff','start');
