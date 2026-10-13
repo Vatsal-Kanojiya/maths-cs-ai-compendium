@@ -1017,3 +1017,325 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     </div>
   </div>
 </section>
+
+<section id="zoo">
+  <div class="col">
+    <div class="sechead"><span class="secnum">07</span><h2>The rest of the weight-only zoo</h2>
+      <a class="srcref" href="@SRC@chapter%2017%20-%20AI%20inference/01.%20quantisation.md" target="_blank" rel="noopener">src 01. quantisation &#8599;</a>
+    </div>
+    <p>
+      Since decode is limited by reading weights (&sect;01), the source&rsquo;s favourite methods
+      quantise only the weights, to 4 bits or fewer, and keep activations in 16-bit floats. The
+      weights are expanded back to floats inside the arithmetic unit, so memory and bandwidth
+      shrink while the arithmetic stays as it was. Each method attacks the same enemy, a few large
+      values that set the range for everything else, in a different way.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>The source&rsquo;s weight-only methods, by what they do to the gauge. Results on real models are reported, not computed here.</caption>
+      <thead><tr><th>Method</th><th>What it does</th><th>In gauge terms</th></tr></thead>
+      <tbody>
+        <tr><td>GPTQ</td><td>Rounds column by column and lets the rest settle</td><td>Baseline dimensioning (&sect;06)</td></tr>
+        <tr><td>AWQ</td><td>Scales up the 1&ndash;3% of weight channels that meet large activations, scales the activations down</td><td>SmoothQuant&rsquo;s trick (&sect;04) aimed at the important channels</td></tr>
+        <tr><td>GGUF k-quants</td><td>Spends more bits on blocks that matter more</td><td>Finer gauges on critical dimensions</td></tr>
+        <tr><td>QuIP</td><td>Rotates the weight matrix by a random orthogonal matrix first</td><td>Mohr&rsquo;s circle: same tensor, different axes</td></tr>
+        <tr><td>SpQR</td><td>Keeps the 0.1&ndash;1% worst outliers in 16 bits, stored sparsely</td><td>Measure a few critical features on the CMM, the rest by gauge</td></tr>
+        <tr><td>HQQ</td><td>Solves for scales with no calibration data</td><td>Range from the drawing, not from samples</td></tr>
+        <tr><td>AQLM</td><td>Writes each group of 8 weights as a sum of entries from two codebooks</td><td>Sheet 10 &sect;06&rsquo;s residual quantisation, with codebooks fitted jointly</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>QuIP&rsquo;s rotation is Mohr&rsquo;s circle used backwards</div>
+      <p>
+        Rotating the axes cannot change a stress tensor; it only changes how the tensor is shared
+        among components. A uniaxial stress of 100 MPa, read on axes at 45&deg;, shows 50 normal on
+        each and 50 shear. Principal axes concentrate a tensor; QuIP wants the opposite, axes on
+        which no single entry stands out. Multiply the weight matrix on both sides by random
+        orthogonal matrices, quantise, and rotate back. The product is unchanged, because
+        \(Wx = (U^{\mathsf T}U)\,W(Q^{\mathsf T}Q)\,x\).
+      </p>
+      <p style="margin-bottom:0">
+        The source&rsquo;s own example is &ldquo;one weight is 100 and the rest are ~1&rdquo;. On a
+        256&times;256 matrix of that kind, the largest entry is 93 times the typical one, and INT4
+        with one scale loses 93% of the matrix. After a random rotation the largest entry is 4.7
+        times the typical one, and the error is 19% (<code>[Ch17 s07]</code>).
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks: the rotation must be undone at run time</div>
+      <p style="margin-bottom:0">
+        A stress tensor does not care which axes you read it on. A quantised matrix stored on
+        rotated axes needs its inputs rotated to match on every use. QuIP makes that affordable with
+        structured orthogonal matrices that cost far less than a full multiply (reported). It is
+        extra work bought to make rounding cheaper.
+      </p>
+    </div>
+    <p>
+      AQLM&rsquo;s arithmetic is easy to check: two codebooks of 256 entries are two 8-bit indices
+      per group of 8 weights, so 2 bits per weight before the codebooks themselves
+      (<code>[Ch17 s07]</code>). <b>FP8 training</b> uses E4M3 for the forward pass and E5M2 for
+      gradients: more figures where values are well behaved, more range where they span many
+      decades. The &ldquo;loss scaling&rdquo; it needs multiplies the gradients by a large factor
+      before they are stored and divides afterwards, which is changing an amplifier&rsquo;s gain so
+      a small signal sits inside the converter&rsquo;s range.
+    </p>
+  </div>
+</section>
+
+<section id="stack">
+  <div class="col">
+    <div class="sechead"><span class="secnum">08</span><h2>Errors stack like tolerances</h2>
+      <a class="srcref" href="@SRC@chapter%2017%20-%20AI%20inference/01.%20quantisation.md" target="_blank" rel="noopener">src 01. quantisation &#8599;</a>
+    </div>
+    <p>
+      A model has dozens of layers, and every layer rounds. The source mentions error
+      accumulation once, for the KV cache. It deserves a law, and you already own it. Modern
+      language models pass a running total, the <b>residual stream</b>, from block to block, and
+      each block adds its contribution to it. That is a stack of parts, and each rounding is a
+      part&rsquo;s deviation.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: rounding errors stack in RSS, and a bias stacks linearly</div>
+      <p>
+        Sheet 04 &sect;05 derived root-sum-square tolerance stacking: independent zero-mean
+        deviations add in variance, so the stack grows as \(\sqrt{n}\); a common drift, such as tool
+        wear on every part in a shift, adds directly, so it grows as \(n\). Round-to-nearest gives
+        zero-mean errors; truncation (always rounding down) gives a bias of \(-\Delta/2\) every time.
+        Simulated on a residual stream of 256 values, rounded to 0.01 after every block
+        (<code>[Ch17 s08]</code>):
+      </p>
+      <ul style="margin-bottom:0">
+        <li>rounding: RMS error 0.0058, 0.0119, 0.0270 at 4, 16 and 64 blocks; each fourfold
+          increase in depth multiplies it by 2.06 and 2.26, against RSS&rsquo;s 2;</li>
+        <li>truncating: 0.0210, 0.0828, 0.3548; factors 3.95 and 4.28, against linear
+          stacking&rsquo;s 4.</li>
+      </ul>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks: a layer is not a rigid part</div>
+      <p style="margin-bottom:0">
+        A stacked part passes a deviation on unchanged. A layer multiplies it by its own gain, so
+        an early error is amplified by every later layer, and the rounding factors come out a
+        little above 2 for that reason. Errors at a layer with large gain matter more than the same
+        rounding elsewhere, which is the source&rsquo;s <b>sensitivity analysis</b> under another
+        name: quantise one layer at a time, measure the damage, and give more bits where it is
+        largest. Tolerance allocation does exactly that with sensitivity coefficients
+        \(\partial y/\partial x_i\), tightening the tolerance where the coefficient is large.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="kvcache">
+  <div class="col">
+    <div class="sechead"><span class="secnum">09</span><h2>The KV cache, and the 330 GB that is 344</h2>
+      <a class="srcref" href="@SRC@chapter%2017%20-%20AI%20inference/01.%20quantisation.md" target="_blank" rel="noopener">src 01. quantisation &#8599;</a>
+    </div>
+    <p>
+      Attention lets each new token look back at every earlier one. To do that it needs, for every
+      earlier token and every layer, a <b>key</b> vector and a <b>value</b> vector. Recomputing them
+      each step would repeat all the earlier work, so they are stored: the <b>KV cache</b>. It grows
+      by one token&rsquo;s worth per step, and it belongs to one request.
+    </p>
+  </div>
+  <div class="mathbox col">$$\text{KV bytes} = 2 \times n_{\text{layers}} \times n_{\text{kv heads}} \times d_{\text{head}} \times \text{tokens} \times \text{bytes per value}$$</div>
+  <div class="col">
+    <p>
+      The source writes \(n_{\text{heads}}\) where this writes \(n_{\text{kv heads}}\). The two are the
+      same in plain multi-head attention and differ by 8&times; in the grouped-query attention its
+      next file says most modern models use (&sect;10). The distinction is where the numbers go
+      wrong.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>The source&rsquo;s prose and its own code disagree</div>
+      <p>
+        For a 70B model with 80 layers, 64 heads of 128 dimensions, 131,072 tokens in FP16, the
+        prose says 330 GB. The product is \(343{,}597{,}383{,}680\) bytes: 343.6 GB, or exactly
+        320 GiB (<code>[Ch17 s09]</code>). The coding task at the end of the same file prints
+        343.6. Neither binary nor decimal units give 330.
+      </p>
+      <p>
+        The 70B model the source has in mind uses 8 key-value heads, not 64 (reported for
+        Llama-2-70B), so its real cache at that length is 42.9 GB. The same slip runs through the
+        chapter. File 03 sizes a token of this model&rsquo;s cache at &ldquo;~1.3 KB per layer,
+        ~100 KB total&rdquo;; file 01&rsquo;s parameters give 32 KB per layer and 2.6 MB per token,
+        and with 8 key-value heads it is 4 KB and 328 KB. File 05&rsquo;s 2,000-token shared
+        prompt &ldquo;saves ~200 MB&rdquo;; at 328 KB a token it is 655 MB, and at file 01&rsquo;s
+        figures 5.2 GB (<code>[Ch17 s09]</code>).
+      </p>
+      <p style="margin-bottom:0">
+        None of this changes a conclusion that is a ratio, such as how much paging saves (&sect;16).
+        It changes every conclusion that is a number of gigabytes.
+      </p>
+    </div>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>The KV cache is work in progress</div>
+      <p style="margin-bottom:0">
+        Each active request holds its own cache in memory, the cache grows one token at a time, and
+        it is thrown away when the request finishes. That is work-in-progress inventory, held in
+        the stores, one traveller per job. Memory is the stores, and when it fills, no more jobs can
+        be released to the floor. &sect;14 shows this is usually what limits a server, and Little&rsquo;s
+        law says how much of it you will hold.
+      </p>
+    </div>
+    <p>
+      <b>KV-cache quantisation</b> stores keys and values in 8 or 4 bits. The source calls it
+      &ldquo;multiplicatively beneficial&rdquo;, and &sect;14 makes that exact: it halves the time
+      each sequence costs per step <em>and</em> doubles how many sequences fit, and on the example
+      server those two together double the capacity, from 2,500 to 5,000 tokens per second
+      (<code>[Ch17 s14]</code>).
+    </p>
+  </div>
+</section>
+
+<section id="lesswork">
+  <div class="col">
+    <div class="sechead"><span class="secnum">10</span><h2>Doing less work per token</h2>
+      <a class="srcref" href="@SRC@chapter%2017%20-%20AI%20inference/02.%20efficient%20architectures.md" target="_blank" rel="noopener">src 02. efficient architectures &#8599;</a>
+    </div>
+    <p>
+      File 02 turns from cheaper operations to fewer of them. Most of it is about attention, whose
+      cost grows with the square of the sequence length \(n\) because every token looks at every
+      earlier one.
+    </p>
+    <ul>
+      <li><b>StreamingLLM</b> keeps the first few tokens permanently (the &ldquo;attention
+        sinks&rdquo;, which take a large share of attention whatever they say) plus a rolling
+        window of the most recent ones. The cache stops growing. What falls out of the window is
+        gone.</li>
+      <li><b>Sliding-window attention</b> lets each token see only the last \(w\). After \(L\)
+        layers information can travel about \(L \times w\) tokens, the way a disturbance crosses a
+        lattice one neighbour per step.</li>
+      <li><b>Linear attention</b> regroups a product. Softmax attention computes
+        \((QK^{\mathsf T})V\), an \(n\times n\) matrix first. Replace the softmax by a feature map
+        \(\phi\) and the product can be taken as \(\phi(Q)\,(\phi(K)^{\mathsf T}V)\), a small
+        \(d\times d\) matrix first: cost \(nd^2\) instead of \(n^2 d\). Matrix multiplication is
+        associative, so this is exact for the new model. It is not the same model, because the
+        softmax cannot be regrouped.</li>
+      <li><b>State-space models</b> such as Mamba are Sheet 07 &sect;07&rsquo;s discrete
+        state-space systems, and the cache is replaced by a fixed-size state.</li>
+      <li><b>Flash attention</b> computes ordinary attention exactly, in tiles that stay in fast
+        on-chip memory; Sheet 16 is where it belongs. <b>Ring attention</b> spreads one long
+        sequence over several devices.</li>
+    </ul>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>The window&rsquo;s 4&times; compares two different kinds of attention</div>
+      <p style="margin-bottom:0">
+        The coding task prints &ldquo;Reduction: 4.0x&rdquo; for a window of 128 on 512 tokens, as
+        \(n^2/(nw)\). But its full-attention function lets every token see every other, including
+        later ones, while its window looks only backwards. A language model only ever looks
+        backwards, so the fair baseline is the triangle: 131,328 scores against the window&rsquo;s
+        57,408, a reduction of <b>2.29&times;</b> (<code>[Ch17 s10]</code>). For long sequences the
+        ratio tends to \(n/2w\), half the printed figure.
+      </p>
+    </div>
+    <p>
+      The cache itself shrinks if heads share keys and values. <b>Multi-query attention</b> gives
+      all heads one key-value set; <b>grouped-query attention</b> gives each group of heads one. At
+      32K tokens with 32 heads of 128 dimensions, the source&rsquo;s task gives 537 MB per layer for
+      separate sets, 134 MB with 8 groups and 16.8 MB with one: 4&times; and 32&times; smaller
+      (<code>[Ch17 s10]</code>). <b>Multi-head latent attention</b> stores a compressed vector per
+      token and rebuilds keys and values from it, trading a little arithmetic for a lot of memory,
+      which is the right trade when memory is the constraint (its 93.3% reduction is reported).
+    </p>
+  </div>
+  <figure class="col">
+    <div class="paper"><img src="img/mha_gqa_mqa.svg" alt="Multi-head, grouped-query and multi-query attention: eight query heads sharing eight, two or one key-value sets" width="560"></div>
+    <figcaption><b>Fig. 17.3</b> &mdash; Eight query heads with eight, two or one key-value sets. The sizes printed under the figure for a 70B model at 32K in FP16 (40, 5 and 0.6 GB) are the 1-byte values; at 2 bytes they are 85.9, 10.7 and 1.3 GB (<code>[Ch17 s10]</code>). <i>Figure from the compendium.</i></figcaption>
+  </figure>
+</section>
+
+<section id="moe">
+  <div class="col">
+    <div class="sechead"><span class="secnum">11</span><h2>A mixture of experts is a mixed-model lot</h2>
+      <a class="srcref" href="@SRC@chapter%2017%20-%20AI%20inference/02.%20efficient%20architectures.md" target="_blank" rel="noopener">src 02. efficient architectures &#8599;</a>
+    </div>
+    <p>
+      A <b>mixture-of-experts</b> (MoE) model replaces one large block with several smaller
+      &ldquo;experts&rdquo; and sends each token to two of them. The source&rsquo;s example has 8
+      experts, 46.7B weights in all and 12.9B used per token (figures reported), and calls it
+      &ldquo;70B-class quality with 13B-class inference cost&rdquo;. From those two numbers each
+      expert holds 5.63B weights and 1.63B are shared by every token (<code>[Ch17 s11]</code>).
+    </p>
+    <p>
+      The 13B-class cost is true for one token. But &sect;01 said the cost that matters is the
+      weight read per step, and a step serves a whole batch. Each token in the batch picks its own
+      two experts, and the step must read every expert that <em>any</em> token picked.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same structure: the setup of a mixed-model lot grows with its variety</div>
+      <p>
+        A lot that mixes product variants needs the tooling for every variant present. One variant,
+        one setup; five variants, five. With uniform routing a token misses a given expert with
+        probability 6/8, so a batch of \(b\) tokens touches on average \(8\,(1-(3/4)^b)\) experts. The
+        formula matches simulation within 0.01, and the weight read per step follows
+        (<code>[Ch17 s11]</code>):
+      </p>
+      <ul style="margin-bottom:0">
+        <li>batch 1: 2 experts, 12.9B read, 28% of what a dense 46.7B model reads;</li>
+        <li>batch 4: 5.47 experts, 32.4B, 69%;</li>
+        <li>batch 8: 7.20 experts, 42.2B, 90%;</li>
+        <li>batch 16: 7.92 experts, 46.2B, 99%.</li>
+      </ul>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks, and what survives</div>
+      <p style="margin-bottom:0">
+        Routing in real models is not uniform (reported), so the curve is an estimate of shape. The
+        conclusion holds: at the batch sizes a server runs (&sect;14), an MoE&rsquo;s saving in
+        weight reads is nearly gone, and what remains is the saving in arithmetic, 12.9B rather
+        than 46.7B multiply-adds per token. The model still needs memory for all 46.7B. The
+        source&rsquo;s expert offloading and expert caching keep the rarely used experts further down
+        the memory hierarchy, which is Sheet 13 part 1 &sect;15&rsquo;s material staging.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="prune">
+  <div class="col">
+    <div class="sechead"><span class="secnum">12</span><h2>Distillation, pruning and search</h2>
+      <a class="srcref" href="@SRC@chapter%2017%20-%20AI%20inference/02.%20efficient%20architectures.md" target="_blank" rel="noopener">src 02. efficient architectures &#8599;</a>
+    </div>
+    <p>
+      <b>Distillation</b> trains a small &ldquo;student&rdquo; to reproduce a large
+      &ldquo;teacher&rdquo;. The student learns from the teacher&rsquo;s full probability over the
+      answers, not just the right answer, and the source says this carries more information.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Hard labels are attribute data; the teacher&rsquo;s probabilities are variables data</div>
+      <p style="margin-bottom:0">
+        A go/no-go check tells you pass or fail. A measured dimension tells you how far inside the
+        band, which is why a variables sampling plan reaches the same assurance as an attributes
+        plan with fewer samples. A label says &ldquo;cat&rdquo;. A teacher&rsquo;s output says
+        &ldquo;cat 0.80, fox 0.15, dog 0.05&rdquo;, which also says which wrong answers are nearly
+        right. The temperature \(T\) in the source&rsquo;s loss flattens those probabilities so the
+        small ones carry weight. The bridge is in kind, not in a formula: no sample-size equation
+        carries across.
+      </p>
+    </div>
+    <p>
+      <b>Pruning</b> removes weights. Removing scattered single weights saves memory but not time,
+      because the hardware multiplies dense blocks; removing whole heads, neurons or layers
+      leaves a smaller dense model. The one scattered pattern hardware does accelerate is 2:4,
+      two zeros in every four weights, for about 2&times; (reported). <b>Neural architecture
+      search</b> automates design against a target such as &ldquo;under 5 ms on this phone&rdquo;.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>The pruning task measures only how much it removed</div>
+      <p style="margin-bottom:0">
+        File 02&rsquo;s third task ranks 8 attention heads by size and zeroes the smallest. Its heads
+        are random numbers, so their sizes all lie between 44.6 and 46.0 and the ranking means
+        nothing. Keeping 6, 4 or 2 heads gives errors of 0.495, 0.702 and 0.862, which are
+        \(\sqrt{2/8}\), \(\sqrt{4/8}\) and \(\sqrt{6/8}\) to within 0.006 (<code>[Ch17 s12]</code>): the
+        share removed, and nothing about importance. Its <code>reshape</code> also does not lay the
+        heads side by side per token, which would need a transpose first. That does not change the
+        printed error, which ignores order, but the comment calling it a concatenation is wrong.
+        Pruning by importance needs heads whose importance differs.
+      </p>
+    </div>
+  </div>
+</section>
