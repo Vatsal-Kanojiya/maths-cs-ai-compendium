@@ -5679,6 +5679,26 @@ def _ch15():
     say("s24", f"  linear search through the ECN log instead: {300 / 2:.0f} builds on average, and 1-(0.95)^k compounding over k good builds")
     say("s24", f"  expected builds with 2 runs per step: {2 * w2[1]:.1f}, vs 150 for the linear search")
 
+    # --- s26: question-bank answers ------------------------------------------------------------------------
+    print()
+    q1 = 1 - math.exp(-(50000 ** 2) / 2 ** 29)
+    say("s26", f"Q: 50,000 objects, 7-hex-digit prefixes: P(some shared) = {q1:.4f}", abs(q1 - 0.9905) < 1e-3)
+    say("s26", f"Q: N=120, M=125, LCS 110: shortest diff {120 + 125 - 2 * 110} lines (10 deleted, 15 inserted)", 120 + 125 - 220 == 25)
+    say("s26", f"Q: bisect 1,000 commits: ceil(log2 1000) = {math.ceil(math.log2(1000))} builds", math.ceil(math.log2(1000)) == 10)
+    q4a, q4b = 1 - 0.9995 ** 2000, 1 - (1 - 0.0005 ** 2) ** 2000
+    say("s26", f"Q: 2,000 tests flaky 0.05%: red {q4a:.3f} run once, {q4b:.1e} with one rerun", abs(q4a - 0.632) < 1e-3 and abs(q4b - 5.0e-4) < 1e-5)
+    q5 = 1 - 0.05 ** (1 / 500)
+    say("s26", f"Q: 500 passing random inputs: 95% bound {q5:.5f} vs 3/500 = {3 / 500:.4f}", abs(q5 - 0.00597) < 1e-5)
+    cq, pq = [10, 120, 900], [0.10, 0.30, 0.20]
+    oq = sorted(range(3), key=lambda i: cq[i] / pq[i])
+    say("s26", f"Q: CI lint 10 s/10%, unit 120 s/30%, integration 900 s/20%: order {oq}, expected {ff_cost(oq, cq, pq):.0f} s",
+        oq == [0, 1, 2] and abs(ff_cost(oq, cq, pq) - 685) < 1e-9)
+    ea, eb = exp_cost([0, 1], [300, 5], [0.1, 0.5]), exp_cost([1, 0], [300, 5], [0.1, 0.5])
+    say("s26", f"Q: layer A 300 s/10%, B 5 s/50%: A first {ea:.2f} s, B first {eb:.2f} s",
+        abs(ea - 32.75) < 1e-9 and abs(eb - 167.5) < 1e-9 and ratio_order([300, 5], [0.1, 0.5]) == [0, 1])
+    q8 = 1 - 0.99 ** 30
+    say("s26", f"Q: a page of 30 requests meets one beyond p99 with prob {q8:.3f}", abs(q8 - 0.260) < 1e-3)
+
     print()
     say("summary", "Ch15 numbers for the page: " + json.dumps({"LAB5": LAB5, "LAB6": LAB6, "LAB20": {k: round(v, 2) for k, v in LAB20.items()},
                                                              "OC": {k: round(v, 4) for k, v in OC.items()}, "bisect_calls": BIS}))

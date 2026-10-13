@@ -2319,3 +2319,316 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     </p>
   </div>
 </section>
+
+<section id="breaks">
+  <div class="col">
+    <div class="sechead"><span class="secnum">25</span><h2>Where it breaks, across the chapter</h2>
+      <span class="srcref nolink" title="Written for this sheet; not in the source chapter">whole chapter</span>
+    </div>
+    <p>
+      Every correspondence on this sheet, with the place it stops holding. The right-hand
+      column is the part to remember.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Each bridge, what carries over, and where it fails.</caption>
+      <thead><tr><th>Correspondence</th><th>What holds</th><th>Where it breaks</th></tr></thead>
+      <tbody>
+        <tr><td>Pipe &harr; kanban loop</td><td>Bounded buffer; pull; a stopped consumer stops the producer</td><td>A pipe carries bytes, not records (&sect;01)</td></tr>
+        <tr><td>Commit &harr; drawing revision</td><td>Complete snapshots with a reason for change</td><td>The name is computed and certifies all history; it carries no order (&sect;&sect;04&ndash;05)</td></tr>
+        <tr><td>Content hash &harr; drawing number</td><td>Identifies a revision</td><td>Unique with probability, not certainty; weaker against deliberate collisions (&sect;05)</td></tr>
+        <tr><td>Diff &harr; LCS</td><td>The shortest diff is exactly \(N+M-2L\)</td><td>Tools are heuristics (150 against 144); a diff sees characters, not intent (&sect;06)</td></tr>
+        <tr><td>Merge &harr; vault check-out</td><td>Both prevent the lost update</td><td>A clean merge can still be wrong; binary files need the lock (&sect;07)</td></tr>
+        <tr><td>Bisect &harr; bisection</td><td>\(\log_2 n\) tests</td><td>Needs one change of sign; a flaky test misleads it (&sect;&sect;08, 24)</td></tr>
+        <tr><td>Config &harr; tabulated drawing</td><td>Base plus overrides</td><td>A parser with its own rules reads it: <code>3e-4</code> is text (&sect;11)</td></tr>
+        <tr><td>Version rules &harr; form-fit-function</td><td>Major version = not interchangeable</td><td>A promise, not an enforced rule; libraries declare ranges, applications pin (&sect;13)</td></tr>
+        <tr><td>Assertion &harr; limit gauge</td><td>Accept or reject against limits</td><td>Limits wider than the tolerance accept bad parts; the source&rsquo;s do (&sect;15)</td></tr>
+        <tr><td>Random testing &harr; c = 0 sampling</td><td>\((1-\theta)^n\) and the rule of three</td><td>Bugs cluster at boundaries; there is no unit-to-unit variation (&sect;16)</td></tr>
+        <tr><td>Test suite &harr; series system</td><td>\(1-(1-f)^N\), exactly</td><td>Reruns trade producer&rsquo;s risk for consumer&rsquo;s (&sect;16)</td></tr>
+        <tr><td><code>isclose</code> &harr; tolerance</td><td>A band about a nominal</td><td>Asymmetric, with a hidden relative term (&sect;17)</td></tr>
+        <tr><td>CI &harr; jidoka</td><td>Stop on the defect</td><td>The stop must be wired: a required check is a separate setting (&sect;18)</td></tr>
+        <tr><td>Container &harr; palletised fixture</td><td>Setup once, locate anywhere</td><td>The kernel and GPU driver stay on the host (&sect;19)</td></tr>
+        <tr><td>Layer order &harr; delayed differentiation</td><td>The ratio rule is optimal</td><td>Cache keys name commands, not what they fetch (&sect;20)</td></tr>
+        <tr><td>Tracking &harr; lot traceability</td><td>The same record, field for field</td><td>An image digest is necessary, not sufficient (&sect;21)</td></tr>
+        <tr><td>Drift monitoring &harr; control chart</td><td>Limits from a reference period</td><td>The reference goes stale; concept drift is invisible in the inputs (&sect;22)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="recall">
+  <div class="col">
+    <div class="sechead"><span class="secnum">26</span><h2>Question bank</h2>
+      <span class="srcref nolink" title="Written for this sheet">whole chapter</span>
+    </div>
+    <p>
+      Twenty-four prompts in three tiers. Answer before opening. The numerical answers in tier 2
+      are checked by <code>[Ch15 s26]</code>.
+    </p>
+
+    <div class="gap">
+      <div class="gap-h">Tier 1 &mdash; recall</div>
+      <details><summary>What happens to the writer of a pipe when the buffer is full, and when the reader exits?</summary>
+        <p>When the 65,536-byte buffer is full the writer waits. When the reader has exited, the writer&rsquo;s next write kills it with SIGPIPE (exit status 141): demand stopped, so production stops.</p></details>
+      <details><summary>Name git&rsquo;s three kinds of object and say how each is named.</summary>
+        <p>Blob (file bytes), tree (names to blobs and trees), commit (tree, parents, author, time, message). Each is named by the SHA-1 of its own bytes with a type-and-size header.</p></details>
+      <details><summary>How is the length of the shortest diff related to the longest common subsequence?</summary>
+        <p>\(D = N + M - 2L\). The untouched lines form a common subsequence, so the fewest edits keep the longest one.</p></details>
+      <details><summary>In a three-way merge, when do two edits conflict?</summary>
+        <p>When both sides change the same region relative to the common base and the changes differ. Adjacent lines count as one region; identical changes merge cleanly.</p></details>
+      <details><summary>Why does the source&rsquo;s error report run <code>sort</code> before <code>uniq -c</code>?</summary>
+        <p><code>uniq -c</code> counts only consecutive repeats. Sorting puts equal lines next to each other.</p></details>
+      <details><summary>What is a flaky test in inspection terms, and how does a suite&rsquo;s false-alarm rate grow with its size?</summary>
+        <p>Producer&rsquo;s risk: rejecting a good change. A suite is a series system, so \(\alpha = 1-(1-f)^N\).</p></details>
+      <details><summary>State the rule of three.</summary>
+        <p>After \(n\) passing random trials, the failing fraction is below about \(3/n\) with 95% confidence; exactly, below \(1-0.05^{1/n}\).</p></details>
+      <details><summary>What does <code>np.isclose(a, b)</code> test, exactly?</summary>
+        <p>\(|a-b| \le \text{atol} + \text{rtol}\,|b|\), with default rtol \(10^{-5}\). The band is built around <code>b</code>, so swapping the arguments can change the answer.</p></details>
+    </div>
+
+    <div class="gap">
+      <div class="gap-h">Tier 2 &mdash; apply</div>
+      <details><summary>A repository holds 50,000 objects. What is the chance that some two share their first seven hex digits?</summary>
+        <p>Seven digits are 28 bits. \(1-e^{-n^2/2^{29}}\) with \(n = 50{,}000\) gives 0.9905. Practically certain, which is why git lengthens short names in large repositories.</p></details>
+      <details><summary>The old file has 120 lines, the new one 125, and their LCS is 110 lines. What does the shortest diff contain?</summary>
+        <p>\(120 + 125 - 220 = 25\) changed lines: 10 deletions and 15 insertions.</p></details>
+      <details><summary>How many builds does bisect need to search 1,000 commits?</summary>
+        <p>\(\lceil\log_2 1000\rceil = 10\).</p></details>
+      <details><summary>2,000 tests, each flaky 0.05% of the time. How often does a correct change go red, and with one automatic rerun of failures?</summary>
+        <p>\(1-0.9995^{2000} = 0.632\). With a rerun the per-test rate is \(0.0005^2\), and the suite goes red with probability about \(5.0\times10^{-4}\).</p></details>
+      <details><summary>500 random inputs all pass. What can you say about the fraction of inputs that fail?</summary>
+        <p>With 95% confidence it is below \(1-0.05^{1/500} = 0.00597\), against the rule of three&rsquo;s 0.0060. Nothing at all about a bug at one specific input.</p></details>
+      <details><summary>CI checks: lint 10 s, fails 10%; unit tests 120 s, fail 30%; integration tests 900 s, fail 20%. Best order, and the expected time per run?</summary>
+        <p>Sort by cost over failure probability: 100, 400, 4,500. So lint, unit, integration, with expected \(10 + 0.9\times120 + 0.9\times0.7\times900 = 685\) s.</p></details>
+      <details><summary>Dockerfile step A takes 300 s and changes on 10% of builds; step B takes 5 s and changes on 50%. Which goes first?</summary>
+        <p>A: its ratio \(p/(c(1-p))\) is \(3.7\times10^{-4}\) against B&rsquo;s 0.2. Expected rebuild 32.75 s with A first, 167.5 s with B first.</p></details>
+      <details><summary>A page makes 30 requests. How often does it meet a request slower than the p99?</summary>
+        <p>\(1-0.99^{30} = 0.260\): about one page in four.</p></details>
+    </div>
+
+    <div class="gap">
+      <div class="gap-h">Tier 3 &mdash; judge</div>
+      <details><summary>Your team wants to keep CAD part files in git and merge as the programmers do. Advise.</summary>
+        <p>A binary part file is one region, so every concurrent edit conflicts and no line merge can combine them. Use a lock: a PDM vault, or file locking in Git LFS. The vault&rsquo;s policy is right for its file type (&sect;07).</p></details>
+      <details><summary>&ldquo;The test suite passed, so the function is correct.&rdquo; What do you ask?</summary>
+        <p>Can these tests fail? Feed them known-wrong versions and see. Range checks such as the source&rsquo;s pass broken code; exact-value or round-trip tests do not (&sect;15).</p></details>
+      <details><summary>Should a library you publish pin <code>torch==2.2.1</code>?</summary>
+        <p>No. A library states what it is compatible with, as a range; an application or an experiment pins what it was built with. A library that pins exactly cannot be installed next to another that pins differently (&sect;13).</p></details>
+      <details><summary>Is a commit hash a better identifier than a drawing number?</summary>
+        <p>It is different. It needs no registry, gives identical content the same name, and makes silent edits impossible. It has no order, means nothing to a person, is unique only with overwhelming probability, and its short form collides in large repositories (&sect;05).</p></details>
+      <details><summary>CI is red on 40% of runs of unchanged code. Should failures be rerun automatically?</summary>
+        <p>Reruns cut the false alarms but let intermittent bugs through and hide the flakiness. Fix or quarantine the flaky tests and track them; a rerun policy is a deliberate trade of producer&rsquo;s risk for consumer&rsquo;s, as in Sheet 04 &sect;07.</p></details>
+      <details><summary>&ldquo;Keep the Docker image digest and the training is reproducible.&rdquo; Agree?</summary>
+        <p>Necessary, not sufficient. Kernel, driver and GPU are outside the image; GPU sums can vary with order; and rebuilding the Dockerfile later gives a different image, so keep the image itself (&sect;&sect;19&ndash;21).</p></details>
+      <details><summary>When does random testing earn a place beside hand-picked boundary tests?</summary>
+        <p>When the input space is large and the property is cheap to check. It bounds the failing fraction by about \(3/n\) and finds cases nobody thought to pick. It never replaces boundary tests, because bugs cluster where random draws rarely land (&sect;16).</p></details>
+      <details><summary>The bridge bank paired version control with drawing revision control. Where does that pairing most mislead?</summary>
+        <p>On names and on merging. Names are computed from content and certify the whole history, but carry no order; differences are computed, not written; and git merges optimistically where a vault locks. A clean merge is not a checked assembly (&sect;&sect;04&ndash;07).</p></details>
+    </div>
+  </div>
+</section>
+
+<section id="map">
+  <div class="col">
+    <div class="sechead"><span class="secnum">27</span><h2>The map, and what the chapter leaves out</h2>
+      <span class="srcref nolink" title="Added material, not in the source chapter">beyond the chapter</span>
+    </div>
+    <p>
+      Three ideas carry most of this sheet, and each turns up in more than one of the
+      source&rsquo;s files: a name computed from content, the series system
+      \(1-(1-p)^n\), and the adjacent-exchange argument that orders a sequence. Under them sit
+      four results inherited from Sheets 13 and 14.
+    </p>
+  </div>
+  <figure class="col">
+    <svg viewBox="0 0 480 340" role="img" style="width:100%; max-width:560px; height:auto; display:block; margin-inline:auto"
+         aria-label="Concept map. Content hash leads to commit and tree names, patch-id, Git LFS pointers and Docker cache keys. The series system one minus one minus p to the n leads to random testing, the flaky suite, p99 fan-out and bisect confidence. Adjacent exchange leads to CI check order and Dockerfile layer order. Below, four results inherited from Sheets 13 and 14: LCS becomes diff, hashing becomes names, bisection becomes bisect, topological sort becomes pipeline scheduling.">
+      <defs>
+        <marker id="mArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M0,1 L9,5 L0,9 z" fill="var(--ink-3)"></path>
+        </marker>
+      </defs>
+      <rect x="8" y="10" width="148" height="34" rx="3" fill="none" stroke="var(--c1)" stroke-width="1.8"></rect>
+      <text class="tkb" x="82" y="31" text-anchor="middle">content hash</text>
+      <rect x="166" y="10" width="148" height="34" rx="3" fill="none" stroke="var(--c2)" stroke-width="1.8"></rect>
+      <text class="tkb" x="240" y="31" text-anchor="middle">1 &#8722; (1 &#8722; p)&#8319;</text>
+      <rect x="324" y="10" width="148" height="34" rx="3" fill="none" stroke="var(--c3)" stroke-width="1.8"></rect>
+      <text class="tkb" x="398" y="31" text-anchor="middle">adjacent exchange</text>
+      <g stroke="var(--ink-3)" stroke-width="1.2" marker-end="url(#mArrow)">
+        <line x1="82" y1="46" x2="82" y2="62"></line>
+        <line x1="240" y1="46" x2="240" y2="62"></line>
+        <line x1="398" y1="46" x2="398" y2="62"></line>
+      </g>
+      <g>
+        <rect x="8" y="66" width="148" height="26" rx="3" fill="var(--sheet-2)" stroke="var(--rule-strong)"></rect>
+        <text class="tk" x="82" y="83" text-anchor="middle">commit, tree names &#167;04</text>
+        <rect x="8" y="98" width="148" height="26" rx="3" fill="var(--sheet-2)" stroke="var(--rule-strong)"></rect>
+        <text class="tk" x="82" y="115" text-anchor="middle">rebase, patch-id &#167;08</text>
+        <rect x="8" y="130" width="148" height="26" rx="3" fill="var(--sheet-2)" stroke="var(--rule-strong)"></rect>
+        <text class="tk" x="82" y="147" text-anchor="middle">LFS pointer &#167;09</text>
+        <rect x="8" y="162" width="148" height="26" rx="3" fill="var(--sheet-2)" stroke="var(--rule-strong)"></rect>
+        <text class="tk" x="82" y="179" text-anchor="middle">layer cache keys &#167;20</text>
+        <rect x="166" y="66" width="148" height="26" rx="3" fill="var(--sheet-2)" stroke="var(--rule-strong)"></rect>
+        <text class="tk" x="240" y="83" text-anchor="middle">random testing &#167;16</text>
+        <rect x="166" y="98" width="148" height="26" rx="3" fill="var(--sheet-2)" stroke="var(--rule-strong)"></rect>
+        <text class="tk" x="240" y="115" text-anchor="middle">flaky suite &#167;16</text>
+        <rect x="166" y="130" width="148" height="26" rx="3" fill="var(--sheet-2)" stroke="var(--rule-strong)"></rect>
+        <text class="tk" x="240" y="147" text-anchor="middle">p99 fan-out &#167;22</text>
+        <rect x="166" y="162" width="148" height="26" rx="3" fill="var(--sheet-2)" stroke="var(--rule-strong)"></rect>
+        <text class="tk" x="240" y="179" text-anchor="middle">bisect confidence &#167;24</text>
+        <rect x="324" y="66" width="148" height="26" rx="3" fill="var(--sheet-2)" stroke="var(--rule-strong)"></rect>
+        <text class="tk" x="398" y="83" text-anchor="middle">CI check order &#167;18</text>
+        <rect x="324" y="98" width="148" height="26" rx="3" fill="var(--sheet-2)" stroke="var(--rule-strong)"></rect>
+        <text class="tk" x="398" y="115" text-anchor="middle">Dockerfile order &#167;20</text>
+        <rect x="324" y="130" width="148" height="26" rx="3" fill="var(--sheet-2)" stroke="var(--rule-strong)"></rect>
+        <text class="tk" x="398" y="147" text-anchor="middle">Johnson, SPT (13, 14)</text>
+      </g>
+      <line x1="8" y1="212" x2="472" y2="212" stroke="var(--rule)" stroke-width="1"></line>
+      <text class="tkb" x="8" y="232">inherited from Sheets 13 and 14</text>
+      <g>
+        <rect x="8" y="244" width="108" height="40" rx="3" fill="none" stroke="var(--ink-3)"></rect>
+        <text class="tk" x="62" y="260" text-anchor="middle">LCS (14 &#167;18)</text>
+        <text class="tkb" x="62" y="275" text-anchor="middle">&#8594; diff &#167;06</text>
+        <rect x="124" y="244" width="108" height="40" rx="3" fill="none" stroke="var(--ink-3)"></rect>
+        <text class="tk" x="178" y="260" text-anchor="middle">hashing (14 &#167;13)</text>
+        <text class="tkb" x="178" y="275" text-anchor="middle">&#8594; names &#167;04</text>
+        <rect x="240" y="244" width="108" height="40" rx="3" fill="none" stroke="var(--ink-3)"></rect>
+        <text class="tk" x="294" y="260" text-anchor="middle">bisection (13,14)</text>
+        <text class="tkb" x="294" y="275" text-anchor="middle">&#8594; bisect &#167;08</text>
+        <rect x="356" y="244" width="116" height="40" rx="3" fill="none" stroke="var(--ink-3)"></rect>
+        <text class="tk" x="414" y="260" text-anchor="middle">topo sort (14 &#167;10)</text>
+        <text class="tkb" x="414" y="275" text-anchor="middle">&#8594; pipelines &#167;23</text>
+      </g>
+      <text class="tk" x="240" y="314" text-anchor="middle">Sheet 14 references are to part 1 for &#167;13 and part 2 for &#167;&#167;10, 18</text>
+    </svg>
+    <figcaption><b>Fig. 15.2</b> &mdash; Three ideas, each used in several of the source&rsquo;s files: a name computed from content (orange), the series-system formula (blue), and the adjacent-exchange argument for ordering a sequence (green). Below the line, the four earlier results this sheet put to work. Drawn for this sheet.</figcaption>
+  </figure>
+  <div class="col">
+    <h3>What this chapter feeds</h3>
+    <p>
+      <b>Sheet 16 (SIMD and GPU)</b> is about the parallel hardware whose additions, done in a
+      varying order, are why &sect;21 says a GPU training run is not exactly repeatable.
+      <b>Sheet 17 (AI inference)</b> takes up what file 05 only lists: serving a model,
+      batching requests, and the latency that &sect;22&rsquo;s p99 measures. <b>Sheet 18 (ML
+      systems design)</b> takes the pipelines, monitoring and infrastructure of
+      &sect;&sect;19&ndash;23 to the scale of whole systems.
+    </p>
+    <h3>What this chapter does not cover</h3>
+    <p>Naming it honestly:</p>
+    <ul>
+      <li><b>Security.</b> Beyond &ldquo;do not commit secrets&rdquo;: no authentication,
+        secret management, signing of builds or protection against tampered dependencies.
+        &sect;05&rsquo;s note on deliberate hash collisions is the only adversarial idea on the
+        sheet.</li>
+      <li><b>Git&rsquo;s deeper machinery.</b> How packfiles choose their deltas, how remotes
+        exchange objects, merge strategies, rename detection, and history rewriting are not
+        covered.</li>
+      <li><b>Testing beyond examples.</b> Coverage measurement, property-based testing tools,
+        fuzzing, static analysis beyond linters, and formal verification are named at most.</li>
+      <li><b>The Windows command line.</b> File 01 is titled &ldquo;linux and CMD&rdquo; but
+        covers only Unix shells; so does this sheet.</li>
+      <li><b>Operations at scale.</b> Kubernetes, cloud services, infrastructure as code,
+        databases and schema changes are left to Sheet 18 or not covered.</li>
+      <li><b>Measurement of practice.</b> Claims such as &ldquo;PRs under 400 lines&rdquo; or
+        &ldquo;code review is not about finding bugs&rdquo; are the source&rsquo;s judgment; the
+        sheet neither confirms nor refutes them.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="provenance">
+  <div class="col">
+    <div class="sechead"><span class="secnum">A</span><h2>Provenance and changes</h2>
+      <span class="srcref nolink" title="Required by Apache-2.0 section 4(b)">licence notice</span>
+    </div>
+    <p>
+      This sheet is a derivative work of <b>chapter 15 &mdash; production software
+      engineering</b> of the <i>Mathematics, Computer Science and AI Compendium</i>, licensed
+      under Apache&nbsp;2.0. Section&nbsp;4(b) of that licence requires prominent notice of
+      changes. The source is pinned at commit <code>9850ee5</code>; every section chip above
+      links to the file it draws on.
+    </p>
+    <h3>Source material used</h3>
+    <ul>
+      <li><code>01. linux and CMD.md</code> (318 lines) &mdash; &sect;&sect;01&ndash;03</li>
+      <li><code>02. git and repository management.md</code> (218 lines) &mdash; &sect;&sect;04&ndash;09</li>
+      <li><code>03. codebase design.md</code> (383 lines) &mdash; &sect;&sect;10&ndash;14</li>
+      <li><code>04. testing and quality assurance.md</code> (322 lines) &mdash; &sect;&sect;15&ndash;18</li>
+      <li><code>05. deployment and devops.md</code> (233 lines) &mdash; &sect;&sect;19&ndash;23</li>
+      <li>&sect;05, &sect;16 and &sect;&sect;24&ndash;27 are written for this sheet. The source
+        files contain no figures; Figs. 15.1 and 15.2 were drawn for this sheet.</li>
+    </ul>
+    <h3>Changes made</h3>
+    <ul>
+      <li><b>Re-narrated for one reader</b> &mdash; a GATE-prepared mechanical engineering
+        graduate with no computing background &mdash; against drawing control, inspection and
+        quality engineering, reliability, production planning and manufacturing practice. The
+        source&rsquo;s cheat sheets and tool lists are summarised rather than reproduced.</li>
+      <li><b>Corrections to the source, fifteen,</b> each with its computation and listed at the
+        top of the sheet: environment variables (&sect;03); <code>kill %1</code> (&sect;03);
+        the unique-count and <code>du</code> commands (&sect;02); git storing diffs (&sect;04);
+        when merges conflict, and which side HEAD is in a rebase (&sect;07); logging the commit
+        hash (&sect;09); the naming example (&sect;10); <code>3e-4</code> in YAML (&sect;11);
+        the logging example (&sect;12); the build backend (&sect;13); the normaliser test
+        (&sect;15); the Dockerfile (&sect;19); the W&amp;B save (&sect;21); the meaning of p99
+        (&sect;22). Smaller points are corrected where they occur: <code>grep -c</code> and
+        <code>chmod +x</code> (&sect;&sect;01&ndash;02), <code>nohup</code> (&sect;03), the
+        Hydra key (&sect;11), the YAML <code>on</code> key (&sect;11), the floating-point example,
+        <code>isclose</code> and the determinism test (&sect;17), CI blocking merges (&sect;18),
+        and the image digest as a fingerprint (&sect;21).</li>
+      <li><b>Sheet 14&rsquo;s two reported claims are now computed.</b> The longest common
+        subsequence as the basis of file comparison (&sect;06: a floor every tool respects, met
+        exactly by GNU <code>diff -d</code>, missed by six blank lines by git on one real
+        revision) and hashing as how version control names what it stores (&sect;04: blob,
+        tree and commit names rebuilt by hand).</li>
+      <li><b>Correspondences added that are not in the source</b> &mdash; the pipe as a kanban
+        loop and process against transfer batches; the environment as a job traveller; commits
+        as drawing revisions and hashes against drawing numbers; the vault lock against the
+        three-way merge; bisect as bisection; config as a tabulated drawing; version rules as
+        form-fit-function; agents and the title block; the assertion as a limit gauge and
+        mutation testing as an attribute-gauge study; random testing as a c&nbsp;=&nbsp;0
+        sampling plan and the rule of three as a zero-failure demonstration test; the test suite
+        as a series system; CI as jidoka; the container as a palletised fixture; layer order as
+        delayed differentiation; tracking as lot traceability; drift monitoring as a control
+        chart; the feature store as gauge correlation.</li>
+      <li><b>Material added that the source does not have</b> &mdash; the birthday bound and its
+        measured check; the LCS floor and the six-tool comparison on random and real files; the
+        measured merge rules; the kill matrix; the operating characteristic of a test suite;
+        the ordering rules for fail-fast checks and for Dockerfile layers, each with its
+        exchange proof; PSI as symmetrised KL divergence; the worked example; the where-it-breaks
+        table; the question bank; the concept map; the list of what the chapter leaves out.</li>
+      <li><b>Five interactive labs</b> written for this sheet in plain SVG and vanilla
+        JavaScript, and two drawn figures.</li>
+      <li><b>@NCHK@ new numerical checks</b> in the <code>_ch15()</code> block of
+        <code>study-companion/verify_claims.py</code>, all passing. They build real git
+        repositories, run real shell commands, <code>diff</code>, PyYAML, pip and Python&rsquo;s
+        <code>logging</code>, and run the source&rsquo;s own code where it is runnable.</li>
+    </ul>
+    <h3>What is claimed, and what is reported</h3>
+    <p>
+      Statements tagged <code>[Ch15 sNN]</code> are computed, and the tag names the block of the
+      verification script that computes them; tool versions are those installed where it ran
+      (git 2.43, GNU diffutils 3.10, Python 3.13, NumPy 2.5.3, PyYAML 6.0.1, setuptools 68.1.2).
+      Marked as <b>reported</b>, and not derived here: the 2017 SHA-1 collision demonstration;
+      git&rsquo;s collision detection, SHA-256 format and lengthening of short names; the cost of
+      Myers&rsquo; diff; file locking in Git LFS; GitHub&rsquo;s workflow parser and branch
+      protection; Hydra&rsquo;s rule for unknown keys; Docker&rsquo;s GPU driver pass-through
+      and its cache keys for <code>RUN</code>; the Python version of Ubuntu 22.04 and the
+      contents of CUDA runtime images; semantic versioning; <code>math.isclose</code>&rsquo;s
+      symmetry; the usual PSI alarm levels; the speed of gRPC. The cause of git&rsquo;s six extra
+      blank lines in &sect;06 is inferred from the measurement, not traced in git&rsquo;s source.
+      No Docker daemon was available, so the Dockerfile findings come from a mock of its file
+      tree and from reading. No internet research was used. This sheet was drafted by an AI
+      agent and checked by running code.
+    </p>
+    <p class="endnote">
+      Sheet 15 of 20. Source compendium &copy; its authors, Apache&nbsp;2.0. This derivative
+      sheet is offered under the same licence. Next: <b>Sheet 16 &mdash; SIMD and GPU
+      programming</b>.
+    </p>
+  </div>
+</section>
+
+</main>
+</div>
