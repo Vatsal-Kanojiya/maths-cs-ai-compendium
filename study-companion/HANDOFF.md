@@ -37,6 +37,8 @@ browser probe those runs used is now in the repo: `tools/probe.js` (see the prob
 | 13 | Computing and OS **pt 3/3** | `ch13-computing-os-part3/` | https://claude.ai/artifact/46yW11goFtfNaMG2QfWVZh |
 | 14 | Data Structures and Algorithms **pt 1/2** | `ch14-data-structures-algorithms/` | https://claude.ai/artifact/TCQEggFEntAofLXcUbunbd |
 | 14 | Data Structures and Algorithms **pt 2/2** | `ch14-data-structures-algorithms-part2/` | https://claude.ai/artifact/NESj33J7qvUysyK9djgRed |
+| 15 | Production Software Engineering | `ch15-production-software-engineering/` | https://claude.ai/artifact/FGGLCb4G11EoK8UXHnVhHs |
+| 17 | AI Inference | `ch17-ai-inference/` | https://claude.ai/artifact/UdoN6PEmWrY6pHxACELcxr |
 
 `verify_claims.py` stands at **612 checks, 0 failures**, covering chapters 01–14. Run it first in
 any new session — it is the fastest way to confirm nothing has rotted. It needs numpy and scipy,
@@ -329,16 +331,35 @@ check; and **the slip-gauge "clear the last decimal first" rule is greedy change
 exactly optimal for the M87 set** (95,001 lengths vs an exact search) — a positive result, as
 valuable as a correction.
 
-**15 Production software engineering.** Version control ↔ **drawing revision control**,
-ECN/ECO. Testing ↔ inspection and QA. CI/CD ↔ line automation. Containers ↔ standardised
-jigs and fixtures.
+**15 Production software engineering.** ~~Version control ↔ drawing revision control, ECN/ECO.
+Testing ↔ inspection and QA. CI/CD ↔ line automation. Containers ↔ standardised jigs and
+fixtures.~~ **Written.** Revision control held as *same structure* and broke usefully on the
+name: computed not issued, certifies all history, no order, unique only with probability.
+The vault-versus-merge contrast (lock vs optimistic three-way merge) was the better ECN bridge.
+Testing ↔ inspection was right but the right inspection is **first-article / design
+verification**, not lot sampling: every copy of a program is bit-identical, so there is no
+unit-to-unit variation. Sampling returns only over *inputs* (random testing = c = 0 OC curve,
+exact). Sheet 04's producer's/consumer's risk carried over exactly as flaky tests vs escapes.
+CI ↔ line automation became **jidoka** (the stop must be wired: required checks); containers ↔
+fixtures became a **palletised fixture** whose machine (kernel, GPU driver) stays behind. Outside
+the bank: layer order as delayed differentiation (exact ratio rule); pipe as kanban loop.
 
 **16 SIMD and GPU.** Where Ch02's matmul lands. SIMD ↔ multi-spindle machining. Memory
 bandwidth ↔ material-flow bottleneck.
 
-**17 AI inference.** Quantisation ↔ measurement resolution and significant figures.
-**Batching ↔ batch production versus one-piece flow** in lean manufacturing; latency
-versus throughput ↔ cycle time versus takt time. Strong.
+**17 AI inference.** ~~Quantisation ↔ measurement resolution and significant figures.
+**Batching ↔ batch production versus one-piece flow** in lean manufacturing; latency versus
+throughput ↔ cycle time versus takt time. Strong.~~ **Written.** Quantisation ↔ measurement
+held exactly (`Delta^2/12` is the GUM rectangular `a/sqrt3`; the source's own INT8 task measures
+it to 0.1%) and predicted its own failure: the outlier task's normal channels sit at
+`sigma/Delta = 0.46`, and the measured signal-to-noise 2.61 matches `12(sigma/Delta)^2 = 2.53`.
+"A gauge range per feature" **broke** on the summed dimension: per-input-channel activation
+scales cannot leave an integer GEMM, which is why SmoothQuant exists. "Batching ↔ batch vs
+one-piece flow" held in algebra (step = setup + b × per-piece) with a better picture (a furnace
+load), and **one-piece flow loses**: its precondition, a setup cut to near zero, fails (batch 1
+uses 1% of the machine). "Latency ↔ cycle time" was **wrong**: latency is lead time; cycle
+time and takt are both rates; Little ties them. Headline outside the bank: continuous batching
+= the lean minimum lot, by Little's law. Also outside: GPTQ = support settlement.
 
 **18 ML systems design.** Plant design and capacity planning. **Little's law** is already
 used in manufacturing. Redundancy ↔ reliability engineering.
@@ -387,6 +408,10 @@ names everything it leaves out rather than surveying it.
   show the broken layout**; they are superseded, not deleted (deleting is the user's call). The
   new artifacts were published after this session hit the 10-watch cap, so none of them is
   watched.
+- **Sheet 13 part 2 §10 overstates containers.** It says a container "runs identically
+  everywhere"; Sheet 15 §19 qualifies this, because the kernel and the GPU driver belong to the
+  host, not the image. Sheet 15 says so in the open; the Sheet 13 sentence itself is unchanged,
+  since softening it means re-reading and republishing that artifact.
 - **Nine of the twelve published sheets have display equations that overflow their `.mathbox`
   at 390px, and Chapter 10 has one clipped `.ro-k` label.** Measured at Chapter 12; details in
   the series-sweep note under the browser-probe section. Pre-existing, not regressions, and
@@ -966,6 +991,51 @@ joint by joint. The page's lab now finds the smallest self-contained block and r
 simulation agreed with Knuth's formula "a little less closely near 0.95". Measured, a single set
 of four 16,384-slot tables at load 0.9 ranges from 40.1 to 56.9 around the formula's 50.5; the
 median sits on it. The footer now says so, with the numbers.
+
+## The Chapter 15 lesson worth generalising
+
+**In a chapter about checking, check the checks — and make each one fail on purpose.** The
+best result was the source's own test passing a function that returns zeros. The general move
+is mutation: before trusting any verification, feed it known-wrong inputs and confirm it
+rejects them. Second: **compute what you inherited as "reported".** Sheet 14 reported that diff
+tools are built on LCS; computing it found the precise truth (a floor, met by some tools,
+missed by git on a real file) and a measurable exception nobody would have written down.
+
+**New traps from Chapter 15.**
+
+- **The uppercase trap catches lowercase Latin too.** "Random inputs n" rendered as "N" beside
+  a different N; `GNU -d` became `-D` (a different diff flag); YAML `3e-4` became `3E-4`.
+  Wrap variables, flags and literal spellings in `.gk` inside the 17 uppercased selectors.
+- **Long inline `<code>` overflows a phone.** `logging.basicConfig(level=logging.INFO)` in a
+  bullet pushed the page 11px sideways at 390. Fix added to this page's own style block:
+  `.col p code, .col li code, .lab-foot code{overflow-wrap:anywhere}`.
+- **One shared RNG in a verifier block shifts later numbers when you insert a check.** Adding
+  §18's checks moved §20's count from 221/300 to 235/300. Re-read every downstream number
+  after an insertion, or give each section its own seeded RNG.
+- The block needs full git history (`git show <sha>:path`); no Docker daemon exists here. The
+  worktree guard refuses shell lines mixing `cd`, variables and git words: run scripts instead.
+
+## The Chapter 17 lesson worth generalising
+
+**When a bridge pairs two vocabularies, check each term's definition, not the pairing.** The
+bank said "latency vs throughput ↔ cycle time vs takt". Writing down what cycle time, lead time
+and takt each *are* showed the pairing was off by one term, and fixing it is what produced the
+headline: once latency is lead time, Little's law (WIP = rate × lead time) applies to the batch,
+and the batch turns out to be the planner's minimum lot. The bank had the right field and the
+wrong map inside it. Second lesson, the Chapter 13 one again: **"more X cannot hurt" was worth
+testing clause by clause** — true for throughput, false for latency, empty below capacity,
+impossible past the memory cap, false for MoE's setup.
+
+**New traps from Chapter 17.**
+
+- **A stochastic lab readout needs a long enough run to sit on its verified value.** LAB 2's
+  12,000-step simulation read batch 69.4 against 66.7 (arrivals ran 2% high) and failed the
+  probe's expectation; 40,000 steps gives 67.3. Size simulations so sampling noise is under the
+  expectation's tolerance, and do not reseed until it passes.
+- **Variables in uppercased labels.** `.ro-k` and `label` uppercase `t_w`, `k`, `c` into `T_W`,
+  `K`, `C`, colliding with takt `T`. Wrap symbols, not just Greek, in `.gk`.
+- **Chapters 09–14 put lab contents flush to the lab border** (no `.lab-body`); 01–08 used it.
+  This sheet uses `.lab-body` again. Worth backporting.
 
 ## On splitting a chapter into parts
 

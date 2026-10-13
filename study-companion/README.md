@@ -53,6 +53,8 @@ merely structural, that is said plainly.
 | 13 | Computing and OS *(pt 3: languages + end matter)* | [`ch13-computing-os-part3/`](ch13-computing-os-part3/index.html) | [Read online](https://claude.ai/artifact/46yW11goFtfNaMG2QfWVZh) |
 | 14 | Data Structures and Algorithms *(pt 1: foundations, arrays, lists)* | [`ch14-data-structures-algorithms/`](ch14-data-structures-algorithms/index.html) | [Read online](https://claude.ai/artifact/TCQEggFEntAofLXcUbunbd) |
 | 14 | Data Structures and Algorithms *(pt 2: trees, graphs, search + end matter)* | [`ch14-data-structures-algorithms-part2/`](ch14-data-structures-algorithms-part2/index.html) | [Read online](https://claude.ai/artifact/NESj33J7qvUysyK9djgRed) |
+| 15 | Production Software Engineering | [`ch15-production-software-engineering/`](ch15-production-software-engineering/index.html) | [Read online](https://claude.ai/artifact/FGGLCb4G11EoK8UXHnVhHs) |
+| 17 | AI Inference | [`ch17-ai-inference/`](ch17-ai-inference/index.html) | [Read online](https://claude.ai/artifact/UdoN6PEmWrY6pHxACELcxr) |
 
 ## What's in a chapter page
 
@@ -129,7 +131,24 @@ against Kahn's topological sort on 500 random networks, the method of joints aga
 matrix solve (and the compound truss on which it stalls), a pipe network's Laplacian flow split
 against Dijkstra's least-resistance route, the `ceil(log2 n!)` sorting floor against measured
 merge-sort counts, quicksort's `n(n-1)/2` on repeated keys under every pivot rule, and the
-metrology rule for slip gauges against an exact minimum-block search over 95,001 lengths.
+metrology rule for slip gauges against an exact minimum-block search over 95,001 lengths;
+and -- for Chapter 15 -- git's blob, tree and commit names rebuilt from SHA-1 by hand (two
+identical files stored once; an independent repository giving the same commit name), whole
+loose objects and the *older* revision packed as a 17-byte delta, the birthday bound against
+truncated SHA-1 collisions, `N + M - 2L` as a floor that six real diff tools never beat on 300
+random pairs and four real revisions of this repository's own files (git reports 150 where the
+minimum is 144, all six extra lines blank), five measured merge cases, bisect finding commit
+187 of 300 in 8 builds, the source's normaliser test passing three broken versions, the rule
+of three, the flaky suite as a series system, the ratio rules for fail-fast check order and
+Dockerfile layer order against every permutation, and PSI as symmetrised KL divergence; and --
+for Chapter 17 -- `Delta^2/12` against the source's own INT8 task (ratio 0.9989) and its failure
+below `sigma/Delta = 0.5`, the integer-GEMM factorisation that admits per-token and per-output
+scales and refuses per-input-channel ones, the MSE-optimal clip (2.47 sigma at 4 bits), GPTQ's
+update as static condensation (`-K_rr^-1 K_rj == H^-1_rj / H^-1_jj` to 5e-12), RSS against
+linear error growth through a residual stream, the expected distinct experts `8(1-(3/4)^b)` of
+a batched MoE, continuous batching's batch against the lean minimum lot `t_w/(T - t_kv)` and
+`TPOT = t_w/(1-rho)` by simulation, and speculative decoding's `(1-a^(k+1))/(1-a)` with the
+rejection rule's exactness.
 
 Several checks exist because they caught an error. The suite has overturned claims in the
 source material (what neighbour-averaging consensus converges to; whether four legs are
