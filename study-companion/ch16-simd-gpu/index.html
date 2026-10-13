@@ -399,6 +399,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
 .mnote{font-family:var(--f-disp); font-size:12.5px; color:var(--ink-3); margin:-8px 0 16px}
 .svgfig{width:100%; height:auto; display:block; color:var(--ink)}
 .chartwrap{overflow-x:auto}
+.chartwrap > .svgfig{min-width:500px}
 .col p code, .col li code, .lab-foot code{overflow-wrap:anywhere}
 .sel{appearance:auto; font-family:var(--f-disp); font-size:12px; padding:5px 8px; border:1px solid var(--rule-strong);
   border-radius:2px; background:var(--sheet); color:var(--ink)}
@@ -661,16 +662,16 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
       That is the fixed-pitch calculation of Sheet 14 part 1 &sect;12: an array is a row of
       equal bins, so any bin is one multiplication away. A pointer is a bin location written on a
       requisition slip. The danger is the same as with a slip: nothing stops you writing a
-      location past the end of the rack, and C++ will fetch whatever is there.
+      location past the end of the row of bins, and C++ will fetch whatever is there.
     </p>
     <p>
       <b>Stack and heap.</b> Small, short-lived arrays go on the <em>stack</em>, typically 1&ndash;8
       MB per thread, created when a function starts and cleared when it returns. Large arrays go
       on the <em>heap</em>, booked out with <code>new</code> and returned with <code>delete</code>.
-      The stack is the workbench, cleared at the end of every job. The heap is the stores, where
-      material booked out and never returned is a <em>memory leak</em>.
-      <code>std::make_unique</code> attaches the return slip to the job, so the material goes back
-      automatically when the job ends.
+      Sheet 13 part 3 &sect;03 called these the bench and the stores: the bench is cleared at the end
+      of every job and cannot leak, while material booked out of the stores and never returned is a
+      <em>memory leak</em>. What C++ adds is <code>std::make_unique</code>, which attaches the return
+      slip to the job, so the material goes back automatically when the job ends.
     </p>
     <div class="note bridge">
       <div class="note-h"><span class="ic">&check;</span>Same structure: a template is a tabulated drawing</div>
@@ -795,8 +796,10 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
       <button class="pbtn" data-p1="d" type="button">The same</button>
       <div class="pverdict" id="pv1"></div>
     </div>
+    <div class="chartwrap">
     <svg class="svgfig" id="pS" viewBox="0 0 560 300" role="img"
          aria-label="Throughput of n equal-power cores relative to one fast core, against the serial fraction of the work"></svg>
+    </div>
     <div class="ctl">
       <label for="pN">Cores <span class="gk">n</span></label>
       <input type="range" id="pN" min="1" max="16" value="4" step="1">
@@ -903,8 +906,10 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
       <button class="pbtn" data-p2="d" type="button">50%</button>
       <div class="pverdict" id="pv2"></div>
     </div>
+    <div class="chartwrap">
     <svg class="svgfig" id="bS" viewBox="0 0 560 250" role="img"
          aria-label="The predictor's states and the first 48 branch outcomes with the predictions made for them"></svg>
+    </div>
     <div class="ctl">
       <button class="btn on" data-bp="loop" type="button">Loop</button>
       <button class="btn" data-bp="alt" type="button">Alternating</button>
@@ -1051,8 +1056,10 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
       <button class="pbtn" data-p3="d" type="button">10 strokes, 12.5%</button>
       <div class="pverdict" id="pv3"></div>
     </div>
+    <div class="chartwrap">
     <svg class="svgfig" id="hS" viewBox="0 0 560 270" role="img"
          aria-label="Holes grouped into strokes of the drilling head, and the same data laid over 64-byte cache lines with split loads marked"></svg>
+    </div>
     <div class="ctl">
       <button class="btn" data-hw="4" type="button">4 lanes</button>
       <button class="btn on" data-hw="8" type="button">8 lanes</button>
@@ -1236,8 +1243,10 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     <svg class="svgfig" id="rS" viewBox="0 0 560 330" role="img"
          aria-label="Roofline on log axes: attainable GFLOP per second against arithmetic intensity, with operations placed on it"></svg>
     </div>
+    <div class="chartwrap">
     <svg class="svgfig" id="rL" viewBox="0 0 560 92" role="img"
          aria-label="The same operating point drawn as a two-station line: a delivery station and a machining station, with the slower one marked"></svg>
+    </div>
     <div class="ctl">
       <label for="rOp">Operation</label>
       <select class="sel" id="rOp">
@@ -1295,10 +1304,11 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
       <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2016%20-%20SIMD%20and%20GPU%20programming/00.%20why%20C%2B%2B%20and%20how%20ML%20frameworks%20work.md" target="_blank" rel="noopener">src 00. why C++ &#8599;</a>
     </div>
     <p>
-      Memory is a ladder of stores, each smaller and closer than the last. On the build machine:
-      registers at the spindle; a 32 KiB <b>L1</b> cache per core, the rack beside the machine; a 1
-      MiB <b>L2</b> per core, the cell&rsquo;s buffer; a 33 MiB shared <b>L3</b>, the shop stores;
-      and main memory (DRAM), the warehouse, about 210 ns away (&sect;08). The cache keeps whatever
+      Sheet 13 part 1 &sect;15 drew the memory hierarchy as material staging, and this section does
+      the arithmetic that drawing left open. On the build machine:
+      registers in the operator&rsquo;s hand; a 32 KiB <b>L1</b> cache per core, the line-side bin; a 1
+      MiB <b>L2</b> per core, the cell supermarket; a 33 MiB shared <b>L3</b>, the shared stock;
+      and main memory (DRAM), the plant store, about 210 ns away (&sect;08). The cache keeps whatever
       was used recently and evicts the least recently used line when it is full (<em>LRU</em>);
       the programmer does not move material by hand, but chooses an order of work that keeps the
       right material close.
@@ -1357,7 +1367,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
       <div class="note-h"><span class="ic">&check;</span>Same structure: kitting at the machine</div>
       <p style="margin-bottom:0">
         Staging a kit at the machine so that many operations happen per trip to the stores is the
-        whole idea. The kit must fit the rack: three float tiles fit a 32 KiB L1 while
+        whole idea. The kit must fit the line-side bin: three float tiles fit a 32 KiB L1 while
         \(12b^2 \le 32{,}768\), so \(b \le 52\). The intensity it buys must clear the ridge of
         &sect;06: \(b/4 \ge I^*\), so \(b \ge 4I^*\). &sect;12 does that calculation for the build
         machine.
@@ -1367,7 +1377,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
       <div class="note-h"><span class="ic">&#33;</span>Where kitting breaks</div>
       <p style="margin-bottom:0">
         A kit is consumed; a tile is reused. The same \(A\) tile serves every \(B\) tile in its row,
-        and that reuse is where \(b/4\) comes from. And no planner chooses what leaves the rack: the
+        and that reuse is where \(b/4\) comes from. And no planner chooses what leaves the bin: the
         cache evicts the least recently used line by itself. The lab shows the consequence. At
         exactly the capacity of three \(8\times8\) tiles (192 words) LRU fetches 12,240 words, not the
         formula&rsquo;s 9,216, because it sometimes evicts a line it needs next. With room to spare
@@ -1545,8 +1555,10 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     <svg class="svgfig" id="lS" viewBox="0 0 560 300" role="img"
          aria-label="Throughput against the number of independent chains: the best-case bound and the build machine's measurements"></svg>
     </div>
+    <div class="chartwrap">
     <svg class="svgfig" id="lG" viewBox="0 0 560 120" role="img"
          aria-label="Issue timeline: which chain starts an operation in each slot, and the empty slots"></svg>
+    </div>
     <div class="ctl">
       <button class="btn on" data-lm="fma" type="button">FMA chains</button>
       <button class="btn" data-lm="mem" type="button">Memory misses</button>
@@ -1850,15 +1862,15 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
       \(101.4/10 = 10.14\) FLOP per byte. A kit of three \(b\times b\) tiles, with the output tile
       kept at the machine, yields \(b/4\) FLOP per byte delivered (&sect;07), so the kit must have
       \(b/4 \ge 10.14\): \(b \ge 41\). Three such tiles are \(3 \times 41^2 \times 4 = 20{,}172\)
-      bytes, 19.7 KiB, which fits the 32 KiB rack beside the machine.
+      bytes, 19.7 KiB, which fits the 32 KiB line-side bin.
     </p>
     <p>
       Now four machines draw from the same stores. Machining capacity is 405.8 GFLOP/s, delivery
       about 20 GB/s, so the balance point moves to 20.3 FLOP/B and the kit to \(b \ge 82\): three
-      tiles are 79 KiB, more than the rack holds. So the kit is staged in two steps, the way a cell
-      buffer feeds line-side racks: an \(82\times82\) (or larger) kit in each core&rsquo;s 1 MiB L2
-      sets the traffic from the warehouse, and smaller tiles inside it, cut to fit L1, feed the
-      machine from the cell buffer, whose own delivery rate is far higher (reported). Inside the
+      tiles are 79 KiB, more than the bin holds. So the kit is staged in two steps, the way a cell
+      supermarket feeds line-side bins: an \(82\times82\) (or larger) kit in each core&rsquo;s 1 MiB L2
+      sets the traffic from the plant store, and smaller tiles inside it, cut to fit L1, feed the
+      machine from the supermarket, whose own delivery rate is far higher (reported). Inside the
       machine, &sect;08 adds the last requirement: at least eight independent accumulators.
     </p>
     <h3>Solved as a roofline</h3>
@@ -2057,7 +2069,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
         WIP in a closed loop) and where it breaks (hardware switches warps; the compiler allocates
         accumulators).</li>
       <li><b>Tiles in shared memory.</b> The CUDA tiled matmul is &sect;07&rsquo;s kitting with a
-        programmer-managed rack instead of an LRU cache. Compute the intensity of the source&rsquo;s
+        programmer-managed line-side bin instead of an LRU cache. Compute the intensity of the source&rsquo;s
         tile size by \(b/4\) and check it against the GPU ridge from debt 1.</li>
       <li><b>Divergence on a warp.</b> &sect;05&rsquo;s drilling head with drills removed becomes a
         32-lane warp taking both sides of a branch. State the exact cost count and what SIMT adds
@@ -2229,7 +2241,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     if(n>1){ xs=(Math.pow(n,-1/3)-1/n)/(1-1/n);
       h+=U.ln(X(xs),Y0,X(xs),Y(1),'stroke:var(--c1);stroke-width:1.5;stroke-dasharray:3 3');
       h+='<circle cx="'+U.f1(X(xs))+'" cy="'+U.f1(Y(1))+'" r="4.5" style="fill:var(--c1)"/>';
-      h+=U.txt(X(xs)+7,Y(1)+16,'break-even s* = '+xs.toFixed(3),ST.small); }
+      h+=U.txt(X(xs)-8,Y(1)+18,'break-even s* = '+xs.toFixed(3),ST.small,'end'); }
     h+='<circle cx="'+U.f1(X(s))+'" cy="'+U.f1(Y(R(n,s)))+'" r="6" style="fill:var(--c3);stroke:var(--sheet);stroke-width:2"/>';
     $('pS').innerHTML=h;
     var f=4.5/Math.pow(n,1/3);
@@ -2305,7 +2317,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     }
     h+=U.txt(10,118,'Ring = state after 10,000 branches; blue ring = predicts taken.',ST.tick);
     /* strip of the first 48 */
-    var x0=86, w=9.5, gap=0.9;
+    var x0=86, w=8.8, gap=0.9;
     h+=U.txt(x0-8,152,'actual',ST.small,'end')+U.txt(x0-8,184,'predicted',ST.small,'end');
     for(i=0;i<48;i++){
       var x=x0+i*(w+gap);
@@ -2436,8 +2448,10 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     OPS.forEach(function(o,k){
       var sel=Math.abs(o[0]-op)<1e-9, px=X(o[0]), py=Y(att(o[0]));
       h+='<circle cx="'+U.f1(px)+'" cy="'+U.f1(py)+'" r="'+(sel?7:4.5)+'" style="fill:'+(sel?'var(--c2)':'var(--ink-3)')+';stroke:var(--sheet);stroke-width:2"/>';
-      var below=k%2===1;
-      h+=U.txt(px,py+(below?20:-11),o[1],sel?ST.lab:ST.tick,'middle');
+      /* points on the sloped roof: alternate above-left and below-right of the line; on the flat roof, above or below */
+      var slope=B*o[0]<peak, pos=slope?(k%2===0?'ul':'dr'):(k%2===0?'u':'d');
+      var lx=px+(pos==='ul'?-9:pos==='dr'?9:0), ly=py+(pos==='ul'||pos==='u'?-10:18);
+      h+=U.txt(lx,ly,o[1],sel?ST.lab:ST.tick,pos==='ul'?'end':pos==='dr'?'start':'middle');
     });
     $('rS').innerHTML=h;
     /* the line */
@@ -2519,7 +2533,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     /* formula band for the selected tile: valid once the tile set fits with slack */
     var fm=N*N+2*N*N*N/bSel, fx0=X(Math.max(32,3*bSel*bSel));
     h+=U.ln(fx0,Y(fm),X(1024),Y(fm),'stroke:var(--ink-3);stroke-width:1.2;stroke-dasharray:4 3');
-    h+=U.txt(X(1024)+4,Y(fm)+4,'n² + 2n³/b',ST.tick);
+    h+=U.txt(fx0+2,Y(fm)+15,'n² + 2n³/b',ST.tick);
     SER.forEach(function(s){
       var pts=[], i;
       for(i=0;i<=140;i++){var c=Math.round(Math.pow(2,LX0+(LX1-LX0)*i/140)); pts.push(U.f1(X(c))+','+U.f1(Y(Math.max(2048,misses(SUF[s.k],c)))));}
@@ -2585,7 +2599,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     h+=U.ln(X1-156,Y0-26,X1-144,Y0-26,'stroke:var(--c2);stroke-width:2.2')+U.txt(X1-140,Y0-22,'bound min(K/T₀, r_b)',ST.small);
     $('lS').innerHTML=h;
     /* issue timeline */
-    var L=mode==='fma'?4:15, units=mode==='fma'?2:1, slots=24, ready=[], g='', cw=21, x0=40, t, u;
+    var L=mode==='fma'?4:15, units=mode==='fma'?2:1, slots=24, ready=[], g='', cw=20.5, x0=54, t, u;
     for(i=0;i<K;i++) ready.push(0);
     var rr=0;
     g+=U.txt(x0-6,mode==='fma'?36:48,mode==='fma'?'unit 1':'issue',ST.tick,'end');
@@ -2601,14 +2615,14 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
         } else g+='<rect x="'+(x0+t*cw+0.5)+'" y="'+(y+0.5)+'" width="'+(cw-3)+'" height="19" rx="2" style="fill:none;stroke:var(--rule-strong);stroke-dasharray:2 2"/>';
       }
     }
-    g+=U.txt(x0,104,mode==='fma'?'24 cycles; a chain can issue again 4 cycles after it last issued; empty box = idle unit':
-                               '24 slots of 14.4 ns; a chain waits about 15 slots (210 ns) for its line; empty = idle',ST.tick);
+    g+=U.txt(x0,104,mode==='fma'?'24 cycles; each chain waits 4 cycles between issues; dashed = idle':
+                               '24 slots of 14.4 ns; each chain waits ~15 slots (210 ns); dashed = idle',ST.tick);
     $('lG').innerHTML=g;
     var b=th(K);
-    $('lB').textContent=mode==='fma'?b.toFixed(2)+' per cycle':b.toFixed(2)+' GB/s';
+    $('lB').textContent=mode==='fma'?b.toFixed(2)+' /cycle':b.toFixed(2)+' GB/s';
     $('lM').textContent=M[K]===undefined?'not measured':(mode==='fma'?M[K].toFixed(2):(64/M[K]).toFixed(2)+' GB/s');
     $('lW').textContent=mode==='fma'?'8':p.w0.toFixed(1);
-    $('lT').textContent=mode==='fma'?Math.max(4,K/2).toFixed(0)+' cycles':Math.round(Math.max(210,K*14.4))+' ns';
+    $('lT').textContent=mode==='fma'?(K<=8?'4':(K/2).toFixed(K%2?1:0))+' cycles':Math.round(Math.max(210,K*14.4))+' ns';
   }
   $('lK').addEventListener('input',draw);
   document.querySelectorAll('[data-lm]').forEach(function(b){b.addEventListener('click',function(){
