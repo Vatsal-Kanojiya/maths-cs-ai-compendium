@@ -711,3 +711,579 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     </p>
   </div>
 </section>
+
+<section id="power">
+  <div class="col">
+    <div class="sechead"><span class="secnum">03</span><h2>Why clocks stopped: the cube law</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2016%20-%20SIMD%20and%20GPU%20programming/01.%20hardware%20fundamentals.md" target="_blank" rel="noopener">src 01. hardware fundamentals &#8599;</a>
+    </div>
+    <p>
+      Until about 2005 a new processor ran old programs faster because its clock was faster.
+      Then clocks stopped near 4 GHz, and every gain since has come from doing more things at
+      once: more cores, wider vector units, GPUs. The source gives the reason as the dynamic
+      power of switching transistors,
+    </p>
+    <div class="mathbox">$$P \propto C\,V^{2} f,$$</div>
+    <p>
+      with \(C\) the switched capacitance, \(V\) the supply voltage and \(f\) the clock
+      frequency. A transistor switches faster at a higher voltage, so raising \(f\) means raising
+      \(V\). Over the range where voltage tracks frequency, \(V \propto f\), and
+    </p>
+    <div class="mathbox">$$P \propto f^{3}, \qquad \frac{\text{energy}}{\text{operation}} = \frac{P}{f} \propto f^{2}.$$</div>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same exponents: the affinity laws</div>
+      <p style="margin-bottom:0">
+        For a fan or a centrifugal pump at speed \(N\): flow \(Q \propto N\), head
+        \(H \propto N^2\), power \(P \propto N^3\), so the energy per cubic metre delivered goes as
+        \(N^2\). A processor under \(V \propto f\) has operations per second \(\propto f\), power
+        \(\propto f^3\), and energy per operation \(\propto f^2\). The exponents match term for
+        term, and the practical rule matches too: a pump or a chip run a little slower saves a lot
+        of energy per unit of output. The physics differs. The pump&rsquo;s cube comes from fluid
+        similarity; the chip&rsquo;s comes from charging a capacitance to a voltage,
+        \(\tfrac12 CV^2\) per switching event.
+      </p>
+    </div>
+    <p>
+      The source then says &ldquo;a 4-core chip at 3 GHz uses similar power to a single core at
+      4.5 GHz but can do 4&times; the parallel work.&rdquo; Under its own cube law the power ratio is
+    </p>
+    <div class="mathbox">$$\frac{4 \times 3^{3}}{4.5^{3}} = \frac{108}{91.1} = 1.185,$$</div>
+    <p>
+      which is fair to call similar. The work is not 4&times;. Four cores at 3 GHz do
+      \(4 \times 3 = 12\) units of clock-work per nanosecond against 4.5 for the single core:
+      <b>2.67&times;</b>. At exactly equal power each core runs at \(4.5/4^{1/3} = 2.835\) GHz and
+      the total is \(4^{2/3} = \mathbf{2.52\times}\). Doubling a 4 GHz, 100 W core to 8 GHz would
+      take \(2^3 = 8\times\) the power, 800 W, which is the source&rsquo;s &ldquo;impractical
+      cooling&rdquo; in numbers (<code>[Ch16 s03]</code>).
+    </p>
+    <p>
+      The trade has a condition attached, and it is Sheet 13&rsquo;s Amdahl&rsquo;s law. If a
+      fraction \(s\) of the work cannot be split, \(n\) equal-power cores, each at
+      \(f_n = 4.5/n^{1/3}\) GHz, deliver, relative to the one fast core,
+    </p>
+    <div class="mathbox">$$R(s) = \frac{n^{-1/3}}{s + (1-s)/n}, \qquad R > 1 \iff s < s^{*} = \frac{n^{-1/3} - 1/n}{1 - 1/n}.$$</div>
+    <p>
+      For two cores \(s^* = 0.587\); for four, 0.507; for sixteen, 0.357. More cores lower the
+      bar, because each one is slower.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where the analogy breaks</div>
+      <p style="margin-bottom:0">
+        \(V \propto f\) is a fit over the normal operating range, not a law. Below a threshold
+        voltage the transistor stops switching cleanly, and at low voltage the <em>leakage</em>
+        current, which flows whether or not anything switches, becomes a large share of the power.
+        So the cube law overstates the saving at the slow end, just as the affinity laws mislead
+        when a pump is slowed below the speed at which it can still meet the system&rsquo;s static
+        head. The serial fraction plays the part of that static head: no number of slow units in
+        parallel gets past it.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">One fast core or n slow ones, same power</div><div class="lab-tag">Predict, then split</div></div>
+    <div class="lab-body">
+    <div class="predict">
+      <p style="margin-top:0">
+        Four cores share the power budget of one 4.5 GHz core, under the cube law. The work splits
+        perfectly. How much more work per second do the four deliver?
+      </p>
+      <button class="pbtn" data-p1="a" type="button">4&times;</button>
+      <button class="pbtn" data-p1="b" type="button">2.52&times;</button>
+      <button class="pbtn" data-p1="c" type="button">1.59&times;</button>
+      <button class="pbtn" data-p1="d" type="button">The same</button>
+      <div class="pverdict" id="pv1"></div>
+    </div>
+    <svg class="svgfig" id="pS" viewBox="0 0 560 300" role="img"
+         aria-label="Throughput of n equal-power cores relative to one fast core, against the serial fraction of the work"></svg>
+    <div class="ctl">
+      <label for="pN">Cores n</label>
+      <input type="range" id="pN" min="1" max="16" value="4" step="1">
+      <span class="ro-v" id="pNv" style="min-width:32px">4</span>
+    </div>
+    <div class="ctl">
+      <label for="pSf">Serial fraction s</label>
+      <input type="range" id="pSf" min="0" max="1" value="0.25" step="0.01">
+      <span class="ro-v" id="pSv" style="min-width:42px">0.25</span>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Clock per core<br>(GHz)</div><div class="ro-v" id="pF">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Gain if fully<br>parallel</div><div class="ro-v a" id="pG">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Break-even<br>serial fraction</div><div class="ro-v b" id="pX">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Gain at<br>your s</div><div class="ro-v c" id="pR">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Power vs<br>one fast core</div><div class="ro-v" id="pP">&mdash;</div></div>
+    </div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    The curve is \(R(s)\) for the chosen \(n\); the dashed line is the single 4.5 GHz core. Where
+    they cross is the break-even serial fraction. At \(s = 0\) four cores give <b>2.52&times;</b>,
+    the answer to the prediction, not 4&times;, because each core had to slow to 2.835 GHz to
+    keep the total power fixed. Drag \(n\) up: the gain at \(s = 0\) keeps growing as
+    \(n^{2/3}\), but the crossing moves left, so a workload with a fifth of its time serial
+    stops profiting from sixteen cores (\(s^* = 0.357\)) well before it stops profiting from
+    four (0.507).
+  </div>
+</section>
+
+<section id="core">
+  <div class="col">
+    <div class="sechead"><span class="secnum">04</span><h2>Inside one core</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2016%20-%20SIMD%20and%20GPU%20programming/01.%20hardware%20fundamentals.md" target="_blank" rel="noopener">src 01. hardware fundamentals &#8599;</a>
+    </div>
+    <p>
+      Sheet 13 part 1 built a processor that fetches, decodes and executes one instruction at a
+      time. A modern core does three more things, all automatically.
+    </p>
+    <p>
+      <b>Superscalar execution.</b> The core has several execution units (integer, floating-point,
+      load, store) and can start four to six independent instructions in the same cycle. It is a
+      cell with several machines.
+    </p>
+    <p>
+      <b>Out-of-order execution.</b> The core looks a few hundred instructions ahead and starts any
+      instruction whose inputs are ready, wherever it sits in the program. Results are then
+      committed in program order. In shop terms it is a dispatcher who starts any job whose
+      material has arrived, while the shipping dock still releases orders in order-book sequence;
+      the holding area between them is the <em>reorder buffer</em>.
+    </p>
+    <p>
+      <b>Branch prediction and speculation.</b> An <code>if</code> or a loop test is a fork: the
+      core does not know which way to go until the condition is computed, many cycles later.
+      Rather than wait, it guesses and starts work down the guessed path. A correct guess costs
+      nothing. A wrong one means the speculative work is discarded and the right path started:
+      about 15 cycles, the source says.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same structure: making to forecast</div>
+      <p style="margin-bottom:0">
+        Speculation is making to forecast before the order is confirmed. A good forecast hides the
+        lead time; a bad one scraps the work in process, and the scrap is the pipeline flush. The
+        cost model is the expected-value calculation you would do for a forecast:
+        \(\text{cost per branch} = \text{miss rate} \times \text{penalty}\). At the source&rsquo;s
+        5% and 15 cycles that is 0.75 cycles per branch. On the build machine a branch that went
+        either way at random cost <b>3.7 ns more per element</b> than the same branch on sorted data,
+        about <b>24 cycles</b> per misprediction (29 on the second container), so the source&rsquo;s
+        15 is the floor, not the typical cost (<code>[Ch16 s04]</code>).
+      </p>
+    </div>
+    <p>
+      The simplest useful predictor keeps a 2-bit counter per branch: states 0 and 1 predict
+      &ldquo;not taken&rdquo;, 2 and 3 predict &ldquo;taken&rdquo;, and each outcome moves the
+      counter one step toward itself, stopping at the ends.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: the 2-bit counter is a hysteresis band</div>
+      <p style="margin-bottom:0">
+        It takes two wrong outcomes in a row to flip the prediction, as a thermostat with a
+        dead band needs the temperature to cross the band, not just touch the set point. The
+        payoff is on loops. A loop that runs nine times and exits has one surprise in ten. A
+        1-bit predictor (remember the last outcome) misses twice per loop, at the exit and again on
+        re-entry: <b>20%</b>. The 2-bit counter rides through the single exit: <b>10%</b>. The
+        same hysteresis can also lock in the worst case. Fed T, N, T, N&hellip; it misses <b>50%</b>
+        if it starts weakly taken and <b>100%</b> if it starts weakly not-taken (<code>[Ch16 s04]</code>).
+        Real predictors add a history of recent outcomes and learn such patterns; that refinement
+        is reported, not built here.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Making to forecast</div><div class="lab-tag">Predict, then run</div></div>
+    <div class="lab-body">
+    <div class="predict">
+      <p style="margin-top:0">
+        A loop runs 9 times, exits, and is entered again, over and over. A 2-bit counter predicts
+        its branch. What fraction does it get wrong?
+      </p>
+      <button class="pbtn" data-p2="a" type="button">0%</button>
+      <button class="pbtn" data-p2="b" type="button">10%</button>
+      <button class="pbtn" data-p2="c" type="button">20%</button>
+      <button class="pbtn" data-p2="d" type="button">50%</button>
+      <div class="pverdict" id="pv2"></div>
+    </div>
+    <svg class="svgfig" id="bS" viewBox="0 0 560 250" role="img"
+         aria-label="The predictor's states and the first 48 branch outcomes with the predictions made for them"></svg>
+    <div class="ctl">
+      <button class="btn on" data-bp="loop" type="button">Loop</button>
+      <button class="btn" data-bp="alt" type="button">Alternating</button>
+      <button class="btn" data-bp="rand" type="button">Random</button>
+      <span style="flex:1"></span>
+      <button class="btn" data-bk="1" type="button">1-bit</button>
+      <button class="btn on" data-bk="2" type="button">2-bit</button>
+      <button class="btn" id="bStart" type="button">Start weak N</button>
+    </div>
+    <div class="ctl">
+      <label for="bL">Loop length / P(taken)</label>
+      <input type="range" id="bL" min="2" max="20" value="10" step="1">
+      <span class="ro-v" id="bLv" style="min-width:42px">10</span>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Miss rate,<br>10,000 branches</div><div class="ro-v b" id="bM">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Theory</div><div class="ro-v a" id="bT">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Cycles/branch<br>at 24 (measured)</div><div class="ro-v" id="bC1">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Cycles/branch<br>at 15 (source)</div><div class="ro-v" id="bC2">&mdash;</div></div>
+    </div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    The top strip is what the branch did (filled: taken), the bottom strip what was predicted for
+    it; a red tick marks each miss. With the loop of 10 and the 2-bit counter the only miss is the
+    exit: <b>10%</b>, the answer to the prediction. Switch to 1-bit and the re-entry misses too.
+    <b>Alternating</b> from the default start misses every other branch; press <b>Start weak N</b>
+    and it misses every one, the hysteresis holding the wrong state. <b>Random</b> with the slider
+    at 50% cannot be predicted by anything; at 90% the counter settles on &ldquo;taken&rdquo; and
+    misses about the 10% that are not.
+  </div>
+
+  <div class="col">
+    <p>
+      Out-of-order execution hides a delay only if the core can find enough independent work to do
+      meanwhile. A trip to main memory took about <b>210 ns</b> on the build machine (&sect;08),
+      which is \(210 \times 3.17 \approx 670\) cycles. At four instructions per cycle, hiding it
+      would need about 2,700 instructions in flight. The reorder buffer of this core family holds
+      224 (reported). So out-of-order execution hides cache hits and short arithmetic latencies;
+      it does not hide main memory. That is Little&rsquo;s law, and &sect;08 is built on it.
+    </p>
+    <p>
+      The source closes the topic with latency against throughput: a bus waits at every stop but
+      carries fifty, a taxi goes straight there with four. Pipelining turns latency into
+      throughput: an instruction may take five cycles, but if one starts every cycle, one finishes
+      every cycle. Sheet 13 part 1 showed that a pipeline&rsquo;s cycle time, throughput and
+      latency are the assembly line&rsquo;s, the same expressions. All of this is
+      <em>instruction-level</em> parallelism, found automatically among independent instructions.
+      Doing the same operation to many numbers at once is <em>data-level</em> parallelism, and it
+      needs the vector units of &sect;05.
+    </p>
+  </div>
+</section>
+
+<section id="simd">
+  <div class="col">
+    <div class="sechead"><span class="secnum">05</span><h2>SIMD is a multi-spindle drilling head</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2016%20-%20SIMD%20and%20GPU%20programming/01.%20hardware%20fundamentals.md" target="_blank" rel="noopener">src 01. hardware fundamentals &#8599;</a>
+    </div>
+    <p>
+      <b>SIMD</b> (single instruction, multiple data) applies one instruction to several numbers
+      at once. The numbers sit side by side in a wide <em>vector register</em>, each in its own
+      <em>lane</em>. Instead of four scalar additions, <code>_mm_add_ps(va, vb)</code> adds four
+      pairs of floats in one instruction. The lane count is the register width divided by the
+      number&rsquo;s width:
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Lanes per register. SVE and the RISC-V vector extension choose the width in hardware (&sect;09; part 3).</caption>
+      <thead><tr><th>Width</th><th>float32 lanes</th><th>float64 lanes</th><th>Name</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">128 bit</td><td class="mono">4</td><td class="mono">2</td><td>SSE (x86), NEON (ARM)</td></tr>
+        <tr><td class="mono">256 bit</td><td class="mono">8</td><td class="mono">4</td><td>AVX, AVX2 (x86)</td></tr>
+        <tr><td class="mono">512 bit</td><td class="mono">16</td><td class="mono">8</td><td>AVX-512 (x86)</td></tr>
+        <tr><td class="mono">128&ndash;2048 bit</td><td class="mono">4&ndash;64</td><td class="mono">2&ndash;32</td><td>SVE, SVE2 (ARM)</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      The bank&rsquo;s entry was &ldquo;SIMD &harr; multi-spindle machining&rdquo;. That names a
+      family, and Sheet 12 taught the move: when a bridge names a category, ask which member and
+      why. There are two common multi-spindle machines and they are opposite kinds of parallelism.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same structure: the multi-spindle drilling head</div>
+      <p style="margin-bottom:0">
+        A drilling head with \(W\) spindles on one gearbox, fed by one slide, cuts \(W\) holes in
+        one stroke. One feed is one instruction; the spindles are the lanes; the fixed spindle pitch
+        is the fixed spacing of consecutive floats in memory. A stroke takes the same time whether
+        one spindle carries a drill or all of them do, which is why a short job wastes the head. With
+        10 holes on an 8-spindle head you need \(\lceil 10/8\rceil = 2\) strokes and only
+        \(10/16 = 62.5\%\) of the spindle-strokes cut metal; on a 4-spindle head, 3 strokes and
+        83.3% (<code>[Ch16 s05]</code>). Taking the drills out of the spare spindles is a
+        <b>mask</b>: AVX-512&rsquo;s mask registers and SVE&rsquo;s predicates switch lanes off so the
+        last stroke cuts only the holes that exist, instead of a separate scalar &ldquo;cleanup
+        loop&rdquo;.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where the bank&rsquo;s wording breaks: the multi-spindle automatic</div>
+      <p style="margin-bottom:0">
+        A multi-spindle automatic lathe indexes six or eight spindles round a drum. At any moment
+        each spindle holds a different part at a different station, so the machine does different
+        operations on different parts simultaneously and finishes one part per index. That is a
+        <b>pipeline</b>, Sheet 13 part 1&rsquo;s assembly line, not SIMD. Same name on the machine,
+        opposite kind of parallelism.
+      </p>
+    </div>
+    <p>
+      <b>Divergence.</b> Suppose some holes need a deeper cut. A head cannot feed two depths in one
+      stroke, so a group of holes containing both kinds takes two strokes, each with the other
+      kind&rsquo;s drills removed. SIMD does exactly this with an <code>if</code>: it computes both
+      branches for every lane and selects per lane with the comparison mask
+      (<code>vbslq_f32</code> on NEON, <code>_mm256_blendv_ps</code> on AVX2, a mask register on
+      AVX-512). The cost of a group is the sum of both branches whenever both occur in it. That
+      count is exact, and part 2 meets it again as warp divergence on a GPU.
+    </p>
+    <p>
+      <b>Pallets: alignment.</b> Memory reaches the core in fixed 64-byte <em>cache lines</em>,
+      16 floats each, the way stock arrives in pallets of fixed size. A vector load of \(W\) bytes
+      that starts at an address that is not a multiple of \(W\) will sometimes straddle two lines
+      and need both pallets. Over a long array the fraction of such split loads is exactly
+    </p>
+    <div class="mathbox">$$\text{split fraction} = \frac{W}{64}: \quad 16\ \text{B (SSE, NEON)} \to 25\%, \quad 32\ \text{B (AVX)} \to 50\%, \quad 64\ \text{B (AVX-512)} \to 100\%,$$</div>
+    <p>
+      and zero when the start is a multiple of \(W\) (<code>[Ch16 s05]</code>). Whether it costs
+      anything depends on which station binds, and &sect;10 measures both cases.
+    </p>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">The drilling head</div><div class="lab-tag">Predict, then feed</div></div>
+    <div class="lab-body">
+    <div class="predict">
+      <p style="margin-top:0">
+        Ten holes, an 8-spindle head, all holes the same. How many strokes, and what share of the
+        spindle-strokes cut metal?
+      </p>
+      <button class="pbtn" data-p3="a" type="button">1 stroke, 100%</button>
+      <button class="pbtn" data-p3="b" type="button">2 strokes, 62.5%</button>
+      <button class="pbtn" data-p3="c" type="button">2 strokes, 100%</button>
+      <button class="pbtn" data-p3="d" type="button">10 strokes, 12.5%</button>
+      <div class="pverdict" id="pv3"></div>
+    </div>
+    <svg class="svgfig" id="hS" viewBox="0 0 560 270" role="img"
+         aria-label="Holes grouped into strokes of the drilling head, and the same data laid over 64-byte cache lines with split loads marked"></svg>
+    <div class="ctl">
+      <button class="btn" data-hw="4" type="button">4 lanes</button>
+      <button class="btn on" data-hw="8" type="button">8 lanes</button>
+      <button class="btn" data-hw="16" type="button">16 lanes</button>
+    </div>
+    <div class="ctl">
+      <label for="hN">Holes n</label>
+      <input type="range" id="hN" min="1" max="40" value="10" step="1">
+      <span class="ro-v" id="hNv" style="min-width:32px">10</span>
+    </div>
+    <div class="ctl">
+      <label for="hD">Deep holes</label>
+      <input type="range" id="hD" min="0" max="40" value="0" step="1">
+      <span class="ro-v" id="hDv" style="min-width:32px">0</span>
+    </div>
+    <div class="ctl">
+      <label for="hO">Start offset (floats)</label>
+      <input type="range" id="hO" min="0" max="15" value="1" step="1">
+      <span class="ro-v" id="hOv" style="min-width:32px">1</span>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Strokes,<br>one depth</div><div class="ro-v a" id="hK">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Strokes with<br>deep holes</div><div class="ro-v b" id="hK2">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Spindle-strokes<br>cutting</div><div class="ro-v c" id="hU">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Loads split,<br>drawn</div><div class="ro-v" id="hSp">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Long-array<br>W/64</div><div class="ro-v" id="hSq">&mdash;</div></div>
+    </div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    Top: each box is one stroke of the head; a filled circle is a hole cut, a dashed ring a spindle
+    with its drill removed (a masked lane), a blue hole a deep one. Ten holes on 8 lanes take
+    <b>2 strokes at 62.5%</b>, the answer to the prediction. Add deep holes: every stroke group
+    holding both kinds runs twice. Bottom: the same floats laid over 64-byte lines; an orange
+    bracket is a load that straddles two lines. For a short array the drawn fraction can differ
+    from \(W/64\); for a long one it converges to it. Set the offset to a multiple of the lane count
+    and nothing splits.
+  </div>
+
+  <div class="col">
+    <h3 style="margin-top:28px">Reductions have no spindle</h3>
+    <p>
+      A drilling head has no path from one spindle to another. Neither does a vector unit, mostly:
+      it is built for <em>vertical</em> operations, lane 0 with lane 0. Summing or taking the
+      maximum <em>across</em> the lanes needs <b>shuffles</b> that move values between lanes. The
+      source&rsquo;s AVX2 maximum does it in two steps on four lanes, with the immediates
+      <code>0b01001110</code> and <code>0b10110001</code>. Decoded, the first moves lane \(i\) to lane
+      \(i \oplus 2\) (swap halves) and the second to \(i \oplus 1\) (swap neighbours), where
+      \(\oplus\) is bitwise exclusive-or. After each step every lane keeps the larger of itself and
+      its partner, so after \(\log_2 4 = 2\) steps every lane holds the maximum. Partners at
+      \(i \oplus 2^s\) are the butterfly of Sheet 09&rsquo;s FFT.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>A shuffle is a permutation matrix only sometimes</div>
+      <p style="margin-bottom:0">
+        The source says shuffling lanes &ldquo;is the hardware equivalent of multiplying by a
+        permutation matrix&rdquo;. For these two immediates it is, and the verifier checks both are
+        orthogonal. But <code>_mm_shuffle_ps</code> may pick the same source lane twice: immediate 0
+        copies lane 0 into all four, a 0/1 matrix of rank 1, which is a selection, not a
+        permutation (<code>[Ch16 s05]</code>).
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where the drilling head breaks, and one place it holds</div>
+      <p style="margin-bottom:0">
+        The head drills one part, so feeding it is one part per stroke whatever the spindle count.
+        Every SIMD lane needs its own numbers delivered, so doubling the width doubles the demand on
+        the delivery station. That is the source&rsquo;s remark that &ldquo;you can compute faster
+        than you can feed data&rdquo;, and &sect;06 makes it a formula. One correspondence survives
+        where you might not expect it: more spindles draw more spindle power, and a head at its
+        motor limit must be fed more slowly. Wider vectors draw more power, and many Intel cores
+        lower their clock under heavy AVX-512 load. On the build machine AVX-512 chains delivered
+        <b>164&ndash;165 GFLOP/s</b> per core against AVX2&rsquo;s 87&ndash;101 in separate runs,
+        <b>1.6&ndash;1.9&times;</b> rather than 2&times; (1.5&ndash;1.7&times; on the second container).
+        This measurement cannot separate a clock drop from other limits (<code>[Ch16 s10]</code>).
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="roofline">
+  <div class="col">
+    <div class="sechead"><span class="secnum">06</span><h2>The roofline is a two-station line</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2016%20-%20SIMD%20and%20GPU%20programming/01.%20hardware%20fundamentals.md" target="_blank" rel="noopener">src 01. hardware fundamentals &#8599;</a>
+    </div>
+    <p>
+      The roofline model rates a piece of code against two limits of the machine. The
+      <b>peak compute rate</b>, in floating-point operations per second, is
+    </p>
+    <div class="mathbox">$$\text{Peak} = \text{cores} \times f \times \text{lanes} \times \text{FMA units} \times 2 .$$</div>
+    <p>
+      The 2 is there because a fused multiply-add (FMA), \(c \leftarrow c + a\times b\), is two
+      operations. The source writes \(4\times10^9 \times 8 \times 2 = 64\) GFLOPS for a 4 GHz AVX2
+      core with two FMA units, which leaves it out. Its own matmul count, \(2n^3\), counts the
+      multiply and the add separately, so the consistent peak is <b>128 GFLOP/s</b>. Mixing the two
+      conventions halves every ridge point computed from them.
+    </p>
+    <p>
+      The <b>peak bandwidth</b> is how many bytes per second memory can deliver: the source&rsquo;s
+      &ldquo;50 GB/s&rdquo; is a whole-chip figure (one core of the build machine streamed 9&ndash;12
+      GB/s; &sect;08 says why). A kernel&rsquo;s <b>arithmetic intensity</b> \(I\) is the FLOPs it
+      performs per byte it moves. Then
+    </p>
+    <div class="mathbox">$$\text{attainable} = \min\left(\text{Peak},\ \text{BW} \times I\right), \qquad I^{*} = \frac{\text{Peak}}{\text{BW}} .$$</div>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: a two-station serial line</div>
+      <p style="margin-bottom:0">
+        Station 1 delivers material at BW bytes per second. Station 2 machines it at Peak FLOPs per
+        second. The product mix \(I\) converts station 1&rsquo;s capacity into station 2&rsquo;s units:
+        BW bytes per second feed \(\text{BW}\times I\) FLOPs per second of work. A serial line runs
+        at the rate of its slower station, so its output is \(\min(\text{Peak}, \text{BW}\times I)\),
+        which is the roofline formula. The <b>ridge point</b> \(I^*\) is the product mix at which
+        the line is balanced. Below it the delivery station is the constraint (memory-bound); above
+        it the machining station is (compute-bound). With the corrected peak and 50 GB/s,
+        \(I^* = 128/50 = 2.56\) FLOP/B; the source&rsquo;s figures give 1.28.
+      </p>
+    </div>
+    <p>
+      The source&rsquo;s intensity task, run as printed, gives:
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>File 01 task 1, run (it imports JAX but uses only plain Python arithmetic). Attainable is on one corrected core, 128 GFLOP/s and 50 GB/s.</caption>
+      <thead><tr><th>Operation</th><th>Count used</th><th>Prints</th><th>Exact</th><th>Attainable</th><th>Bound by</th></tr></thead>
+      <tbody>
+        <tr><td>ReLU, \(n\) floats</td><td>\(n\) FLOP / \(8n\) B</td><td class="mono">0.12</td><td class="mono">0.125</td><td class="mono">6.25 GFLOP/s</td><td>delivery</td></tr>
+        <tr><td>Layer norm</td><td>\(5n\) / \(8n\)</td><td class="mono">0.62</td><td class="mono">0.625</td><td class="mono">31.25</td><td>delivery</td></tr>
+        <tr><td>Conv 3&times;3, 64&rarr;128 ch, 32&times;32</td><td>\(2\cdot9\cdot C_iC_oHW\) / bytes</td><td class="mono">140</td><td class="mono">139.64</td><td class="mono">128</td><td>machining</td></tr>
+        <tr><td>Matmul, \(n = 1024\)</td><td>\(2n^3\) / \(12n^2\)</td><td class="mono">171</td><td class="mono">170.67</td><td class="mono">128</td><td>machining</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      The matmul row hides an assumption. \(2n^3/12n^2 = n/6\) counts each matrix crossing the bus
+      exactly once, which is true only if everything is staged perfectly. A naive triple loop
+      fetches two floats for every multiply-add it performs: 2 FLOP per 8 bytes, \(I = 0.25\),
+      below every ridge on this page. So a naive matmul is memory-bound and a well-staged one is
+      compute-bound. Intensity belongs to the algorithm and its staging, not to the operation, and
+      &sect;07 is about choosing it.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: the constraint moves</div>
+      <p style="margin-bottom:0">
+        Sheet 13 part 3 found Goldratt&rsquo;s fifth step by computation: fix one bottleneck and
+        another appears, without anything else changing. Here it is in one line. Adding cores raises
+        Peak and leaves BW alone, so \(I^*\) moves right: 2.56 FLOP/B for one core, <b>20.48</b> for
+        eight on the same 50 GB/s. A tiled matmul at 16 FLOP/B is machining-bound on one core and
+        delivery-bound on eight. Nothing about the kernel changed; the constraint moved.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks: the line assumes the stations overlap</div>
+      <p style="margin-bottom:0">
+        \(\min\) is the rule for a line whose stations work at the same time on different items.
+        If the core waited for each delivery before computing on it, the times would add, as in a
+        one-operator cell, and the rate would be the harmonic combination
+        \(1/(1/\text{Peak} + 1/(\text{BW}\,I))\), exactly half the roof at the ridge point. Real
+        cores overlap through out-of-order execution and hardware prefetching, so they sit close to
+        the \(\min\) when prefetching works and drop toward the sum when it cannot (random access,
+        &sect;08). The lab shows both.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">The roofline as a line</div><div class="lab-tag">Predict, then add cores</div></div>
+    <div class="lab-body">
+    <div class="predict">
+      <p style="margin-top:0">
+        A 64&times;64-tiled matmul runs at 16 FLOP/B and is compute-bound on one core (ridge 2.56).
+        Eight cores now share the same 50 GB/s. Is it still compute-bound?
+      </p>
+      <button class="pbtn" data-p4="a" type="button">Yes: more cores only help</button>
+      <button class="pbtn" data-p4="b" type="button">No: it becomes memory-bound</button>
+      <button class="pbtn" data-p4="c" type="button">It depends on the clock</button>
+      <div class="pverdict" id="pv4"></div>
+    </div>
+    <div class="chartwrap">
+    <svg class="svgfig" id="rS" viewBox="0 0 560 330" role="img"
+         aria-label="Roofline on log axes: attainable GFLOP per second against arithmetic intensity, with operations placed on it"></svg>
+    </div>
+    <svg class="svgfig" id="rL" viewBox="0 0 560 92" role="img"
+         aria-label="The same operating point drawn as a two-station line: a delivery station and a machining station, with the slower one marked"></svg>
+    <div class="ctl">
+      <label for="rOp">Operation</label>
+      <select class="sel" id="rOp">
+        <option value="0.125">ReLU (0.125)</option>
+        <option value="0.25">Naive matmul (0.25)</option>
+        <option value="0.625">Layer norm (0.625)</option>
+        <option value="2">Matmul, 8&times;8 tiles (2)</option>
+        <option value="16" selected>Matmul, 64&times;64 tiles (16)</option>
+        <option value="139.64">Conv 3&times;3 (139.6)</option>
+      </select>
+      <button class="btn on" data-rf="2" type="button">FMA = 2 FLOP</button>
+      <button class="btn" data-rf="1" type="button">FMA = 1 (source)</button>
+      <button class="btn" id="rOv" type="button">No overlap</button>
+    </div>
+    <div class="ctl">
+      <label for="rC">Cores</label>
+      <input type="range" id="rC" min="1" max="8" value="1" step="1">
+      <span class="ro-v" id="rCv" style="min-width:32px">1</span>
+    </div>
+    <div class="ctl">
+      <label for="rB">Bandwidth GB/s</label>
+      <input type="range" id="rB" min="10" max="100" value="50" step="1">
+      <span class="ro-v" id="rBv" style="min-width:32px">50</span>
+    </div>
+    <div class="ctl">
+      <label for="rG">Clock GHz</label>
+      <input type="range" id="rG" min="2" max="5" value="4" step="0.1">
+      <span class="ro-v" id="rGv" style="min-width:32px">4.0</span>
+      <button class="btn" data-rw="4" type="button">4 lanes</button>
+      <button class="btn on" data-rw="8" type="button">8 lanes</button>
+      <button class="btn" data-rw="16" type="button">16 lanes</button>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Peak<br>GFLOP/s</div><div class="ro-v a" id="rP">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Ridge<br>FLOP/B</div><div class="ro-v b" id="rR">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Attainable<br>GFLOP/s</div><div class="ro-v c" id="rA">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Binding<br>station</div><div class="ro-v" id="rK">&mdash;</div></div>
+    </div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    Two FMA units, 4 GHz, 8 lanes, 50 GB/s: the roof is <b>128 GFLOP/s</b> and the ridge
+    <b>2.56 FLOP/B</b>. Press <b>FMA = 1</b> to see the source&rsquo;s roof drop to 64 and its ridge
+    to 1.28. Now drag cores to 8: the roof rises to 1,024, the ridge moves to 20.48, and the
+    64&times;64 tile at 16 FLOP/B slides under the sloped roof. That is the answer to the
+    prediction: <b>it becomes memory-bound</b>, and the line diagram shows the delivery station
+    taking over. <b>No overlap</b> draws the harmonic curve for a core that waits for each delivery;
+    it meets the roof only far from the ridge.
+  </div>
+</section>
