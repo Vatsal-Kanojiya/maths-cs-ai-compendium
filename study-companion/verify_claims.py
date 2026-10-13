@@ -5259,6 +5259,8 @@ def _ch15():
     for k, (a, b) in presets.items():
         Lk = lcs_len(a, b); LAB6[k] = (len(a), len(b), Lk, len(a) + len(b) - 2 * Lk)
     say("s06", f"lab presets (N, M, LCS, edits): {LAB6}", LAB6["notes"] == (6, 6, 4, 4) and LAB6["myers"] == (7, 6, 4, 5))
+    ndist = {k: len(lcs_all(tuple(a), tuple(b))) for k, (a, b) in presets.items()}
+    say("s06", f"lab presets, number of different LCSs: {ndist}", ndist == {"notes": 1, "myers": 3, "renum": 1})
 
     # --- s07: three-way merge, and which side is which ---------------------------------------------
     print()
