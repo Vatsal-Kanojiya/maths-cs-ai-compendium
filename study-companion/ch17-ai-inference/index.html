@@ -1931,3 +1931,348 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     </p>
   </div>
 </section>
+
+<section id="worked">
+  <div class="col">
+    <div class="sechead"><span class="secnum">20</span><h2>Worked example: one server for a help desk</h2>
+      <span class="srcref nolink" title="Written for this sheet; draws on files 01 and 03">files 01 and 03</span>
+    </div>
+    <p>
+      A help-desk assistant receives 6 requests a second, each answered in 300 tokens. The target
+      is a time per output token of at most 50 ms. The server is &sect;13&rsquo;s: 40 GB of weights
+      read in 20 ms, 0.4 GB of FP16 cache per conversation read in 0.2 ms, 80 GB of memory. Does
+      one server do, what will users see, and what limits it? Solve it twice.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>The same problem in two vocabularies (<code>[Ch17 s20]</code>).</caption>
+      <thead><tr><th>Step</th><th>As a production planner</th><th>As a serving engineer</th><th class="mono">Value</th></tr></thead>
+      <tbody>
+        <tr><td>Demand</td><td>Takt = available time / demand</td><td>\(\Lambda\) = 6 &times; 300 tokens/s</td><td class="mono">0.556 ms; 1,800/s</td></tr>
+        <tr><td>Fixed cost</td><td>Setup per lot</td><td>Weight read per step, \(t_w\)</td><td class="mono">20 ms</td></tr>
+        <tr><td>Variable cost</td><td>Time per piece</td><td>Cache read per sequence, \(t_{kv}\)</td><td class="mono">0.2 ms</td></tr>
+        <tr><td>Lot</td><td>Minimum lot \(S/(T-p)\)</td><td>Batch by Little&rsquo;s law, \(\Lambda\,t_w/(1-\rho)\)</td><td class="mono">56.2</td></tr>
+        <tr><td>Response</td><td>Lead time \(S + Qp\)</td><td>TPOT \(t_w/(1-\rho)\), \(\rho = 0.36\)</td><td class="mono">31.25 ms</td></tr>
+        <tr><td>Space</td><td>Fixtures + work in progress</td><td>Weights + 56.2 caches</td><td class="mono">62.5 of 80 GB</td></tr>
+        <tr><td>Limit 1</td><td>Lead-time promise</td><td>TPOT &le; 50 ms needs \(\rho \le 0.6\)</td><td class="mono">3,000/s</td></tr>
+        <tr><td>Limit 2</td><td>Stores capacity</td><td>Cap of 100 sequences, \(X(100)\)</td><td class="mono">2,500/s</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      Both columns reach the same answer. One server meets the demand with users seeing 31 ms
+      per token, comfortably inside the target. It has 39% headroom (2,500 against 1,800), and the
+      limit is memory, not the lead-time promise: the stores fill before the step gets slow. A
+      simulation with the cap in place, random arrivals and 20,000 steps gives a mean batch of
+      58.0, TPOT 31.79 ms, and 1,823 tokens/s served against the 1,800 asked for
+      (<code>[Ch17 s20]</code>); the small excesses are the randomness of arrivals.
+    </p>
+    <p>
+      The two columns also agree on the cheapest fix. Since memory binds, store the cache in 8
+      bits. Both limits move: the lead-time limit to 6,000 tokens/s and the memory limit to
+      5,000, so capacity doubles on the same hardware (<code>[Ch17 s20]</code>). Quantising the
+      weights further would shorten the setup and lower every TPOT, but would buy less capacity
+      than the cache does, because it is not the binding constraint. That is Sheet 13 part 3
+      &sect;11&rsquo;s lesson in this setting: find the constraint first, and expect it to move once
+      you fix it.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>What one server&rsquo;s answer leaves out</div>
+      <p style="margin-bottom:0">
+        Six requests a second is an average. Demand has peaks, servers fail, and prompts need
+        prefill time this model ignores; a real plan provisions for the peak with spare servers.
+        That is plant-level capacity planning and reliability, and it is where Sheet 18 starts,
+        with this sheet&rsquo;s per-server curve as its input.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="breaks">
+  <div class="col">
+    <div class="sechead"><span class="secnum">21</span><h2>Where it breaks</h2>
+      <span class="srcref nolink" title="Summary of the sheet">whole sheet</span>
+    </div>
+    <p>
+      Every correspondence in this sheet, and the place it stops being true. The right-hand column
+      is the part to remember.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>The chapter&rsquo;s bridges and their edges.</caption>
+      <thead><tr><th>You know</th><th>It is</th><th>Where it breaks</th></tr></thead>
+      <tbody>
+        <tr><td>A dial gauge; significant figures</td><td>Integer and float formats (&sect;02)</td><td>An integer format carries fewer figures for every smaller reading</td></tr>
+        <tr><td>Reading uncertainty \(\Delta/\sqrt{12}\)</td><td>Quantisation noise (&sect;03)</td><td>Below about half a step, readings round to zero and the error is the signal</td></tr>
+        <tr><td>A gauge range per feature</td><td>Per-channel scales (&sect;04)</td><td>Not on the summed dimension: the scales cannot leave the integer sum</td></tr>
+        <tr><td>Range against resolution</td><td>Calibration clipping (&sect;05)</td><td>The range is set on a sample and used on inputs never seen</td></tr>
+        <tr><td>A support settlement</td><td>GPTQ (&sect;06)</td><td>The stiffness is estimated from data and can have mechanisms</td></tr>
+        <tr><td>Mohr&rsquo;s circle</td><td>QuIP&rsquo;s rotation (&sect;07)</td><td>The rotation must be undone on every use</td></tr>
+        <tr><td>RSS and linear tolerance stacks</td><td>Rounding through layers (&sect;08)</td><td>A layer has gain; early errors are amplified</td></tr>
+        <tr><td>Work in progress in the stores</td><td>The KV cache (&sect;09)</td><td>It grows while the job runs</td></tr>
+        <tr><td>A mixed-model lot</td><td>MoE under batching (&sect;11)</td><td>Real routing is not uniform</td></tr>
+        <tr><td>Attribute and variables data</td><td>Hard and soft labels (&sect;12)</td><td>No sample-size formula carries across</td></tr>
+        <tr><td>Setup + quantity &times; time per piece</td><td>Decode step time (&sect;13)</td><td>Per-sequence cost grows with context; arithmetic catches up at large batch</td></tr>
+        <tr><td>Minimum lot to meet takt</td><td>Continuous batching&rsquo;s batch (&sect;14)</td><td>Only below the memory cap</td></tr>
+        <tr><td>The utilisation cliff</td><td>TPOT \(= t_w/(1-\rho)\) (&sect;14)</td><td>Same shape from feedback, not from randomness</td></tr>
+        <tr><td>One-piece flow</td><td>Batch of one (&sect;15)</td><td>The setup cannot be cut to zero, so a lot of one wastes 99%</td></tr>
+        <tr><td>Roughing and finishing</td><td>Disaggregated serving (&sect;16)</td><td>The work in progress, a whole cache, must be shipped between them</td></tr>
+        <tr><td>SMED on a single-user machine</td><td>Edge quantisation (&sect;17)</td><td>Quality loss is a training question this sheet cannot compute</td></tr>
+        <tr><td>Speculative execution</td><td>Speculative decoding (&sect;18)</td><td>Identical in distribution, not in result</td></tr>
+        <tr><td>The pipelined line</td><td>Pipeline parallelism (&sect;19)</td><td>Never shortens one request, only raises throughput</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="recall">
+  <div class="col">
+    <div class="sechead"><span class="secnum">22</span><h2>Question bank</h2>
+      <span class="srcref nolink" title="Covers the whole sheet">whole sheet</span>
+    </div>
+    <p>
+      Twenty-four prompts in three tiers. Answer before opening.
+    </p>
+
+    <div class="gap">
+      <div class="gap-h">Tier 1 &mdash; recall</div>
+      <details><summary>Why is generating text limited by memory bandwidth rather than arithmetic?</summary>
+        <p>Each step reads every weight once to make one token per sequence, so there is very little arithmetic per byte fetched. Tokens per second is at most bandwidth divided by weight bytes.</p></details>
+      <details><summary>Derive the variance of rounding error for a step \(\Delta\), and say when it holds.</summary>
+        <p>Uniform on \([-\Delta/2, \Delta/2]\): \(\frac1\Delta\int e^2\,de = \Delta^2/12\). It holds when the values span many steps; below about \(\sigma/\Delta = 0.5\) most values round to zero.</p></details>
+      <details><summary>What does a scale factor do in integer quantisation, and what is its gauge equivalent?</summary>
+        <p>It converts integer counts back to values, \(\hat x = s\,(x_q - z)\). It is the least count; the zero point is a shifted datum.</p></details>
+      <details><summary>Which per-channel scales can an integer matrix product absorb, and which can it not?</summary>
+        <p>Scales on the token rows of the activations and on the output columns of the weights come outside the sum. Scales on the summed channel dimension sit inside it and need a multiply per term.</p></details>
+      <details><summary>State the KV-cache size formula. Which head count goes in it?</summary>
+        <p>\(2 \times n_{\text{layers}} \times n_{\text{kv heads}} \times d_{\text{head}} \times \text{tokens} \times \text{bytes}\). The key-value head count, which grouped-query attention makes smaller than the query head count.</p></details>
+      <details><summary>Define takt time, cycle time and lead time for a decode server.</summary>
+        <p>Takt \(1/\Lambda\) from demand; cycle time \(t_{\text{step}}/b\), the interval between tokens served; lead time \(t_{\text{step}}\), the TPOT each request sees.</p></details>
+      <details><summary>What is continuous batching, and how is it different from static batching?</summary>
+        <p>It removes finished sequences and admits waiting ones at every step. Static batching runs a fixed lot until its longest member finishes.</p></details>
+      <details><summary>Give the expected tokens per target step in speculative decoding.</summary>
+        <p>\((1-\alpha^{k+1})/(1-\alpha)\) for acceptance probability \(\alpha\) and \(k\) drafted tokens.</p></details>
+    </div>
+
+    <div class="gap">
+      <div class="gap-h">Tier 2 &mdash; apply</div>
+      <details><summary>A 13B model at 4.5 bits per weight runs on a device with 100 GB/s. Bound its tokens per second.</summary>
+        <p>\(13\times10^9 \times 4.5/8 = 7.3\) GB; \(100/7.3 \approx 13.7\) tokens/s at most, batch of one.</p></details>
+      <details><summary>Weights have \(\sigma = 0.02\) and the largest is \(5\sigma\). Ranged to the largest, what is \(\sigma/\Delta\) at INT8 and at INT4, and what does that predict?</summary>
+        <p>INT8: \(\Delta = 0.1/127\), \(\sigma/\Delta = 25.4\), signal-to-noise \(12\times25.4^2 \approx 7{,}700\). INT4: \(\Delta = 0.1/7\), \(\sigma/\Delta = 1.4\), ratio about 23.5, and clipping near \(2.5\sigma\) would do about three times better.</p></details>
+      <details><summary>For \(H = \begin{bmatrix}4&1\\1&2\end{bmatrix}\), rounding moves weight 1 by 0.1. How should weight 2 move?</summary>
+        <p>\(\delta_2 = -b\,\delta_1/c = -1\times0.1/2 = -0.05\). The source&rsquo;s printed rule gives \(-1\times0.1/4 = -0.025\).</p></details>
+      <details><summary>Twenty rounding errors of standard deviation \(\Delta/\sqrt{12}\) stack. What is the standard deviation of the total if zero-mean and independent, and the mean if every one is a truncation?</summary>
+        <p>\(\sqrt{20}\,\Delta/\sqrt{12} \approx 1.29\Delta\). Truncation biases each by \(-\Delta/2\), so the mean is \(-10\Delta\).</p></details>
+      <details><summary>Size the cache of a model with 32 layers, 8 key-value heads of 128, at 8,000 tokens in FP16.</summary>
+        <p>\(2\times32\times8\times128\times8000\times2 = 1.05\) GB.</p></details>
+      <details><summary>On the example server, demand is 4,000 tokens/s with an INT8 cache (\(t_{kv} = 0.1\) ms, cap 200). Find the lot, the TPOT and whether it fits.</summary>
+        <p>\(\rho = 0.4\); TPOT \(= 20/0.6 = 33.3\) ms; lot \(= 4000\times0.0333 = 133\), under the cap of 200. It fits.</p></details>
+      <details><summary>A server waits to fill lots of 16 while requests arrive at 4 per second. What mean wait does that add?</summary>
+        <p>\((16-1)/(2\times4) = 1.875\) s, with no gain in throughput if the server could have kept up anyway.</p></details>
+      <details><summary>With \(\alpha = 0.6\), \(k = 3\), \(c = 0.1\), what speedup does speculative decoding give?</summary>
+        <p>\((1-0.6^4)/(0.4) = 2.176\) tokens per step; divided by \(1.3\): 1.67&times;.</p></details>
+    </div>
+
+    <div class="gap">
+      <div class="gap-h">Tier 3 &mdash; judge</div>
+      <details><summary>A colleague says per-channel quantisation of activations beats SmoothQuant because its error is lower. Answer.</summary>
+        <p>Its error is lower than per-token, but it cannot run as an integer product, which was the reason for quantising activations. SmoothQuant moves the same per-channel range into the weights, where it is free, and on the &sect;04 example is also more accurate (0.38% against 0.79%).</p></details>
+      <details><summary>Is the source&rsquo;s printed GPTQ update a harmless typo?</summary>
+        <p>No. Run as printed it removes 13&ndash;16% of plain rounding&rsquo;s error against 48&ndash;49% for the correct one. It divides by the settled weight&rsquo;s stiffness and uses \(H\) where \(H^{-1}\) is needed, so on two weights it gives \(-b/a\) where the answer is \(-b/c\).</p></details>
+      <details><summary>&ldquo;Our server is at 40% utilisation, so batching harder would cut cost.&rdquo; Under continuous batching, what would batching harder even mean?</summary>
+        <p>Below capacity, throughput equals demand whatever the lot; the batch is set by Little&rsquo;s law, not chosen. Forcing bigger lots only adds waiting. Cost per token falls only with more demand per server, which moves along \(t_w/(1-\rho)\).</p></details>
+      <details><summary>Lean says one-piece flow. Why is that wrong for a decode server, and what part of lean survives?</summary>
+        <p>One-piece flow assumes setups can be cut to near zero. This setup, the weight read, cannot; a lot of one uses 1% of the machine. What survives is the smallest lot that meets takt, which continuous batching delivers by itself, and the warning that extra work in progress becomes lead time.</p></details>
+      <details><summary>A mixture-of-experts model reads 28% of a dense model&rsquo;s weights per token. Will it serve tokens at 3.6 times the rate?</summary>
+        <p>At batch one, roughly. At batch 16 a step touches nearly all 8 experts and reads 99% of the dense model&rsquo;s weights, so the bandwidth saving is gone; the arithmetic saving remains.</p></details>
+      <details><summary>The server in &sect;20 must take 50% more demand. Quantise the weights from 4.5 to 3 bits, or the cache from 16 to 8?</summary>
+        <p>The cache. Memory is the binding constraint, and the cache change both halves \(t_{kv}\) and doubles the cap, taking capacity from 2,500 to 5,000. Cutting weights to 3 bits frees about 13 GB, room for about 33 more sequences, and shortens the setup to 13 ms; capacity rises only to about 3,360.</p></details>
+      <details><summary>Speculative decoding is called lossless. In what sense is that true, and in what sense not?</summary>
+        <p>The output tokens are distributed exactly as the target model&rsquo;s, by the rejection-sampling rule. Any one run differs from what the target would have written alone; a CPU&rsquo;s speculation, by contrast, gives the identical result.</p></details>
+      <details><summary>The source&rsquo;s cost model gives $311 per million tokens and its table $0.50. Which is right?</summary>
+        <p>Both are internally consistent with different assumptions; the model has no batch in it and the table&rsquo;s prices assume large batches. The 622&times; gap is mostly the lot size of &sect;14, which is the chapter&rsquo;s point: batching is most of the cost of serving, not a refinement of it.</p></details>
+    </div>
+  </div>
+</section>
+
+<section id="map">
+  <div class="col">
+    <div class="sechead"><span class="secnum">23</span><h2>The map, and what the chapter leaves out</h2>
+      <span class="srcref nolink" title="Added material, not in the source chapter">beyond the chapter</span>
+    </div>
+    <p>
+      One cost organises the chapter: the weight read paid on every decode step. Each technique
+      does one of five things to it.
+    </p>
+  </div>
+  <figure class="col">
+    <svg viewBox="0 0 480 320" role="img" style="width:100%; max-width:560px; height:auto; display:block; margin-inline:auto"
+         aria-label="Concept map. At the centre, the weight read paid every step. Shrink it: quantisation, sections 2 to 9. Avoid work around it: efficient architectures, sections 10 to 12. Share it between users: batching, sections 13 to 16, limited by the KV cache in memory. Spread it over one user's tokens: speculative decoding, section 18. Cannot share it: the edge, section 17.">
+      <defs>
+        <marker id="cmArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M0,1 L9,5 L0,9 z" fill="var(--ink-3)"></path>
+        </marker>
+      </defs>
+      <rect x="150" y="128" width="180" height="46" rx="3" fill="var(--sheet-2)" stroke="var(--c1)" stroke-width="1.8"></rect>
+      <text class="tkb" x="240" y="148" text-anchor="middle">weight read, every step</text>
+      <text class="tk" x="240" y="164" text-anchor="middle">the setup, t_w (&#167;01, &#167;13)</text>
+      <g stroke="var(--ink-3)" stroke-width="1.3" marker-end="url(#cmArrow)">
+        <line x1="190" y1="128" x2="110" y2="70"></line>
+        <line x1="290" y1="128" x2="370" y2="70"></line>
+        <line x1="150" y1="160" x2="104" y2="160"></line>
+        <line x1="330" y1="160" x2="376" y2="160"></line>
+        <line x1="240" y1="174" x2="240" y2="226"></line>
+      </g>
+      <rect x="10" y="22" width="190" height="46" rx="3" fill="none" stroke="var(--c2)" stroke-width="1.6"></rect>
+      <text class="tkb" x="105" y="41" text-anchor="middle">shrink it: quantise</text>
+      <text class="tk" x="105" y="57" text-anchor="middle">&#916;&#178;/12, gauge range, GPTQ &#167;02&#8211;09</text>
+      <rect x="280" y="22" width="190" height="46" rx="3" fill="none" stroke="var(--c2)" stroke-width="1.6"></rect>
+      <text class="tkb" x="375" y="41" text-anchor="middle">work around it</text>
+      <text class="tk" x="375" y="57" text-anchor="middle">GQA, windows, MoE &#167;10&#8211;12</text>
+      <rect x="4" y="138" width="100" height="46" rx="3" fill="none" stroke="var(--c3)" stroke-width="1.6"></rect>
+      <text class="tkb" x="54" y="157" text-anchor="middle">cannot share</text>
+      <text class="tk" x="54" y="173" text-anchor="middle">the edge &#167;17</text>
+      <rect x="376" y="138" width="100" height="46" rx="3" fill="none" stroke="var(--c3)" stroke-width="1.6"></rect>
+      <text class="tkb" x="426" y="157" text-anchor="middle">spread it</text>
+      <text class="tk" x="426" y="173" text-anchor="middle">speculation &#167;18</text>
+      <rect x="130" y="228" width="220" height="46" rx="3" fill="none" stroke="var(--c3)" stroke-width="1.6"></rect>
+      <text class="tkb" x="240" y="247" text-anchor="middle">share it: batch to takt</text>
+      <text class="tk" x="240" y="263" text-anchor="middle">b = t_w/(T &#8722; t_kv), Little &#167;14</text>
+      <line x1="350" y1="251" x2="390" y2="251" stroke="var(--c5)" stroke-width="1.4" stroke-dasharray="4 3"></line>
+      <text class="tk" x="394" y="248">capped by the</text>
+      <text class="tk" x="394" y="261">KV cache &#167;09</text>
+      <text class="tk" x="240" y="300" text-anchor="middle">TPOT = t_w/(1 &#8722; &#961;): the Sheet 13 cliff, by feedback</text>
+    </svg>
+    <figcaption><b>Fig. 17.7</b> &mdash; The weight read is a setup paid every step. Quantisation shrinks it, efficient architectures do less around it, batching shares it between users up to the limit the KV cache sets, speculative decoding spreads it over one user&rsquo;s tokens, and the edge has nobody to share it with.</figcaption>
+  </figure>
+  <div class="col">
+    <h3>What this chapter feeds</h3>
+    <p>
+      <b>Sheet 18 (ML systems design)</b> takes &sect;14&rsquo;s per-server curve, throughput
+      \(b/(t_w + b\,t_{kv})\) and TPOT \(t_w/(1-\rho)\) up to a memory cap, as its unit of capacity,
+      and adds what one server cannot answer: peaks, failures, redundancy and the design of the
+      plant. The &sect;20 example stops exactly where that begins. <b>Sheet 16</b> is underneath
+      everything here: the bandwidth that sets \(t_w\), the roofline ridge where the furnace model
+      of &sect;13 stops, and Flash attention.
+    </p>
+    <h3>What this chapter does not cover</h3>
+    <p>Naming it, so one sheet does not imply completeness:</p>
+    <ul>
+      <li><b>Quality.</b> Every quantisation result here is an error in a layer&rsquo;s output.
+        Whether a 4-bit model answers as well as a 16-bit one is measured on benchmarks with trained
+        models, which this series cannot run. All such claims in the source are reported.</li>
+      <li><b>Prefill and time to first token.</b> The model of &sect;13 is decode only. Chunked
+        prefill, how prompts interleave with decode, and the queueing that sets TTFT are left
+        out.</li>
+      <li><b>Variable lengths and the tail.</b> The simulations use Poisson arrivals and fixed or
+        geometric lengths. Real traffic has heavy tails, and the 99th percentile, which the source
+        rightly says is what users feel, needs more than a mean.</li>
+      <li><b>Hardware and kernels.</b> How a quantised weight is unpacked inside a matrix unit, and
+        why 2:4 sparsity is fast, belong to Sheet 16.</li>
+      <li><b>Dither and stochastic rounding.</b> Adding noise before rounding can make the error
+        independent of the signal and recover detail below one step; it is used in training and is
+        not in the source.</li>
+      <li><b>Privacy.</b> Federated learning&rsquo;s privacy rests on differential privacy, which
+        the source names in one sentence and this sheet does not develop.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="provenance">
+  <div class="col">
+    <div class="sechead"><span class="secnum">A</span><h2>Provenance and changes</h2>
+      <span class="srcref nolink" title="Required by Apache-2.0 section 4(b)">licence notice</span>
+    </div>
+    <p>
+      This sheet is a derivative work of <b>chapter 17 &mdash; AI inference</b> of the
+      <i>Mathematics, Computer Science and AI Compendium</i>, licensed under Apache&nbsp;2.0.
+      Section&nbsp;4(b) of that licence requires prominent notice of changes. The source is pinned
+      at commit <code>9850ee5</code>; every section chip above links to the file it draws on.
+    </p>
+    <h3>Source material used</h3>
+    <ul>
+      <li><code>01. quantisation.md</code> (339 lines) &mdash; &sect;&sect;01&ndash;09, and the
+        &sect;01 and &sect;14 numbers</li>
+      <li><code>02. efficient architectures.md</code> (238 lines) &mdash; &sect;&sect;10&ndash;12</li>
+      <li><code>03. serving and batching.md</code> (236 lines) &mdash; &sect;&sect;13&ndash;16</li>
+      <li><code>04. edge inference.md</code> (212 lines) &mdash; &sect;17 and the &sect;01 estimates</li>
+      <li><code>05. scaling and deployment.md</code> (251 lines) &mdash; &sect;&sect;18&ndash;19</li>
+      <li>Six figures from the compendium&rsquo;s <code>images/</code> folder (Figs. 17.1&ndash;17.6),
+        shipped unmodified. Fig. 17.7 was drawn for this sheet. The worked example, the
+        where-it-breaks table, the question bank and the map (&sect;&sect;20&ndash;23) are written
+        for this sheet.</li>
+    </ul>
+    <h3>Changes made</h3>
+    <ul>
+      <li><b>Re-narrated for one reader</b> &mdash; a GATE-prepared mechanical engineering graduate
+        with no computing background &mdash; against metrology, tolerance analysis, structural
+        analysis, production planning and lean manufacturing. Framework and product lists are kept
+        short and marked as reported.</li>
+      <li><b>Corrections to the source, fourteen,</b> each with its computation and listed at the top
+        of the sheet: the throughput ladder against the 989/67 ratio (&sect;01); the MX bit costs
+        (&sect;02); the outlier task&rsquo;s printed waste figure, and per-channel activation scales
+        that cannot run as an integer product (&sect;04); the GPTQ update (&sect;06); the 330 GB KV
+        cache and the per-token cache sizes across files 01, 03 and 05 (&sect;09); the
+        MHA/GQA/MQA figure&rsquo;s sizes and the sliding-window reduction (&sect;10); the battery
+        figure and the FedAvg average (&sect;17); the speculative-decoding speedup (&sect;18); the
+        $3 billion figure and the tensor-parallel operation and link delays (&sect;19). Also noted:
+        the head-pruning task measures only the share removed (&sect;12); the compression
+        pipeline&rsquo;s code and diagram disagree (&sect;17); the static-batching simulation gives
+        1.76&times; against the text&rsquo;s 2&ndash;10&times; (&sect;15); paging waste of 0% is an
+        artefact of the mean length (&sect;16); the source&rsquo;s cost model is 622&times; its own
+        price table (&sect;19).</li>
+      <li><b>Correspondences added that are not in the source</b> &mdash; integer and float formats as
+        dial gauge and significant figures; \(\Delta^2/12\) as the rectangular reading uncertainty,
+        with its limit; per-channel scales as gauge ranges, with the summed-dimension break;
+        calibration clipping as range against resolution, with its optimum; GPTQ as a support
+        settlement solved by static condensation, and its all-equal case as baseline dimensioning;
+        QuIP as Mohr&rsquo;s circle; error growth through layers as RSS and linear tolerance stacks;
+        the KV cache as work in progress; MoE under batching as a mixed-model lot; soft labels as
+        variables data; the decode step as a furnace load with a setup; continuous batching as the
+        minimum lot that meets takt, by Little&rsquo;s law; TPOT as the utilisation cliff; static
+        batching as a furnace that waits for its slowest part; disaggregation as roughing and
+        finishing; constrained decoding as poka-yoke; edge inference as one-piece flow with
+        quantisation as SMED; speculative decoding as speculative execution.</li>
+      <li><b>Material added that the source does not have</b> &mdash; the integer-product factorisation
+        argument; the MSE-optimal clip; the static-condensation derivation and its two-weight check;
+        the residual-stream stacking simulation; the batching model, its Little&rsquo;s-law fixed
+        point and its simulation; the memory cap; the test of &ldquo;more batching cannot
+        hurt&rdquo;; the expected-tokens formula and the rejection-sampling check; the worked
+        example; the where-it-breaks table; the question bank; the concept map; and the list of what
+        the chapter leaves out. The bridge bank&rsquo;s pairing of latency with cycle time is
+        corrected in &sect;14.</li>
+      <li><b>Three interactive labs</b> written for this sheet in plain SVG and vanilla JavaScript,
+        and one drawn figure.</li>
+      <li><b>Sixty-nine new numerical checks</b> added to
+        <code>study-companion/verify_claims.py</code> under the tags <code>[Ch17 s01]</code> to
+        <code>[Ch17 s20]</code>.</li>
+    </ul>
+    <h3>What is claimed, and what is reported</h3>
+    <p>
+      Statements tagged <code>[Ch17 sNN]</code> are computed, and the tag names the block of the
+      verification script that computes them. The source&rsquo;s coding tasks were ported from JAX
+      and PyTorch to numpy, so their random draws differ and their statistics do not. Marked as
+      <b>reported</b>, and not derived here: accelerator memory sizes, bandwidths and FLOP rates; the
+      Llama-2-70B and Mixtral configurations; the MX standard&rsquo;s block size and the GGUF block
+      layout; that the straight-through estimator and the quantisation methods work on real
+      models; GPTQ&rsquo;s diagonal damping and its use of the inverse Hessian; MLA&rsquo;s 93.3%;
+      the speed of 2:4 sparsity; non-uniform expert routing; QuIP&rsquo;s structured rotations;
+      Megatron&rsquo;s pairing of splits; message start-up times; user tolerances for TTFT and TPOT;
+      the 2&ndash;10&times; continuous-batching gain; throttling figures; device tables, frameworks
+      and prices. The 2 TB/s bandwidth, 80 GB memory and 15.4 Wh battery are assumed round
+      figures. No internet research was used.
+    </p>
+    <p class="endnote">
+      Sheet 17 of 20. Source compendium &copy; its authors, Apache&nbsp;2.0. This derivative sheet
+      is offered under the same licence. Next: <b>Sheet 18 &mdash; ML systems design</b>, where one
+      server&rsquo;s curve becomes a plant.
+    </p>
+  </div>
+</section>
+
+</main>
+</div>

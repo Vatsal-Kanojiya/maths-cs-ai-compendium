@@ -6119,6 +6119,9 @@ def _ch17():
     say("s20", f"TPOT <= 50 ms caps demand at {lam_slo:.0f} tok/s; memory caps it at {Xb(100):.0f}: memory binds; "
         f"INT8 KV -> SLO cap {(1-tw/50)/0.1*1000:.0f}, memory cap {200/(tw+200*0.1)*1000:.0f}",
         abs(lam_slo-3000) < 1e-9 and Xb(100) == 2500)
+    w3 = 70e9*3/8/1e9; tw3 = w3/2000*1000; cap3 = int((80-w3)/0.4); x3 = cap3/(tw3+cap3*tk)*1000
+    say("s20", f"weights to 3 bits instead: {w3:.2f} GB, t_w {tw3:.2f} ms, cap {cap3}, capacity {x3:.0f} tok/s "
+        "(INT8 cache: 5000)", cap3 == 134 and abs(x3-3356) < 2)
     bmd, tpd, thd, _ = des(Lam, steps=20000, bcap=100, seed=5)
     say("s20", f"simulated at {Lam} tok/s with the cap: b {bmd:.1f}, TPOT {tpd:.2f} ms, throughput {thd:.0f}",
         abs(tpd/tp-1) < 0.04 and abs(thd/Lam-1) < 0.02)
