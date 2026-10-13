@@ -1,0 +1,664 @@
+<title>Quantising, Batching, Serving</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(', '\\)']], displayMath: [['$$', '$$']], processEscapes: true },
+  svg: { fontCache: 'global', scale: 1.0 },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-svg.js" id="MathJax-script" async></script>
+
+<style>
+/* ============ TOKENS: light is complete and authoritative ============ */
+:root{
+  --ground:#F0F2F1;
+  --sheet:#FBFCFB;
+  --sheet-2:#F4F6F5;
+  --ink:#14181A;
+  --ink-2:#4E575B;
+  --ink-3:#77838A;
+  --rule:#D3DAD7;
+  --rule-strong:#A8B4B0;
+  --accent:#12507E;
+  --accent-ink:#0E4267;
+  --accent-soft:#E4EEF6;
+  --bridge:#1F8A4C;
+  --bridge-soft:#E4F2EA;
+  --brk:#A8500F;
+  --brk-soft:#FAEBDF;
+  --s1:#BF5B00;
+  --s2:#0F74C7;
+  --s3:#1F8A4C;
+  --paper:#FFFFFF;            /* pasted-drawing ground, both themes */
+  --paper-ink:#1b1b1b;
+  --shadow:0 1px 2px rgba(20,24,26,.06), 0 6px 18px rgba(20,24,26,.05);
+  --f-disp:'Archivo Narrow', 'Arial Narrow', Helvetica, sans-serif;
+  --f-body:'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --f-mono:'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+    --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+    --rule:#293134; --rule-strong:#3F494C;
+    --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+    --bridge:#35AC63; --bridge-soft:#11281B;
+    --brk:#E0913F; --brk-soft:#2E2012;
+    --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+  --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+  --rule:#293134; --rule-strong:#3F494C;
+  --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+  --bridge:#35AC63; --bridge-soft:#11281B;
+  --brk:#E0913F; --brk-soft:#2E2012;
+  --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:var(--f-body); font-size:17px; line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ============ TITLE BLOCK (engineering drawing header) ============ */
+.titleblock{
+  position:sticky; top:env(safe-area-inset-top,0px); z-index:40;
+  background:var(--sheet); border-bottom:1px solid var(--rule-strong);
+}
+.tb-in{
+  max-width:1240px; margin:0 auto; padding:0 16px;
+  display:flex; align-items:stretch; gap:0; min-height:46px;
+}
+.tb-cell{
+  display:flex; flex-direction:column; justify-content:center;
+  padding:5px 14px; border-right:1px solid var(--rule);
+  font-family:var(--f-disp);
+}
+.tb-cell:first-child{padding-left:0}
+.tb-cell:last-child{border-right:0; margin-left:auto; padding-right:0}
+.tb-k{
+  font-size:8.5px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); line-height:1.4;
+}
+.tb-v{font-size:13px; font-weight:700; letter-spacing:.02em; color:var(--ink); line-height:1.3}
+.tb-v.accent{color:var(--accent)}
+.tb-hide{display:none}
+@media (min-width:680px){ .tb-hide{display:flex} }
+
+.themebtn{
+  appearance:none; background:transparent; border:1px solid var(--rule-strong);
+  color:var(--ink-2); font-family:var(--f-disp); font-size:10px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:6px 10px; border-radius:2px;
+  cursor:pointer; align-self:center; white-space:nowrap;
+}
+.themebtn:hover{border-color:var(--accent); color:var(--accent)}
+.themebtn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+/* ============ SHELL ============ */
+.shell{max-width:1240px; margin:0 auto; padding:0 16px; padding-block:0 64px}
+@media (min-width:1080px){
+  .shell{display:grid; grid-template-columns:212px minmax(0,1fr); gap:44px; align-items:start}
+}
+.rail{display:none}
+@media (min-width:1080px){
+  .rail{
+    display:block; position:sticky; top:calc(env(safe-area-inset-top,0px) + 70px);
+    padding-block:28px; font-family:var(--f-disp); font-size:12.5px;
+  }
+}
+.rail-h{
+  font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-3);
+  padding-bottom:8px; border-bottom:1px solid var(--rule); margin-bottom:10px;
+}
+.rail a{
+  display:flex; gap:9px; padding:4px 0; color:var(--ink-2); text-decoration:none;
+  border-left:2px solid transparent; padding-left:9px; margin-left:-11px; line-height:1.35;
+}
+.rail a:hover{color:var(--accent)}
+.rail a.on{color:var(--accent); border-left-color:var(--accent); font-weight:700}
+.rail a .n{font-family:var(--f-mono); font-size:10.5px; color:var(--ink-3); flex:none; padding-top:1px}
+.rail a.on .n{color:var(--accent)}
+
+main{min-width:0; padding-block:0 0}
+.col{max-width:70ch}
+
+/* ============ TYPE ============ */
+h1,h2,h3,h4{font-family:var(--f-disp); text-wrap:balance; margin:0; line-height:1.14}
+h1{font-size:clamp(34px,7vw,58px); font-weight:700; letter-spacing:-.015em}
+h2{font-size:clamp(25px,4.2vw,34px); font-weight:700; letter-spacing:-.01em}
+h3{font-size:19px; font-weight:700; letter-spacing:.005em; margin-top:2px}
+h4{font-size:14px; font-weight:700; letter-spacing:.06em; text-transform:uppercase}
+p{margin:0 0 1.05em}
+a{color:var(--accent-ink)}
+strong{font-weight:600}
+em{font-style:italic}
+code{font-family:var(--f-mono); font-size:.87em; background:var(--sheet-2); padding:1px 5px; border-radius:2px; border:1px solid var(--rule)}
+.lead{font-size:19.5px; line-height:1.56; color:var(--ink-2)}
+.eyebrow{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--ink-3); margin:0 0 10px;
+}
+.srcref{
+  font-family:var(--f-mono); font-size:11px; color:var(--ink-3);
+  border:1px solid var(--rule); border-radius:2px; padding:2px 7px; display:inline-block;
+  background:var(--sheet-2); white-space:nowrap;
+}
+
+/* ============ SECTION ============ */
+section{padding-block:38px 0; scroll-margin-top:calc(env(safe-area-inset-top,0px) + 62px)}
+.sechead{display:flex; align-items:baseline; gap:13px; margin-bottom:6px; flex-wrap:wrap}
+.secnum{
+  font-family:var(--f-mono); font-size:12px; font-weight:600; color:var(--accent);
+  border:1px solid var(--accent); border-radius:2px; padding:2px 7px; flex:none;
+  background:var(--accent-soft);
+}
+.rule-h{border:0; border-top:1px solid var(--rule); margin:0 0 22px}
+.rule-d{border:0; border-top:1px dashed var(--rule-strong); margin:34px 0}
+
+/* ============ CALLOUTS ============ */
+.note{
+  border:1px solid var(--rule); border-left:3px solid var(--accent);
+  background:var(--sheet); border-radius:2px; padding:16px 18px; margin:22px 0;
+}
+/* Greek letters must never be uppercased: text-transform turns beta into
+   a capital Beta, which is the Latin letter B on screen -- likewise eta->H,
+   kappa->K, lambda->A-shape.  Any Greek inside an uppercased label wears .gk. */
+.gk{text-transform:none}
+.note.bridge{border-left-color:var(--bridge); background:var(--bridge-soft)}
+.note.brk{border-left-color:var(--brk); background:var(--brk-soft)}
+.note-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; margin-bottom:7px; display:flex; align-items:center; gap:8px;
+}
+.note.bridge .note-h{color:var(--bridge)}
+.note.brk .note-h{color:var(--brk)}
+.note .note-h{color:var(--accent)}
+.note p:last-child, .note ul:last-child{margin-bottom:0}
+.note-h .ic{
+  width:15px; height:15px; border-radius:50%; border:1.5px solid currentColor; flex:none;
+  display:grid; place-items:center; font-size:9.5px; font-weight:700; font-family:var(--f-mono);
+}
+ul,ol{margin:0 0 1.05em; padding-left:1.25em}
+li{margin-bottom:.4em}
+li::marker{color:var(--ink-3)}
+
+/* ============ DEFINITION BLOCK ============ */
+.defn{
+  background:var(--sheet); border:1px solid var(--rule); border-radius:3px;
+  padding:18px 20px; margin:22px 0; box-shadow:var(--shadow);
+}
+.defn-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:10px;
+  padding-bottom:8px; border-bottom:1px solid var(--rule);
+}
+.defn p:last-child{margin-bottom:0}
+
+/* ============ TABLES ============ */
+.tw{overflow-x:auto; margin:22px 0; border:1px solid var(--rule); border-radius:3px; background:var(--sheet)}
+table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:480px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule); vertical-align:top}
+thead th{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); background:var(--sheet-2); font-weight:700; white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:0}
+td.mono,th.mono{font-family:var(--f-mono); font-size:13px; font-variant-numeric:tabular-nums}
+.tw caption{
+  caption-side:bottom; text-align:left; padding:9px 14px; font-size:12.5px;
+  color:var(--ink-3); border-top:1px solid var(--rule); font-family:var(--f-disp);
+}
+
+/* ============ FIGURES ============ */
+figure{margin:24px 0}
+.paper{
+  background:var(--paper); border:1px solid var(--rule-strong); border-radius:3px;
+  padding:16px; display:flex; justify-content:center; box-shadow:var(--shadow);
+}
+.paper img{max-width:100%; height:auto; display:block}
+figcaption{
+  font-family:var(--f-disp); font-size:12.5px; color:var(--ink-3); margin-top:9px;
+  line-height:1.45; padding-left:2px;
+}
+figcaption b{color:var(--ink-2); font-weight:700; letter-spacing:.04em}
+
+/* ============ INTERACTIVE PANELS ============ */
+.lab{
+  background:var(--sheet); border:1px solid var(--rule-strong); border-radius:3px;
+  margin:26px 0; overflow:hidden; box-shadow:var(--shadow);
+}
+.lab-h{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:11px 16px; border-bottom:1px solid var(--rule); background:var(--sheet-2);
+}
+.lab-t{font-family:var(--f-disp); font-size:13px; font-weight:700; letter-spacing:.05em; text-transform:uppercase}
+.lab-tag{
+  font-family:var(--f-mono); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--accent); border:1px solid var(--accent); border-radius:2px; padding:2px 6px;
+  margin-left:auto; white-space:nowrap;
+}
+.lab-body{padding:16px}
+.lab-foot{
+  padding:11px 16px; border-top:1px solid var(--rule); background:var(--sheet-2);
+  font-size:13.5px; color:var(--ink-2); line-height:1.5;
+}
+.lab-foot b{color:var(--ink)}
+.stage{width:100%; max-width:560px; height:auto; display:block; margin-inline:auto; touch-action:none; cursor:grab}
+.stage.drag{cursor:grabbing}
+
+/* Dividers are drawn as cell borders rather than as 1px grid gaps over a grey
+   backdrop: when the item count does not fill the last row, a gap-based grid
+   leaves the backdrop showing as an empty grey block. */
+.readout{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr)); gap:0;
+  background:var(--sheet); border:1px solid var(--rule); border-radius:2px;
+  margin-top:14px; overflow:hidden;
+}
+.ro{background:var(--sheet); padding:8px 11px;
+  border-right:1px solid var(--rule); border-bottom:1px solid var(--rule)}
+.ro-k{
+  font-family:var(--f-disp); font-size:9px; letter-spacing:.13em; text-transform:uppercase;
+  color:var(--ink-3); margin-bottom:2px;
+  /* was white-space:nowrap, which clipped the longer keys instead of wrapping */
+  white-space:normal; overflow-wrap:break-word; line-height:1.3; min-height:2.6em;
+}
+.ro-v{
+  font-family:var(--f-mono); font-size:15px; font-weight:500; font-variant-numeric:tabular-nums;
+  color:var(--ink); line-height:1.25;
+}
+.ro-v.a{color:var(--s2)} .ro-v.b{color:var(--s1)} .ro-v.c{color:var(--s3)}
+
+.ctl{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:14px}
+.ctl label{
+  font-family:var(--f-disp); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-2); white-space:nowrap;
+}
+input[type=range]{
+  -webkit-appearance:none; appearance:none; height:22px; background:transparent;
+  flex:1 1 160px; min-width:130px; cursor:pointer;
+}
+input[type=range]:focus-visible{outline:2px solid var(--accent); outline-offset:3px}
+input[type=range]::-webkit-slider-runnable-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-moz-range-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:16px; height:16px; border-radius:50%;
+  background:var(--accent); border:2px solid var(--sheet); margin-top:-6.5px;
+}
+input[type=range]::-moz-range-thumb{
+  width:16px; height:16px; border-radius:50%; background:var(--accent);
+  border:2px solid var(--sheet);
+}
+.btn{
+  appearance:none; font-family:var(--f-disp); font-size:11px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:7px 13px; border-radius:2px;
+  border:1px solid var(--rule-strong); background:var(--sheet); color:var(--ink-2); cursor:pointer;
+}
+.btn:hover{border-color:var(--accent); color:var(--accent)}
+.btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.btn.on{background:var(--accent); border-color:var(--accent); color:var(--sheet)}
+
+.legend{display:flex; gap:16px; flex-wrap:wrap; margin-top:12px}
+.lg{display:flex; align-items:center; gap:7px; font-family:var(--f-disp); font-size:12px; color:var(--ink-2)}
+.lg i{width:15px; height:3px; border-radius:2px; flex:none; display:block}
+
+/* ============ MISC ============ */
+.mathbox{overflow-x:auto; overflow-y:hidden; margin:18px 0}
+mjx-container[display="true"]{margin:0 !important}
+.kv{display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:15px; margin:16px 0}
+.kv dt{font-family:var(--f-mono); font-size:13px; color:var(--accent); white-space:nowrap}
+.kv dd{margin:0; color:var(--ink-2)}
+
+details.q{
+  border:1px solid var(--rule); border-radius:3px; background:var(--sheet);
+  margin-bottom:9px; overflow:hidden;
+}
+details.q summary{
+  cursor:pointer; padding:12px 15px; font-weight:600; list-style:none;
+  display:flex; gap:11px; align-items:flex-start; font-size:15.5px;
+}
+details.q summary::-webkit-details-marker{display:none}
+details.q summary::after{
+  content:'+'; margin-left:auto; font-family:var(--f-mono); color:var(--accent);
+  font-size:17px; line-height:1; flex:none; padding-top:2px;
+}
+details.q[open] summary::after{content:'\2212'}
+details.q summary:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
+details.q summary .qn{
+  font-family:var(--f-mono); font-size:12px; color:var(--ink-3); flex:none; padding-top:3px;
+}
+details.q .ans{padding:0 15px 14px 41px; font-size:15.5px; color:var(--ink-2); border-top:1px solid var(--rule); padding-top:13px}
+details.q .ans p:last-child{margin-bottom:0}
+
+.endnote{
+  margin-top:44px; padding-top:20px; border-top:1px solid var(--rule-strong);
+  font-size:13.5px; color:var(--ink-3); font-family:var(--f-disp); line-height:1.55;
+}
+.endnote a{color:var(--accent)}
+
+.srcref{text-decoration:none}
+a.srcref{color:var(--ink-2); transition:none}
+
+</style>
+<style>
+.srcref{text-decoration:none}
+a.srcref{color:var(--ink-2)}
+a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(--accent-soft)}
+.srcref.nolink{opacity:.75; font-style:italic}
+.pv{font-family:var(--f-disp); font-size:9.5px; font-weight:700; letter-spacing:.1em;
+    text-transform:uppercase; padding:2px 7px; border-radius:2px; white-space:nowrap}
+.pv.ok{background:var(--bridge-soft); color:var(--bridge)}
+.pv.add{background:var(--accent-soft); color:var(--accent)}
+.pv.corr{background:var(--brk-soft); color:var(--brk)}
+.flag{display:inline-block; padding:1px 7px; border-radius:2px; font-family:var(--f-disp);
+      font-size:10px; letter-spacing:.1em; text-transform:uppercase; font-weight:700}
+.flag.ok{background:var(--bridge-soft); color:var(--bridge)}
+.flag.bad{background:var(--brk-soft); color:var(--brk)}
+.predict{border:1px solid var(--rule-strong); border-left:3px solid var(--brk);
+  background:var(--brk-soft); border-radius:2px; padding:13px 15px; margin:0 0 14px}
+.predict-h{font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--brk); margin-bottom:6px}
+.predict p{margin:0 0 10px; font-size:15px}
+.predict .opts{display:flex; gap:8px; flex-wrap:wrap}
+.pbtn{appearance:none; font-family:var(--f-disp); font-size:12px; font-weight:600;
+  padding:6px 12px; border-radius:2px; border:1px solid var(--rule-strong);
+  background:var(--sheet); color:var(--ink-2); cursor:pointer}
+.pbtn:hover{border-color:var(--brk); color:var(--brk)}
+.pbtn.picked{background:var(--brk); border-color:var(--brk); color:var(--sheet)}
+.pverdict{margin-top:10px; font-size:14.5px; color:var(--ink-2); display:none}
+.pverdict.show{display:block}
+.pverdict b{color:var(--ink)}
+.gap{border:1px solid var(--rule); border-left:3px solid var(--ink-3); background:var(--sheet-2);
+  border-radius:2px; padding:14px 16px; margin:18px 0}
+.gap-h{font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:7px}
+</style>
+
+<header class="titleblock">
+  <div class="tb-in">
+    <div class="tb-cell"><div class="tb-k">Chapter</div><div class="tb-v accent">17 &middot; AI Inference</div></div>
+    <div class="tb-cell tb-hide"><div class="tb-k">Sheet</div><div class="tb-v">17 of 20</div></div>
+    <div class="tb-cell tb-hide"><div class="tb-k">Reader</div><div class="tb-v">B.E. Mechanical</div></div>
+    <div class="tb-cell tb-hide"><div class="tb-k">Prerequisite</div><div class="tb-v">Sheet 16</div></div>
+    <div class="tb-cell"><button class="themebtn" id="themebtn" type="button" aria-label="Switch colour theme">Theme</button></div>
+  </div>
+</header>
+
+<div class="shell">
+
+<nav class="rail" aria-label="Chapter contents">
+  <div class="rail-h">Contents</div>
+  <a href="#bridge" class="on"><span class="n">00</span><span>The bridge</span></a>
+  <a href="#memory"><span class="n">01</span><span>A memory problem</span></a>
+  <a href="#formats"><span class="n">02</span><span>Gauges and figures</span></a>
+  <a href="#noise"><span class="n">03</span><span>&Delta;&sup2;/12</span></a>
+  <a href="#granularity"><span class="n">04</span><span>A range per feature</span></a>
+  <a href="#clipping"><span class="n">05</span><span>Range against resolution</span></a>
+  <a href="#gptq"><span class="n">06</span><span>A support settlement</span></a>
+  <a href="#zoo"><span class="n">07</span><span>The weight-only zoo</span></a>
+  <a href="#stack"><span class="n">08</span><span>Tolerance stacks</span></a>
+  <a href="#kvcache"><span class="n">09</span><span>The KV cache</span></a>
+  <a href="#lesswork"><span class="n">10</span><span>Less work per token</span></a>
+  <a href="#moe"><span class="n">11</span><span>A mixed-model lot</span></a>
+  <a href="#prune"><span class="n">12</span><span>Distil, prune, search</span></a>
+  <a href="#phases"><span class="n">13</span><span>Prefill and decode</span></a>
+  <a href="#takt"><span class="n">14</span><span>Batching to takt</span></a>
+  <a href="#morebatch"><span class="n">15</span><span>More batching</span></a>
+  <a href="#paging"><span class="n">16</span><span>Paging and routing</span></a>
+  <a href="#edge"><span class="n">17</span><span>One-piece flow</span></a>
+  <a href="#spec"><span class="n">18</span><span>Speculative decoding</span></a>
+  <a href="#scale"><span class="n">19</span><span>Past one server</span></a>
+  <a href="#worked"><span class="n">20</span><span>Worked example</span></a>
+  <a href="#breaks"><span class="n">21</span><span>Where it breaks</span></a>
+  <a href="#recall"><span class="n">22</span><span>Question bank</span></a>
+  <a href="#map"><span class="n">23</span><span>The map</span></a>
+  <a href="#provenance"><span class="n">A</span><span>Provenance</span></a>
+</nav>
+
+<main>
+
+<section id="top" style="padding-top:44px">
+  <div class="col">
+    <p class="eyebrow">Maths, CS &amp; AI Compendium &middot; Chapter 17</p>
+    <h1>Every Token Pays a Setup</h1>
+    <p class="lead" style="margin-top:18px">
+      To write one word, a language model reads every one of its weights out of memory. That read
+      is a setup, paid again on every step, and almost everything in this chapter is a way to
+      shrink it, share it or spread it. Shrinking it is quantisation, and quantisation is
+      measurement. Sharing it is batching, and batching is lot sizing against a takt time.
+    </p>
+    <p>
+      The chapter has five source files: quantisation, efficient architectures, serving and
+      batching, edge inference, and scaling and deployment. This sheet covers all five at the
+      level of <b>one server</b>. Sheet 18 takes up the plant: capacity planning across many
+      servers, redundancy and system design. Sheet 16 covers the hardware underneath, and this
+      sheet uses only one fact from it: reading memory, not arithmetic, sets the pace of
+      generating text.
+    </p>
+    <p>
+      The headline is &sect;14. Continuous batching, the scheduling method every modern server
+      uses, runs at exactly the <b>minimum lot size that meets takt</b>, the quantity a production
+      planner computes as setup time divided by (takt time minus time per piece). Nobody sets it
+      that way. Little&rsquo;s law forces it, and the same algebra gives the time per output token
+      as \(t_w/(1-\rho)\), the queueing cliff of Sheet 13 part 2 &sect;06 with no randomness in it.
+      The second result is &sect;06: the best-known weight quantiser, GPTQ, is a support-settlement
+      problem, and the source prints its update with the wrong matrix.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Corrections to the source. Each is recomputed by <code>verify_claims.py</code> under the tag shown in its section.</caption>
+      <thead><tr><th>Source says</th><th>Computed</th><th>Where</th></tr></thead>
+      <tbody>
+        <tr><td>&ldquo;2&times; again for INT8 vs FP16&rdquo; on each halving, and &ldquo;989 TFLOPS in FP8 vs 67 in FP32, a 15&times; difference&rdquo;</td><td>The ladder gives 4&times; from FP32 to FP8. 989/67 = 14.8 mixes two kinds of rate, so the two statements cannot describe the same hardware.</td><td>&sect;01</td></tr>
+        <tr><td>MX formats: MXFP8 &ldquo;~8&rdquo; bits, MXINT8 &ldquo;~8.5&rdquo;</td><td>Same element bits, same shared exponent, so the same cost: 8.25 bits with a block of 32, 8.5 with a block of 16.</td><td>&sect;02</td></tr>
+        <tr><td>Outlier task prints that the outliers &ldquo;waste 100% of the quantisation range&rdquo;</td><td>The printed 99.6% is the share of channels that are normal. The normal channels use 5 of 255 levels, 1.6% of the range, and 72% of their values round to zero.</td><td>&sect;04</td></tr>
+        <tr><td>Per-channel scaling of activations &ldquo;succeeds&rdquo;</td><td>Scales along the summed dimension cannot be taken out of an integer matrix product. SmoothQuant exists because of this, and beats it: 0.38% against 0.79%.</td><td>&sect;04</td></tr>
+        <tr><td>GPTQ update \(W_{:,j+1:} \mathrel{-}= (\hat W_{:,j}-W_{:,j})H_{j,j+1:}/H_{jj}\)</td><td>The update needs the inverse Hessian. As printed it removes 13&ndash;16% of plain rounding&rsquo;s error; the correct update removes 48&ndash;49%.</td><td>&sect;06</td></tr>
+        <tr><td>KV cache of a 70B model at 128K tokens in FP16: &ldquo;330 GB&rdquo;</td><td>343.6 GB (320 GiB). The source&rsquo;s own code prints 343.6. With 8 key-value heads it is 42.9 GB.</td><td>&sect;09</td></tr>
+        <tr><td>&ldquo;~1.3 KB per token per layer, ~100 KB per token&rdquo; for the 70B (file 03)</td><td>File 01&rsquo;s own parameters give 32 KB per layer, 2.6 MB per token. With 8 key-value heads: 4 KB and 328 KB.</td><td>&sect;09</td></tr>
+        <tr><td>Figure: MHA/GQA/MQA cache for the 70B at 32K in FP16 is 40/5/0.6 GB</td><td>85.9/10.7/1.3 GB. The figure&rsquo;s numbers are the 1-byte values.</td><td>&sect;10</td></tr>
+        <tr><td>Sliding window of 128 on 512 tokens: &ldquo;Reduction: 4.0x&rdquo;</td><td>That compares two-way full attention with a one-way window. Like for like it is 2.29&times;.</td><td>&sect;10</td></tr>
+        <tr><td>Speculative decoding speedup &asymp; \(k \times\) acceptance / cost ratio</td><td>\((1-\alpha^{k+1})/[(1-\alpha)(kc+1)]\). At \(\alpha = 0.5\), \(k = 5\): 1.31&times;, where the source&rsquo;s form gives 1.67&times;.</td><td>&sect;18</td></tr>
+        <tr><td>A 30-minute conversation on a 3&ndash;5 W model &ldquo;drains ~5%&rdquo; of a phone battery</td><td>10&ndash;16% of an assumed 15.4 Wh battery if it generates throughout. 5% needs the model idle about two thirds of the time.</td><td>&sect;17</td></tr>
+        <tr><td>FedAvg: \(W_{\text{new}} = \frac1K\sum_k W_k\)</td><td>Weight each device by its data. The weighted mean equals the central step to \(10^{-16}\); the plain mean is off by 0.058.</td><td>&sect;17</td></tr>
+        <tr><td>100,000 GPUs &ldquo;~$3 billion per year&rdquo;</td><td>$7.0 billion at the source&rsquo;s own $8 per GPU-hour.</td><td>&sect;19</td></tr>
+        <tr><td>Tensor parallelism: &ldquo;an all-reduce aggregates&rdquo; a column split, then \(Y = \text{concat}(Y_i)\)</td><td>A column split is concatenated (all-gather); a row split is summed (all-reduce). The quoted 0.1 ms and 3 ms per layer need messages of about 5,500 tokens, not one.</td><td>&sect;19</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="bridge">
+  <div class="col">
+    <div class="sechead"><span class="secnum">00</span><h2>The bridge</h2>
+      <a class="srcref" href="@SRC@chapter%2017%20-%20AI%20inference/01.%20quantisation.md" target="_blank" rel="noopener">src 01. quantisation &#8599;</a>
+    </div>
+    <p>
+      The verdict column follows the series&rsquo; convention. <b>Identity</b> means the same
+      formula or procedure, checked numerically. <b>Same structure</b> means the parts map one to
+      one but the numbers are not shared. <b>Breaks</b> means the correspondence holds in form and
+      fails in substance, and the section says where.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>What a GATE-prepared mechanical engineer already owns, and what this chapter calls it.</caption>
+      <thead><tr><th>What you already know</th><th>What this chapter calls it</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td>Least count; reading uncertainty \(\Delta/\sqrt{12}\)</td><td>Quantisation step; noise variance \(\Delta^2/12\)</td><td><b style="color:var(--bridge)">Identity</b> while the spread is at least half a step. See &sect;03.</td></tr>
+        <tr><td>A dial gauge against significant figures</td><td>Integer formats against floating point</td><td><b style="color:var(--bridge)">Identity,</b> Sheet 13 part 1 &sect;10. See &sect;02.</td></tr>
+        <tr><td>Choosing a gauge range for each feature</td><td>Per-channel and per-token scales</td><td><b style="color:var(--brk)">Breaks</b> on the dimension that gets summed. See &sect;04.</td></tr>
+        <tr><td>Range against resolution: clip or lose divisions</td><td>Calibration by clipping</td><td><b style="color:var(--bridge)">Identity,</b> with a computable optimum. See &sect;05.</td></tr>
+        <tr><td>Support settlement; static condensation</td><td>GPTQ&rsquo;s error compensation</td><td><b style="color:var(--bridge)">Identity.</b> See &sect;06.</td></tr>
+        <tr><td>Baseline against chain dimensioning</td><td>Compensated against independent rounding</td><td><b style="color:var(--bridge)">Identity</b> when all inputs agree. See &sect;06.</td></tr>
+        <tr><td>RSS tolerance stack; a systematic drift</td><td>Rounding error through many layers</td><td><b style="color:var(--bridge)">Identity</b> in growth law. See &sect;08.</td></tr>
+        <tr><td>A mixed-model lot, whose setup grows with variety</td><td>A mixture-of-experts model under batching</td><td><b style="color:var(--bridge)">Same structure.</b> See &sect;11.</td></tr>
+        <tr><td>Lot time = setup + quantity &times; time per piece</td><td>Decode step = weight read + batch &times; per-sequence read</td><td><b style="color:var(--bridge)">Identity</b> in the algebra; the picture is a furnace load. See &sect;13.</td></tr>
+        <tr><td>Minimum lot to meet takt, \(S/(T-p)\)</td><td>The batch continuous batching settles at</td><td><b style="color:var(--bridge)">Identity,</b> by Little&rsquo;s law. The headline. See &sect;14.</td></tr>
+        <tr><td>Lead time, cycle time, takt time</td><td>Time per output token, time per token served, demand</td><td><b style="color:var(--brk)">Corrects the bank:</b> latency is lead time, not cycle time. See &sect;14.</td></tr>
+        <tr><td>The utilisation cliff \(1/(1-\rho)\)</td><td>Time per output token \(t_w/(1-\rho)\)</td><td><b style="color:var(--bridge)">Same shape,</b> with no randomness. See &sect;14.</td></tr>
+        <tr><td>One-piece flow beats batch-and-queue</td><td>Batch size 1 against continuous batching</td><td><b style="color:var(--brk)">Breaks.</b> This setup cannot be reduced to zero. See &sect;15.</td></tr>
+        <tr><td>Roughing and finishing on separate machines</td><td>Disaggregated prefill and decode</td><td><b style="color:var(--bridge)">Same structure.</b> See &sect;16.</td></tr>
+        <tr><td>SMED; a single-user machine</td><td>Quantisation at the edge, where batch size is 1</td><td><b style="color:var(--bridge)">Same role.</b> See &sect;17.</td></tr>
+        <tr><td>Branch prediction, Sheet 13 part 1 &sect;14</td><td>Speculative decoding</td><td><b style="color:var(--bridge)">Same structure.</b> See &sect;18.</td></tr>
+        <tr><td>&mdash;</td><td>Rejection sampling, the rule that makes it exact</td><td><b style="color:var(--brk)">No counterpart.</b> Learn it cold. See &sect;18.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="memory">
+  <div class="col">
+    <div class="sechead"><span class="secnum">01</span><h2>Inference is a memory problem</h2>
+      <a class="srcref" href="@SRC@chapter%2017%20-%20AI%20inference/01.%20quantisation.md" target="_blank" rel="noopener">src 01. quantisation &#8599;</a>
+    </div>
+    <p>
+      <b>Inference</b> means running a trained model to get answers from it, as opposed to training
+      it. A language model answers one <b>token</b> at a time; a token is a word or a piece of
+      one. The source opens with the number that sets the whole chapter: a model with 70 billion
+      weights, stored at 16 bits (2 bytes) each, needs 140 GB of memory. At 8 bits it needs 70 GB,
+      at 4 bits 35 GB (<code>[Ch17 s01]</code>). One data-centre accelerator holds about 80 GB
+      (reported), so the format decides whether the model fits on one device at all.
+    </p>
+    <p>
+      The second fact is the one this sheet is built on. Generating a token means pushing one
+      vector through every layer, and every layer multiplies that vector by its weight matrix. Each
+      weight is fetched from memory, used once, and not needed again until the next token. A
+      memory system delivers a fixed number of bytes per second (its <b>bandwidth</b>), so the
+      fastest possible rate is
+    </p>
+  </div>
+  <div class="mathbox col">$$\text{tokens per second} \;\le\; \frac{\text{memory bandwidth}}{\text{bytes of weights}}$$</div>
+  <div class="col">
+    <p>
+      The source&rsquo;s own estimator in file 04 is exactly this bound. At 200 GB/s a 7B model
+      gives 57 tokens per second at 4 bits and 29 at 8 bits; at 50 GB/s a 3.8B model gives 26
+      (<code>[Ch17 s01]</code>). Halve the bytes and the bound doubles, which is why the source can
+      say quantisation gives &ldquo;nearly linear speedups&rdquo;. The arithmetic units sit mostly
+      idle; Sheet 16 calls this being bandwidth-bound and draws it as a roofline.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>The weight read is a setup</div>
+      <p>
+        Read the bound as a production engineer would. Before a step can produce anything, every
+        weight must come out of memory. That cost is the same whether the step produces a token
+        for one user or for a hundred, because the hundred can all use the weights while they are
+        on chip. A cost paid once per run and independent of how many pieces the run makes is a
+        <b>setup</b>, and Sheet 14 part 1 &sect;04 showed how a setup is shared over a lot.
+      </p>
+      <p style="margin-bottom:0">
+        The rest of the chapter sorts by what each technique does to this setup.
+        <b>Quantisation</b> shrinks it (&sect;&sect;02&ndash;09). <b>Efficient architectures</b>
+        cut the work around it (&sect;&sect;10&ndash;12). <b>Batching</b> shares it between users
+        (&sect;&sect;13&ndash;16). <b>Edge devices</b> have one user and cannot share it
+        (&sect;17). <b>Speculative decoding</b> spreads it over several tokens of one user
+        (&sect;18).
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>The source&rsquo;s throughput ladder does not add up</div>
+      <p style="margin-bottom:0">
+        File 01 says each halving of precision doubles arithmetic throughput, FP32 to FP16 to INT8
+        to INT4. Two lines later it quotes 989 TFLOPS for FP8 against 67 for FP32, a 14.8&times;
+        ratio (<code>[Ch17 s01]</code>). The ladder gives 4&times; for two halvings. Both cannot be
+        rates of the same kind of operation on the same chip. The usual explanation, reported and
+        not derived here, is that 67 is the rate of the ordinary FP32 units and 989 is the dense
+        FP16 rate of the matrix units, with FP8 twice that. For this chapter it hardly matters:
+        decode is limited by bytes, not by FLOPs.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="formats">
+  <div class="col">
+    <div class="sechead"><span class="secnum">02</span><h2>Integers are dial gauges; floats are significant figures</h2>
+      <a class="srcref" href="@SRC@chapter%2017%20-%20AI%20inference/01.%20quantisation.md" target="_blank" rel="noopener">src 01. quantisation &#8599;</a>
+    </div>
+    <p>
+      Sheet 13 part 1 &sect;10 set up the bridge this section uses. A floating-point number has
+      constant <em>relative</em> precision, a fixed number of significant figures at every
+      magnitude. A fixed-point number, like a dial gauge, has constant <em>absolute</em> precision,
+      the same smallest division everywhere. The source&rsquo;s table of formats sorts into those two
+      families, and the figures each one carries can be computed from its bit layout.
+    </p>
+  </div>
+  <figure class="col">
+    <div class="paper"><img src="img/precision_formats_memory.svg" alt="Bit layouts of FP32, BF16, FP16, FP8 E4M3 and E5M2, INT8, INT4 and ternary, with memory per parameter" width="560"></div>
+    <figcaption><b>Fig. 17.1</b> &mdash; Sign, exponent and mantissa bits for each format, with bytes per weight. The exponent sets the decade; the mantissa sets the figures within it. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+  <div class="tw col">
+    <table>
+      <caption>Largest value and significant figures, computed from the bit layout (<code>[Ch17 s02]</code>). Figures = (mantissa bits + 1) &times; log<sub>10</sub>2.</caption>
+      <thead><tr><th>Format</th><th class="mono">Exp / mant</th><th class="mono">Largest value</th><th class="mono">Figures</th><th>Behaves like</th></tr></thead>
+      <tbody>
+        <tr><td>FP32</td><td class="mono">8 / 23</td><td class="mono">3.4&times;10<sup>38</sup></td><td class="mono">7.22</td><td>Significant figures</td></tr>
+        <tr><td>FP16</td><td class="mono">5 / 10</td><td class="mono">65,504</td><td class="mono">3.31</td><td>Significant figures, short range</td></tr>
+        <tr><td>BF16</td><td class="mono">8 / 7</td><td class="mono">3.39&times;10<sup>38</sup></td><td class="mono">2.41</td><td>Fewer figures, FP32&rsquo;s range</td></tr>
+        <tr><td>FP8 E4M3</td><td class="mono">4 / 3</td><td class="mono">448</td><td class="mono">1.20</td><td>About one figure</td></tr>
+        <tr><td>FP8 E5M2</td><td class="mono">5 / 2</td><td class="mono">57,344</td><td class="mono">0.90</td><td>Range over figures</td></tr>
+        <tr><td>INT8 with a scale</td><td class="mono">&mdash;</td><td class="mono">127 &times; scale</td><td class="mono">2.41 at full scale</td><td>A dial gauge with 255 divisions</td></tr>
+        <tr><td>INT4 with a scale</td><td class="mono">&mdash;</td><td class="mono">7 &times; scale</td><td class="mono">1.18 at full scale</td><td>A gauge with 15 divisions</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      The integer rows need the qualifier &ldquo;at full scale&rdquo;. An INT8 tensor carries 2.41
+      figures for a value at the top of its range and 1.41 for a value a tenth as large
+      (<code>[Ch17 s02]</code>), exactly as a dial gauge reading 0.08 mm on a 1 mm range has one
+      useful figure. To use integers at all, every tensor (or every row, or every block) gets a
+      <b>scale</b>, a float that converts counts back to values:
+    </p>
+  </div>
+  <div class="mathbox col">$$x_q = \operatorname{clamp}\!\Big(\operatorname{round}\big(x/s\big) + z,\; q_{\min},\, q_{\max}\Big), \qquad \hat x = s\,(x_q - z)$$</div>
+  <div class="col">
+    <p>
+      The scale \(s\) is the least count. The zero point \(z\) shifts the scale for one-sided data,
+      as a gauge zeroed off the datum would. <b>Symmetric</b> quantisation sets \(z = 0\) and
+      \(s = \max|x|/127\), which is ranging the gauge to the largest reading.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Block floating point is one range switch for a bank of channels</div>
+      <p style="margin-bottom:0">
+        The source&rsquo;s microscaling (MX) formats give a block of elements one shared 8-bit
+        exponent and each element its own few mantissa bits. That is a multi-channel recorder with
+        one range switch per bank: within a bank every channel reads on the same scale, and banks
+        can sit on different ranges. GGUF&rsquo;s Q4_0, in the source&rsquo;s llama.cpp list, is the
+        same idea with integers: 32 four-bit counts share one 16-bit scale (layout reported), so it
+        costs 4.5 bits per weight. That is why the source&rsquo;s own table lists Llama 3.1 8B at
+        about 4.5 GB in &ldquo;Q4&rdquo;: \(8\times10^9 \times 4.5/8 = 4.5\) GB. The same
+        accounting puts the 70B at 39.4 GB, not 35 (<code>[Ch17 s02]</code>).
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>The MX table charges the same format two prices</div>
+      <p style="margin-bottom:0">
+        The shared exponent adds 8 bits per block. With a block of 32 that is 0.25 bits per
+        element, with 16 it is 0.5. The source lists MXFP6 at ~6.5, MXFP4 at ~4.5 and MXINT8 at
+        ~8.5, which is the block-of-16 accounting, and MXFP8 at ~8. MXFP8 and MXINT8 both have 8
+        element bits and the same shared exponent, so they cost the same: 8.25 at a block of 32
+        (the standard&rsquo;s block size, reported), 8.5 at 16 (<code>[Ch17 s02]</code>).
+      </p>
+    </div>
+    <p>
+      At the far end, <b>BitNet</b> restricts every weight to \(\{-1, 0, +1\}\). Three states carry
+      \(\log_2 3 = 1.585\) bits, so a 70B model needs 13.9 GB, close to the source&rsquo;s
+      &ldquo;~15 GB&rdquo;. Multiplying by &minus;1, 0 or +1 needs no multiplier: a ternary matrix
+      product is a sum of some inputs minus a sum of others, which the script confirms to
+      \(4\times10^{-15}\) (<code>[Ch17 s07]</code>). Whether such a model is as good as a 16-bit
+      one is a training question this sheet cannot compute.
+    </p>
+  </div>
+</section>

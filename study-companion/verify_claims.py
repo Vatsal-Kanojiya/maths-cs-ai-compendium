@@ -5915,6 +5915,10 @@ def _ch17():
     mha, gqa, mqa = (2*k*128*32768*2/1e6 for k in (32, 8, 1))
     say("s10", f"KV per layer at 32K: MHA {mha:.0f} MB, GQA-8 {gqa:.0f} MB ({mha/gqa:.0f}x), MQA {mqa:.1f} MB "
         f"({mha/mqa:.0f}x)", round(mha) == 537 and mha/gqa == 4 and mha/mqa == 32)
+    fig = [2*80*k*128*32768*b/1e9 for b in (2, 1) for k in (64, 8, 1)]
+    say("s10", "figure mha_gqa_mqa (70B, 80 layers, 32K): FP16 MHA/GQA-8/MQA = " +
+        "/".join(f"{v:.1f}" for v in fig[:3]) + " GB; the figure's 40/5/0.6 GB match 1 byte per element: " +
+        "/".join(f"{v:.2f}" for v in fig[3:]), abs(fig[0]-85.9) < 0.05 and abs(fig[3]-42.9) < 0.05)
 
     # --- s11: MoE is a mixed-model lot -----------------------------------
     r11 = np.random.default_rng(5)
