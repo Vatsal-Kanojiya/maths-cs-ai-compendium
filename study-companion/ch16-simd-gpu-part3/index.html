@@ -912,6 +912,348 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
   </div>
 </section>
 
+<section id="vulkan">
+  <div class="col">
+    <div class="sechead"><span class="secnum">06</span><h2>Vulkan, counted</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2016%20-%20SIMD%20and%20GPU%20programming/07.%20vulkan%20compute%20and%20cross-platform%20GPU.md" target="_blank" rel="noopener">src 07. Vulkan &#8599;</a>
+    </div>
+    <p>
+      CUDA runs on NVIDIA&rsquo;s GPUs only. <b>Vulkan</b>, from the Khronos Group, is a GPU interface that every
+      major vendor implements, and the source&rsquo;s route to phones, AMD and Intel GPUs, and (through WebGPU) the
+      browser. Its price is explicitness. Where CUDA&rsquo;s driver quietly creates contexts, allocates memory and
+      orders work, a Vulkan program does each step itself: create an instance, pick a device, allocate memory of a
+      chosen type, create buffers, describe how they bind to the shader, build a pipeline, record commands into a
+      command buffer, submit it to a queue and wait on a fence. The source argues this keeps drivers thin and lets
+      the program synchronise only where it must.
+    </p>
+    <p>
+      The GPU code itself is a <b>compute shader</b>, written in GLSL and compiled to <b>SPIR-V</b>, a portable
+      binary that each vendor&rsquo;s driver translates for its own hardware. All six compute shaders in file 07 (vector
+      add, ReLU through shared memory, the reduction, the tiled matmul, softmax, and Kompute&rsquo;s inline add) were
+      compiled to SPIR-V here with glslang&rsquo;s WebAssembly build: <b>6 of 6 compile</b> (<code>[Ch16p3 s07]</code>).
+      The C++ host program needs the Vulkan SDK and a device, and neither is in the build container, so it was read,
+      not run.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same structure: a drawing standard any shop can make the part to</div>
+      <p style="margin-bottom:0">
+        SPIR-V is a drawing in a standard form: any conforming shop can make the part, with its own machines and its
+        own process plan. Where it breaks: a drawing fixes the part&rsquo;s geometry, so every shop delivers the same
+        thing; SPIR-V fixes the result, and every driver compiles it again for its own hardware, so the
+        <em>speed</em> of the same shader differs by vendor. Correctness travels; performance does not, and &sect;09
+        shows that even correctness travels only within the standard&rsquo;s guaranteed limits.
+      </p>
+    </div>
+    <p>
+      The source says this costs &ldquo;~200 lines for vector addition&rdquo; against CUDA&rsquo;s &ldquo;~30&rdquo;. Counted,
+      its Vulkan program is <b>223 lines of code</b> (288 with blank lines and comments) against <b>32</b> (54) for its own
+      CUDA <code>vector_add</code>: 7.0 times as much (<code>[Ch16p3 s07]</code>). Reading those 223 lines turns up two
+      faults.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>The memory-type test accepts the wrong memory</div>
+      <p style="margin-bottom:0">
+        The program wants memory the CPU can write and the GPU then sees without further action: host-visible
+        <em>and</em> host-coherent. Its test is <code>flags &amp; (HOST_VISIBLE | HOST_COHERENT)</code>, which is true
+        if <em>either</em> bit is set. A memory type that is visible but cached and not coherent passes, and the
+        program never flushes its writes, so the GPU may read stale data. The test must be
+        <code>(flags &amp; (VISIBLE | COHERENT)) == (VISIBLE | COHERENT)</code>; with the real flag values the first
+        test accepts both a visible-but-not-coherent type and a coherent-only one, and the second rejects both. Nor
+        does the program check a single return value: on a machine with no Vulkan device the count comes back 0 and
+        <code>devices[0]</code> reads past the end of an empty vector.
+      </p>
+    </div>
+    <p>
+      The source&rsquo;s cure for the verbosity is a wrapper library. <b>Kompute</b> shrinks the program to a dozen
+      lines. Its shader, though, declares <code>local_size_x = 1</code>, which &sect;07 prices.
+    </p>
+  </div>
+</section>
+
+<section id="subgroups">
+  <div class="col">
+    <div class="sechead"><span class="secnum">07</span><h2>Subgroups are lanes</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2016%20-%20SIMD%20and%20GPU%20programming/07.%20vulkan%20compute%20and%20cross-platform%20GPU.md" target="_blank" rel="noopener">src 07. Vulkan &#8599;</a>
+    </div>
+    <p>
+      <b>Debt 2 of 6.</b> The source maps Vulkan&rsquo;s vocabulary onto CUDA&rsquo;s. One level is missing from its
+      table, and it is the level that matters for speed. Vulkan 1.1 calls the hardware&rsquo;s warp a
+      <b>subgroup</b> and lets a shader read its size, <code>gl_SubgroupSize</code>, and use subgroup operations
+      (reported; the source does not mention subgroups). Its size depends on the vendor: 32 on NVIDIA, 64 or 32 on AMD,
+      and from 4 to 128 elsewhere (reported).
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Vulkan, CUDA and this series. The subgroup row is added; the rest is the source&rsquo;s table.</caption>
+      <thead><tr><th>Vulkan</th><th>CUDA</th><th>In this series</th></tr></thead>
+      <tbody>
+        <tr><td>Invocation</td><td>Thread</td><td>One spindle&rsquo;s hole (part 1 &sect;05)</td></tr>
+        <tr><td><b>Subgroup</b> (32 or 64 lanes)</td><td>Warp (32)</td><td>The drilling head; one feed for all its spindles (part 2 &sect;06)</td></tr>
+        <tr><td>Workgroup (<code>local_size</code>)</td><td>Block (<code>blockDim</code>)</td><td>A cell with a shared bench (part 2 &sect;02)</td></tr>
+        <tr><td><code>gl_GlobalInvocationID</code></td><td><code>blockIdx * blockDim + threadIdx</code></td><td>A mixed-radix serial number (part 2 &sect;02)</td></tr>
+        <tr><td><code>shared</code> and <code>barrier()</code></td><td><code>__shared__</code> and <code>__syncthreads()</code></td><td>The planned bin and the transfer line&rsquo;s index (part 2 &sect;&sect;02, 08)</td></tr>
+        <tr><td><code>vkCmdDispatch</code></td><td><code>&lt;&lt;&lt;grid, block&gt;&gt;&gt;</code></td><td>Releasing the order to the floor</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      Divergence follows the head, whatever its size. A workgroup of 256 invocations is 8 subgroups of 32 or 4 of 64,
+      and part 2 &sect;06&rsquo;s count applies with \(s\) lanes in place of 32. A branch that a fraction \(q\) of
+      invocations take at random is run by the whole subgroup with probability
+    </p>
+    <div class="mathbox">$$P = 1 - (1-q)^{s} \;=\; 27.5\%,\ \ 47.4\%,\ \ 72.4\% \quad \text{for } q = 1\%,\ s = 32,\ 64,\ 128 .$$</div>
+    <p>
+      With the rare path costing 100 and the common one 10, a subgroup spends 3.44, 5.27 and 7.56 times the per-lane
+      average. Even/odd branching diverges in every subgroup at any size; a first-half/second-half split diverges in
+      none, if the boundary falls on a multiple of the subgroup size (<code>[Ch16p3 s08]</code>).
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: the zero-acceptance plan with the sample size set by the vendor</div>
+      <p style="margin-bottom:0">
+        Part 2 &sect;06 found that a warp runs a rare branch with the rejection probability of Sheet 15&rsquo;s \(c = 0\)
+        sampling plan, sample 32. A subgroup is the same plan with sample \(s\). Doubling the sample nearly doubles the
+        chance of catching one defective at small \(q\), which is good for an inspector and bad for a shader: on a
+        64-lane GPU the same branch costs the rare path in almost half of all subgroups.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Kompute&rsquo;s shader runs one drill per head</div>
+      <p style="margin-bottom:0">
+        <code>local_size_x = 1</code> makes every workgroup a single invocation, and a workgroup never shares a subgroup
+        with another. Each invocation occupies a whole subgroup with one live lane: <b>3.1%</b> of a 32-lane subgroup,
+        <b>1.6%</b> of a 64-lane one. The example&rsquo;s 5 additions occupy 5 subgroups, 160 or 320 lane-slots. A size of
+        64 or 256 with a bounds test, as in the source&rsquo;s own <code>add.comp</code>, fills the head. And since the
+        subgroup size can differ between devices, and is reported to vary between shaders on some, portable code reads
+        <code>gl_SubgroupSize</code> instead of assuming it: <code>vsetvl</code>&rsquo;s lesson from &sect;02 again.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="tree">
+  <div class="col">
+    <div class="sechead"><span class="secnum">08</span><h2>The whiffletree: file 07&rsquo;s reduction, counted</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2016%20-%20SIMD%20and%20GPU%20programming/07.%20vulkan%20compute%20and%20cross-platform%20GPU.md" target="_blank" rel="noopener">src 07. Vulkan &#8599;</a>
+    </div>
+    <p>
+      <b>Debt 3 of 6.</b> The source&rsquo;s <code>reduce_sum.comp</code> sums 256 values per workgroup. Each invocation
+      loads one value into shared memory; after a barrier, invocations below 128 add the value 128 places above theirs;
+      after another barrier, those below 64 add the value 64 above; and so on to 1. Thread 0 writes the workgroup&rsquo;s
+      total, and a second dispatch reduces those totals the same way. Counted (<code>[Ch16p3 s09]</code>):
+    </p>
+    <ul>
+      <li><b>Barriers: 9</b> per workgroup, one after the load and one after each of the 8 halvings.</li>
+      <li><b>Additions: 255</b>, which is \(n - 1\), the same as a single running total; the tree changes the order and
+        the depth (8 levels), not the work.</li>
+      <li><b>Lane-slots doing an addition: 255 of \(8 \times 256\), 12.5%.</b> Most lanes sit idle at most steps.</li>
+      <li><b>Subgroups that must issue</b> at each step, with 32 lanes: 4, 2, 1, 1, 1, 1, 1, 1. Inside those, 66.4% of
+        lanes work. With 64 lanes: 2, 1, 1, 1, 1, 1, 1, 1, and 44.3%. The last 5 steps (6 at 64 lanes) run inside a single
+        subgroup with most of its lanes switched off: part 2 &sect;06&rsquo;s divergence.</li>
+    </ul>
+    <p>
+      Vulkan&rsquo;s subgroup operations (reported) let each subgroup add its own values in one instruction. Each
+      subgroup then writes one partial sum, one barrier follows, and one subgroup adds the partials: <b>1 barrier
+      instead of 9</b>. The order inside that instruction belongs to the implementation (reported).
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same structure: a whiffletree of balance beams</div>
+      <p style="margin-bottom:0">
+        A whiffletree combines loads in pairs: each beam takes two forces and passes their sum to the beam above. Spread
+        a load over 256 points and it takes 255 beams in 8 levels, the tree in file 07 to the beam. Windscreen-wiper arms
+        and the multi-point supports of telescope mirrors are built this way. Where it breaks: a whiffletree acts all at
+        once, every level in equilibrium together, and its sums are exact. The GPU&rsquo;s levels happen one after
+        another, a barrier between each, and every addition rounds.
+      </p>
+    </div>
+    <p>
+      <b>Does it repeat bit for bit?</b> Yes, on one device. Every addition&rsquo;s operands are fixed by the
+      invocation&rsquo;s index, not by timing, and the second dispatch is the same fixed tree. Run on part 2&rsquo;s 65,536
+      numbers in float32, the two dispatches land 0.8 ulp below the exact sum, with the same bits every time. Part 2
+      &sect;14 combined the same 256 block totals by atomic adds in arrival order and got 14 different totals in 200
+      runs. The tree is also the better tolerance stack: its worst case is 16 levels of rounding, \(16u = 9.5 \times
+      10^{-7}\) of the sum of magnitudes, against \(3.9 \times 10^{-3}\) for a running total. A different GPU may still
+      give different bits, through a different subgroup size or compiler.
+    </p>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">The whiffletree on a GPU</div><div class="lab-tag">Predict, then change the subgroup</div></div>
+    <div class="lab-body">
+    <div class="predict">
+      <p style="margin-top:0">
+        File 07 sums 256 values in one workgroup by halving. How many barriers does the workgroup wait at, and what share
+        of its lane-slots does an addition?
+      </p>
+      <button class="pbtn" data-p3="a" type="button">1 barrier, 100%</button>
+      <button class="pbtn" data-p3="b" type="button">8 barriers, 50%</button>
+      <button class="pbtn" data-p3="c" type="button">9 barriers, about 12%</button>
+      <button class="pbtn" data-p3="d" type="button">256 barriers, about 1%</button>
+      <div class="pverdict" id="pv3"></div>
+    </div>
+    <div class="chartwrap">
+    <svg class="svgfig" id="tS" viewBox="0 0 560 330" role="img"
+         aria-label="The 256 lanes of a workgroup at each halving step: lanes adding, idle lanes in subgroups that issue, and idle subgroups"></svg>
+    </div>
+    <div class="ctl">
+      <label for="tG8">Subgroup lanes</label>
+      <button class="btn" id="tG8" data-tg="8" type="button">8</button>
+      <button class="btn" data-tg="16" type="button">16</button>
+      <button class="btn on" data-tg="32" type="button">32</button>
+      <button class="btn" data-tg="64" type="button">64</button>
+      <button class="btn" data-tg="128" type="button">128</button>
+    </div>
+    <div class="ctl">
+      <button class="btn" id="tA" type="button">Finish with subgroup adds</button>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Barriers per<br>workgroup</div><div class="ro-v a" id="tB">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Lane-slots<br>adding</div><div class="ro-v b" id="tL">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Busy, in issuing<br>subgroups</div><div class="ro-v c" id="tI">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Rare branch at 1%,<br>subgroup runs it</div><div class="ro-v" id="tR">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Total of 65,536,<br><span class="gk">ulp</span> from exact</div><div class="ro-v" id="tU">&mdash;</div></div>
+    </div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    Each row is one step of the reduction across the workgroup&rsquo;s 256 lanes, grouped into subgroups by the tick
+    marks. Orange lanes add; blue lanes are idle inside a subgroup that still has to issue; blank lanes belong to
+    subgroups with nothing to do. At rest, 32-lane subgroups: <b>9 barriers and 12.5% of lane-slots adding</b>, the
+    answer to the prediction. <b>Finish with subgroup adds</b> collapses the bottom rows into one instruction per
+    subgroup and one barrier. The total in the last readout is computed in your browser, in float32, through both of
+    file 07&rsquo;s dispatches, and comes out the same every time.
+  </div>
+</section>
+
+<section id="portable">
+  <div class="col">
+    <div class="sechead"><span class="secnum">09</span><h2>The portable kit</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2016%20-%20SIMD%20and%20GPU%20programming/07.%20vulkan%20compute%20and%20cross-platform%20GPU.md" target="_blank" rel="noopener">src 07. Vulkan &#8599;</a>
+    </div>
+    <p>
+      <b>Debt 4 of 6.</b> File 07&rsquo;s tiled matrix multiply is, as it says, &ldquo;the same tiling algorithm as the CUDA
+      version&rdquo;: <code>TILE_SIZE</code> 16, one output per invocation, two 16&times;16 tiles in shared memory, a
+      barrier before and after each step. So it carries part 2 &sect;08&rsquo;s price: \(b/4 = 4\) FLOP per byte, 2 KiB of
+      shared memory, 256 invocations per workgroup, and on part 2&rsquo;s reference GPU (66.9 TFLOP/s, 3.3 TB/s)
+      <b>13.2 TFLOP/s, 19.7% of the roof</b>. Delivery binds, as it did in CUDA.
+    </p>
+    <p>
+      Portability adds a second constraint. Vulkan does not promise every device the limits of a data-centre GPU. Its
+      guaranteed minimums are reported to be <b>128 invocations per workgroup</b> and <b>16 KiB of shared memory</b>.
+      The source&rsquo;s 16&times;16 workgroup is 256 invocations, so it is not guaranteed to run everywhere. The largest
+      one-output square tile within the minimum is 11&times;11, 121 invocations, at \(11/4 = 2.75\) FLOP/B, which reaches
+      9.07 TFLOP/s on the reference GPU. Shared memory alone would allow \(8b^2 \le 16{,}384\), so \(b \le 45\); the
+      invocation count is the binding limit (<code>[Ch16p3 s10]</code>).
+    </p>
+    <p>
+      On the smartphone the source&rsquo;s figures stop short: it gives 10 TFLOPS but no memory bandwidth. Taking a
+      reported LPDDR5 figure of 51.2 GB/s, the phone&rsquo;s ridge is about <b>195 FLOP/B</b>, nearly ten times the reference
+      GPU&rsquo;s, and the 16-tile reaches 0.205 TFLOP/s, <b>2.0%</b> of the phone&rsquo;s peak. A phone has the arithmetic of
+      a small GPU and the memory of a laptop, so on a phone every kit is far too small.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same structure: designing to the minimum guaranteed strength</div>
+      <p style="margin-bottom:0">
+        A part designed to the minimum specified yield strength is safe with any heat of steel that meets the
+        specification, though most heats are stronger. A shader that stays within Vulkan&rsquo;s minimum limits runs on any
+        conforming device, though most devices allow more. Where it breaks: steel cannot be asked its strength before
+        use, but a device can. A program reads the real limits at run time and picks its tile to suit, which is what part
+        2 &sect;11&rsquo;s autotuning and &sect;02&rsquo;s <code>vsetvl</code> both do. Portable code is written to the
+        minimum and tuned to the machine.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">The portable kit</div><div class="lab-tag">Predict, then size the tile</div></div>
+    <div class="lab-body">
+    <div class="predict">
+      <p style="margin-top:0">
+        A tiled matmul must run on every Vulkan device, with one output per invocation. What is the largest square tile it
+        can count on, and its intensity?
+      </p>
+      <button class="pbtn" data-p4="a" type="button">32, at 8 FLOP/B</button>
+      <button class="pbtn" data-p4="b" type="button">16, at 4 FLOP/B</button>
+      <button class="pbtn" data-p4="c" type="button">11, at 2.75 FLOP/B</button>
+      <button class="pbtn" data-p4="d" type="button">8, at 2 FLOP/B</button>
+      <div class="pverdict" id="pv4"></div>
+    </div>
+    <div class="chartwrap">
+    <svg class="svgfig" id="kS" viewBox="0 0 560 250" role="img"
+         aria-label="The tile's invocations and shared memory against the device's limits, and the attainable rate against the roof"></svg>
+    </div>
+    <div class="ctl">
+      <label for="kB">Tile edge <span class="gk">b</span></label>
+      <input type="range" id="kB" min="4" max="32" value="16" step="1">
+      <span class="ro-v" id="kBv" style="min-width:32px">16</span>
+    </div>
+    <div class="ctl">
+      <label for="kLmin">Limits</label>
+      <button class="btn on" id="kLmin" data-kl="min" type="button">Vulkan minimum</button>
+      <button class="btn" data-kl="ref" type="button">Reference GPU</button>
+    </div>
+    <div class="ctl">
+      <label for="kRref">Roof</label>
+      <button class="btn on" id="kRref" data-kr="ref" type="button">Reference GPU</button>
+      <button class="btn" data-kr="phone" type="button">Smartphone</button>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Invocations,<br>limit</div><div class="ro-v a" id="kI">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Shared bytes,<br>limit</div><div class="ro-v b" id="kM">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Guaranteed<br>to run</div><div class="ro-v" id="kOk">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Intensity<br>FLOP/B</div><div class="ro-v c" id="kX">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Attainable,<br><span class="gk">TFLOP/s</span></div><div class="ro-v" id="kA">&mdash;</div></div>
+    </div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    The two gauges show the tile&rsquo;s demand (invocations \(b^2\), shared memory \(8b^2\) bytes) against the chosen
+    limits; a gauge past its line turns orange. The bottom bar is the attainable rate against the chosen roof. At rest the
+    source&rsquo;s 16-tile asks for 256 invocations where the minimum guarantees 128: not guaranteed to run, while reaching
+    13.2 TFLOP/s on the reference GPU. Drag the edge to 11 for the largest tile every device must accept, the answer to
+    the prediction. The phone roof uses a reported bandwidth; the source gives none.
+  </div>
+</section>
+
+<section id="small">
+  <div class="col">
+    <div class="sechead"><span class="secnum">10</span><h2>Small jobs, softmax and the browser</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2016%20-%20SIMD%20and%20GPU%20programming/07.%20vulkan%20compute%20and%20cross-platform%20GPU.md" target="_blank" rel="noopener">src 07. Vulkan &#8599;</a>
+    </div>
+    <p>
+      <b>The softmax shader.</b> Coding task 2 computes a softmax with two shared-memory trees, one for the maximum and one
+      for the sum: 19 barriers per workgroup. It reduces within a workgroup only, so it is a softmax of a row of at most
+      256 values. Simulated on 256 values it matches the textbook softmax. On 512 it runs two workgroups, each of which
+      normalises its own half, and the outputs sum to <b>2.000</b> instead of 1 (<code>[Ch16p3 s11]</code>). A longer row
+      needs a second pass over the workgroups&rsquo; partial results, which is part 2 &sect;13&rsquo;s online softmax.
+    </p>
+    <p>
+      <b>The WGSL kernel.</b> WebGPU, the browser&rsquo;s GPU interface, runs on top of Vulkan, Metal or Direct3D 12 and has its
+      own shading language, WGSL. The source&rsquo;s WGSL vector add drops the bounds test its GLSL twin has
+      (<code>if (idx &lt; n)</code>). For 1,000 elements its dispatch of \(\lceil 1000/256 \rceil = 4\) workgroups starts
+      1,024 invocations, 24 past the end. WebGPU is reported to confine out-of-range accesses to the buffer, which prevents
+      damage elsewhere but does not make them correct.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Task 3 cannot measure bandwidth: the job is smaller than the pipe</div>
+      <p style="margin-bottom:0">
+        Task 3 asks for the achieved bandwidth of the 1,024-element vector add. That dispatch moves 12,288 bytes. Part 2
+        &sect;05 found that a GPU with 3.3 TB/s and a 400-cycle latency needs 666,667 bytes in flight to run at full rate.
+        This whole job is 1.8% of that. Even if every byte flew at once, with no launch cost at all, it would take one
+        round trip, 202 ns, for <b>60.8 GB/s</b>, 1.8% of the bandwidth. Launch and synchronisation overheads (reported,
+        microseconds) bring the measured figure far lower. To measure bandwidth, the job must be many times larger than
+        bandwidth &times; latency: Little&rsquo;s law again.
+      </p>
+    </div>
+    <p>
+      The source closes with a table of when to use Vulkan: not for training or for NVIDIA inference, yes for AMD and Intel
+      GPUs, Android and cross-vendor libraries, WebGPU in the browser, Metal on Apple devices. Those are judgements about
+      tools and are reported, as are the libraries it names (vk-bootstrap, VMA, Kompute, ONNX Runtime Web, Transformers.js).
+    </p>
+  </div>
+</section>
+
 </main>
 </div>
 
@@ -1069,6 +1411,128 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     b:'<b>Right.</b> 5 W / 10 TFLOP/s = 0.50 pJ, against 0.70 for the server and 1.00 for the microcontroller: a factor of two across a 700,000-fold range of power.',
     c:'<b>Close, not cheapest.</b> 700 W / 1,000 TFLOP/s = 0.70 pJ. The phone does 0.50.',
     d:'<b>Nearly, not exactly:</b> 0.70, 0.50 and 1.00 pJ. Within a factor of two, which is the surprise.'});
+  draw();
+})();
+</script>
+
+<script>
+/* ===== LAB 3 -- file 07's reduction tree on subgroups ([Ch16p3 s09]); float32 total through both dispatches ===== */
+(function(){
+  'use strict';
+  var U=window.__c16, $=U.$, ST=U.ST, fr=Math.fround;
+  var SG=32, SUB=false, STR=[128,64,32,16,8,4,2,1];
+  var total=(function(){
+    var r=U.rng(16), d=new Float32Array(65536), ex=0, i, b;
+    for(i=0;i<65536;i++){d[i]=fr(r()); ex+=d[i];}
+    function tree(x){ var nb=x.length/256, out=new Float32Array(nb);
+      for(b=0;b<nb;b++){ var s=Array.prototype.slice.call(x.subarray(b*256,(b+1)*256));
+        for(var st=128;st>=1;st>>=1){ for(i=0;i<st;i++) s[i]=fr(s[i]+s[i+st]); }
+        out[b]=s[0]; }
+      return out; }
+    var t=tree(tree(d))[0], ulp=Math.pow(2,Math.floor(Math.log2(ex))-23);
+    return (t-ex)/ulp;
+  })();
+  function draw(){
+    var h='', X0=44, LW=2, rowH=24, Y0=26, k, l;
+    var rows=[];
+    if(!SUB){
+      STR.forEach(function(s){rows.push({lab:'stride '+s, busy:function(l){return l<s;}, issue:function(g){return g*SG<s;}});});
+    } else {
+      var p=256, lev=0;
+      rows.push({lab:'subgroup add', busy:function(){return true;}, issue:function(){return true;}});
+      p=256/SG;
+      while(p>1){ (function(pp){ rows.push({lab:'add '+pp+' partials', busy:function(l){return l<pp;}, issue:function(g){return g*SG<pp;}}); })(p); p=Math.ceil(p/SG); }
+    }
+    rows.forEach(function(rw,ri){
+      var y=Y0+ri*(rowH+6);
+      h+=U.txt(X0+256*LW+8,y+rowH/2+4,rw.lab,ST.tick);
+      for(l=0;l<256;l++){
+        var g=Math.floor(l/SG), col=rw.busy(l)?'var(--c1)':(rw.issue(g)?'var(--c2)':'none');
+        if(col!=='none') h+='<rect x="'+(X0+l*LW)+'" y="'+y+'" width="'+LW+'" height="'+rowH+'" style="fill:'+col+';opacity:'+(rw.busy(l)?1:0.35)+'"/>';
+      }
+      h+='<rect x="'+X0+'" y="'+y+'" width="'+(256*LW)+'" height="'+rowH+'" style="fill:none;stroke:var(--rule-strong);stroke-width:0.8"/>';
+      for(k=SG;k<256;k+=SG) h+=U.ln(X0+k*LW,y,X0+k*LW,y+rowH,'stroke:var(--rule-strong);stroke-width:0.8');
+    });
+    var yb=Y0+rows.length*(rowH+6)+14;
+    h+=U.txt(X0,yb,'lane 0',ST.tick)+U.txt(X0+256*LW,yb,'lane 255',ST.tick,'end');
+    h+=U.txt(X0,yb+18,'orange: adding  |  pale blue: idle in a subgroup that must issue  |  blank: subgroup with nothing to do',ST.small);
+    $('tS').setAttribute('viewBox','0 0 640 '+(yb+30));
+    $('tS').innerHTML=h;
+    var bar, lanes, inIss;
+    if(!SUB){
+      bar=9; var adds=255, iss=0; STR.forEach(function(s){iss+=Math.ceil(s/SG);});
+      lanes=(100*adds/(8*256)).toFixed(1)+'%'; inIss=(100*adds/(iss*SG)).toFixed(1)+'%';
+    } else {
+      bar=rows.length-1; lanes='in subgroup adds'; inIss='in subgroup adds';
+    }
+    $('tB').textContent=bar; $('tL').textContent=lanes; $('tI').textContent=inIss;
+    $('tR').textContent=(100*(1-Math.pow(0.99,SG))).toFixed(1)+'%';
+    $('tU').textContent=SUB?'set by the driver':(total>0?'+':'')+total.toFixed(1);
+  }
+  document.querySelectorAll('[data-tg]').forEach(function(b){b.addEventListener('click',function(){
+    SG=+b.getAttribute('data-tg'); U.onBtn('data-tg',SG); draw();});});
+  $('tA').addEventListener('click',function(){SUB=!SUB; $('tA').classList.toggle('on',SUB); draw();});
+  U.predict('data-p3','pv3',{
+    a:'<b>No.</b> One barrier is what subgroup operations can achieve. File 07&rsquo;s loop waits after the load and after each of 8 halvings: <b>9</b>, with 12.5% of lane-slots adding.',
+    b:'<b>Close on the barriers, wrong on the work.</b> 8 halvings plus the load make 9 barriers, and the active lanes halve each step: 255 additions in 8 &times; 256 lane-slots, <b>12.5%</b>.',
+    c:'<b>Right.</b> 1 + 8 = 9 barriers, and 128 + 64 + &hellip; + 1 = 255 additions in 2,048 lane-slots: 12.5%. The tree buys a short chain of rounding, not efficiency.',
+    d:'<b>No.</b> The tree halves the active lanes each step, so it needs log<sub>2</sub>256 = 8 halvings, not 256 steps: 9 barriers.'});
+  draw();
+})();
+</script>
+
+<script>
+/* ===== LAB 4 -- the portable kit: a GLSL tile against Vulkan's minimum limits and two roofs ([Ch16p3 s10]) ===== */
+(function(){
+  'use strict';
+  var U=window.__c16, $=U.$, ST=U.ST;
+  var LIM={min:{inv:128, shm:16384, name:'Vulkan minimum (reported)'}, ref:{inv:1024, shm:228*1024, name:'reference GPU (source)'}};
+  var ROOF={ref:{p:16896*1.98e9*2, bw:3.3e12, name:'reference GPU, 66.9 TFLOP/s'}, phone:{p:10e12, bw:51.2e9, name:'smartphone, 10 TFLOP/s (bandwidth reported)'}};
+  var lim='min', roof='ref';
+  function gauge(y,label,val,limv,unit){
+    var X0=150, X1=530, top=Math.max(limv*1.25,val*1.05), over=val>limv, h='';
+    function X(v){return X0+(X1-X0)*v/top;}
+    h+=U.txt(X0-10,y+15,label,ST.lab,'end');
+    h+='<rect x="'+X0+'" y="'+y+'" width="'+(X1-X0)+'" height="20" rx="2" style="fill:var(--sheet-2)"/>';
+    h+='<rect x="'+X0+'" y="'+y+'" width="'+U.f1(X(val)-X0)+'" height="20" rx="2" style="fill:'+(over?'var(--c1)':'var(--c2)')+'"/>';
+    h+=U.ln(X(limv),y-6,X(limv),y+26,'stroke:var(--ink);stroke-width:2');
+    h+=U.txt(X(limv),y-9,'limit '+U.comma(limv),ST.tick,'middle');
+    var inside=(X(val)-X0)>80;
+    h+=U.txt(inside?X(val)-6:X(val)+6,y+15,U.comma(val)+unit,inside?'font-family:var(--f-mono);font-size:10.5px;font-weight:600;fill:var(--sheet)':ST.tick,inside?'end':'start');
+    return h;
+  }
+  function draw(){
+    var b=+$('kB').value, L=LIM[lim], R=ROOF[roof];
+    $('kBv').textContent=b;
+    var inv=b*b, shm=8*b*b, I=b/4, att=Math.min(R.p,R.bw*I), ok=inv<=L.inv&&shm<=L.shm;
+    var h='';
+    h+=U.txt(20,18,'limits: '+L.name,ST.small);
+    h+=gauge(40,'invocations',inv,L.inv,'');
+    h+=gauge(98,'shared memory',shm,L.shm,' B');
+    var X0=150, X1=530, y=170;
+    function X(v){return X0+(X1-X0)*v/R.p;}
+    h+=U.txt(X0-10,y+15,'attainable',ST.lab,'end');
+    h+='<rect x="'+X0+'" y="'+y+'" width="'+(X1-X0)+'" height="20" rx="2" style="fill:var(--sheet-2)"/>';
+    h+='<rect x="'+X0+'" y="'+y+'" width="'+U.f1(Math.max(1,X(att)-X0))+'" height="20" rx="2" style="fill:var(--c3)"/>';
+    h+=U.txt(Math.max(X(att),X0+1)+6,y+15,(att/1e12>=1?(att/1e12).toFixed(1):(att/1e12).toFixed(3))+' TFLOP/s',ST.tick);
+    h+=U.txt(X0,y+40,'roof: '+R.name+'; ridge '+(R.p/R.bw).toFixed(1)+' FLOP/B; this tile '+I.toFixed(2)+' FLOP/B',ST.small);
+    $('kS').innerHTML=h;
+    $('kI').textContent=U.comma(inv)+' / '+U.comma(L.inv);
+    $('kM').textContent=U.comma(shm)+' / '+U.comma(L.shm);
+    $('kOk').textContent=ok?'yes':'no';
+    $('kX').textContent=I.toFixed(2);
+    $('kA').textContent=att>=1e12?(att/1e12).toFixed(1):(att/1e12).toFixed(3);
+  }
+  document.querySelectorAll('[data-kl]').forEach(function(x){x.addEventListener('click',function(){
+    lim=x.getAttribute('data-kl'); U.onBtn('data-kl',lim); draw();});});
+  document.querySelectorAll('[data-kr]').forEach(function(x){x.addEventListener('click',function(){
+    roof=x.getAttribute('data-kr'); U.onBtn('data-kr',roof); draw();});});
+  $('kB').addEventListener('input',draw);
+  U.predict('data-p4','pv4',{
+    a:'<b>No.</b> A 32-tile needs 1,024 invocations, eight times the guaranteed 128. The largest square that fits is 11&times;11 = 121, at <b>2.75 FLOP/B</b>.',
+    b:'<b>Not guaranteed.</b> 16&times;16 = 256 invocations against a minimum of 128. The source&rsquo;s tile runs on most GPUs and is promised on none. The largest guaranteed is 11, at <b>2.75</b>.',
+    c:'<b>Right.</b> 11&sup2; = 121 &le; 128 &lt; 144 = 12&sup2;, and 11/4 = 2.75 FLOP/B: 9.07 TFLOP/s on the reference GPU, against 13.2 for the 16-tile it cannot promise.',
+    d:'<b>It fits, but it is not the largest.</b> 8&times;8 = 64 invocations; 11&times;11 = 121 also fits, at <b>2.75 FLOP/B</b>.'});
   draw();
 })();
 </script>
