@@ -908,3 +908,387 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
   </div>
 </section>
 
+<section id="var">
+  <div class="col">
+    <div class="sechead"><span class="secnum">03</span><h2>Value at risk fails like a series system; expected shortfall is a centroid</h2>
+      <a class="srcref" href="@SRC@chapter%2019%20-%20applied%20AI/01.%20AI%20for%20finance.md" target="_blank" rel="noopener">src 19/01. finance &#8599;</a>
+    </div>
+    <p>
+      The fourth finance bullet names value at risk, expected shortfall and Monte Carlo
+      simulation. Let \(L\) be the loss on a position over some horizon, a random variable.
+    </p>
+    <dl class="kv">
+      <dt>VaR<sub>&alpha;</sub></dt><dd>The \(\alpha\)-quantile of \(L\): the smallest loss that is exceeded with probability at most \(1-\alpha\). A 95% VaR of 50 says &ldquo;on 95% of days we lose 50 or less&rdquo;.</dd>
+      <dt>ES<sub>&alpha;</sub></dt><dd>Expected shortfall: the average loss over the worst \(1-\alpha\) of outcomes. Precisely, the mean of the quantile function over \((\alpha, 1)\), which also handles losses that come in lumps.</dd>
+    </dl>
+    <p>
+      VaR is a percentile limit, the same kind of number as a tolerance limit set at a
+      percentile of a process. Expected shortfall is a section property.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: expected shortfall is the centroid of the tail</div>
+      <p style="margin-bottom:0">
+        Sheet 04 &sect;01 showed that a mean is a centroid. ES is the mean of the loss
+        distribution restricted to its tail, so it is the centroid of the tail area,
+        \(\int_{\text{tail}} x f(x)\,dx \big/ \int_{\text{tail}} f(x)\,dx\). For a normal loss,
+        VaR<sub>99</sub> is \(2.326\sigma\), and the centroid beyond it, computed by
+        integrating the area, is \(2.665\sigma\), equal to the closed form
+        \(\varphi(z)/(1-\alpha)\) (<code>[Ch19 s03]</code>). VaR says where the tail
+        starts; ES says where its mass sits. ES<sub>97.5</sub> works out at \(2.338\sigma\),
+        almost exactly VaR<sub>99</sub>, a pairing reported in banking regulation.
+      </p>
+    </div>
+    <h3>The counterexample is a reliability calculation</h3>
+    <p>
+      A risk measure ought to be <b>subadditive</b>: putting two positions together should
+      never be riskier than the two measured separately,
+      \(\rho(X+Y) \le \rho(X) + \rho(Y)\). Otherwise it penalises diversification, and a
+      firm could lower its reported risk by splitting into two firms. VaR fails this. Two
+      loans, each losing 100 with probability 4%, independently:
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Exact loss distributions at the 95% level (<code>[Ch19 s03]</code>).</caption>
+      <thead><tr><th></th><th>Outcomes</th><th class="mono">VaR<sub>95</sub></th><th class="mono">ES<sub>95</sub></th></tr></thead>
+      <tbody>
+        <tr><td>One loan</td><td>0 with 96%, 100 with 4%</td><td class="mono">0</td><td class="mono">80</td></tr>
+        <tr><td>Each loan, summed</td><td>&mdash;</td><td class="mono">0 + 0 = 0</td><td class="mono">80 + 80 = 160</td></tr>
+        <tr><td>Both loans held together</td><td>0 with 92.16%, 100 with 7.68%, 200 with 0.16%</td><td class="mono">100</td><td class="mono">103.2</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      Each loan alone loses something only 4% of the time, inside the 5% VaR ignores, so its
+      VaR is zero. Together, something is lost 7.84% of the time, outside the 5%, so the VaR
+      jumps to 100. Expected shortfall goes from 160 to 103.2: it falls, as a sensible measure
+      should.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: &ldquo;something is lost&rdquo; is a series system</div>
+      <p>
+        The probability that at least one of \(n\) independent loans defaults is
+        \(1 - (1-p)^n\). That is Sheet 05 &sect;03&rsquo;s series reliability, read as a
+        failure: the portfolio has a loss if loan 1 <em>or</em> loan 2 defaults, as a
+        series system fails if any block fails. VaR at 95% is a pass&ndash;fail test of that
+        probability against 5%. It is an assembly made of two parts that each pass a 5%
+        reject limit while the assembly does not. With \(p = 4\%\) the second loan tips it; with
+        \(p = 1\%\) it takes six, since \(1-0.99^5 = 0.049\) and \(1-0.99^6 = 0.059\)
+        (<code>[Ch19 s03]</code>).
+      </p>
+      <p style="margin-bottom:0">
+        The test looks only at whether the tail probability crosses the line, never at how
+        large the losses beyond it are. That is the whole defect, and ES, which averages over
+        the tail, does not have it.
+      </p>
+    </div>
+    <p>
+      When does VaR behave? When losses are jointly normal, VaR is \(z\sigma\), and the
+      standard deviation of a sum never exceeds the sum of standard deviations; 2,000 random
+      normal pairs never broke subadditivity (<code>[Ch19 s03]</code>). So the failure lives
+      exactly where Sheet 04 &sect;05&rsquo;s central limit theorem does not reach: lumpy,
+      rare, all-or-nothing losses such as defaults, which are the ones a risk number exists to
+      catch. ES is subadditive for every joint distribution (reported as a theorem). On 6,000
+      random dependent, lumpy pairs generated here, VaR<sub>95</sub> failed 16 times and ES
+      never (<code>[Ch19 s03]</code>).
+    </p>
+    <h3>Monte Carlo VaR is a sampling plan with a sparse tail</h3>
+    <p>
+      For a real portfolio the loss distribution has no closed form, so it is simulated:
+      draw \(N\) scenarios, compute each loss, sort, and read off the \(\alpha\) point. The
+      error of that estimate has a formula you have half met already:
+    </p>
+  </div>
+  <div class="mathbox col">$$\operatorname{SD}\!\left(\widehat{\text{VaR}}_\alpha\right) \approx \frac{\sqrt{\alpha(1-\alpha)/N}}{f(\text{VaR}_\alpha)}$$</div>
+  <div class="col">
+    <p>
+      The numerator is the binomial standard error of an estimated fraction, the one you use
+      to judge a defect rate from a sample (Sheet 04 &sect;&sect;04&ndash;06). Dividing by the
+      density \(f\) at the quantile converts an error in probability into an error in loss,
+      and in the tail the density is small. For a normal loss at 99% with 10,000 scenarios the
+      formula gives \(0.0373\sigma\); 2,000 repeated simulations measured \(0.0379\sigma\).
+      The mean of the same samples is known to \(0.0099\sigma\), so matching its precision at
+      the 99% point takes 13.9 times as many scenarios (<code>[Ch19 s03]</code>). Only 100 of
+      the 10,000 scenarios lie in the tail.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same economics: Monte Carlo tolerance analysis</div>
+      <p style="margin-bottom:0">
+        A statistical tolerance analysis by simulation, building 10,000 virtual assemblies and
+        counting those out of specification, estimates a 1% reject rate with a standard error of
+        0.000995, a tenth of the rate itself (<code>[Ch19 s03]</code>). Risk managers and
+        tolerance analysts face the same arithmetic: the events you care about are rare, so the
+        samples that inform you are few.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks</div>
+      <p style="margin-bottom:0">
+        Every number in this section assumes the loss distribution is known, or that the
+        simulation draws from the right one. Loans default together in a recession; the
+        independence behind \(1-(1-p)^n\) is Sheet 05 &sect;09&rsquo;s common-cause failure
+        in another industry. Getting the joint distribution right is the hard part of real risk
+        modelling and is not attempted here. Credit scoring, the bullet&rsquo;s last item, is a
+        classification problem in the sense of Sheet 06 and is not treated.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Split the exposure</div><div class="lab-tag">Predict, then split</div></div>
+    <div class="predict">
+      <div class="predict-h">Predict</div>
+      <p>
+        A loan of 100 to one borrower who defaults with probability 4% has a 95% VaR of zero.
+        Split it into two loans of 50 to independent borrowers with the same default
+        probability. What is the 95% VaR now?
+      </p>
+      <div class="opts">
+        <button class="pbtn" data-p3="a" type="button">Still 0</button>
+        <button class="pbtn" data-p3="b" type="button">50</button>
+        <button class="pbtn" data-p3="c" type="button">100</button>
+        <button class="pbtn" data-p3="d" type="button">4, the expected loss</button>
+      </div>
+      <div class="pverdict" id="pv3"></div>
+    </div>
+    <svg class="stage" id="vS" viewBox="0 0 560 260" role="img"
+         aria-label="The loss distribution of the split loan on a logarithmic probability axis, with the VaR and expected shortfall marked">
+      <g id="vGrid"></g><g id="vBars"></g><g id="vMarks"></g><g id="vLab"></g>
+    </svg>
+    <div class="legend">
+      <span class="lg"><i style="background:var(--c2)"></i>probability of each loss</span>
+      <span class="lg"><i style="background:var(--c1)"></i>VaR</span>
+      <span class="lg"><i style="background:var(--c4)"></i>expected shortfall</span>
+    </div>
+    <div class="ctl">
+      <label for="vN">Borrowers <span class="gk">n</span></label>
+      <input type="range" id="vN" min="1" max="10" step="1" value="2">
+      <span class="ro-v" id="vNv" style="min-width:48px">2</span>
+    </div>
+    <div class="ctl">
+      <label for="vP">Default probability</label>
+      <input type="range" id="vP" min="0.5" max="10" step="0.5" value="4">
+      <span class="ro-v" id="vPv" style="min-width:48px">4.0%</span>
+    </div>
+    <div class="ctl">
+      <label for="vA">Confidence <span class="gk">&alpha;</span></label>
+      <input type="range" id="vA" min="90" max="99.5" step="0.5" value="95">
+      <span class="ro-v" id="vAv" style="min-width:48px">95.0%</span>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">VaR, split<br>portfolio</div><div class="ro-v b" id="vV">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Sum of the<br>pieces&rsquo; VaR</div><div class="ro-v b" id="vVs">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">ES, split<br>portfolio</div><div class="ro-v a" id="vE">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Sum of the<br>pieces&rsquo; ES</div><div class="ro-v a" id="vEs">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">P(any loss),<br>series</div><div class="ro-v c" id="vPa">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">P(total loss),<br>parallel</div><div class="ro-v c" id="vPt">&mdash;</div></div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    A total exposure of 100 is divided equally among \(n\) independent borrowers. The bars are
+    the exact binomial probabilities of each possible loss, on a logarithmic axis so that the
+    rare large losses stay visible. The sum of the pieces&rsquo; VaR is also the VaR of lending
+    the whole 100 to one borrower, so each pair of readouts compares concentrating with
+    splitting. At the opening setting VaR rises from 0 to 50 when the loan is split, the answer
+    to the prediction, while ES falls from 80.0 to 51.6. Raise the number of borrowers and the
+    chance of losing everything falls as \(p^n\), the parallel-redundancy formula, while the
+    chance of losing something rises as \(1-(1-p)^n\). Set the default probability above
+    \(1-\alpha\) and both measures agree that splitting helps; the paradox needs a default
+    probability inside the tail VaR ignores.
+  </div>
+</section>
+
+<section id="qubit">
+  <div class="col">
+    <div class="sechead"><span class="secnum">04</span><h2>A qubit, a gate, and a Mohr&rsquo;s circle</h2>
+      <a class="srcref" href="@SRC@chapter%2020%20-%20bleeding%20edge%20AI/01.%20quantum%20machine%20learning.md" target="_blank" rel="noopener">src 20/01. quantum ML &#8599;</a>
+    </div>
+    <p>
+      The first two quantum bullets list qubits, superposition, entanglement, measurement and
+      the standard gates. Take quantum mechanics&rsquo; rules as given, since they are
+      postulates rather than things this page can derive. A <b>qubit</b>&rsquo;s state is a
+      pair of amplitudes \((a_0, a_1)\), complex numbers with
+      \(|a_0|^2 + |a_1|^2 = 1\). <b>Measuring</b> it gives 0 with probability \(|a_0|^2\) and 1
+      with probability \(|a_1|^2\), and leaves the qubit in the state it reported (the Born
+      rule). <b>Superposition</b> means both amplitudes are non-zero. A <b>gate</b> is a
+      \(2\times2\) unitary matrix, \(U^{\dagger}U = I\), the complex version of Sheet 02
+      &sect;04&rsquo;s orthogonal matrix, and for the same reason it preserves length: the
+      probabilities still sum to 1 after any gate, checked to \(10^{-15}\) over 500 random
+      two-qubit gates (<code>[Ch20 s04]</code>).
+    </p>
+    <p>
+      Several standard gates are real, and then they are matrices you have used as direction
+      cosine matrices:
+    </p>
+  </div>
+  <div class="mathbox col">$$R_y(\theta) = \begin{bmatrix}\cos\frac{\theta}{2} & -\sin\frac{\theta}{2}\\ \sin\frac{\theta}{2} & \cos\frac{\theta}{2}\end{bmatrix}, \quad H = \frac{1}{\sqrt2}\begin{bmatrix}1 & 1\\ 1 & -1\end{bmatrix}, \quad X = \begin{bmatrix}0 & 1\\ 1 & 0\end{bmatrix}, \quad Z = \begin{bmatrix}1 & 0\\ 0 & -1\end{bmatrix}$$</div>
+  <div class="col">
+    <p>
+      \(R_y(\theta)\) is a rotation through \(\theta/2\). The Hadamard gate \(H\) is a
+      reflection about the line at 22.5&deg;, with determinant \(-1\) and \(H^2 = I\); \(X\)
+      reflects about 45&deg; and \(Z\) about the horizontal (<code>[Ch20 s04]</code>). So
+      restrict the amplitudes to real numbers for a moment. The state is a unit vector
+      \(\psi = (\cos a, \sin a)\) in a plane, and real gates turn or mirror it.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: a real qubit state is a uniaxial stress</div>
+      <p>
+        Form the density matrix \(\rho = \psi\psi^{\mathsf T}\), the object quantum mechanics
+        uses to compute every probability:
+      </p>
+      <div class="mathbox">$$\rho = \begin{bmatrix}\cos^2 a & \cos a\sin a\\ \cos a\sin a & \sin^2 a\end{bmatrix}$$</div>
+      <p>
+        This is the stress tensor of a unit uniaxial tension along the direction \(a\). Then
+        the probability of the outcome along a direction \(\beta\) is
+        \(n_\beta^{\mathsf T}\rho\,n_\beta\), which is the normal stress on the plane whose
+        normal is at \(\beta\):
+      </p>
+      <div class="mathbox">$$P(\beta) = \sigma_x\cos^2\beta + \sigma_y\sin^2\beta + 2\tau_{xy}\sin\beta\cos\beta = \cos^2(a-\beta)$$</div>
+      <p style="margin-bottom:0">
+        The Born rule for a real state is the stress-transformation formula, to \(10^{-16}\)
+        over 1,000 random states and directions. That the two outcomes of any measurement have
+        probabilities summing to 1 is the first stress invariant,
+        \(\sigma_x + \sigma_y = \operatorname{tr}\rho = 1\) (<code>[Ch20 s04]</code>).
+      </p>
+    </div>
+    <p>
+      Draw Mohr&rsquo;s circle for \(\rho\). A uniaxial stress has its circle through the
+      origin: centre \(\tfrac12\), radius \(\tfrac12\), and the point for the \(x\) face at
+      angle \(2a\). Physicists draw a qubit on the <b>Bloch sphere</b>, whose coordinates are
+      \(x = 2\operatorname{Re}(a_0^{*}a_1)\), \(y = 2\operatorname{Im}(a_0^{*}a_1)\),
+      \(z = |a_0|^2 - |a_1|^2\). For a real state, \(y = 0\) and
+      \((x, z) = (\sin 2a, \cos 2a)\), which is exactly twice the Mohr point measured from the
+      centre (<code>[Ch20 s04]</code>). The great circle of the Bloch sphere that real states
+      live on is Mohr&rsquo;s circle of the density matrix, drawn at double size.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Both diagrams double the angle, for the same reason</div>
+      <p>
+        Sheet 12 &sect;21 explained Mohr&rsquo;s factor of 2: the stress is quadratic in the
+        direction vector, \(\sigma = n n^{\mathsf T}\) for a uniaxial state, and a quadratic
+        doubles angles. The density matrix is quadratic in the amplitudes in the same way. So
+        the states \(|0\rangle\) and \(|1\rangle\), at 90&deg; as amplitude vectors, sit at
+        opposite ends of the Bloch circle, as two principal planes at 90&deg; sit at opposite
+        ends of Mohr&rsquo;s circle. A phrase you may meet, that the Bloch sphere
+        <em>halves</em> angles where Mohr&rsquo;s circle doubles them, has the direction wrong:
+        both diagrams double. What is halved is the angle inside the gate&rsquo;s matrix.
+        \(R_y(\theta)\) turns the amplitude vector by \(\theta/2\) and moves the Bloch point by
+        \(\theta\), exactly as turning a stress element by \(\theta/2\) moves its Mohr point
+        by \(\theta\) (<code>[Ch20 s04]</code>).
+      </p>
+      <p style="margin-bottom:0">
+        Hence \(R_y(360^\circ) = -I\): a full turn of the Bloch point flips the sign of both
+        amplitudes, and changes no density matrix and no probability. Turning a stress element
+        through 180&deg; does the same to its direction vector, \(n \to -n\), and nothing to
+        the stress. It takes \(R_y(720^\circ)\) to return the amplitudes to where they began.
+      </p>
+    </div>
+    <p>
+      Sheet 12 &sect;21 put it in the language of labels: an object of label \(\ell\) picks up
+      \(\ell\phi\) of phase when rotated by \(\phi\), with a scalar at 0, a vector at 1 and the
+      stress deviator at 2. A qubit sits half a step below the bottom of that table. The gate
+      that turns the Bloch sphere about its \(z\) axis by \(\phi\) multiplies the two
+      amplitudes by \(e^{-i\phi/2}\) and \(e^{+i\phi/2}\) (<code>[Ch20 s04]</code>): the label is
+      \(\tfrac12\). That is exact, and it is as far as the correspondence goes. Sheet 12&rsquo;s
+      labels were whole numbers because they describe tensors built from ordinary vectors, and
+      no such tensor has label \(\tfrac12\); that is why a full turn can change a sign.
+    </p>
+    <p>
+      Mixtures carry over too. A <b>mixed</b> state, a qubit that is in one state or another
+      with some probabilities, has a density matrix that is a biaxial stress, and the length
+      of its Bloch vector is \((\sigma_1 - \sigma_2)/(\sigma_1 + \sigma_2)\), the Mohr diameter
+      over the trace (<code>[Ch20 s04]</code>). The completely uncertain qubit, \(\rho = I/2\),
+      is a hydrostatic stress: Mohr&rsquo;s circle shrinks to a point at the centre of the
+      Bloch sphere.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks: the third axis, and the count</div>
+      <p>
+        <b>Phase.</b> Real amplitudes reach only the \(x\)&ndash;\(z\) circle. Complex ones fill
+        the sphere, and the \(y\) axis comes from the imaginary part of \(\rho\), which a stress
+        tensor does not have. The state \((1, i)/\sqrt2\), made by \(H\) and then the phase gate
+        \(S = \operatorname{diag}(1, i)\), is a pure state on the \(y\) axis; yet the real part
+        of its density matrix is \(I/2\), so its &ldquo;Mohr&rsquo;s circle&rdquo; is a point,
+        identical to the completely uncertain qubit&rsquo;s (<code>[Ch20 s04]</code>). Relative
+        phase is what quantum interference is made of (reported), and the analogy is blind to
+        it.
+      </p>
+      <p>
+        <b>More qubits.</b> Two qubits have 4 amplitudes and \(n\) qubits have \(2^n\), one for
+        every string of outcomes. Storing them takes 16 bytes each: 16 GiB at 30 qubits, 16 PiB
+        at 50 (<code>[Ch20 s04]</code>). No section property grows like that. Entangled states,
+        the ones that cannot be written as one amplitude pair per qubit, live in that space and
+        have no counterpart on this page.
+      </p>
+      <p style="margin-bottom:0">
+        <b>One shot is one bit.</b> A measurement returns 0 or 1, not a probability.
+        Probabilities are estimated from repeated runs, with Sheet 04&rsquo;s binomial error:
+        \(\sqrt{0.25/1000} = 0.0158\) at \(p = 0.5\) after 1,000 shots. &sect;05 turns that into
+        a cost.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">A qubit on Mohr&rsquo;s circle</div><div class="lab-tag">Predict, then apply gates</div></div>
+    <div class="predict">
+      <div class="predict-h">Predict</div>
+      <p>
+        A gate takes \(|0\rangle\) to \(|1\rangle\), half a turn round the Bloch circle.
+        Through what angle did it turn the amplitude vector?
+      </p>
+      <div class="opts">
+        <button class="pbtn" data-p4="a" type="button">360&deg;</button>
+        <button class="pbtn" data-p4="b" type="button">180&deg;</button>
+        <button class="pbtn" data-p4="c" type="button">90&deg;</button>
+        <button class="pbtn" data-p4="d" type="button">45&deg;</button>
+      </div>
+      <div class="pverdict" id="pv4"></div>
+    </div>
+    <svg class="stage" id="qS" viewBox="0 0 560 290" role="img"
+         aria-label="Left: the real amplitude vector and a measurement direction in the amplitude plane. Right: the Mohr's circle of the density matrix, which is the Bloch circle at half size, with the state point at twice the amplitude angle.">
+      <g id="qL"></g><g id="qR"></g>
+    </svg>
+    <div class="legend">
+      <span class="lg"><i style="background:var(--c1)"></i>state</span>
+      <span class="lg"><i style="background:var(--c2)"></i>measurement direction</span>
+    </div>
+    <div class="ctl">
+      <label for="qA">Amplitude angle <span class="gk">a</span></label>
+      <input type="range" id="qA" min="-180" max="180" step="1" value="30">
+      <span class="ro-v" id="qAv" style="min-width:56px">30&deg;</span>
+    </div>
+    <div class="ctl">
+      <label for="qB">Measurement direction <span class="gk">&beta;</span></label>
+      <input type="range" id="qB" min="0" max="180" step="1" value="0">
+      <span class="ro-v" id="qBv" style="min-width:56px">0&deg;</span>
+    </div>
+    <div class="ctl">
+      <button class="btn" data-qg="ry90" type="button">R<sub>y</sub>(90&deg;)</button>
+      <button class="btn" data-qg="h" type="button">Hadamard</button>
+      <button class="btn" data-qg="ry360" type="button">R<sub>y</sub>(360&deg;)</button>
+      <button class="btn" data-qg="reset" type="button">Reset</button>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Amplitudes<br>(<span class="gk">a&#8320;, a&#8321;</span>)</div><div class="ro-v b" id="qAmp">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Bloch angle<br>2<span class="gk">a</span></div><div class="ro-v b" id="qBl">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">P(<span class="gk">&beta;</span>), Born<br>(<span class="gk">n&middot;&psi;</span>)&sup2;</div><div class="ro-v a" id="qP">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Normal stress,<br>Mohr formula</div><div class="ro-v a" id="qSn">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">P(<span class="gk">&beta;</span>) + P(<span class="gk">&beta;</span>+90&deg;)<br>= trace</div><div class="ro-v c" id="qSum">&mdash;</div></div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    Left, the amplitude plane: the state is a unit vector at angle \(a\), and its probability of
+    being found along the measurement direction \(\beta\) is the square of its projection. Right,
+    Mohr&rsquo;s circle of \(\rho\): the state point sits at \(2a\), the measurement plane at
+    \(2\beta\), and the normal stress there is the probability. At the opening state, 30&deg;,
+    the probability of 0 is 0.750 by either route. Press <b>R<sub>y</sub>(90&deg;)</b> twice from
+    \(a = 0\): each press turns the amplitude vector 45&deg; and the Mohr point 90&deg;, and after
+    two presses the state is \(|1\rangle\), 180&deg; round the circle and 90&deg; in the
+    amplitude plane, the answer to the prediction. <b>R<sub>y</sub>(360&deg;)</b> flips both
+    amplitudes&rsquo; signs and moves nothing on the right. <b>Hadamard</b> mirrors the vector in
+    the dashed 22.5&deg; line, which swaps the circle&rsquo;s top and right.
+  </div>
+</section>
+
