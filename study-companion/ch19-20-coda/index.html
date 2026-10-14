@@ -462,7 +462,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
   </div>
   <div class="col">
     <p>
-      Nine of the 33 bullets are touched, six of them properly. That is a small fraction, and
+      Ten of the 33 bullets are touched, and six of them carry a section. That is a small fraction, and
       it is the right one: each of the six turned out to be something you have already
       computed under another name, and most of the correspondences are identities rather than
       likenesses. The price of the method is &sect;09, which is long.
@@ -1652,4 +1652,428 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     s, so \(u = 1.526\) gives the 63.67 s of the worked problem above.
   </div>
 </section>
+
+<section id="worked">
+  <div class="col">
+    <div class="sechead"><span class="secnum">07</span><h2>Worked example: one critical casting, two suppliers</h2>
+      <span class="srcref nolink" title="Written for this sheet; not in the source chapters">written for this sheet</span>
+    </div>
+    <p>
+      A plant buys a critical casting. Supplier A&rsquo;s monthly delivery falls short of the
+      order by a random amount with a standard deviation of 8% of what was ordered from it;
+      supplier B&rsquo;s by 12%. The two shortfalls are correlated at 0.3, since both foundries
+      buy sand from the same pit. Separately, each supplier has a 4% chance in a year of a
+      total stoppage, a fire or a strike, independently of the other. Two questions. How
+      should the order be split to make the monthly shortfall as steady as possible? And
+      against a total stoppage, is dual-sourcing safer than buying everything from A?
+    </p>
+    <h3>Solved as the plant engineer</h3>
+    <p>
+      <b>Steadiness.</b> With a fraction \(w\) ordered from A, the shortfall is a weighted stack
+      of two correlated deviations, Sheet 04 &sect;05 with the covariance term kept:
+      \(\sigma^2 = w^2\sigma_A^2 + (1-w)^2\sigma_B^2 + 2w(1-w)\rho\sigma_A\sigma_B\). Set its
+      derivative to zero:
+    </p>
+  </div>
+  <div class="mathbox col">$$w = \frac{\sigma_B^2 - \rho\sigma_A\sigma_B}{\sigma_A^2 + \sigma_B^2 - 2\rho\sigma_A\sigma_B} = \frac{144 - 28.8}{64 + 144 - 57.6} = 0.766, \qquad \sigma = 7.467\%$$</div>
+  <div class="col">
+    <p>
+      Order 76.6% from A. The gain over A alone is small, 7.47% against 8%, and an even split
+      is worse than A alone, 8.15% (<code>[Ch19 s07]</code>): with unequal suppliers and a
+      shared cause, splitting evenly adds B&rsquo;s larger wobble faster than it averages
+      anything away.
+    </p>
+    <p>
+      <b>Stoppage.</b> Draw the reliability block diagram. &ldquo;No castings at all&rdquo;
+      needs both suppliers down: a parallel system, probability \(0.04^2 = 0.0016\), against
+      0.04 for a single source, 25 times better. &ldquo;Some castings missing&rdquo; needs either
+      down: a series system, \(1 - 0.96^2 = 0.0784\), nearly twice the single source&rsquo;s
+      0.04. Dual sourcing trades a rare catastrophe for a more frequent partial loss, at the
+      same expected loss of 4% of supply.
+    </p>
+    <h3>Solved as the risk manager</h3>
+    <p>
+      <b>Steadiness</b> is the minimum-variance portfolio of &sect;02, with covariance
+      \(\Sigma = \begin{psmallmatrix}64 & 28.8\\ 28.8 & 144\end{psmallmatrix}\):
+      \(w^\ast = \Sigma^{-1}\mathbf{1}/(\mathbf{1}^{\mathsf T}\Sigma^{-1}\mathbf{1})\) gives
+      0.766 and 0.234, the same numbers, because it is the same calculation. <b>Stoppage</b> is
+      a tail question, so the report gives VaR and ES at 95%, with the loss measured as the
+      percentage of supply lost:
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Loss of supply in a year from a total stoppage, exact distributions (<code>[Ch19 s07]</code>).</caption>
+      <thead><tr><th>Sourcing</th><th class="mono">Expected loss</th><th class="mono">VaR<sub>95</sub></th><th class="mono">ES<sub>95</sub></th><th class="mono">P(lose all)</th></tr></thead>
+      <tbody>
+        <tr><td>All from A</td><td class="mono">4.00%</td><td class="mono">0</td><td class="mono">80.0%</td><td class="mono">0.0400</td></tr>
+        <tr><td>Split 50 / 50</td><td class="mono">4.00%</td><td class="mono">50%</td><td class="mono">51.6%</td><td class="mono">0.0016</td></tr>
+        <tr><td>Split 76.6 / 23.4 (steadiest)</td><td class="mono">4.00%</td><td class="mono">23.4%</td><td class="mono">66.7%</td><td class="mono">0.0016</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      Read the VaR column alone and single sourcing is risk-free at 95%, while either split
+      carries a risk of 23&ndash;50% of supply. Read ES, or the engineer&rsquo;s block
+      diagram, and the single source is the dangerous one. VaR sees only that &ldquo;some
+      loss&rdquo; now happens 7.84% of the time, more than 5%; it never looks at the 4% chance of
+      losing everything. ES is lowest at the even split, 51.6% (<code>[Ch19 s07]</code>).
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same arithmetic, and two answers that are both right</div>
+      <p style="margin-bottom:0">
+        The engineer&rsquo;s stack-up and the manager&rsquo;s portfolio formula are one
+        calculation; the block diagram and the tail measures are another. What the example
+        adds is that the two questions have different answers: 76.6 / 23.4 is the steadiest
+        split and 50 / 50 the one that best protects against a stoppage. No formula chooses
+        between them. Which risk the plant can least afford, a wobbling line or a stopped
+        one, is a judgement, and a risk number that silently answers it for you, as VaR does
+        here, is the dangerous kind.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="breaks">
+  <div class="col">
+    <div class="sechead"><span class="secnum">08</span><h2>Where it breaks, across the coda</h2>
+      <span class="srcref nolink" title="Summary of the whole sheet">whole sheet</span>
+    </div>
+    <p>Every correspondence on this sheet, and the place it stops being true.</p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>The coda&rsquo;s bridges and their edges.</caption>
+      <thead><tr><th>You know</th><th>It is</th><th>Where it breaks</th></tr></thead>
+      <tbody>
+        <tr><td>A thermocouple&rsquo;s lag</td><td>Exponential smoothing (&sect;01)</td><td>The flat forecast lags a trend by slope \(\times(1-\alpha)/\alpha\)</td></tr>
+        <tr><td>A steady-state Kalman gain</td><td>The best \(\alpha\) (&sect;01)</td><td>Optimal only for a random walk in white noise; real returns have heavy tails</td></tr>
+        <tr><td>Lagrange; MVDR</td><td>Minimum variance (&sect;02)</td><td>\(\Sigma\) is estimated: 1.49&times; the true minimum at 20 assets and 60 months</td></tr>
+        <tr><td>RSS stack-up</td><td>Diversification (&sect;02)</td><td>Correlation leaves a floor, \(\sigma\sqrt\rho\)</td></tr>
+        <tr><td>A dummy gauge</td><td>A short position (&sect;02)</td><td>Near \(\rho = 1\) the offsetting weights grow without bound</td></tr>
+        <tr><td>Series reliability</td><td>VaR&rsquo;s failure (&sect;03)</td><td>Assumes independent defaults; recessions correlate them</td></tr>
+        <tr><td>A centroid</td><td>Expected shortfall (&sect;03)</td><td>Needs the tail&rsquo;s shape, the least-known part of any distribution</td></tr>
+        <tr><td>Estimating a defect rate</td><td>Monte Carlo VaR (&sect;03)</td><td>Sparse tails: 13.9&times; the samples at 99%</td></tr>
+        <tr><td>A direction cosine matrix</td><td>A real gate (&sect;04)</td><td>Complex gates have no real counterpart</td></tr>
+        <tr><td>A uniaxial stress</td><td>A real qubit state (&sect;04)</td><td>Phase, the Bloch \(y\) axis, and entanglement have none</td></tr>
+        <tr><td>A central difference</td><td>The parameter-shift rule (&sect;05)</td><td>Exact because each angle enters as one sinusoid; other gate types need more shifts (reported)</td></tr>
+        <tr><td>Sample size from a margin</td><td>The shot cost of a plateau (&sect;05)</td><td>Ten simulated qubits cannot settle the asymptotics</td></tr>
+        <tr><td>Lumped-capacitance heating</td><td>An LIF neuron (&sect;06)</td><td>The reset is a hard nonlinearity, and spikes have no gradient</td></tr>
+        <tr><td>Sheet 06&rsquo;s ReLU</td><td>A firing rate (&sect;06)</td><td>The leak bends it and moves the kink; reset to zero turns it into a staircase</td></tr>
+        <tr><td>A frequency counter</td><td>Rate coding (&sect;06)</td><td>Codes that use spike timing are not counted rates</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="gaps">
+  <div class="col">
+    <div class="sechead"><span class="secnum">09</span><h2>What this coda does not cover</h2>
+      <a class="srcref" href="@SRC@chapter%2019%20-%20applied%20AI/02.%20protein%20design.md" target="_blank" rel="noopener">src 19/02. biology &#8599;</a>
+    </div>
+    <p>
+      Everything below is named in the source outlines and is <b>not</b> treated on this page.
+      Naming it is the honest alternative to a survey built on claims this series could not
+      check. Where a sentence above touched one of these, it was marked reported.
+    </p>
+    <h3>Chapter 19, file 01: AI for finance</h3>
+    <ul>
+      <li>Forecasting beyond exponential smoothing: the rest of the ARIMA family, Prophet, LSTM, the Temporal Fusion Transformer and PatchTST.</li>
+      <li>Algorithmic trading: signal generation, execution algorithms such as TWAP and VWAP, and market microstructure.</li>
+      <li>Portfolio construction beyond mean&ndash;variance: Black&ndash;Litterman and reinforcement-learning portfolio management.</li>
+      <li>Credit scoring.</li>
+      <li>Fraud detection: anomaly detection, graph-based methods and real-time streaming.</li>
+      <li>NLP in finance: sentiment analysis of news and earnings calls, and document understanding.</li>
+      <li>Alternative data: satellite imagery, social media and web scraping.</li>
+      <li>Regulation and ethics: SHAP and LIME explanations, fairness in credit, and compliance.</li>
+    </ul>
+    <h3>Chapter 19, file 02: AI for biology (nothing taken)</h3>
+    <ul>
+      <li>Protein structure prediction: AlphaFold 1, 2 and 3, ESMFold, co-evolutionary analysis and MSA transformers.</li>
+      <li>Protein design: inverse folding (ProteinMPNN), diffusion models for proteins (RFDiffusion) and hallucination.</li>
+      <li>Drug discovery: molecular representations (SMILES strings, graphs), property prediction, virtual screening and docking. Sheet 12&rsquo;s graph networks are the nearest this series comes.</li>
+      <li>Generative chemistry: molecular generation by VAEs, GANs and diffusion, and retrosynthesis prediction.</li>
+      <li>Genomics: DNA sequence models (Enformer, HyenaDNA), variant-effect prediction and CRISPR guide design.</li>
+      <li>Single-cell analysis: scRNA-seq, cell-type clustering and trajectory inference.</li>
+      <li>Medical imaging: radiology (CheXNet), whole-slide pathology and segmentation (nnU-Net).</li>
+      <li>Clinical NLP: medical entity extraction, clinical-trial matching and electronic health records.</li>
+    </ul>
+    <h3>Chapter 20, file 01: quantum machine learning</h3>
+    <ul>
+      <li>Entanglement and multi-qubit gates (CNOT, Toffoli) beyond a unitarity check and the \(2^n\) count; the simulator in &sect;05 uses CZ gates without explaining them.</li>
+      <li>Circuit depth and width as resources.</li>
+      <li>Variational algorithms: VQE, QAOA and variational classifiers.</li>
+      <li>Quantum kernel methods: feature maps and quantum support vector machines.</li>
+      <li>Quantum neural networks as layers, and hybrid classical&ndash;quantum pipelines.</li>
+      <li>The quantum advantage debate: the limits of present noisy devices and the timeline to fault tolerance. Nothing here can be derived, and any date would be stale.</li>
+    </ul>
+    <h3>Chapter 20, file 02: neuromorphic computing</h3>
+    <ul>
+      <li>Biological detail: synaptic plasticity and temporal coding.</li>
+      <li>Spike-timing-dependent plasticity (STDP), and how surrogate gradients are actually built.</li>
+      <li>Neuromorphic hardware: Intel Loihi 2, IBM TrueNorth, SpiNNaker and BrainScaleS.</li>
+      <li>Event-driven computation and its energy efficiency, which is the field&rsquo;s main claim and is reported, not derived, here.</li>
+      <li>Event cameras (DVS) and sparse temporal data.</li>
+      <li>Applications: low-power edge inference, robotics and always-on sensing.</li>
+    </ul>
+    <h3>The six empty files</h3>
+    <p>
+      Drug discovery, agentic systems and healthcare (Chapter 19, files 03&ndash;05);
+      datacentres in space, decentralised AI and brain&ndash;machine interfaces (Chapter 20,
+      files 03&ndash;05). Each is a file with no content. This sheet does not guess what they
+      would have said.
+    </p>
+  </div>
+</section>
+
+<section id="recall">
+  <div class="col">
+    <div class="sechead"><span class="secnum">10</span><h2>Question bank</h2>
+      <span class="srcref nolink" title="Covers the whole sheet">whole sheet</span>
+    </div>
+    <p>Twenty-four prompts in three tiers. Answer before opening.</p>
+
+    <div class="gap">
+      <div class="gap-h">Tier 1 &mdash; recall</div>
+      <details class="q"><summary><span class="qn">R1</span><span>Write exponential smoothing as a first-order lag. What are its weights, its gain, and the mean age of its data?</span></summary>
+        <div class="ans"><p>\(s_k = (1-\alpha)s_{k-1} + \alpha x_k\). The weights are \(\alpha(1-\alpha)^j\), its discrete impulse response; they sum to 1, the unit gain; their centroid, the mean age, is \((1-\alpha)/\alpha\).</p></div></details>
+      <details class="q"><summary><span class="qn">R2</span><span>Exponential smoothing is the steady state of which Kalman filter, and what is the best \(\alpha\)?</span></summary>
+        <div class="ans"><p>A random-walk level, \(F = H = 1\), seen through white noise. \(\alpha^\ast = (\sqrt{\lambda^2+4\lambda} - \lambda)/2\) with \(\lambda = q/r\): 0.618 when \(q = r\), and 1 when there is no measurement noise.</p></div></details>
+      <details class="q"><summary><span class="qn">R3</span><span>Give the minimum-variance weights and variance. Which formula from an earlier sheet is it?</span></summary>
+        <div class="ans"><p>\(w^\ast = \Sigma^{-1}\mathbf{1}/(\mathbf{1}^{\mathsf T}\Sigma^{-1}\mathbf{1})\), \(\sigma^2_{\min} = 1/(\mathbf{1}^{\mathsf T}\Sigma^{-1}\mathbf{1})\). Sheet 09&rsquo;s MVDR beamformer with the steering vector all ones, by Sheet 03 &sect;07&rsquo;s Lagrange multiplier.</p></div></details>
+      <details class="q"><summary><span class="qn">R4</span><span>Define VaR and expected shortfall. Which one is a centroid?</span></summary>
+        <div class="ans"><p>VaR<sub>&alpha;</sub> is the \(\alpha\)-quantile of the loss. ES<sub>&alpha;</sub> is the mean loss over the worst \(1-\alpha\) of outcomes, which is the centroid of the tail area.</p></div></details>
+      <details class="q"><summary><span class="qn">R5</span><span>State the standard error of a Monte Carlo VaR and say what each factor does.</span></summary>
+        <div class="ans"><p>\(\sqrt{\alpha(1-\alpha)/N}\,/\,f(\text{VaR}_\alpha)\). The numerator is the binomial error of an estimated fraction; dividing by the density at the quantile turns a probability error into a loss error, and the density is small in the tail.</p></div></details>
+      <details class="q"><summary><span class="qn">R6</span><span>What is the density matrix of the real state \((\cos a, \sin a)\), read as a stress?</span></summary>
+        <div class="ans"><p>\(\psi\psi^{\mathsf T}\), a unit uniaxial tension along \(a\). Its Mohr&rsquo;s circle has centre and radius \(\tfrac12\); the Bloch circle is the same circle at double size.</p></div></details>
+      <details class="q"><summary><span class="qn">R7</span><span>State the parameter-shift rule and say why it is exact.</span></summary>
+        <div class="ans"><p>\(dC/d\theta = [C(\theta+\pi/2) - C(\theta-\pi/2)]/2\). As a function of one angle the cost is a single sinusoid, and a central difference of a sinusoid returns \(\sin h\) times the slope; \(h = \pi/2\) makes the factor 1.</p></div></details>
+      <details class="q"><summary><span class="qn">R8</span><span>Write the LIF interspike interval, and the furnace problem it is.</span></summary>
+        <div class="ans"><p>\(t_{\text{ref}} + \tau\ln\big(u/(u-1)\big)\) with \(u = RI/V_{\text{th}}\). A lumped body heated from \(T_0\) towards \(T_\infty\) reaches \(T_{\text{th}}\) after \(\tau\ln\big((T_\infty-T_0)/(T_\infty-T_{\text{th}})\big)\), and quenching it at \(T_{\text{th}}\) is the reset.</p></div></details>
+    </div>
+
+    <div class="gap">
+      <div class="gap-h">Tier 2 &mdash; apply</div>
+      <details class="q"><summary><span class="qn">A1</span><span>A reading drifts as a random walk with step variance 0.01 and carries noise of variance 1. What smoothing constant, and what moving average removes the same noise?</span></summary>
+        <div class="ans"><p>\(\lambda = 0.01\), so \(\alpha^\ast = 0.0951\). The equal-noise moving average has \((2-\alpha)/\alpha = 20.0\) points.</p></div></details>
+      <details class="q"><summary><span class="qn">A2</span><span>An EWMA chart uses \(\lambda = 0.2\) and \(L = 3\). Where are its steady-state limits?</span></summary>
+        <div class="ans"><p>\(\mu_0 \pm 3\sigma\sqrt{0.2/1.8} = \mu_0 \pm 1.000\sigma\).</p></div></details>
+      <details class="q"><summary><span class="qn">A3</span><span>Assets of 20% and 30% volatility, correlation 0.2. Minimum-variance weights and volatility? Above what correlation is the second asset sold short?</span></summary>
+        <div class="ans"><p>73.6% and 26.4%, volatility 18.06%. Short when \(\rho > 0.2/0.3 = 2/3\); at 0.8 the weight is &minus;23.5%.</p></div></details>
+      <details class="q"><summary><span class="qn">A4</span><span>Twenty-five equally weighted assets, each of volatility \(\sigma\), every pair correlated at 0.3. Portfolio volatility, and the floor?</span></summary>
+        <div class="ans"><p>\(\sigma\sqrt{0.3 + 0.7/25} = 0.573\sigma\). The floor is \(\sigma\sqrt{0.3} = 0.548\sigma\); 400 assets reach 0.549\(\sigma\).</p></div></details>
+      <details class="q"><summary><span class="qn">A5</span><span>Loans each default independently with probability 1%. How many before the 95% VaR of the pool is no longer zero?</span></summary>
+        <div class="ans"><p>Six: \(1 - 0.99^5 = 0.049\) is inside the 5%, \(1 - 0.99^6 = 0.059\) is not. It is series reliability crossing a 5% limit.</p></div></details>
+      <details class="q"><summary><span class="qn">A6</span><span>A real qubit at amplitude angle 30&deg; is measured along 0&deg;. Probability of 0, Bloch angle, and the stress reading?</span></summary>
+        <div class="ans"><p>\(\cos^2 30^\circ = 0.75\). The Bloch point is at 60&deg;. On Mohr&rsquo;s circle of \(\rho\) the plane at 0&deg; carries a normal stress of 0.75, the same number.</p></div></details>
+      <details class="q"><summary><span class="qn">A7</span><span>Ten qubits, one \(R_y\) each, global cost. Gradient variance, and shots per circuit to see a typical gradient?</span></summary>
+        <div class="ans"><p>\(\tfrac18(3/8)^9 = 1.83\times10^{-5}\). About \(1/(8\times1.83\times10^{-5}) = 6{,}819\) shots per circuit, per angle, per step, and 8/3 times more for each added qubit.</p></div></details>
+      <details class="q"><summary><span class="qn">A8</span><span>An LIF neuron with \(\tau = 20\) ms is driven at \(u = 2\). Interval, rate, and the rate without the leak?</span></summary>
+        <div class="ans"><p>\(20\ln 2 = 13.86\) ms, so 72.1 Hz. Without the leak the rate is \(u/\tau = 100\) Hz; the leaky neuron fires at 0.721 of it.</p></div></details>
+    </div>
+
+    <div class="gap">
+      <div class="gap-h">Tier 3 &mdash; judge</div>
+      <details class="q"><summary><span class="qn">J1</span><span>A colleague picked a smoothing constant by eye on last year&rsquo;s data and calls it optimal. Your response?</span></summary>
+        <div class="ans"><p>Optimal for what model? For a random walk in noise the best \(\alpha\) follows from \(q/r\), which can be estimated, or found by minimising one-step error. Then check that the forecast errors are white, Sheet 11&rsquo;s innovation test; if there is a trend, no \(\alpha\) is optimal, because the flat forecast lags it.</p></div></details>
+      <details class="q"><summary><span class="qn">J2</span><span>&ldquo;Diversification is free; just add assets.&rdquo; When does it stop working?</span></summary>
+        <div class="ans"><p>When the common cause dominates. With \(\rho = 0.3\), 25 assets leave 0.573\(\sigma\) and 400 leave 0.549\(\sigma\), against a floor of 0.548\(\sigma\). It is RSS stacking meeting a tool-wear drift: averaging removes only the independent part.</p></div></details>
+      <details class="q"><summary><span class="qn">J3</span><span>An optimiser recommends a large short position. Do you trust it?</span></summary>
+        <div class="ans"><p>A short is legitimate when a correlated asset can cancel risk, like a dummy gauge. But the weights come from an estimated \(\Sigma^{-1}\): with 20 assets and 60 months the optimum carries 1.49 times the true minimum variance on average. Test how much the weights move between sub-periods before believing them, or constrain them.</p></div></details>
+      <details class="q"><summary><span class="qn">J4</span><span>After you split a loan between two borrowers, the risk report&rsquo;s 95% VaR rises from 0 to 50. Did risk rise?</span></summary>
+        <div class="ans"><p>Not in any sense that matters. VaR is not subadditive: the chance of some loss rose past 5%, a series effect, while the chance of losing everything fell from 4% to 0.16%. ES fell from 80 to 51.6. Report ES alongside VaR.</p></div></details>
+      <details class="q"><summary><span class="qn">J5</span><span>&ldquo;The Bloch sphere halves angles where Mohr&rsquo;s circle doubles them.&rdquo; Correct it.</span></summary>
+        <div class="ans"><p>Both diagrams double: orthogonal states sit 180&deg; apart on the Bloch circle as principal planes do on Mohr&rsquo;s. What is halved is the angle inside the gate: \(R_y(\theta)\) turns the amplitudes by \(\theta/2\) and the Bloch point by \(\theta\), as turning a stress element by \(\theta/2\) moves its Mohr point by \(\theta\).</p></div></details>
+      <details class="q"><summary><span class="qn">J6</span><span>Can Mohr&rsquo;s circle stand in for a qubit in general?</span></summary>
+        <div class="ans"><p>No. It covers real amplitudes only, the \(x\)&ndash;\(z\) circle. The pure state \((1, i)/\sqrt2\) has a real density-matrix part of \(I/2\), a Mohr&rsquo;s circle shrunk to a point, indistinguishable from complete uncertainty. Phase, entanglement and the \(2^n\) growth are all outside it.</p></div></details>
+      <details class="q"><summary><span class="qn">J7</span><span>A ten-qubit simulation shows a local cost&rsquo;s gradient variance falling only 0.17 bits per qubit. Has it shown that local costs avoid barren plateaus?</span></summary>
+        <div class="ans"><p>No. It is ten qubits at one depth, and sampling error grows with \(n\). Reported theorems say sufficiently deep circuits plateau for local costs too. What the page does prove is narrower: for the circuit without entanglement, the global cost decays as \((3/8)^n\) and the averaged local cost only as \(1/n^2\).</p></div></details>
+      <details class="q"><summary><span class="qn">J8</span><span>A ReLU network converted to leaky spiking neurons loses accuracy. Name three causes this sheet predicts.</span></summary>
+        <div class="ans"><p>The leak bends the rate curve and moves its kink to \(u = 1\) (0.721 of the intended rate at \(u = 2\)); reset to zero turns rates into a staircase (0.4 fires at 1/3); and too few time steps leave a counting error of about \(1/(2T)\). The derivation says to use non-leaky neurons, reset by subtraction, and enough steps.</p></div></details>
+    </div>
+  </div>
+</section>
+
+<section id="map">
+  <div class="col">
+    <div class="sechead"><span class="secnum">11</span><h2>The map, and the end of the series</h2>
+      <span class="srcref nolink" title="Added material, not in the source chapters">beyond the chapters</span>
+    </div>
+    <p>
+      Every section of this coda was paid for by an earlier sheet. The map draws each debt.
+      The first-order lag sits in the top row with an arrow into each chapter, because it is
+      the one piece of mathematics both chapters turned out to share.
+    </p>
+  </div>
+  <figure class="col">
+    <svg viewBox="0 0 560 380" role="img" style="width:100%; max-width:600px; height:auto; display:block; margin-inline:auto"
+         aria-label="Concept map. A centre column of earlier sheets feeds the coda's sections: the first-order lag and Kalman filter of Sheets 07 and 11 feed section 01, smoothing, in Chapter 19 and section 06, the spiking neuron, in Chapter 20. Lagrange and MVDR from Sheets 03 and 09 and the stack-up and centroid of Sheet 04 feed section 02, minimum variance. Sheet 04 and the series reliability of Sheet 05 feed section 03, VaR. Mohr's circle and the l labels of Sheets 02 and 12 feed section 04, the qubit. Plateaus and sample size from Sheets 03 and 04 feed section 05, barren plateaus.">
+      <defs>
+        <marker id="cmArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M0,1 L9,5 L0,9 z" fill="var(--ink-3)"></path>
+        </marker>
+      </defs>
+      <text class="tkb" x="79" y="16" text-anchor="middle">Chapter 19</text>
+      <text class="tkb" x="280" y="16" text-anchor="middle">from earlier sheets</text>
+      <text class="tkb" x="481" y="16" text-anchor="middle">Chapter 20</text>
+      <g>
+        <rect x="190" y="28" width="180" height="40" rx="3" fill="var(--sheet-2)" stroke="var(--c3)" stroke-width="1.8"></rect>
+        <text class="tkb" x="280" y="44" text-anchor="middle">first-order lag, Kalman</text>
+        <text class="tk" x="280" y="59" text-anchor="middle">Sheets 07 &#167;04, 11 &#167;&#167;09&#8211;10</text>
+        <rect x="190" y="84" width="180" height="40" rx="3" fill="var(--sheet-2)" stroke="var(--ink-3)"></rect>
+        <text class="tkb" x="280" y="100" text-anchor="middle">Lagrange multiplier, MVDR</text>
+        <text class="tk" x="280" y="115" text-anchor="middle">Sheets 03 &#167;07, 09 &#167;19</text>
+        <rect x="190" y="140" width="180" height="40" rx="3" fill="var(--sheet-2)" stroke="var(--ink-3)"></rect>
+        <text class="tkb" x="280" y="156" text-anchor="middle">RSS stack-up, centroid</text>
+        <text class="tk" x="280" y="171" text-anchor="middle">Sheet 04 &#167;&#167;01, 05</text>
+        <rect x="190" y="196" width="180" height="40" rx="3" fill="var(--sheet-2)" stroke="var(--ink-3)"></rect>
+        <text class="tkb" x="280" y="212" text-anchor="middle">series reliability</text>
+        <text class="tk" x="280" y="227" text-anchor="middle">Sheet 05 &#167;03</text>
+        <rect x="190" y="252" width="180" height="40" rx="3" fill="var(--sheet-2)" stroke="var(--ink-3)"></rect>
+        <text class="tkb" x="280" y="268" text-anchor="middle">Mohr&#8217;s circle, &#8467; labels</text>
+        <text class="tk" x="280" y="283" text-anchor="middle">Sheets 02 &#167;04, 12 &#167;21</text>
+        <rect x="190" y="308" width="180" height="40" rx="3" fill="var(--sheet-2)" stroke="var(--ink-3)"></rect>
+        <text class="tkb" x="280" y="324" text-anchor="middle">plateaus, sample size</text>
+        <text class="tk" x="280" y="339" text-anchor="middle">Sheets 03 &#167;08, 04 &#167;08</text>
+      </g>
+      <g>
+        <rect x="8" y="28" width="142" height="40" rx="3" fill="none" stroke="var(--c1)" stroke-width="1.6"></rect>
+        <text class="tkb" x="79" y="44" text-anchor="middle">&#167;01 smoothing</text>
+        <text class="tk" x="79" y="59" text-anchor="middle">best &#945; = Kalman gain</text>
+        <rect x="8" y="112" width="142" height="40" rx="3" fill="none" stroke="var(--c1)" stroke-width="1.6"></rect>
+        <text class="tkb" x="79" y="128" text-anchor="middle">&#167;02 min variance</text>
+        <text class="tk" x="79" y="143" text-anchor="middle">a beamformer</text>
+        <rect x="8" y="196" width="142" height="40" rx="3" fill="none" stroke="var(--c1)" stroke-width="1.6"></rect>
+        <text class="tkb" x="79" y="212" text-anchor="middle">&#167;03 VaR and ES</text>
+        <text class="tk" x="79" y="227" text-anchor="middle">a series system</text>
+        <rect x="410" y="28" width="142" height="40" rx="3" fill="none" stroke="var(--c2)" stroke-width="1.6"></rect>
+        <text class="tkb" x="481" y="44" text-anchor="middle">&#167;06 spiking neuron</text>
+        <text class="tk" x="481" y="59" text-anchor="middle">furnace and quench</text>
+        <rect x="410" y="252" width="142" height="40" rx="3" fill="none" stroke="var(--c2)" stroke-width="1.6"></rect>
+        <text class="tkb" x="481" y="268" text-anchor="middle">&#167;04 qubit</text>
+        <text class="tk" x="481" y="283" text-anchor="middle">a uniaxial stress</text>
+        <rect x="410" y="308" width="142" height="40" rx="3" fill="none" stroke="var(--c2)" stroke-width="1.6"></rect>
+        <text class="tkb" x="481" y="324" text-anchor="middle">&#167;05 barren plateau</text>
+        <text class="tk" x="481" y="339" text-anchor="middle">(3/8) per qubit</text>
+      </g>
+      <g stroke="var(--ink-3)" stroke-width="1.3" fill="none" marker-end="url(#cmArrow)">
+        <line x1="190" y1="48" x2="153" y2="48" stroke="var(--c3)" stroke-width="1.8"></line>
+        <line x1="370" y1="48" x2="407" y2="48" stroke="var(--c3)" stroke-width="1.8"></line>
+        <line x1="190" y1="104" x2="153" y2="126"></line>
+        <line x1="190" y1="160" x2="153" y2="140"></line>
+        <line x1="190" y1="168" x2="153" y2="206"></line>
+        <line x1="190" y1="216" x2="153" y2="216"></line>
+        <line x1="370" y1="272" x2="407" y2="272"></line>
+        <line x1="370" y1="328" x2="407" y2="328"></line>
+      </g>
+      <text class="tk" x="280" y="372" text-anchor="middle">Sheet 18 was the last full sheet. This coda closes the series.</text>
+    </svg>
+    <figcaption><b>Fig. 19.1</b> &mdash; What each section of the coda draws on. The centre column is earlier sheets; left and right are this sheet&rsquo;s sections, by source chapter. The first-order lag (green) is the only box with an arrow into both chapters. Drawn for this sheet.</figcaption>
+  </figure>
+  <div class="col">
+    <h3>Where the series ends</h3>
+    <p>
+      Sheet 01 began with forces as vectors and Mohr&rsquo;s circle as a change of basis. The
+      last derivation in the series puts a qubit on that same circle. In between, nearly every
+      sheet found that a piece of machine learning was a calculation a mechanical engineer had
+      already done: a stiffness matrix, a tolerance stack, a reliability diagram, a servo, a
+      line-balancing heuristic. This coda found it again, in two chapters that were
+      never written.
+    </p>
+    <p>
+      It also found the series&rsquo; most persistent lesson one last time: <b>the bridge is
+      exact up to the point where the subject becomes new, and then it ends</b>. Mohr&rsquo;s
+      circle holds every real qubit state and none of the phase. The furnace holds the
+      neuron&rsquo;s charging and none of its learning. The stack-up holds diversification and
+      none of the estimation. Sheet 07 said this about attention and state-space models; Sheet
+      12 said it about graph attention. It is true of every page in between, and the break boxes
+      are where each page says so.
+    </p>
+    <p>
+      Sheets 15 to 18 turn from mathematics to the engineering of software, hardware, inference
+      and systems. The coda draws on them once, Sheet 17 &sect;08&rsquo;s rounding bias in
+      &sect;02, and does not summarise them. There is no Sheet 21.
+    </p>
+  </div>
+</section>
+
+<section id="provenance">
+  <div class="col">
+    <div class="sechead"><span class="secnum">A</span><h2>Provenance and changes</h2>
+      <span class="srcref nolink" title="Required by Apache-2.0 section 4(b)">licence notice</span>
+    </div>
+    <p>
+      This sheet is a derivative work of <b>chapters 19 and 20 &mdash; applied AI and
+      bleeding-edge AI</b> of the <i>Mathematics, Computer Science and AI Compendium</i>,
+      licensed under Apache&nbsp;2.0. Section&nbsp;4(b) of that licence requires prominent
+      notice of changes. The source is pinned at commit <code>9850ee5</code>; every section
+      chip above links to the file it draws on.
+    </p>
+    <h3>Source material used</h3>
+    <ul>
+      <li><code>chapter 19 / 01. AI for finance.md</code> (10 lines, 8 bullets) &mdash; &sect;&sect;01&ndash;03 and &sect;07</li>
+      <li><code>chapter 19 / 02. protein design.md</code> (10 lines, 8 bullets) &mdash; listed in &sect;09 only</li>
+      <li><code>chapter 20 / 01. quantum machine learning.md</code> (11 lines, 9 bullets) &mdash; &sect;&sect;04&ndash;05</li>
+      <li><code>chapter 20 / 02. neuromorphic computing.md</code> (10 lines, 8 bullets) &mdash; &sect;06</li>
+      <li>Six empty files: <code>19/03. drug discovery.md</code>, <code>19/04. agentic systems.md</code>, <code>19/05. healthcare.md</code>, <code>20/03. datacentres in space.md</code>, <code>20/04. decentralised AI.md</code>, <code>20/05. brain machine interfaces.md</code>. Nothing was taken from them.</li>
+      <li>The source files contain no figures and no code. Fig. 19.1 was drawn for this sheet.</li>
+    </ul>
+    <h3>Changes made</h3>
+    <ul>
+      <li><b>Written from outlines.</b> Every derivation, number and paragraph on this sheet is
+        new: the source supplies only the names of topics. Six of the 33 bullets were chosen
+        for a derivable core, and the rest are named in &sect;09.</li>
+      <li><b>Correspondences added</b> &mdash; exponential smoothing as a sampled first-order lag
+        and as the EWMA chart statistic, with an equal-lag moving average; the optimal smoothing
+        constant as a steady-state Kalman gain; ARIMA(0,1,1) as its error form; the
+        minimum-variance portfolio as an MVDR beamformer, with the multiplier as shadow price;
+        diversification as RSS stack-up and worst-case stacking as unit correlation; short
+        positions as a dummy gauge; VaR&rsquo;s failure of subadditivity as series reliability;
+        expected shortfall as a tail centroid; Monte Carlo VaR error as a sampling-plan error; a
+        real qubit&rsquo;s density matrix as a uniaxial stress, the Born rule as stress
+        transformation, and the Bloch circle as Mohr&rsquo;s circle; the parameter-shift rule as
+        an exact central difference; the shot cost of a plateau as a sample-size formula; the
+        LIF neuron as the lumped-capacitance problem; rate coding as a frequency counter.</li>
+      <li><b>Results derived here</b> &mdash; the exact gradient variance \(\tfrac18(3/8)^{n-1}\)
+        for an unentangled circuit with a global cost, and its local-cost counterparts; the
+        kurtosis that makes such variances hard to sample; the LIF rate&rsquo;s asymptote and
+        its ratio to the ReLU; the reset-to-zero staircase; the dual-sourcing example, where VaR
+        and ES disagree.</li>
+      <li><b>Notes on earlier sheets</b>, made in passing: Sheet 06 &sect;06 refers to an
+        exponential moving average defined in Sheet 04, which Sheet 04 does not contain (&sect;01
+        supplies it); Sheet 09 &sect;19 refers to Sheet 03 &sect;08 for Lagrange multipliers,
+        which are in &sect;07 (&sect;02). And a phrasing sometimes used for the Bloch sphere,
+        that it halves angles where Mohr&rsquo;s circle doubles them, is corrected in &sect;04.</li>
+      <li><b>Six interactive labs</b> written for this sheet in plain SVG and vanilla
+        JavaScript, and one drawn figure.</li>
+      <li><b>New numerical checks</b> added to <code>study-companion/verify_claims.py</code> in
+        the block <code>_ch1920()</code>, all passing.</li>
+    </ul>
+    <h3>What is claimed, and what is reported</h3>
+    <p>
+      Statements tagged <code>[Ch19 sNN]</code> or <code>[Ch20 sNN]</code> are computed, and
+      the tag names the section of the verification block that computes them. Marked as
+      <b>reported</b>, and not derived here: the attribution of mean&ndash;variance theory to
+      Markowitz; methods for trends in exponential smoothing; heavy tails and volatility
+      clustering in returns; the closed form \((T-2)/(T-N-1)\) for estimated portfolios; the
+      difficulty of estimating expected returns; the subadditivity of expected shortfall as a
+      theorem; the pairing of ES<sub>97.5</sub> with VaR<sub>99</sub> in regulation; the
+      postulates of quantum mechanics, including the Born rule; interference as the source of
+      quantum speed-ups; the barren-plateau theorems for random and deep circuits; parameter
+      shifts for other gate types; the use of non-leaky neurons in conversion; surrogate-gradient
+      training; and the energy efficiency of neuromorphic hardware. No internet research was
+      used.
+    </p>
+    <p class="endnote">
+      Sheets 19&ndash;20 of 20, the coda. Source compendium &copy; its authors, Apache&nbsp;2.0.
+      This derivative sheet is offered under the same licence. This is the last sheet of the
+      series.
+    </p>
+  </div>
+</section>
+
+</main>
+</div>
 
