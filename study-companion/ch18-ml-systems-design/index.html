@@ -1064,3 +1064,476 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     </p>
   </div>
 </section>
+
+<section id="nines">
+  <div class="col">
+    <div class="sechead"><span class="secnum">07</span><h2>Nines, and a request path in series</h2>
+      <a class="srcref" href="@F3@" target="_blank" rel="noopener">src 03. large scale infrastructure &#8599;</a>
+    </div>
+    <p>
+      Availability is quoted in <b>nines</b>: 99.9% is three nines. The arithmetic behind the
+      jargon is one multiplication (<code>[Ch18 s07]</code>):
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Allowed downtime at each level of availability.</caption>
+      <thead><tr><th class="mono">Availability</th><th class="mono">Per year</th><th class="mono">Per 30-day month</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">99% (two nines)</td><td class="mono">87.6 h</td><td class="mono">7.2 h</td></tr>
+        <tr><td class="mono">99.9% (three)</td><td class="mono">8.76 h</td><td class="mono">43.2 min</td></tr>
+        <tr><td class="mono">99.99% (four)</td><td class="mono">52.6 min</td><td class="mono">4.3 min</td></tr>
+        <tr><td class="mono">99.999% (five)</td><td class="mono">5.3 min</td><td class="mono">26 s</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      The source&rsquo;s SLO (service level objective) of 99.9% gives &ldquo;about 43 minutes
+      per month&rdquo;: 43.2 for a 30-day month, 43.8 for an average one. Its SLO is written
+      per request (&ldquo;99.9% of requests complete in &lt;200ms&rdquo;), so the budget is
+      really 0.1% of requests, and minutes are a translation that assumes steady traffic. An
+      outage in a peak hour running at 1.8 times the average load spends the month&rsquo;s
+      budget in 24 minutes.
+    </p>
+    <p>
+      A request usually passes through several services, and it succeeds only if all of them
+      work. In the source&rsquo;s microservice design below, a prediction passes the gateway,
+      the feature service, the feature store, the model service and the model store: five
+      blocks in series. At 99.9% each, the path is available
+      \(0.999^5 = 99.50\%\) of the time (<code>[Ch18 s07]</code>). Ten excellent components
+      in series make a mediocre system, which Sheet 05 &sect;03 showed for pumps. Logging
+      would make it seven blocks and 99.30%, but the figure routes logging through a message
+      queue, which takes it off the request path; &sect;10 shows what that buys.
+    </p>
+  </div>
+  <figure class="col">
+    <div class="paper"><img src="img/microservices_architecture.svg" alt="Microservice ML architecture: client to API gateway, which routes to a feature service with its feature store, a model service with its model store, and a logging service with its log store, the logging service fed through a message queue." width="700"></div>
+    <figcaption><b>Fig. 18.1</b> &mdash; A request path is a series reliability block diagram: gateway, feature service, feature store, model service, model store. The logging branch sits behind a queue and is not in series. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+  <div class="col">
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: a reliability block diagram, with repair</div>
+      <p style="margin-bottom:0">
+        Series blocks multiply; parallel blocks multiply their unavailabilities; De Morgan
+        turns one into the other (Sheet 13 part 1 &sect;02). Services are repaired, so the
+        number to put in each block is an availability, not a reliability over a mission
+        time: the long-run fraction of time up, \(\text{MTBF}/(\text{MTBF} + \text{MTTR})\),
+        which is the stationary distribution of Sheet 05 &sect;07. A server that fails once a
+        month and takes 45 minutes to replace is up \(720/720.75 = 99.90\%\) of the time.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks: a block can be made optional</div>
+      <p style="margin-bottom:0">
+        In a plant a failed pump in series stops the line. In software a dependency can be
+        skipped: if the feature store is down, the model can still predict from defaults,
+        worse but not failed. The source&rsquo;s circuit breaker (&sect;11) does exactly this.
+        It changes the diagram, not the arithmetic: the feature store moves from a series
+        block on &ldquo;request succeeds&rdquo; to a series block on &ldquo;request gets the
+        best answer&rdquo;, and you must decide which of the two your SLO counts.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="quorum">
+  <div class="col">
+    <div class="sechead"><span class="secnum">08</span><h2>A quorum is 2-out-of-3 voting</h2>
+      <a class="srcref" href="@F3@" target="_blank" rel="noopener">src 03. large scale infrastructure &#8599;</a>
+    </div>
+    <p>
+      Copies of data must agree. File 03&rsquo;s <b>Raft</b> algorithm elects a leader that
+      handles all writes, and a write counts only once a majority of the \(n\) nodes have
+      stored it. The cluster works while a majority is up, so it tolerates
+      \(\lfloor(n-1)/2\rfloor\) failures: one of three, two of five. Its availability is a
+      \(k\)-out-of-\(n\) sum with \(k = \lfloor n/2\rfloor + 1\). For nodes up 99% of the time
+      (<code>[Ch18 s08]</code>):
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Availability of a majority quorum, each node up 99% of the time.</caption>
+      <thead><tr><th class="mono">Nodes n</th><th class="mono">Majority</th><th class="mono">Tolerates</th><th class="mono">Availability</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">1</td><td class="mono">1</td><td class="mono">0</td><td class="mono">0.990000</td></tr>
+        <tr><td class="mono">2</td><td class="mono">2</td><td class="mono">0</td><td class="mono">0.980100</td></tr>
+        <tr><td class="mono">3</td><td class="mono">2</td><td class="mono">1</td><td class="mono">0.999702</td></tr>
+        <tr><td class="mono">4</td><td class="mono">3</td><td class="mono">1</td><td class="mono">0.999408</td></tr>
+        <tr><td class="mono">5</td><td class="mono">3</td><td class="mono">2</td><td class="mono">0.999990</td></tr>
+        <tr><td class="mono">6</td><td class="mono">4</td><td class="mono">2</td><td class="mono">0.999980</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: triple modular redundancy</div>
+      <p style="margin-bottom:0">
+        The three-node row is Sheet 05 &sect;03&rsquo;s 2-out-of-3 voting, 0.99970, to the
+        digit. The table also shows something the voting formula makes plain: an even
+        cluster is <em>worse</em> than the odd one below it. Four nodes need three to agree
+        and still tolerate only one failure, while offering one more node to fail. For 3
+        against 4 the difference is \(3a^2(1-a)^2\), positive for every \(a\); for 1 to 7
+        against 2 to 8 it was checked at 300 values of \(a\) from 0.5 to 0.9999
+        (<code>[Ch18 s08]</code>). Consensus clusters are 3, 5 or 7 nodes for this reason.
+      </p>
+    </div>
+    <p>
+      Why a majority and not, say, any two? Because two majorities of the same cluster always
+      share a member: \(2(\lfloor n/2\rfloor + 1) &gt; n\). A node votes once per election,
+      so two leaders can never both win a majority in the same term, and a write stored on a
+      majority is seen by every later majority. The whole guarantee rests on that pigeonhole
+      count (<code>[Ch18 s08]</code>).
+    </p>
+    <p>
+      That count also explains the <b>CAP theorem</b> in the source&rsquo;s figure. When the
+      network splits a five-node cluster into three and two, the side with two cannot form a
+      majority and must refuse writes. It is giving up availability to stay consistent, which
+      is what &ldquo;CP&rdquo; means. A system that kept answering on both sides would be
+      &ldquo;AP&rdquo;, and its two halves would drift apart until the split heals.
+    </p>
+  </div>
+  <figure class="col">
+    <div class="paper"><img src="img/cap_theorem.svg" alt="CAP theorem triangle with consistency, availability and partition tolerance at the corners; CP systems such as PostgreSQL and model registries, AP systems such as Cassandra, DynamoDB and feature stores." width="500"></div>
+    <figcaption><b>Fig. 18.2</b> &mdash; Since partitions happen, the choice is CP or AP. A majority quorum is CP by arithmetic: the minority side cannot reach a majority. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+  <div class="col">
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>No counterpart: a voter that cannot tell slow from dead</div>
+      <p style="margin-bottom:0">
+        A 2-out-of-3 voter in a safety system reads three sensors on one clock and compares
+        them at once. Distributed nodes do not share a clock (file 03&rsquo;s clock skew), and
+        a message can be delayed for any length of time, so a node that has not answered may
+        be dead or merely slow. It is a known result (reported, Fischer, Lynch and Paterson,
+        1985) that no deterministic protocol can guarantee agreement in bounded time if
+        messages can be delayed without limit and even one node can crash. Practical systems
+        such as Raft guarantee safety always and progress only when timing behaves. Logical
+        clocks, leader leases and election timeouts have nothing in your training to map
+        onto. Learn them cold.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="common">
+  <div class="col">
+    <div class="sechead"><span class="secnum">09</span><h2>Redundancy meets common cause</h2>
+      <a class="srcref" href="@F2@" target="_blank" rel="noopener">src 02. cloud computing &#8599;</a>
+    </div>
+    <p>
+      Put \(N\) identical replicas in parallel, each unavailable a fraction \(q\) of the time,
+      and the parallel formula says the service is down only when all are: \(q^N\). Three
+      replicas at \(q = 0.01\) give \(10^{-6}\), six nines. Sheet 05 &sect;09 warned that
+      this is the formula that fails first in practice, because replicas share causes of
+      failure: a power supply, a cabinet, a flood. Reliability engineering quantifies that
+      with the <b>&beta;-factor model</b>: a fraction \(\beta\) of each unit&rsquo;s
+      unavailability comes from a cause that takes out every unit at once, and the rest is
+      independent.
+    </p>
+    <div class="mathbox">$$Q_N = 1 - (1-\beta q)\bigl(1 - ((1-\beta)q)^N\bigr) \;\approx\; \beta q + \bigl((1-\beta)q\bigr)^N \;\xrightarrow[N\to\infty]{}\; \beta q$$</div>
+    <p>
+      With \(q = 0.01\) and \(\beta = 0.05\): one replica 9.995&times;10<sup>&minus;3</sup>,
+      two 5.90&times;10<sup>&minus;4</sup>, three 5.01&times;10<sup>&minus;4</sup>, four and
+      eight 5.00&times;10<sup>&minus;4</sup>. A Monte Carlo of three replicas over two million
+      days measured 4.75&times;10<sup>&minus;4</sup> (<code>[Ch18 s09]</code>). The second
+      replica buys a factor of seventeen; every replica after it buys almost nothing. The
+      floor is \(\beta q\) = 5&times;10<sup>&minus;4</sup>, 99.95% or 3.3 nines, whatever
+      \(N\) is.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same model: what the common causes are in a cloud</div>
+      <p style="margin-bottom:0">
+        Shared hardware is the familiar kind: replicas in one data centre share its power and
+        network, which is why file 02 describes deploying across regions. The kind with no
+        mechanical precedent is shared <b>design</b>. Every replica runs the same build, so a
+        bug in it, or a bad configuration pushed to all of them, fails every replica at the
+        same moment. For a software fault &beta; is close to 1 by construction, and identical
+        replicas protect against hardware failure only. That is the reliability meaning of
+        file 03&rsquo;s deployment strategies. A <b>canary</b> sends 1&ndash;5% of traffic to
+        the new build first; <b>blue-green</b> keeps the old build running beside it for an
+        instant switch back; <b>shadow deployment</b> runs the new model on real traffic
+        without serving its answers. Each one turns a common-cause failure into an independent
+        one confined to a small fraction, by staggering the change in time. A canary is
+        diversity bought with time instead of a second design.
+      </p>
+    </div>
+    <p>
+      File 02&rsquo;s two multi-region patterns are standby redundancy and active redundancy.
+      <b>Active-passive</b> keeps a warm standby and switches over in &ldquo;30 seconds to
+      several minutes&rdquo;, so each regional failure costs that switchover, and the
+      switch itself is a component that can fail. <b>Active-active</b> serves from both
+      regions all the time; a regional failure costs only the capacity it removes, which the
+      surviving region must have in reserve (&sect;21).
+    </p>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Replicas against a shared cause</div><div class="lab-tag">Predict, then add replicas</div></div>
+    <div class="lab-body">
+    <div class="predict">
+      <div class="predict-h">Commit before you drag</div>
+      <p>
+        Three replicas, each up 99% of the time. Five per cent of each one&rsquo;s downtime
+        comes from a cause they share. How often is the service down?
+      </p>
+      <div class="opts">
+        <button class="pbtn" data-p3="a" type="button">One time in a million</button>
+        <button class="pbtn" data-p3="b" type="button">About one time in 2,000</button>
+        <button class="pbtn" data-p3="c" type="button">About one time in 100</button>
+        <button class="pbtn" data-p3="d" type="button">Never</button>
+      </div>
+      <div class="pverdict" id="pv3"></div>
+    </div>
+    <svg class="stage" id="cS" viewBox="0 0 560 300" role="img"
+         aria-label="Unavailability on a logarithmic scale against the number of replicas, for independent failures and with a common cause; the common-cause curve flattens at a floor.">
+      <g id="cPlot"></g>
+    </svg>
+    <div class="ctl"><label for="cN">Replicas <span class="gk">N</span></label><input type="range" id="cN" min="1" max="8" step="1" value="3"><span class="ro-v" id="cNv">3</span></div>
+    <div class="ctl"><label for="cQ">Each replica down, <span class="gk">q</span></label><input type="range" id="cQ" min="0" max="12" step="1" value="4"><span class="ro-v" id="cQv">0.01</span></div>
+    <div class="ctl"><label for="cB">Shared fraction <span class="gk">&beta;</span></label><input type="range" id="cB" min="0" max="0.3" step="0.01" value="0.05"><span class="ro-v" id="cBv">0.05</span></div>
+    <div class="ctl">
+      <button class="btn" data-cm="par" type="button">Any one up</button>
+      <button class="btn" data-cm="maj" type="button">Majority up</button>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Unavailability,<br>model</div><div class="ro-v a" id="cU">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Unavailability,<br>Monte Carlo</div><div class="ro-v b" id="cUm">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Nines</div><div class="ro-v" id="cNn">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Downtime<br>per year</div><div class="ro-v" id="cD">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Floor<br><span class="gk">&beta;q</span></div><div class="ro-v c" id="cF">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">If independent<br><span class="gk">&beta; = 0</span></div><div class="ro-v" id="cI">&mdash;</div></div>
+    </div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    The dashed curve is the textbook parallel formula with no shared cause; it falls by a
+    factor of \(1/q\) with every replica. The solid curve is the &beta;-factor model, and it
+    lands on the floor \(\beta q\) after two or three replicas. At three replicas, \(q\) =
+    0.01 and \(\beta\) = 0.05 the service is down 5.0&times;10<sup>&minus;4</sup> of the
+    time, about one time in 2,000 or 4.4 hours a year, which answers the prediction; the
+    independent formula claims one in a million. The Monte Carlo readout counts outages over
+    a million simulated days and agrees within its sampling error. <b>Majority up</b>
+    switches to a quorum (&sect;08): odd counts beat the even counts above them, and the same
+    floor applies.
+  </div>
+</section>
+
+<section id="buffer">
+  <div class="col">
+    <div class="sechead"><span class="secnum">10</span><h2>A queue between services is a buffer between stations</h2>
+      <a class="srcref" href="@F1@" target="_blank" rel="noopener">src 01. systems design fundamentals &#8599;</a>
+    </div>
+    <p>
+      File 01 says message queues decouple producers from consumers: &ldquo;without a queue,
+      if the consumer is slow or down, the producer is blocked&rdquo;. A production engineer
+      has this result with numbers attached, from automated transfer lines with storage
+      buffers. Two stations each fail only while working, with probability \(f\) per cycle,
+      and are repaired with probability \(r\) per cycle. Alone, a station is up a fraction
+      \(e = r/(r+f)\) of the time. Joined with no buffer, the line stops whenever either
+      station is down, and its efficiency is
+    </p>
+    <div class="mathbox">$$E_0 = \frac{1}{1 + \dfrac{f_1}{r_1} + \dfrac{f_2}{r_2}}, \qquad E_\infty = \min(e_1, e_2)$$</div>
+    <p>
+      With an unlimited buffer each station works at its own rate and the line runs at the
+      slower one. Simulated for stations of 95% and 90% (<code>[Ch18 s10]</code>): no
+      buffer 0.8593, against the formula&rsquo;s 0.8593; a buffer of 5 parts, 0.8724; 20,
+      0.8932; 100, 0.8990; and the limit is 0.900.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: Kafka is a storage buffer</div>
+      <p style="margin-bottom:0">
+        Put the model service at station 1 and the logging service at station 2. Without a
+        queue, logging is in series and every logging outage stops predictions: the product
+        rule of &sect;07. With a queue, the model service keeps serving while log records
+        pile up, and the pair runs at the slower of the two instead of the product. The
+        buffer must hold what arrives during an outage, so by Little&rsquo;s law its size
+        divided by the arrival rate is the longest outage it covers. Backpressure, in which
+        a full service answers &ldquo;slow down&rdquo; with an HTTP 429 or 503, is the
+        blocked station of a line whose buffer is full.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks: a user is waiting</div>
+      <p style="margin-bottom:0">
+        A buffer helps work that nobody is waiting for: logs, metrics, training data, batch
+        scoring. The source also routes a live prediction through Kafka to a GPU worker, with
+        the answer returned by callback, and says the queue &ldquo;ensures no requests are lost
+        if a GPU worker crashes&rdquo;. That is true of the request and not of the user. The
+        user&rsquo;s deadline is the buffer: with a 200 ms budget, the queue absorbs only
+        outages shorter than 200 ms, and a longer one becomes a late answer, which the SLO of
+        &sect;07 counts as a failure.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="protect">
+  <div class="col">
+    <div class="sechead"><span class="secnum">11</span><h2>Protective devices: breakers, tanks, and breaking step</h2>
+      <a class="srcref" href="@F1@" target="_blank" rel="noopener">src 01. systems design fundamentals &#8599;</a>
+    </div>
+    <p>
+      File 01 ends with five resilience patterns. Three of them are protective devices
+      engineers built long before software.
+    </p>
+    <p>
+      A <b>circuit breaker</b> watches calls to a downstream service. When the error rate
+      passes a threshold it opens and returns a fallback immediately; after a timeout it
+      half-opens and lets one trial call through; success closes it, failure opens it again.
+      An <b>autorecloser</b> on a power distribution feeder does the same: it trips on a
+      fault, waits, recloses to test whether the fault was transient, and locks out if the
+      fault persists. Same state machine, same purpose: stop a fault from spreading, and stop
+      hammering a component that is trying to recover.
+    </p>
+    <p>
+      A <b>token bucket</b> rate limiter is a tank. Tokens flow in at rate \(r\) up to a
+      capacity \(b\), each request draws one, and a request that finds the tank empty is
+      refused. Mass balance bounds what it lets through: over any interval of length \(T\),
+      accepted requests cannot exceed \(b + rT\), the tank&rsquo;s contents plus its inflow.
+      Simulated on 20,000 bursty arrivals with \(b = 20\) and \(r = 5\) per second, no
+      window of any length broke that bound (<code>[Ch18 s11]</code>). It permits short
+      bursts and holds the long-run rate, which is what a surge tank does for a pipeline.
+    </p>
+    <p>
+      <b>Retry with exponential backoff</b> waits 1, 2, 4, 8 seconds between attempts, 15
+      seconds in all after four tries. The source adds jitter &ldquo;to prevent all clients
+      retrying simultaneously&rdquo;, and the numbers show why it matters. A thousand clients
+      that fail together and back off exactly on schedule arrive together again: all 1,000 in
+      the same tenth of a second at each retry. With full jitter, each waits a random time up
+      to its backoff, and the worst tenth of a second sees 112 (<code>[Ch18 s11]</code>).
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same structure: soldiers break step on a bridge</div>
+      <p style="margin-bottom:0">
+        Synchronised retries are a periodic load applied in phase by many sources, and the
+        response is the same as a structure&rsquo;s: the peaks add. Jitter randomises the
+        phase, so the peaks add only as the square root of their number, the way troops
+        ordered to break step load a bridge with footfalls that no longer arrive together.
+        This is a resemblance of mechanism, not a computed identity; there is no resonance in
+        a server, only a queue that the synchronised arrivals overflow.
+      </p>
+    </div>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: idempotency is absolute positioning</div>
+      <p style="margin-bottom:0">
+        A retried request may run twice. File 01 asks for <b>idempotent</b> operations, ones
+        whose second run changes nothing: &ldquo;set the name to Alice&rdquo; rather than
+        &ldquo;pay $10&rdquo;. A CNC programmer knows the pair as absolute and incremental
+        positioning. Repeat <code>G90 X50</code> and the tool is still at X50; repeat
+        <code>G91 X50</code> and it has moved 100 mm. A program that may be resent after a
+        dropped acknowledgement must be written in absolute moves, and an API that may be
+        retried must be written in absolute operations.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="tail">
+  <div class="col">
+    <div class="sechead"><span class="secnum">12</span><h2>The slowest shard, and redundancy for time</h2>
+      <a class="srcref" href="@F5@" target="_blank" rel="noopener">src 05. ML design examples &#8599;</a>
+    </div>
+    <p>
+      The source&rsquo;s image search splits a billion-vector index across machines and, at
+      query time, &ldquo;search[es] all shards in parallel and merge[s] the top-K
+      results&rdquo;. The answer is ready when the slowest shard replies. Sheet 15 &sect;22
+      computed the user&rsquo;s version of this: a page that makes \(k\) requests meets at
+      least one slow one with probability \(1 - 0.99^k\), 63.4% for 100. Here the waiting is
+      inside the system, and the whole distribution of the wait is computable. If the
+      \(n\) shards are independent with latency distribution \(F\), the request&rsquo;s
+      latency is their maximum, and
+    </p>
+    <div class="mathbox">$$P(\max \le t) = F(t)^n \qquad\Longrightarrow\qquad t_{0.99}^{\text{request}} = F^{-1}\!\left(0.99^{1/n}\right)$$</div>
+    <p>
+      The request&rsquo;s p99 is the shards&rsquo; 99.99th percentile when \(n = 100\). For
+      log-normal shards with a median of 10 ms and a p99 of 32 ms, that is 64.2 ms, and a
+      simulation of 20,000 requests gives 64.2 ms (<code>[Ch18 s12]</code>). The median
+      request at 100 shards takes 34.3 ms, already above a single shard&rsquo;s p99. A fan-out
+      turns the tail of the parts into the body of the whole.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: PERT&rsquo;s merge bias</div>
+      <p style="margin-bottom:0">
+        Sheet 14 part 1 &sect;09 showed that an event where two uncertain activities merge
+        happens later on average than either activity&rsquo;s expected finish: two paths of
+        N(10, 2&sup2;) days merge at \(10 + 2/\sqrt\pi = 11.13\), measured 11.125 here
+        (<code>[Ch18 s12]</code>). A fan-out request is a merge event with \(n\) incoming
+        activities. The project planner&rsquo;s lesson transfers whole: plan on the
+        distribution of the latest arrival, never on the mean of a typical one, and expect
+        the bias to grow with the number of paths that merge.
+      </p>
+    </div>
+    <p>
+      The fix uses the reliability algebra of &sect;07 with &ldquo;on time&rdquo; in place of
+      &ldquo;working&rdquo;. A fan-out is a series system for punctuality: the request is on
+      time only if every shard is. So make each shard a parallel pair. A <b>hedged
+      request</b> sends a duplicate to a second replica of a shard that has not answered by
+      its own p95, 22.8 ms here, and takes whichever reply comes first. At 100 shards that cuts
+      the request&rsquo;s p99 from 63.9 to 44.1 ms for 5.0% more shard requests
+      (<code>[Ch18 s12]</code>). Sending both copies at once would make a shard late with
+      probability \(0.01^2\), and the request would be on time 99.0% of the time instead of
+      36.6%, which is De Morgan&rsquo;s duality of Sheet 13 part 1 &sect;02 applied to time.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks: common cause again, and the cliff</div>
+      <p style="margin-bottom:0">
+        A duplicate helps only when the slowness belongs to the replica: a pause, a busy
+        neighbour, a slow disk. If it belongs to the shard, a hot key or an oversized
+        partition, both copies are slow together. Give 0.2% of shards an extra 40 ms on both
+        copies and hedging moves the p99 only from 67.9 to 63.0 ms (<code>[Ch18 s12]</code>):
+        &sect;09&rsquo;s &beta; in a new place. And the duplicates are extra load. At a
+        utilisation near the cliff of &sect;02, 5% more work can slow every request more
+        than the hedge saves, so hedging is something a plant with headroom can afford.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Waiting for the slowest shard</div><div class="lab-tag">Predict, then fan out</div></div>
+    <div class="lab-body">
+    <div class="predict">
+      <div class="predict-h">Commit before you fan out</div>
+      <p>
+        Each shard answers within 32 ms 99% of the time. A query asks 100 shards and waits
+        for all of them. How often does the query take longer than 32 ms?
+      </p>
+      <div class="opts">
+        <button class="pbtn" data-p4="a" type="button">1% of the time</button>
+        <button class="pbtn" data-p4="b" type="button">About 10%</button>
+        <button class="pbtn" data-p4="c" type="button">About 63%</button>
+        <button class="pbtn" data-p4="d" type="button">Always</button>
+      </div>
+      <div class="pverdict" id="pv4"></div>
+    </div>
+    <svg class="stage" id="tS" viewBox="0 0 560 290" role="img"
+         aria-label="Histogram of request latency for a fan-out query against the latency of a single shard, with the shard's 99th percentile and the request's 99th percentile marked.">
+      <g id="tPlot"></g>
+    </svg>
+    <div class="ctl"><label for="tN">Shards <span class="gk">n</span></label><input type="range" id="tN" min="0" max="7" step="1" value="6"><span class="ro-v" id="tNv">100</span></div>
+    <div class="ctl"><label for="tSg">Shard spread <span class="gk">&sigma;</span></label><input type="range" id="tSg" min="0.2" max="1" step="0.05" value="0.5"><span class="ro-v" id="tSgv">0.50</span></div>
+    <div class="ctl">
+      <button class="btn" data-th="off" type="button">No hedging</button>
+      <button class="btn" data-th="on" type="button">Hedge at shard p95</button>
+      <button class="btn" id="tHot" type="button">Hot shards: off</button>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Slower than shard p99,<br>measured</div><div class="ro-v b" id="tP">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Predicted<br><span class="gk">1 &minus; 0.99<sup>n</sup></span></div><div class="ro-v" id="tPp">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Request p99,<br>measured</div><div class="ro-v b" id="t99">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Request p99,<br><span class="gk">F<sup>&minus;1</sup>(0.99<sup>1/n</sup>)</span></div><div class="ro-v" id="t99p">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Request<br>median</div><div class="ro-v" id="t50">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Extra shard<br>requests</div><div class="ro-v c" id="tX">&mdash;</div></div>
+    </div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    The grey outline is one shard&rsquo;s latency; the blue bars are the query&rsquo;s, from
+    6,000 simulated queries. The dashed line is the shard&rsquo;s p99 and the orange line the
+    query&rsquo;s. At 100 shards 63% of queries are slower than the shard p99, which answers
+    the prediction, and the measured query p99 sits on the exact quantile
+    \(F^{-1}(0.99^{1/n})\). <b>Hedge at shard p95</b> pulls the query p99 back by about a third
+    for 5% more shard requests; the predicted columns then describe the unhedged system, for
+    comparison. <b>Hot shards</b> makes 0.2% of shards slow on both copies, and the hedge stops
+    helping. With one shard the two distributions coincide.
+  </div>
+</section>

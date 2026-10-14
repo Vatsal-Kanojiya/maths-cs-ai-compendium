@@ -7043,6 +7043,12 @@ def _ch18():
     say("s07", f"request path of 5 services at 99.9%: {0.999**5*100:.3f}%; 7 services {0.999**7*100:.3f}%; "
         "logging moved behind a queue leaves 5", abs(0.999**5 - 0.99501) < 1e-5)
 
+    say("s07", f"an outage in a peak hour at 1.8x average load spends the 43.2-minute budget in {43.2/1.8:.1f} min",
+        abs(43.2/1.8 - 24.0) < 1e-9)
+    say("s07", f"MTBF 720 h, MTTR 45 min: availability 720/720.75 = {720/720.75:.5f}", abs(720/720.75 - 0.99896) < 1e-5)
+    say("s02", f"random routing over 55 replicas: each is M/M/1 at rho = {50/55:.3f}, mean wait rho s/(1-rho) = "
+        f"{(50/55)*5/(1-50/55):.1f} ms", abs((50/55)*5/(1-50/55) - 50.0) < 1e-9)
+    say("s06", f"IVF flat bottom: (2 sqrt n + sqrt n / 2)/(2 sqrt n) = {(2+0.5)/2:.2f}", (2+0.5)/2 == 1.25)
     # --- s08: quorums --------------------------------------------------------
     kofn = lambda k, n_, p: sum(math.comb(n_, j)*p**j*(1-p)**(n_-j) for j in range(k, n_+1))
     maj = {n_: kofn(n_//2+1, n_, 0.99) for n_ in range(1, 8)}
@@ -7066,6 +7072,8 @@ def _ch18():
         + f"; floor beta*q = {0.05*0.01:.0e}", abs(row[-1] - 5e-4) < 1e-6 and abs(row[1] - 5.9025e-4) < 1e-6)
     say("s09", f"the floor in nines: 1 - 5e-4 = 99.95% = {-math.log10(5e-4):.2f} nines, whatever N",
         abs(-math.log10(5e-4) - 3.30) < 0.01)
+    say("s09", f"second replica buys {bq(1,0.01,0.05)/bq(2,0.01,0.05):.1f}x; floor as downtime {bq(3,0.01,0.05)*8760:.2f} h/yr",
+        abs(bq(1,0.01,0.05)/bq(2,0.01,0.05) - 16.9) < 0.1 and abs(bq(3,0.01,0.05)*8760 - 4.39) < 0.01)
     # Monte Carlo of beta model
     rg = np.random.default_rng(99); Tm = 2_000_000
     common = rg.random(Tm) < 0.05*0.01
