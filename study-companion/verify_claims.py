@@ -6966,6 +6966,9 @@ def _ch18():
         f"(Poisson z-rule: mean {2200*0.02/(1-2200*0.0002):.1f} + 2.33 sqrt -> {2200*0.02/(1-2200*0.0002)+2.33*math.sqrt(2200*0.02/(1-2200*0.0002)):.1f})",
         ex[2200][2] < 0.05)
 
+    c240 = math.ceil(240 + math.sqrt(240))
+    say("s03", f"image moderation a = 240: square-root rule c = {c240}, Pwait {erl_c(c240, 240):.3f}", c240 == 256 and 0.15 < erl_c(c240, 240) < 0.25)
+    say("s09", f"independent formula for 3 replicas: 1e-6 = {1e-6*525600:.2f} min a year", abs(1e-6*525600 - 0.53) < 0.01)
     # --- s04: pooling -------------------------------------------------------
     pool = []
     for cc in (2, 10, 50):

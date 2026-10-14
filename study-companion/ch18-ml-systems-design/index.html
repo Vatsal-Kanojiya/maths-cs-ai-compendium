@@ -2282,3 +2282,318 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     </div>
   </div>
 </section>
+
+<section id="breaks">
+  <div class="col">
+    <div class="sechead"><span class="secnum">22</span><h2>Where it breaks</h2>
+      <span class="srcref nolink" title="Summary of the whole sheet">whole sheet</span>
+    </div>
+    <p>
+      Every correspondence on this sheet, and the place it stops being true. The right-hand
+      column is the part to remember.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>The chapter&rsquo;s bridges and their edges.</caption>
+      <thead><tr><th>You know</th><th>It is</th><th>Where it breaks</th></tr></thead>
+      <tbody>
+        <tr><td>Little&rsquo;s law</td><td>Servers busy = \(\lambda s\) (&sect;01)</td><td>It gives the mean; waiting and spread need more</td></tr>
+        <tr><td>The utilisation cliff</td><td>Wait against replicas (&sect;02)</td><td>Exponential service overstates the wait; nothing rescues \(\rho = 1\)</td></tr>
+        <tr><td>Safety stock</td><td>Spare servers, \(a + z\sqrt a\) (&sect;03)</td><td>Bursty traffic and batching widen the spread; servers take minutes to start</td></tr>
+        <tr><td>A common queue</td><td>A stateless pool (&sect;04)</td><td>Sessions, caches and shards force dedicated machines</td></tr>
+        <tr><td>The RSS tolerance stack</td><td>Virtual nodes on a ring (&sect;05)</td><td>Balances keys, not a hot key&rsquo;s load</td></tr>
+        <tr><td>The station that cannot be split</td><td>Writes on replicas (&sect;06)</td><td>Linear for a fixed write rate, Amdahl for a fixed mix</td></tr>
+        <tr><td>A series block diagram</td><td>A request path (&sect;07)</td><td>Software can make a block optional</td></tr>
+        <tr><td>2-out-of-3 voting</td><td>A majority quorum (&sect;08)</td><td>No shared clock: slow and dead look the same</td></tr>
+        <tr><td>The &beta;-factor model</td><td>Regions, shared builds, deploys (&sect;09)</td><td>For a software bug &beta; is near 1; only staggering in time helps</td></tr>
+        <tr><td>A storage buffer</td><td>A message queue (&sect;10)</td><td>For a waiting user, the deadline is the buffer</td></tr>
+        <tr><td>Breaking step; a surge tank</td><td>Retry jitter; a token bucket (&sect;11)</td><td>No resonance in a server, only a queue overflowed</td></tr>
+        <tr><td>Absolute and incremental moves</td><td>Idempotent operations (&sect;11)</td><td>A request can half-succeed, which a G-code move cannot</td></tr>
+        <tr><td>PERT&rsquo;s merge bias</td><td>Fan-out tail latency (&sect;12)</td><td>Hedging fails on shard-level slowness and adds load</td></tr>
+        <tr><td>Load-duration curve, load factor</td><td>Autoscaling (&sect;13)</td><td>Needs a forecast; harmonics in phase across regions add</td></tr>
+        <tr><td>Base-load and peaking plant</td><td>Reserved and on-demand GPUs (&sect;14)</td><td>Reservations run for years against a forecast that may be wrong</td></tr>
+        <tr><td>A series system</td><td>A synchronous training job (&sect;15)</td><td>Silent data corruption never stops the job</td></tr>
+        <tr><td>The economic order quantity</td><td>The checkpoint interval (&sect;16)</td><td>First order only: exact optimum 17.6 min against 18.3</td></tr>
+        <tr><td>Cutting-stock trim loss</td><td>GPU fragmentation (&sect;17)</td><td>Jobs arrive and leave while you nest them</td></tr>
+        <tr><td>An acceptance plan</td><td>An A/B test (&sect;19)</td><td>Peeking at the result inflates &alpha;</td></tr>
+        <tr><td>A loop with dead time</td><td>Retraining on the model&rsquo;s own effects (&sect;19)</td><td>The gain is unknown and the plant is not linear</td></tr>
+        <tr><td>Order-of-magnitude estimation</td><td>Back-of-envelope sizing (&sect;20)</td><td>Only as good as the units carried through it</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="recall">
+  <div class="col">
+    <div class="sechead"><span class="secnum">23</span><h2>Question bank</h2>
+      <span class="srcref nolink" title="Covers the whole sheet">whole sheet</span>
+    </div>
+    <p>
+      Twenty-four prompts in three tiers. Answer before opening.
+    </p>
+
+    <div class="gap">
+      <div class="gap-h">Tier 1 &mdash; recall</div>
+      <details><summary>State Little&rsquo;s law and use it on the source&rsquo;s user-embedding service.</summary>
+        <p>\(L = \lambda W\). At 10,000 requests/s and 5 ms each, 50 requests are in service on average, so 50 single-request replicas would be busy all the time.</p></details>
+      <details><summary>What does the Erlang C formula give, and what does it say at \(c = a\)?</summary>
+        <p>The probability that an arrival must wait in an M/M/\(c\) queue, and with it the mean wait \(C s/(c-a)\). At \(c = a\) the probability is 1 and the wait is unbounded: utilisation 100%.</p></details>
+      <details><summary>Why is the number of requests in service Poisson, whatever the service-time distribution?</summary>
+        <p>Each past Poisson arrival is still in service with probability \(P(S &gt; t)\), and thinning a Poisson stream leaves a Poisson count, with mean \(\lambda\int P(S&gt;t)\,dt = \lambda s\).</p></details>
+      <details><summary>Write square-root staffing and its inventory twin.</summary>
+        <p>\(c = a + z\sqrt a\) servers; \(\text{ROP} = \mu + z\sqrt\mu\) for Poisson demand. Same mean-plus-\(z\)-sigma, with \(\sigma = \sqrt{\text{mean}}\).</p></details>
+      <details><summary>Adding a server to \(n\): what fraction of keys moves under hash mod \(n\), and under consistent hashing?</summary>
+        <p>About \(n/(n+1)\) under mod \(n\), 75% going from 3 to 4. About \(1/(n+1)\) under consistent hashing, all of it to the new server.</p></details>
+      <details><summary>How many failures does a majority quorum of \(n\) tolerate, and why a majority?</summary>
+        <p>\(\lfloor(n-1)/2\rfloor\). Any two majorities share a member, so two leaders cannot both win, and a majority-stored write is seen by every later majority.</p></details>
+      <details><summary>What floor does common-cause failure put under \(N\) redundant replicas?</summary>
+        <p>\(\beta q\): the shared fraction of each replica&rsquo;s unavailability. At \(q = 0.01\), \(\beta = 0.05\) the floor is \(5\times10^{-4}\), 99.95%, for any \(N\).</p></details>
+      <details><summary>State the best checkpoint interval and match it to the EOQ.</summary>
+        <p>\(\tau^\ast = \sqrt{2\delta M}\). The write time \(\delta\) is the setup cost, the interval is the lot size, \(1/M\) is the holding cost, and the waste at the optimum is \(\sqrt{2\delta/M}\).</p></details>
+    </div>
+
+    <div class="gap">
+      <div class="gap-h">Tier 2 &mdash; apply</div>
+      <details><summary>Image moderation: 12,000 posts/s at 20 ms each. How many servers keep the chance of waiting near 0.2?</summary>
+        <p>\(a = 240\); \(c = 240 + \sqrt{240} \approx 256\). The source&rsquo;s 240 is the load at which the queue never empties.</p></details>
+      <details><summary>Five services at 99.9% in series. What is the path&rsquo;s availability, and what if logging joins it synchronously?</summary>
+        <p>\(0.999^5 = 99.50\%\); with logging and its store, seven blocks, 99.30%. Behind a queue, logging leaves the path.</p></details>
+      <details><summary>Three or four consensus nodes, each up 99%: which is more available, and by how much?</summary>
+        <p>Three: 0.999702 against 0.999408. The difference is \(3a^2(1-a)^2 = 2.94\times10^{-4}\). Go from three to five, never to four.</p></details>
+      <details><summary>Three replicas, \(q = 0.01\), \(\beta = 0.05\). Unavailability and downtime per year?</summary>
+        <p>\(5.0\times10^{-4}\), about 4.4 hours a year. The independent formula would claim \(10^{-6}\), half a minute.</p></details>
+      <details><summary>A query fans out to 100 shards whose p99 is 32 ms. How often is the query slower than 32 ms, and what is its own p99?</summary>
+        <p>\(1 - 0.99^{100} = 63.4\%\) of the time. Its p99 is the shards&rsquo; 99.99th percentile: 64.2 ms for log-normal shards with a 10 ms median and \(\sigma = 0.5\).</p></details>
+      <details><summary>10 GPUs for 6 hours a day and 2 for 18. What does perfect autoscaling save?</summary>
+        <p>Average 4, peak 10, load factor 0.4, saving 60%. With a 12-hour peak it is 40%.</p></details>
+      <details><summary>Reserved capacity is 30% cheaper than on-demand. Which GPUs should you reserve?</summary>
+        <p>Each GPU that the load-duration curve says is busy more than 70% of the hours: reserve where \(f_k &gt; 1 - d\).</p></details>
+      <details><summary>Size a 70B checkpoint with Adam, and its write time at 100 GB/s.</summary>
+        <p>fp32 master weights, \(m\) and \(v\): 12 bytes a parameter, 840 GB (980 GB with a bf16 copy). 8.4 s at 100 GB/s.</p></details>
+    </div>
+
+    <div class="gap">
+      <div class="gap-h">Tier 3 &mdash; judge</div>
+      <details><summary>&ldquo;Offered load 50, so 50 replicas: exactly right-sized.&rdquo; Your reply?</summary>
+        <p>Exactly at the cliff. The queue has no steady state. Fifty-five replicas give a 0.39 ms mean wait, 58 a 19% chance of waiting; the margin is \(z\sqrt a\), about 7 here.</p></details>
+      <details><summary>Why can a 5,000-server fleet run at 98% utilisation when a 5-machine cell needs to stay near 60%?</summary>
+        <p>The spare capacity needed grows as \(\sqrt a\) while load grows as \(a\). At the same chance of waiting, \(a = 5\) runs at 62.5% and \(a = 5{,}000\) at 98.6%. A fixed utilisation target is wrong for both.</p></details>
+      <details><summary>The team proposes four Raft nodes instead of three &ldquo;for safety&rdquo;.</summary>
+        <p>Four tolerate one failure, like three, and have one more node to lose: availability falls. Five tolerate two.</p></details>
+      <details><summary>Three identical replicas in one region are quoted at six nines. What would a reliability engineer say?</summary>
+        <p>That \(q^3\) assumes independence. One region shares power and network, and one build shares its bugs (&beta; near 1). The floor is \(\beta q\); fight it with regions for hardware and canaries for software.</p></details>
+      <details><summary>Should live predictions go through Kafka so that &ldquo;no requests are lost&rdquo;?</summary>
+        <p>The request survives; the user&rsquo;s deadline does not. A queue absorbs only outages shorter than the deadline. Queue the work nobody waits for: logs, training data, batch scores.</p></details>
+      <details><summary>Hedged requests cut p99 by a third. When would you leave them off?</summary>
+        <p>Near the utilisation cliff, where 5% more load costs more than the hedge saves; and where slowness belongs to the shard, so both copies are slow.</p></details>
+      <details><summary>The source says read replicas scale linearly. When is it right?</summary>
+        <p>For a fixed write rate, each replica adds the same read capacity. For traffic that grows with its mix, every replica must apply every write and throughput follows Amdahl with the write share: never above \(1/w\).</p></details>
+      <details><summary>An A/B test reaches \(p = 0.03\) on day 2 of a planned 14. Ship?</summary>
+        <p>No. Stopping at the first significant look inflates the false-alarm rate, and two days miss the weekly cycle. Run the planned sample, as an acceptance plan would.</p></details>
+    </div>
+  </div>
+</section>
+
+<section id="map">
+  <div class="col">
+    <div class="sechead"><span class="secnum">24</span><h2>The map, and where the series ends</h2>
+      <span class="srcref nolink" title="Added material, not in the source chapter">beyond the chapter</span>
+    </div>
+    <p>
+      One idea runs through the sheet. Little&rsquo;s law gives the mean of everything in a
+      plant; every plant decision then turns on something else: the spread, a failure, the
+      slowest part, the shape of the day, or a cost that rises against one that falls. Each
+      row of the map is one of those, with the earlier sheet it came from.
+    </p>
+  </div>
+  <figure class="col">
+    <svg viewBox="0 0 480 372" role="img" style="width:100%; max-width:600px; height:auto; display:block; margin-inline:auto"
+         aria-label="Concept map in three columns. Left, the earlier sheet each idea comes from; middle, the mechanism on this sheet; right, the plant decision it settles. Little's law gives the offered load; the square-root spread gives the margin; series, k-of-n and the beta factor give spares and regions; the maximum of n draws gives hedging; the load-duration curve gives reserve or rent; the square-root EOQ gives the checkpoint interval. Below, Sheet 17's single-server curve feeds the worked example.">
+      <defs>
+        <marker id="cmArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M0,1 L9,5 L0,9 z" fill="var(--ink-3)"></path>
+        </marker>
+      </defs>
+      <text class="tk" x="8" y="14">earlier sheet</text>
+      <text class="tk" x="172" y="14">mechanism here</text>
+      <text class="tk" x="340" y="14">plant decision</text>
+      <g><rect x="8" y="24" width="150" height="34" rx="3" fill="var(--sheet-2)" stroke="var(--ink-3)" stroke-width="1"></rect><text class="tkb" x="15" y="39">Sheet 13 pt 2 &#167;06</text><text class="tk" x="15" y="52">Little&#8217;s law</text>
+        <rect x="172" y="24" width="150" height="34" rx="3" fill="none" stroke="var(--c2)" stroke-width="1.6"></rect><text class="tkb" x="179" y="39">&#167;01  L = &#955;W</text><text class="tk" x="179" y="52">offered load a</text>
+        <rect x="336" y="24" width="136" height="34" rx="3" fill="none" stroke="var(--c3)" stroke-width="1.6"></rect><text class="tkb" x="343" y="39">servers busy</text><text class="tk" x="343" y="52">at the mean</text>
+        <line x1="158" y1="41" x2="170" y2="41" stroke="var(--ink-3)" stroke-width="1.3" marker-end="url(#cmArrow)"></line>
+        <line x1="322" y1="41" x2="334" y2="41" stroke="var(--ink-3)" stroke-width="1.3" marker-end="url(#cmArrow)"></line>
+        <rect x="8" y="70" width="150" height="34" rx="3" fill="var(--sheet-2)" stroke="var(--ink-3)" stroke-width="1"></rect><text class="tkb" x="15" y="85">Sheet 04 &#167;05</text><text class="tk" x="15" y="98">&#8730;n tolerance stack</text>
+        <rect x="172" y="70" width="150" height="34" rx="3" fill="none" stroke="var(--c2)" stroke-width="1.6"></rect><text class="tkb" x="179" y="85">&#167;&#167;03, 05  + z&#8730;a</text><text class="tk" x="179" y="98">spread of the count</text>
+        <rect x="336" y="70" width="136" height="34" rx="3" fill="none" stroke="var(--c3)" stroke-width="1.6"></rect><text class="tkb" x="343" y="85">margin;</text><text class="tk" x="343" y="98">ring balance</text>
+        <line x1="158" y1="87" x2="170" y2="87" stroke="var(--ink-3)" stroke-width="1.3" marker-end="url(#cmArrow)"></line>
+        <line x1="322" y1="87" x2="334" y2="87" stroke="var(--ink-3)" stroke-width="1.3" marker-end="url(#cmArrow)"></line>
+        <rect x="8" y="116" width="150" height="34" rx="3" fill="var(--sheet-2)" stroke="var(--ink-3)" stroke-width="1"></rect><text class="tkb" x="15" y="131">Sheet 05 &#167;&#167;03, 09</text><text class="tk" x="15" y="144">blocks, common cause</text>
+        <rect x="172" y="116" width="150" height="34" rx="3" fill="none" stroke="var(--c2)" stroke-width="1.6"></rect><text class="tkb" x="179" y="131">&#167;&#167;07&#8211;09, 15</text><text class="tk" x="179" y="144">series, k of n, &#946;</text>
+        <rect x="336" y="116" width="136" height="34" rx="3" fill="none" stroke="var(--c3)" stroke-width="1.6"></rect><text class="tkb" x="343" y="131">spares, regions,</text><text class="tk" x="343" y="144">canaries</text>
+        <line x1="158" y1="133" x2="170" y2="133" stroke="var(--ink-3)" stroke-width="1.3" marker-end="url(#cmArrow)"></line>
+        <line x1="322" y1="133" x2="334" y2="133" stroke="var(--ink-3)" stroke-width="1.3" marker-end="url(#cmArrow)"></line>
+        <rect x="8" y="162" width="150" height="34" rx="3" fill="var(--sheet-2)" stroke="var(--ink-3)" stroke-width="1"></rect><text class="tkb" x="15" y="177">Sheet 14 pt 1 &#167;09</text><text class="tk" x="15" y="190">PERT merge bias</text>
+        <rect x="172" y="162" width="150" height="34" rx="3" fill="none" stroke="var(--c2)" stroke-width="1.6"></rect><text class="tkb" x="179" y="177">&#167;12</text><text class="tk" x="179" y="190">max of n draws</text>
+        <rect x="336" y="162" width="136" height="34" rx="3" fill="none" stroke="var(--c3)" stroke-width="1.6"></rect><text class="tkb" x="343" y="183">hedge or not</text>
+        <line x1="158" y1="179" x2="170" y2="179" stroke="var(--ink-3)" stroke-width="1.3" marker-end="url(#cmArrow)"></line>
+        <line x1="322" y1="179" x2="334" y2="179" stroke="var(--ink-3)" stroke-width="1.3" marker-end="url(#cmArrow)"></line>
+        <rect x="8" y="208" width="150" height="34" rx="3" fill="var(--sheet-2)" stroke="var(--ink-3)" stroke-width="1"></rect><text class="tkb" x="15" y="223">power plant practice</text><text class="tk" x="15" y="236">load-duration curve</text>
+        <rect x="172" y="208" width="150" height="34" rx="3" fill="none" stroke="var(--c2)" stroke-width="1.6"></rect><text class="tkb" x="179" y="223">&#167;&#167;13&#8211;14</text><text class="tk" x="179" y="236">load factor, duration</text>
+        <rect x="336" y="208" width="136" height="34" rx="3" fill="none" stroke="var(--c3)" stroke-width="1.6"></rect><text class="tkb" x="343" y="223">autoscale;</text><text class="tk" x="343" y="236">reserve or rent</text>
+        <line x1="158" y1="225" x2="170" y2="225" stroke="var(--ink-3)" stroke-width="1.3" marker-end="url(#cmArrow)"></line>
+        <line x1="322" y1="225" x2="334" y2="225" stroke="var(--ink-3)" stroke-width="1.3" marker-end="url(#cmArrow)"></line>
+        <rect x="8" y="254" width="150" height="34" rx="3" fill="var(--sheet-2)" stroke="var(--ink-3)" stroke-width="1"></rect><text class="tkb" x="15" y="269">Sheet 13 pt 2 &#167;05</text><text class="tk" x="15" y="282">EOQ</text>
+        <rect x="172" y="254" width="150" height="34" rx="3" fill="none" stroke="var(--c2)" stroke-width="1.6"></rect><text class="tkb" x="179" y="269">&#167;16</text><text class="tk" x="179" y="282">&#8730;(2&#948;M)</text>
+        <rect x="336" y="254" width="136" height="34" rx="3" fill="none" stroke="var(--c3)" stroke-width="1.6"></rect><text class="tkb" x="343" y="269">checkpoint</text><text class="tk" x="343" y="282">interval</text>
+        <line x1="158" y1="271" x2="170" y2="271" stroke="var(--ink-3)" stroke-width="1.3" marker-end="url(#cmArrow)"></line>
+        <line x1="322" y1="271" x2="334" y2="271" stroke="var(--ink-3)" stroke-width="1.3" marker-end="url(#cmArrow)"></line>
+        <line x1="8" y1="306" x2="472" y2="306" stroke="var(--rule-strong)" stroke-dasharray="4 4"></line>
+        <rect x="8" y="318" width="150" height="34" rx="3" fill="var(--sheet-2)" stroke="var(--ink-3)" stroke-width="1"></rect><text class="tkb" x="15" y="333">Sheet 17 &#167;14</text><text class="tk" x="15" y="346">one server&#8217;s curve</text>
+        <rect x="172" y="318" width="150" height="34" rx="3" fill="none" stroke="var(--c1)" stroke-width="1.6"></rect><text class="tkb" x="179" y="333">&#167;03  per server</text><text class="tk" x="179" y="346">2,050 tokens/s planned</text>
+        <rect x="336" y="318" width="136" height="34" rx="3" fill="none" stroke="var(--c1)" stroke-width="1.6"></rect><text class="tkb" x="343" y="333">&#167;21  the help</text><text class="tk" x="343" y="346">desk as a plant</text>
+        <line x1="158" y1="335" x2="170" y2="335" stroke="var(--ink-3)" stroke-width="1.3" marker-end="url(#cmArrow)"></line>
+        <line x1="322" y1="335" x2="334" y2="335" stroke="var(--ink-3)" stroke-width="1.3" marker-end="url(#cmArrow)"></line></g>
+    </svg>
+    <figcaption><b>Fig. 18.7</b> &mdash; Little&rsquo;s law gives the mean; each row is one of the things the mean leaves out, the earlier sheet it comes from, and the decision it settles. Sheet 17&rsquo;s server curve enters at the bottom as the unit of capacity for &sect;21.</figcaption>
+  </figure>
+  <div class="col">
+    <h3>What this sheet feeds</h3>
+    <p>
+      This is the last full sheet of the series. The source&rsquo;s chapter 19 (applied AI) and
+      chapter 20 (bleeding-edge AI) are outlines of about twenty lines each, with several
+      files empty; there is no derivation in them to check or bridge, so the derived material
+      of the series ends here. Sheets 01&ndash;17 feed this one, as the map shows: Sheet 05&rsquo;s
+      reliability, Sheet 13&rsquo;s queue and Amdahl, Sheet 14&rsquo;s merge bias, Sheet 04&rsquo;s
+      sampling plans, Sheet 17&rsquo;s server. The debts earlier sheets left here are paid:
+      Sheet 05&rsquo;s queueing (&sect;&sect;02&ndash;03), Sheet 12&rsquo;s partitioning (&sect;06),
+      Sheet 13&rsquo;s Little&rsquo;s law as architecture (&sect;01), Sheet 14&rsquo;s cliff as
+      capacity planning (&sect;02), Sheet 15&rsquo;s monitoring and pipelines at system scale
+      (&sect;&sect;12, 19), and Sheet 17&rsquo;s peaks, failures and spares (&sect;21).
+    </p>
+    <p>
+      A reader who wants to go on from the plant view would study, in roughly this order:
+      networks of queues, where one station&rsquo;s departures are the next one&rsquo;s arrivals
+      (Jackson networks and mean-value analysis); availability with repair crews, standby
+      units and switchover, which is Sheet 05 &sect;07&rsquo;s Markov chain with more states;
+      inventory policies with reorder lead times and forecast error, which is autoscaling done
+      properly; and the theory of distributed agreement, which has no counterpart in
+      mechanical training and is where &sect;08 stopped. These are directions, named so the
+      sheet does not pretend to be complete; they are not promised sheets.
+    </p>
+    <h3>What this sheet does not cover</h3>
+    <ul>
+      <li><b>Security and networking detail.</b> Virtual private clouds, subnets, security
+        groups, mutual TLS and service meshes are in the source and not here; nothing in them
+        is computed.</li>
+      <li><b>Operating the tools.</b> Kubernetes objects and autoscalers, Terraform, SLURM
+        queues and observability stacks are described in the source as practice. Sheet 15 took
+        containers and pipelines; their configuration is not derived anywhere.</li>
+      <li><b>Databases proper.</b> Transactions, isolation levels, index structures in depth
+        (Sheet 14 part 2 built the trees), and schema changes on a running system.</li>
+      <li><b>Streams.</b> Exactly-once processing, event time, windows, and the Lambda and Kappa
+        architectures are named in file 03 and not analysed.</li>
+      <li><b>The models inside the designs.</b> Two-tower retrieval, learning to rank, NDCG,
+        cross-encoders, DLRM and contrastive training belong to earlier sheets or to none.
+        Fairness metrics are conditional rates in Sheet 05&rsquo;s sense and are not computed
+        here.</li>
+      <li><b>Queues beyond M/M/c.</b> Priorities, non-Poisson arrivals and multi-stage service
+        are named above as the next things to study.</li>
+      <li><b>Prices.</b> Every price is the source&rsquo;s, dated 2026 by the source itself, and
+        will drift. The arithmetic done with them will not.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="provenance">
+  <div class="col">
+    <div class="sechead"><span class="secnum">A</span><h2>Provenance and changes</h2>
+      <span class="srcref nolink" title="Required by Apache-2.0 section 4(b)">licence notice</span>
+    </div>
+    <p>
+      This sheet is a derivative work of <b>chapter 18 &mdash; ML systems design</b> of the
+      <i>Mathematics, Computer Science and AI Compendium</i>, licensed under Apache&nbsp;2.0.
+      Section&nbsp;4(b) of that licence requires prominent notice of changes. The source is
+      pinned at commit <code>9850ee5</code>; every section chip above links to the file it
+      draws on.
+    </p>
+    <h3>Source material used</h3>
+    <ul>
+      <li><code>01. systems design fundamentals.md</code> (224 lines) &mdash; &sect;&sect;00&ndash;01, 04&ndash;06, 10&ndash;11</li>
+      <li><code>02. cloud computing.md</code> (192 lines) &mdash; &sect;&sect;09, 13&ndash;14</li>
+      <li><code>03. large scale infrastructure.md</code> (258 lines) &mdash; &sect;&sect;06&ndash;09, 15&ndash;18</li>
+      <li><code>04. ML systems design.md</code> (219 lines) &mdash; &sect;19</li>
+      <li><code>05. ML design examples.md</code> (385 lines) &mdash; &sect;&sect;01&ndash;02, 12, 20</li>
+      <li>&sect;&sect;03, 21&ndash;24 are written for this sheet. Figures 18.1&ndash;18.6 are
+        reproduced from the compendium&rsquo;s <code>images/</code> directory unchanged;
+        Fig. 18.7 was drawn for this sheet.</li>
+    </ul>
+    <h3>Changes made</h3>
+    <ul>
+      <li><b>Re-narrated for one reader</b> &mdash; a GATE-prepared mechanical engineering
+        graduate with no computing background &mdash; against production planning, inventory
+        control, reliability engineering, power plant economics and quality control. The
+        source&rsquo;s code listings (protobuf, YAML, Terraform, a policy snippet) are not
+        reproduced; none contained a computation to run.</li>
+      <li><b>Corrections to the source</b>, each with its computation: every replica count in
+        file 05 sized at 100% utilisation (&sect;02); 1,000 GPU-seconds per second read as 10
+        GPUs (&sect;02); read replicas scaling &ldquo;linearly&rdquo; (&sect;06); IVF search cost
+        omitting the centroid comparisons (&sect;06); the 60% autoscaling saving without its
+        peak length (&sect;13); the 2&ndash;3&times; ownership advantage identified as the
+        comparison against reserved pricing (&sect;14); the Adam checkpoint size (&sect;16);
+        NVLink&rsquo;s &ldquo;30x&rdquo; (&sect;17); &ldquo;bisection bandwidth per node&rdquo;
+        (&sect;17); the 100 GB/s data rate for text (&sect;17); the 989 TFLOPS label, following
+        Sheet 17 (&sect;17); the A/B sample size (&sect;19); the fraud review bands, which
+        disagree between text and figure and ignore the cost matrix the source recommends
+        (&sect;19); the HNSW overhead and the billion-vector index size (&sect;20); the RAG
+        chunk count and the two-GPU self-hosting claim (&sect;20). Also noted: the spot discount
+        is given as 60&ndash;90% and as 60&ndash;70% in the same file (&sect;14).</li>
+      <li><b>Correspondences added that are not in the source</b> &mdash; Little&rsquo;s law as
+        the sizing rule; square-root staffing as the reorder point; pooling as a common queue;
+        the hash ring&rsquo;s balance as an RSS stack; replicas as Amdahl&rsquo;s law; Raft as
+        2-out-of-3 voting; the &beta;-factor model for regions and deploys; Kafka as a
+        transfer-line buffer; the circuit breaker as an autorecloser, the token bucket as a
+        tank, jitter as breaking step, idempotency as absolute positioning; fan-out as
+        PERT&rsquo;s merge and hedging as parallel redundancy in time; autoscaling as one minus
+        the load factor; reservation as base-load plant; regions as three-phase load with its
+        triplen-harmonic break; a training job as a series system; the checkpoint interval as
+        an EOQ; GPU fragmentation as trim loss; A/B tests as acceptance plans; training&ndash;serving
+        skew as gauge correlation; retraining loops as control with dead time.</li>
+      <li><b>Material added that the source does not have</b> &mdash; the Erlang C tables; the
+        Poisson count in service and Halfin&ndash;Whitt staffing; the spread of Sheet 17&rsquo;s
+        batch and the per-server planning capacity; the routing-rule simulation; the exact
+        spread of ring shares; the quorum table and the even-size result; the transfer-line
+        simulation; the exact quantile of a fan-out; the screening rule; the exact checkpoint
+        optimum; the ring all-reduce simulation; the 6ND cost table; PSI in sigmas; the cost
+        threshold; the worked example; the where-it-breaks table; the question bank; the
+        concept map and the list of what is left out.</li>
+      <li><b>Six interactive labs</b> written for this sheet in plain SVG and vanilla
+        JavaScript, six compendium figures and one drawn map.</li>
+      <li><b>Numerical checks</b> added to <code>study-companion/verify_claims.py</code> under
+        <code>_ch18()</code>, tagged <code>[Ch18 sNN]</code>.</li>
+    </ul>
+    <h3>What is claimed, and what is reported</h3>
+    <p>
+      Statements tagged <code>[Ch18 sNN]</code> are computed, and the tag names the block of
+      the verification script that computes them. Marked as <b>reported</b>, and not derived
+      here: the Halfin&ndash;Whitt limit as a theorem (its values are computed); Young&rsquo;s
+      name for the checkpoint formula; the Fischer&ndash;Lynch&ndash;Paterson result; the
+      NVLink, PCIe line rate and InfiniBand specifications; the refractive index of fibre;
+      the meaning of the 989 TFLOPS figure (via Sheet 17); the A10&rsquo;s 125 TFLOPS peak;
+      silent data corruption in large clusters; hierarchical all-reduce at scale; the token
+      counts of recent open models; the conventional PSI thresholds; and every figure the
+      source itself reports (Llama 3&rsquo;s cluster, interruptions and 90% useful time,
+      market shares, prices). The source&rsquo;s figures for prices, MFU and cluster sizes are
+      used as given. No internet research was used.
+    </p>
+    <p class="endnote">
+      Sheet 18 of 20 &mdash; the last full sheet. Source compendium &copy; its authors,
+      Apache&nbsp;2.0. This derivative sheet is offered under the same licence. The
+      source&rsquo;s chapters 19 and 20 are outlines; &sect;24 says what a reader would study
+      next.
+    </p>
+  </div>
+</section>
+
+</main>
+</div>
