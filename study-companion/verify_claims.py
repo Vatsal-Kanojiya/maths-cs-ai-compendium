@@ -7555,6 +7555,23 @@ def _ch1920():
     for k in range(1, 400): lvl = (1-a_)*lvl + a_*(b_*k)
     say("Ch19 s01", f"a ramp of slope 2 per step through alpha = 0.25: lag {b_*399 - lvl:.6f} == slope (1-alpha)/alpha = {b_*(1-a_)/a_:.6f}",
         abs((b_*399 - lvl) - b_*(1-a_)/a_) < 1e-9)
+    # the error form: x_k - x_(k-1) = e_k - (1-alpha) e_(k-1), ARIMA(0,1,1)
+    xa = np.cumsum(g20.normal(size=500)) + g20.normal(size=500); aa = 0.3; lv_ = xa[0]; ee_ = [0.0]
+    for k in range(1, 500):
+        e = xa[k] - lv_; ee_.append(e); lv_ += aa*e
+    resid = max(abs((xa[k] - xa[k-1]) - (ee_[k] - (1-aa)*ee_[k-1])) for k in range(2, 500))
+    say("Ch19 s01", f"error form of smoothing: x_k - x_(k-1) = e_k - (1-alpha) e_(k-1) on 500 points, worst residual {resid:.1e} "
+        f"(ARIMA(0,1,1) with theta = 1 - alpha)", resid < 1e-12)
+    say("Ch19 s01", f"lab figures at q/r = 0.1: MSE(0.05) = {mse_theory(0.05, 0.1, 1):.4f}, MSE(0.5) = {mse_theory(0.5, 0.1, 1):.4f}, "
+        f"MSE(1) = {mse_theory(1.0, 0.1, 1):.4f} = 2r + q; alpha* at q/r = 0.001 is {closed_alpha(0.001):.4f} "
+        f"(N = {(2-closed_alpha(0.001))/closed_alpha(0.001):.1f}), at 100 is {closed_alpha(100):.4f}; alpha = 0.05 averages N = {(2-0.05)/0.05:.0f}",
+        abs(mse_theory(0.05, 0.1, 1) - 2.0513) < 1e-4 and abs(mse_theory(0.5, 0.1, 1) - 1.4667) < 1e-4
+        and abs(mse_theory(1.0, 0.1, 1) - 2.1) < 1e-12 and abs(closed_alpha(0.001) - 0.0311) < 1e-4
+        and abs(closed_alpha(100) - 0.9902) < 1e-4)
+    say("Ch19 s01", f"table: alpha* at q/r = 0.01 is {closed_alpha(0.01):.4f} (N = {(2-closed_alpha(0.01))/closed_alpha(0.01):.1f}), "
+        f"at 0.1 is {closed_alpha(0.1):.4f} (N = {(2-closed_alpha(0.1))/closed_alpha(0.1):.1f}), at 1 is {closed_alpha(1):.4f} "
+        f"(N = {(2-closed_alpha(1))/closed_alpha(1):.1f})",
+        abs(closed_alpha(0.01) - 0.0951) < 1e-4 and abs((2-closed_alpha(0.1))/closed_alpha(0.1) - 6.40) < 0.01)
     # Adam's bias correction: an EWMA started at zero has weights summing to 1-(1-a)^t
     beta2 = 0.999; gg = g20.normal(3.0, 0.1, 50); v = 0.0
     for t_, gt in enumerate(gg, 1): v = beta2*v + (1-beta2)*gt*gt
@@ -7590,6 +7607,23 @@ def _ch1920():
     say("Ch19 s02", f"the riskier asset's weight turns negative exactly when rho > sigma1/sigma2 = 2/3: "
         + ", ".join(f"{x_:+.4f}" for x_ in sgn) + " at rho = 0.6, 2/3-, 2/3+, 0.8",
         sgn[0] > 0 and sgn[1] > 0 and sgn[2] < 0 and sgn[3] < 0)
+    sg8 = math.sqrt(gmv(np.array([[0.04, 0.048], [0.048, 0.09]]))[1]); sg99 = math.sqrt(gmv(np.array([[0.04, 0.0594], [0.0594, 0.09]]))[1])
+    sgm5 = math.sqrt(gmv(np.array([[0.04, -0.03], [-0.03, 0.09]]))[1]); wm5 = gmv(np.array([[0.04, -0.03], [-0.03, 0.09]]))[0]
+    say("Ch19 s02", f"at rho = 0.8 the minimum is {sg8*100:.2f}% with weights (123.5%, -23.5%); at 0.99 it is {sg99*100:.2f}%, "
+        f"falling to 0 at rho = 1; at rho = -0.5 both weights are positive ({wm5[0]:.3f}, {wm5[1]:.3f}), sigma {sgm5*100:.2f}%",
+        abs(sg8 - 0.19524) < 1e-4 and sg99 < 0.08 and min(wm5) > 0)
+    # the full mean-variance problem: a second constraint mu'w = m gives a parabola in (m, variance)
+    mu = np.array([0.06, 0.10, 0.08, 0.12]); A4 = g20.normal(size=(4, 4)); S4 = A4 @ A4.T*0.01 + 0.005*np.eye(4)
+    ms = np.linspace(0.04, 0.16, 13); vs4 = []
+    for m_ in ms:
+        K = np.zeros((6, 6)); K[:4, :4] = 2*S4; K[:4, 4] = K[4, :4] = 1; K[:4, 5] = K[5, :4] = mu
+        sol = np.linalg.solve(K, np.r_[np.zeros(4), 1, m_]); w4 = sol[:4]; vs4.append(w4 @ S4 @ w4)
+    cf = np.polyfit(ms, vs4, 2); res4 = np.max(np.abs(np.polyval(cf, ms) - vs4))
+    wg4, vg4 = gmv(S4); mvert = -cf[1]/(2*cf[0])
+    say("Ch19 s02", f"efficient frontier (budget + target return, two multipliers): variance is exactly quadratic in the target "
+        f"(fit residual {res4:.1e}); vertex at return {mvert:.5f} == the minimum-variance portfolio's {wg4 @ mu:.5f}, "
+        f"variance {np.polyval(cf, mvert):.6f} == {vg4:.6f}",
+        res4 < 1e-12 and abs(mvert - wg4 @ mu) < 1e-9 and abs(np.polyval(cf, mvert) - vg4) < 1e-12)
     S3 = np.array([[0.04, 0.06], [0.06, 0.09]])
     w1z, w2z = 0.3/(0.3-0.2), -0.2/(0.3-0.2)
     wz = np.array([w1z, w2z])
@@ -7849,13 +7883,15 @@ def _ch1920():
     say("Ch20 s05", f"the circuit simulator agrees with the closed-form gradient draw by draw (n = 5, 4000 draws): worst gap "
         f"{wgap:.1e}; sampled variance {np.var(gs):.3e} vs exact {var_prod_global(5):.3e} (relative SE {100*se5:.0f}% at 4000 draws)",
         wgap < 1e-12 and abs(np.var(gs) - var_prod_global(5)) < 3*se5*var_prod_global(5))
-    # entangled ansatz: Ry layers + CZ ladder, depth L = n
+    # entangled ansatz: Ry layers + CZ ladder, depth L = n. Its own generator, so that checks added
+    # elsewhere cannot change these numbers: the page embeds them in a lab.
+    gEnt = np.random.default_rng(20051)
     ent = []
     for n in range(2, 11):
         cz = czmask(n); L = n; Ns = 3000 if n <= 8 else 2000
         gg_, gl_ = [], []
         for _ in range(Ns):
-            th = g20.uniform(0, 2*math.pi, n*L); e = np.zeros(n*L); e[0] = math.pi/2
+            th = gEnt.uniform(0, 2*math.pi, n*L); e = np.zeros(n*L); e[0] = math.pi/2
             cp = costs(run(th + e, n, L, True, cz), n); cm = costs(run(th - e, n, L, True, cz), n)
             gg_.append((cp[0] - cm[0])/2); gl_.append((cp[1] - cm[1])/2)
         ent.append((n, np.var(gg_), np.var(gl_)))
@@ -7866,9 +7902,25 @@ def _ch1920():
     say("Ch20 s05", f"  fitted log2 slope over n = 4..10: global {slope_g:.2f} per qubit, local {slope_l:.2f} per qubit "
         f"(product ansatz: log2(3/8) = {math.log2(3/8):.2f}); both fall, the global cost faster",
         slope_g < -1.0 and -0.5 < slope_l < 0 and slope_g < slope_l)
-    say("Ch20 s05", f"  shots to resolve a typical gradient (SE = sqrt(Var)) ~ 1/(2 Var): product global n = 10: "
-        f"{1/(2*var_prod_global(10)):,.0f}; n = 20: {1/(2*var_prod_global(20)):,.0f}; n = 50: {1/(2*var_prod_global(50)):.1e}",
-        1/(2*var_prod_global(20)) > 1e8)
+    say("Ch20 s05", f"  per added qubit the fitted global slope is a factor 2^({slope_g:.2f}) = {2**slope_g:.3f} (page: about 0.30)",
+        abs(2**slope_g - 0.30) < 0.02)
+    # shots: parameter-shift gradient = (C+ - C-)/2, each from N shots of an outcome with variance <= v,
+    # so SE <= sqrt(v/(2N)); SE = sqrt(Var) needs N = v/(2 Var): v = 1/4 for 0/1, v = 1 for +-1
+    sh = lambda n: 1/(8*var_prod_global(n))
+    say("Ch20 s05", f"  shots per circuit to see a typical gradient, 0/1 global cost, N = 1/(8 Var): n = 10 {sh(10):,.0f}; "
+        f"n = 20 {sh(20):.3g}; n = 50 {sh(50):.2g}; growth per qubit {sh(11)/sh(10):.4f} (8/3)",
+        round(sh(10)) == 6819 and abs(sh(20) - 1.24e8) < 0.01e8 and abs(sh(50) - 7.5e20) < 0.05e20 and abs(sh(11)/sh(10) - 8/3) < 1e-12)
+    v6e = [e for e in ent if e[0] == 6][0]; v5e = [e for e in ent if e[0] == 5][0]
+    say("Ch20 s05", f"  lab at n = 6, global: exact {var_prod_global(6):.2e} -> {sh(6):.0f} shots; entangling {v6e[1]:.2e} -> "
+        f"{1/(8*float(f'{v6e[1]:.2e}')):.0f} shots; measured factor {float(f'{v6e[1]:.2e}')/float(f'{v5e[1]:.2e}'):.2f}",
+        round(sh(6)) == 135)
+    EMB = {2: (4.47e-2, 3.78e-1), 3: (1.39e-2, 2.77e-1), 4: (4.58e-3, 2.37e-1), 5: (1.29e-3, 1.97e-1), 6: (4.58e-4, 1.74e-1),
+           7: (1.54e-4, 1.53e-1), 8: (4.32e-5, 1.36e-1), 9: (7.36e-6, 1.23e-1), 10: (3.52e-6, 1.11e-1)}
+    okE = all(f"{e[1]:.2e}" == f"{EMB[int(e[0])][0]:.2e}" and f"{e[2]:.2e}" == f"{EMB[int(e[0])][1]:.2e}" for e in ent)
+    say("Ch20 s05", "  the values embedded in the page's lab equal this run's measurements to the 3 figures shown", okE)
+    thz = g20.uniform(0, 2*math.pi, 400000)
+    say("Ch20 s05", f"  measuring qubit 1 alone, no entanglement: Var d<Z1>/dtheta1 = Var(-sin theta1) = {np.var(np.sin(thz)):.4f} "
+        f"(1/2, every n)", abs(np.var(np.sin(thz)) - 0.5) < 0.005)
 
     # ================= s06  leaky integrate-and-fire = first-order lag ==========
     print()
@@ -7964,6 +8016,11 @@ def _ch1920():
         ez = max(ez, abs(Vz - Vexact)); ee = max(ee, abs(Ve - Vexact))
     say("Ch20 s06", f"membrane sampled every 1 ms (tau = 20 ms) under held input: EWMA with alpha = 1 - e^(-dt/tau) = {aZ:.5f} "
         f"matches the ODE to {ez:.1e}; forward Euler's alpha = dt/tau = {aE:.3f} is off by {ee:.3f}", ez < 1e-12 and ee > 1e-3)
+    isi2 = lif_isi(2.0, tau)*1000
+    say("Ch20 s06", f"lab at u = 2, tau = 20 ms: interval {isi2:.2f} ms, {1000/isi2:.1f} Hz against u/tau = 100 Hz; the steel ball "
+        f"at the same u: {tau_b*math.log(2):.2f} s; a 0.01 ms step detects the crossing at {math.ceil(isi2/0.01 - 1e-9)*0.01:.2f} ms",
+        abs(isi2 - 13.86) < 0.005 and abs(1000/isi2 - 72.13) < 0.01 and abs(tau_b*math.log(2) - 41.45) < 0.005)
+    say("Ch20 s06", f"reset to zero at a = 0.4: rate 1/3 is {100*(1 - (1/3)/0.4):.1f}% below 0.4", abs((1 - (1/3)/0.4) - 1/6) < 1e-12)
 
     # ================= s07  worked example: dual sourcing ========================
     print()
@@ -7985,6 +8042,11 @@ def _ch1920():
           and abs(es_(half, .95) - 51.6) < 1e-9 and abs(var_(mv, .95) - 23.4043) < 1e-3 and abs(es_(mv, .95) - 66.71) < 0.01)
     say("Ch19 s07", "VaR95 calls dual sourcing riskier (0 -> 50%), ES95 calls it safer (80% -> 51.6%); P(any loss) "
         f"{1-(1-pf)**2:.4f} is the series figure, P(total loss) {pf*pf:.4f} the parallel one", ok)
+    wsg = np.linspace(0.01, 0.99, 981)
+    esg = [es_(dist_add({0: 1-pf, round(100*x_, 9): pf}, {0: 1-pf, round(100*(1-x_), 9): pf}), 0.95) for x_ in wsg]
+    say("Ch19 s07", f"ES95 over every split from 1/99 to 99/1 is least at {wsg[int(np.argmin(esg))]:.3f} ({min(esg):.2f}%); "
+        f"the steadiest split 0.766 gives {es_(mv, 0.95):.2f}%",
+        abs(wsg[int(np.argmin(esg))] - 0.5) < 1e-9 and abs(min(esg) - 51.6) < 1e-9)
 
 _ch1920()
 # ----- end of Chapters 19-20 coda block -----

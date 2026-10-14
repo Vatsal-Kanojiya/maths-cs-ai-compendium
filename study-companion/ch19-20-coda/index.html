@@ -1378,18 +1378,18 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
       <caption>Variance of the gradient with respect to the first angle, entangling circuit of depth n. Measured values carry sampling error of several per cent.</caption>
       <thead><tr><th>Qubits n</th><th class="mono">2</th><th class="mono">4</th><th class="mono">6</th><th class="mono">8</th><th class="mono">10</th></tr></thead>
       <tbody>
-        <tr><td>Global cost, entangling</td><td class="mono">4.27e-2</td><td class="mono">4.55e-3</td><td class="mono">4.11e-4</td><td class="mono">3.91e-5</td><td class="mono">3.13e-6</td></tr>
+        <tr><td>Global cost, entangling</td><td class="mono">4.47e-2</td><td class="mono">4.58e-3</td><td class="mono">4.58e-4</td><td class="mono">4.32e-5</td><td class="mono">3.52e-6</td></tr>
         <tr><td>Global cost, no entanglement (exact)</td><td class="mono">4.69e-2</td><td class="mono">6.59e-3</td><td class="mono">9.27e-4</td><td class="mono">1.30e-4</td><td class="mono">1.83e-5</td></tr>
-        <tr><td>Qubit 1 only, entangling</td><td class="mono">0.365</td><td class="mono">0.233</td><td class="mono">0.167</td><td class="mono">0.133</td><td class="mono">0.118</td></tr>
+        <tr><td>Qubit 1 only, entangling</td><td class="mono">0.378</td><td class="mono">0.237</td><td class="mono">0.174</td><td class="mono">0.136</td><td class="mono">0.111</td></tr>
         <tr><td>Qubit 1 only, no entanglement (exact)</td><td class="mono">0.5</td><td class="mono">0.5</td><td class="mono">0.5</td><td class="mono">0.5</td><td class="mono">0.5</td></tr>
       </tbody>
     </table>
   </div>
   <div class="col">
     <p>
-      Fitted over \(n\) = 4 to 10, the global variance falls by 1.75 bits per qubit, a factor
+      Fitted over \(n\) = 4 to 10, the global variance falls by 1.76 bits per qubit, a factor
       of about 0.30 for each one added and steeper than the exact case&rsquo;s 0.375. The
-      single-qubit cost falls by only 0.17 bits per qubit over the same range
+      single-qubit cost falls by only 0.18 bits per qubit over the same range
       (<code>[Ch20 s05]</code>).
     </p>
     <div class="note brk">
@@ -1477,8 +1477,9 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     for the circuit without entanglement; dots are the simulator&rsquo;s measurements for the
     entangling circuit, copied from the verification run, so they carry its sampling error.
     The exact factor for the global cost is 0.375 at every \(n\), the answer to the
-    prediction; the measured factor between neighbouring dots wanders around 0.3 because each
-    dot has a few per cent of noise. Switch to <b>Qubit 1 only</b>: the exact line is flat at 0.5
+    prediction. The measured factor between neighbouring dots is 0.28 to 0.36 up to 8 qubits and
+    then swings to 0.17 and 0.48, because each dot carries sampling noise and the noise grows with
+    \(n\), as the box above explains. Switch to <b>Qubit 1 only</b>: the exact line is flat at 0.5
     and the entangling circuit&rsquo;s dots fall slowly. The shot readouts use
     \(1/(8\,\mathrm{Var})\) for the 0-or-1 global cost and \(1/(2\,\mathrm{Var})\) for a single
     qubit&rsquo;s \(\pm1\) outcome.
@@ -1891,7 +1892,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
         <div class="ans"><p>Both diagrams double: orthogonal states sit 180&deg; apart on the Bloch circle as principal planes do on Mohr&rsquo;s. What is halved is the angle inside the gate: \(R_y(\theta)\) turns the amplitudes by \(\theta/2\) and the Bloch point by \(\theta\), as turning a stress element by \(\theta/2\) moves its Mohr point by \(\theta\).</p></div></details>
       <details class="q"><summary><span class="qn">J6</span><span>Can Mohr&rsquo;s circle stand in for a qubit in general?</span></summary>
         <div class="ans"><p>No. It covers real amplitudes only, the \(x\)&ndash;\(z\) circle. The pure state \((1, i)/\sqrt2\) has a real density-matrix part of \(I/2\), a Mohr&rsquo;s circle shrunk to a point, indistinguishable from complete uncertainty. Phase, entanglement and the \(2^n\) growth are all outside it.</p></div></details>
-      <details class="q"><summary><span class="qn">J7</span><span>A ten-qubit simulation shows a local cost&rsquo;s gradient variance falling only 0.17 bits per qubit. Has it shown that local costs avoid barren plateaus?</span></summary>
+      <details class="q"><summary><span class="qn">J7</span><span>A ten-qubit simulation shows a local cost&rsquo;s gradient variance falling only 0.18 bits per qubit. Has it shown that local costs avoid barren plateaus?</span></summary>
         <div class="ans"><p>No. It is ten qubits at one depth, and sampling error grows with \(n\). Reported theorems say sufficiently deep circuits plateau for local costs too. What the page does prove is narrower: for the circuit without entanglement, the global cost decays as \((3/8)^n\) and the averaged local cost only as \(1/n^2\).</p></div></details>
       <details class="q"><summary><span class="qn">J8</span><span>A ReLU network converted to leaky spiking neurons loses accuracy. Name three causes this sheet predicts.</span></summary>
         <div class="ans"><p>The leak bends the rate curve and moves its kink to \(u = 1\) (0.721 of the intended rate at \(u = 2\)); reset to zero turns rates into a staircase (0.4 fires at 1/3); and too few time steps leave a counting error of about \(1/(2T)\). The derivation says to use non-leaky neurons, reset by subtraction, and enough steps.</p></div></details>
@@ -2399,8 +2400,8 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
   'use strict';
   var H=window.__c1920, $=H.$, T=H.txt, L=H.ln;
   /* entangling circuit, measured by verify_claims.py [Ch20 s05]: [global, qubit 1 only] */
-  var ENT={2:[4.27e-2,3.65e-1],3:[1.50e-2,2.80e-1],4:[4.55e-3,2.33e-1],5:[1.27e-3,1.93e-1],
-           6:[4.11e-4,1.67e-1],7:[1.05e-4,1.51e-1],8:[3.91e-5,1.33e-1],9:[9.60e-6,1.20e-1],10:[3.13e-6,1.18e-1]};
+  var ENT={2:[4.47e-2,3.78e-1],3:[1.39e-2,2.77e-1],4:[4.58e-3,2.37e-1],5:[1.29e-3,1.97e-1],
+           6:[4.58e-4,1.74e-1],7:[1.54e-4,1.53e-1],8:[4.32e-5,1.36e-1],9:[7.36e-6,1.23e-1],10:[3.52e-6,1.11e-1]};
   var X0=56, X1=540, Y0=14, Y1=224, LMIN=-7, cost='g';
   function exact(n,c){return c==='g'?(1/8)*Math.pow(3/8,n-1):0.5;}
   function px(n){return X0+(X1-X0)*(n-1)/9;}
