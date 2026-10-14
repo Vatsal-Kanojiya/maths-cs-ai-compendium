@@ -54,7 +54,8 @@ merely structural, that is said plainly.
 | 14 | Data Structures and Algorithms *(pt 1: foundations, arrays, lists)* | [`ch14-data-structures-algorithms/`](ch14-data-structures-algorithms/index.html) | [Read online](https://claude.ai/artifact/TCQEggFEntAofLXcUbunbd) |
 | 14 | Data Structures and Algorithms *(pt 2: trees, graphs, search + end matter)* | [`ch14-data-structures-algorithms-part2/`](ch14-data-structures-algorithms-part2/index.html) | [Read online](https://claude.ai/artifact/NESj33J7qvUysyK9djgRed) |
 | 15 | Production Software Engineering | [`ch15-production-software-engineering/`](ch15-production-software-engineering/index.html) | [Read online](https://claude.ai/artifact/FGGLCb4G11EoK8UXHnVhHs) |
-| 16 | SIMD and GPU Programming *(pt 1 of 3: the CPU; parts 2–3 not yet written)* | [`ch16-simd-gpu/`](ch16-simd-gpu/index.html) | [Read online](https://claude.ai/artifact/PkFJKQedyFn3SNLNqWGKCy) |
+| 16 | SIMD and GPU Programming *(pt 1: the CPU)* | [`ch16-simd-gpu/`](ch16-simd-gpu/index.html) | [Read online](https://claude.ai/artifact/PkFJKQedyFn3SNLNqWGKCy) |
+| 16 | SIMD and GPU Programming *(pt 2: the GPU; part 3 not yet written)* | [`ch16-simd-gpu-part2/`](ch16-simd-gpu-part2/index.html) | [Read online](https://claude.ai/artifact/8byqc279ofge6NJ7k7h4NU) |
 | 17 | AI Inference | [`ch17-ai-inference/`](ch17-ai-inference/index.html) | [Read online](https://claude.ai/artifact/UdoN6PEmWrY6pHxACELcxr) |
 | 18 | ML Systems Design | [`ch18-ml-systems-design/`](ch18-ml-systems-design/index.html) | [Read online](https://claude.ai/artifact/Swz1BNJbZVNzbMcUyZVtdh) |
 | 19–20 | Applied AI; Bleeding-edge AI *(coda: derivable cores of two outline chapters)* | [`ch19-20-coda/`](ch19-20-coda/index.html) | [Read online](https://claude.ai/artifact/BRYcFocRMW6VkHCMbECTie) |
@@ -95,7 +96,7 @@ chapters rely on the linked chips instead.
 ## Verification
 
 `verify_claims.py` checks the load-bearing mathematical claims across every published sheet
-(1,072 checks, zero failures at the last full run; it takes about three minutes)
+(1,157 checks, zero failures at the last full run; it takes about three minutes)
 against independent computation rather than against anybody's memory — the von Mises and
 Tresca norm identities, the unit-change nearest-neighbour flip, the worked bracket example,
 the `1/sqrt(d)` concentration of cosine similarity, the inertia tensor eigenvalues, polar
@@ -156,7 +157,12 @@ run (its bandwidth benchmark printing ~1,000 GB/s because GCC ran 1 of 100 trial
 benchmark deleted as dead code), `min(K/4, 2)` against measured FMA chains, Little's law against a
 K-chain pointer chase, exact LRU traffic of naive and tiled matmul by stack distance against direct
 simulation, `16x16x32 = 8,192` MACs for AMX run with and without its setup, and the cube-law
-equal-power Amdahl crossover `s* = (n^-1/3 - 1/n)/(1 - 1/n)`; and -- for Chapter 18 -- Little's
+equal-power Amdahl crossover `s* = (n^-1/3 - 1/n)/(1 - 1/n)`; and -- for Chapter 16 part 2, with
+no GPU in the container -- the GPU roofline from lanes x clock x 2, a cycle-by-cycle simulation of
+one SM against Little's bound (and with latency jitter), divergence over 20,000 simulated warps
+against `1-(1-q)^32`, an output-stationary systolic array checked wave by wave against `a_k b_k^T`,
+float32 sums of one array in 200 arrival orders, the online-softmax identity, and the source's
+Pallas kernel and JAX chain actually run on the CPU; and -- for Chapter 18 -- Little's
 law against every sizing in the source's design examples and by simulation, Erlang C at the
 source's 50 replicas (no steady state; 4.2 ms at 51, 0.39 ms at 55), the M/G/inf count in service
 as Poisson for fixed and log-normal service times, square-root staffing against the Halfin-Whitt

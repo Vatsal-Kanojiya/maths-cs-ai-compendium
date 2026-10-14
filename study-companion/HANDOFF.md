@@ -39,26 +39,25 @@ browser probe those runs used is now in the repo: `tools/probe.js` (see the prob
 | 14 | Data Structures and Algorithms **pt 2/2** | `ch14-data-structures-algorithms-part2/` | https://claude.ai/artifact/NESj33J7qvUysyK9djgRed |
 | 15 | Production Software Engineering | `ch15-production-software-engineering/` | https://claude.ai/artifact/FGGLCb4G11EoK8UXHnVhHs |
 | 16 | SIMD and GPU Programming **pt 1/3** (the CPU) | `ch16-simd-gpu/` | https://claude.ai/artifact/PkFJKQedyFn3SNLNqWGKCy |
+| 16 | SIMD and GPU Programming **pt 2/3** (the GPU) | `ch16-simd-gpu-part2/` | https://claude.ai/artifact/8byqc279ofge6NJ7k7h4NU |
 | 17 | AI Inference | `ch17-ai-inference/` | https://claude.ai/artifact/UdoN6PEmWrY6pHxACELcxr |
 | 18 | ML Systems Design | `ch18-ml-systems-design/` | https://claude.ai/artifact/Swz1BNJbZVNzbMcUyZVtdh |
 | 19–20 | Applied AI; Bleeding-edge AI (coda) | `ch19-20-coda/` | https://claude.ai/artifact/BRYcFocRMW6VkHCMbECTie |
 
-`verify_claims.py` stands at **1,072 checks, 0 failures**, covering every published sheet (01–18
-and the 19–20 coda). Run it first in any new session. It needs numpy and scipy (`pip install numpy
+`verify_claims.py` stands at **1,157 checks, 0 failures**, covering every published sheet (01–18
+and the 19–20 coda). Two more Sheet 16 part 2 checks run the source's JAX/Pallas code and are
+skipped with a NOTE when JAX is not installed (1,159 with it). Run it first in any new session. It needs numpy and scipy (`pip install numpy
 scipy`) and now takes about **three minutes**, longer than the Bash tool's 120 s default — run it
 with a long timeout or in the background, alone. Each chapter's block lives in its own function
 (`_ch14p1`, `_ch15`, `_ch16p1`, `_ch17`, `_ch18`, `_ch1920`, …); empty stubs `_ch16p2()` and
 `_ch16p3()` are waiting. **Sheet 16 part 1's measured-timing checks (s01, s08, s10, s11) are
 flaky under CPU load** — see Known issues. Also run `python3 study-companion/audit_classes.py`.
 
-**What is left: Sheet 16 parts 2 and 3, nothing else.** Part 1 (the CPU) is published and its §16
-is the contract for part 2 — seven calculations, listed in `handoff-notes/ch16-part1.md` §6. Part 2
-is files 04–05 (GPU and CUDA; Triton, TPUs and Pallas) into `ch16-simd-gpu-part2/`; part 3 is files
-06–07 (RISC-V and embedded; Vulkan compute) plus the chapter's concept map joining all three parts,
-into `ch16-simd-gpu-part3/`. Part 2 also owes Sheet 15 §21/§27's promise: why a GPU run is not
-bit-exactly repeatable (reduction order). Part 2 was started once and stopped by the user's choice
-before it saved anything; there is nothing half-built on the branch. Sheets 17 and 18 cite "Sheet
-16" by number only, so nothing needs renumbering when parts 2–3 land.
+**What is left: Sheet 16 part 3, nothing else.** Parts 1 (the CPU) and 2 (the GPU) are published.
+Part 2's §19 is the contract for part 3 — six items, listed in `handoff-notes/ch16-part2.md` §6:
+RVV as predicates, Vulkan subgroups as lanes, file 07's tree reduction and GLSL tiled matmul counted
+and priced, FLOPs per joule at the edge, and a concept map joining all three parts. Part 3 is files
+06–07 (RISC-V and embedded; Vulkan compute) into `ch16-simd-gpu-part3/`, verifier stub `_ch16p3()`.
 
 Copy the **page skeleton from `ch14-data-structures-algorithms-part2/`**, not from Chapters 09–13.
 
@@ -352,6 +351,14 @@ the ridge moves with cores. The SIMD entry named a family: only the **drilling h
 **multi-spindle automatic is a pipeline**. Ch02's matmul lands as **kitting** with intensity
 `b/4` (exact LRU counts). The headline was outside the bank: **Little's law / the CONWIP best case**
 sets accumulator counts and per-core memory bandwidth, measured. Parts 2–3 still to write.
+
+**Part 2 written.** Memory bandwidth ↔ material flow held
+again, now as a three-station line (dock, stores, machines), and the ridge moved past every tile
+the source teaches. Little's law held exactly in a deterministic SM simulation and broke on who
+sets the card count (the register file and the compiler, in whole blocks). The drilling head held
+for branch counts and broke at per-lane addressing, warp switching and shuffles. Outside the bank:
+the c = 0 sampling plan for divergence, the two-bin system for double buffering, and fusion's
+ceiling `1 + ksI*/d`.
 
 **17 AI inference.** ~~Quantisation ↔ measurement resolution and significant figures.
 **Batching ↔ batch production versus one-piece flow** in lean manufacturing; latency versus
@@ -1044,6 +1051,27 @@ missed by git on a real file) and a measurable exception nobody would have writt
 - The block needs full git history (`git show <sha>:path`); no Docker daemon exists here. The
   worktree guard refuses shell lines mixing `cd`, variables and git words: run scripts instead.
 
+## The Chapter 16 part 2 lesson worth generalising
+
+**When there is no hardware, simulate the law, not the machine, and say which inputs are borrowed.**
+No GPU existed here, yet every headline is computed: a ~40-line SM model reproduces Little's bound
+to the third figure, the systolic array is checked wave by wave, and float32 order effects are
+exact in the browser (`Math.fround(a+b)` is IEEE float32 addition, since double holds 2p+2 bits).
+Separating source figures from four reported constants (SM count, lanes, clock, warp limit) let
+every derived number stay honest. Second: **price a claimed saving at the bottleneck.** "Fusion
+removes 4 of 5 passes" is true and buys 1.29x on a compute-bound layer; the formula
+`1 + ksI*/d` says when it buys more. Same move as part 1's moving ridge.
+
+**New traps from Chapter 16 part 2.**
+
+- **Replay the lab's RNG in Python** (`mul32` mirrors the page's `rng()` bit for bit) so the
+  verifier asserts the exact rest values of stochastic labs, not tolerances around them.
+- **Optional dependencies in the verifier.** The two checks that run the source's JAX/Pallas code
+  are skipped with a NOTE when JAX is absent (system python here has none; it was run from a venv).
+- **Round from the formula, not memory**: `1-0.999^32` is 3.15%, which prints as 3.2%; the draft said 3.1%.
+- **Per-warp completion-interval throughput** avoids window-quantisation bias in short simulations
+  (a 10,000-cycle window over a 404-cycle loop read 1.2% above the bound until changed).
+
 ## The Chapter 17 lesson worth generalising
 
 **When a bridge pairs two vocabularies, check each term's definition, not the pairing.** The
@@ -1164,10 +1192,9 @@ push every part; never leave a part uncommitted at the end of a run.
 
 ## What is actually left
 
-**Sheet 16 parts 2 and 3.** Everything else in the series is written and published: chapters
-01–15, 16 part 1, 17, 18, and the 19–20 coda. Part 2's contract is part 1 §16; part 3's is part 2's
-own last section plus part 1's promise of RVV as SVE-style predicates, Vulkan subgroups as lanes,
-and a chapter-wide concept map. Both are single runs at about 1,000 source lines each.
+**Sheet 16 part 3.** Everything else in the series is written and published: chapters 01–15, 16
+parts 1–2, 17, 18, and the 19–20 coda. Part 3's contract is part 2 §19 (six items). A single run at
+about 1,100 source lines.
 
 Optional clean-ups, each needing artifacts republished: the flaky timing checks, the two
 cross-references, Sheet 13 part 2's container sentence, and the nine sheets with display
