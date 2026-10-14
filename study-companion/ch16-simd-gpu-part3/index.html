@@ -1,0 +1,981 @@
+<title>SIMD and the Edge</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(', '\\)']], displayMath: [['$$', '$$']], processEscapes: true },
+  svg: { fontCache: 'global', scale: 1.0 },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-svg.js" id="MathJax-script" async></script>
+
+<style>
+/* ============ TOKENS: light is complete and authoritative ============ */
+:root{
+  --ground:#F0F2F1;
+  --sheet:#FBFCFB;
+  --sheet-2:#F4F6F5;
+  --ink:#14181A;
+  --ink-2:#4E575B;
+  --ink-3:#77838A;
+  --rule:#D3DAD7;
+  --rule-strong:#A8B4B0;
+  --accent:#12507E;
+  --accent-ink:#0E4267;
+  --accent-soft:#E4EEF6;
+  --bridge:#1F8A4C;
+  --bridge-soft:#E4F2EA;
+  --brk:#A8500F;
+  --brk-soft:#FAEBDF;
+  --s1:#BF5B00;
+  --s2:#0F74C7;
+  --s3:#1F8A4C;
+  --paper:#FFFFFF;            /* pasted-drawing ground, both themes */
+  --paper-ink:#1b1b1b;
+  --shadow:0 1px 2px rgba(20,24,26,.06), 0 6px 18px rgba(20,24,26,.05);
+  --f-disp:'Archivo Narrow', 'Arial Narrow', Helvetica, sans-serif;
+  --f-body:'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --f-mono:'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+    --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+    --rule:#293134; --rule-strong:#3F494C;
+    --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+    --bridge:#35AC63; --bridge-soft:#11281B;
+    --brk:#E0913F; --brk-soft:#2E2012;
+    --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+  --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+  --rule:#293134; --rule-strong:#3F494C;
+  --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+  --bridge:#35AC63; --bridge-soft:#11281B;
+  --brk:#E0913F; --brk-soft:#2E2012;
+  --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:var(--f-body); font-size:17px; line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ============ TITLE BLOCK (engineering drawing header) ============ */
+.titleblock{
+  position:sticky; top:env(safe-area-inset-top,0px); z-index:40;
+  background:var(--sheet); border-bottom:1px solid var(--rule-strong);
+}
+.tb-in{
+  max-width:1240px; margin:0 auto; padding:0 16px;
+  display:flex; align-items:stretch; gap:0; min-height:46px;
+}
+.tb-cell{
+  display:flex; flex-direction:column; justify-content:center;
+  padding:5px 14px; border-right:1px solid var(--rule);
+  font-family:var(--f-disp);
+}
+.tb-cell:first-child{padding-left:0}
+.tb-cell:last-child{border-right:0; margin-left:auto; padding-right:0}
+.tb-k{
+  font-size:8.5px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); line-height:1.4;
+}
+.tb-v{font-size:13px; font-weight:700; letter-spacing:.02em; color:var(--ink); line-height:1.3}
+.tb-v.accent{color:var(--accent)}
+.tb-hide{display:none}
+@media (min-width:680px){ .tb-hide{display:flex} }
+
+.themebtn{
+  appearance:none; background:transparent; border:1px solid var(--rule-strong);
+  color:var(--ink-2); font-family:var(--f-disp); font-size:10px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:6px 10px; border-radius:2px;
+  cursor:pointer; align-self:center; white-space:nowrap;
+}
+.themebtn:hover{border-color:var(--accent); color:var(--accent)}
+.themebtn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+/* ============ SHELL ============ */
+.shell{max-width:1240px; margin:0 auto; padding:0 16px; padding-block:0 64px}
+@media (min-width:1080px){
+  .shell{display:grid; grid-template-columns:212px minmax(0,1fr); gap:44px; align-items:start}
+}
+.rail{display:none}
+@media (min-width:1080px){
+  .rail{
+    display:block; position:sticky; top:calc(env(safe-area-inset-top,0px) + 70px);
+    padding-block:28px; font-family:var(--f-disp); font-size:12.5px;
+  }
+}
+.rail-h{
+  font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-3);
+  padding-bottom:8px; border-bottom:1px solid var(--rule); margin-bottom:10px;
+}
+.rail a{
+  display:flex; gap:9px; padding:4px 0; color:var(--ink-2); text-decoration:none;
+  border-left:2px solid transparent; padding-left:9px; margin-left:-11px; line-height:1.35;
+}
+.rail a:hover{color:var(--accent)}
+.rail a.on{color:var(--accent); border-left-color:var(--accent); font-weight:700}
+.rail a .n{font-family:var(--f-mono); font-size:10.5px; color:var(--ink-3); flex:none; padding-top:1px}
+.rail a.on .n{color:var(--accent)}
+
+main{min-width:0; padding-block:0 0}
+.col{max-width:70ch}
+
+/* ============ TYPE ============ */
+h1,h2,h3,h4{font-family:var(--f-disp); text-wrap:balance; margin:0; line-height:1.14}
+h1{font-size:clamp(34px,7vw,58px); font-weight:700; letter-spacing:-.015em}
+h2{font-size:clamp(25px,4.2vw,34px); font-weight:700; letter-spacing:-.01em}
+h3{font-size:19px; font-weight:700; letter-spacing:.005em; margin-top:2px}
+h4{font-size:14px; font-weight:700; letter-spacing:.06em; text-transform:uppercase}
+p{margin:0 0 1.05em}
+a{color:var(--accent-ink)}
+strong{font-weight:600}
+em{font-style:italic}
+code{font-family:var(--f-mono); font-size:.87em; background:var(--sheet-2); padding:1px 5px; border-radius:2px; border:1px solid var(--rule)}
+.lead{font-size:19.5px; line-height:1.56; color:var(--ink-2)}
+.eyebrow{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--ink-3); margin:0 0 10px;
+}
+.srcref{
+  font-family:var(--f-mono); font-size:11px; color:var(--ink-3);
+  border:1px solid var(--rule); border-radius:2px; padding:2px 7px; display:inline-block;
+  background:var(--sheet-2); white-space:nowrap;
+}
+
+/* ============ SECTION ============ */
+section{padding-block:38px 0; scroll-margin-top:calc(env(safe-area-inset-top,0px) + 62px)}
+.sechead{display:flex; align-items:baseline; gap:13px; margin-bottom:6px; flex-wrap:wrap}
+.secnum{
+  font-family:var(--f-mono); font-size:12px; font-weight:600; color:var(--accent);
+  border:1px solid var(--accent); border-radius:2px; padding:2px 7px; flex:none;
+  background:var(--accent-soft);
+}
+.rule-h{border:0; border-top:1px solid var(--rule); margin:0 0 22px}
+.rule-d{border:0; border-top:1px dashed var(--rule-strong); margin:34px 0}
+
+/* ============ CALLOUTS ============ */
+.note{
+  border:1px solid var(--rule); border-left:3px solid var(--accent);
+  background:var(--sheet); border-radius:2px; padding:16px 18px; margin:22px 0;
+}
+/* Greek letters must never be uppercased: text-transform turns beta into
+   a capital Beta, which is the Latin letter B on screen -- likewise eta->H,
+   kappa->K, lambda->A-shape.  Any Greek inside an uppercased label wears .gk. */
+.gk{text-transform:none}
+.note.bridge{border-left-color:var(--bridge); background:var(--bridge-soft)}
+.note.brk{border-left-color:var(--brk); background:var(--brk-soft)}
+.note-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; margin-bottom:7px; display:flex; align-items:center; gap:8px;
+}
+.note.bridge .note-h{color:var(--bridge)}
+.note.brk .note-h{color:var(--brk)}
+.note .note-h{color:var(--accent)}
+.note p:last-child, .note ul:last-child{margin-bottom:0}
+.note-h .ic{
+  width:15px; height:15px; border-radius:50%; border:1.5px solid currentColor; flex:none;
+  display:grid; place-items:center; font-size:9.5px; font-weight:700; font-family:var(--f-mono);
+}
+ul,ol{margin:0 0 1.05em; padding-left:1.25em}
+li{margin-bottom:.4em}
+li::marker{color:var(--ink-3)}
+
+/* ============ DEFINITION BLOCK ============ */
+.defn{
+  background:var(--sheet); border:1px solid var(--rule); border-radius:3px;
+  padding:18px 20px; margin:22px 0; box-shadow:var(--shadow);
+}
+.defn-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:10px;
+  padding-bottom:8px; border-bottom:1px solid var(--rule);
+}
+.defn p:last-child{margin-bottom:0}
+
+/* ============ TABLES ============ */
+.tw{overflow-x:auto; margin:22px 0; border:1px solid var(--rule); border-radius:3px; background:var(--sheet)}
+table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:480px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule); vertical-align:top}
+thead th{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); background:var(--sheet-2); font-weight:700; white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:0}
+td.mono,th.mono{font-family:var(--f-mono); font-size:13px; font-variant-numeric:tabular-nums}
+.tw caption{
+  caption-side:bottom; text-align:left; padding:9px 14px; font-size:12.5px;
+  color:var(--ink-3); border-top:1px solid var(--rule); font-family:var(--f-disp);
+}
+
+/* ============ FIGURES ============ */
+figure{margin:24px 0}
+.paper{
+  background:var(--paper); border:1px solid var(--rule-strong); border-radius:3px;
+  padding:16px; display:flex; justify-content:center; box-shadow:var(--shadow);
+}
+.paper img{max-width:100%; height:auto; display:block}
+figcaption{
+  font-family:var(--f-disp); font-size:12.5px; color:var(--ink-3); margin-top:9px;
+  line-height:1.45; padding-left:2px;
+}
+figcaption b{color:var(--ink-2); font-weight:700; letter-spacing:.04em}
+
+/* ============ INTERACTIVE PANELS ============ */
+.lab{
+  background:var(--sheet); border:1px solid var(--rule-strong); border-radius:3px;
+  margin:26px 0; overflow:hidden; box-shadow:var(--shadow);
+}
+.lab-h{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:11px 16px; border-bottom:1px solid var(--rule); background:var(--sheet-2);
+}
+.lab-t{font-family:var(--f-disp); font-size:13px; font-weight:700; letter-spacing:.05em; text-transform:uppercase}
+.lab-tag{
+  font-family:var(--f-mono); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--accent); border:1px solid var(--accent); border-radius:2px; padding:2px 6px;
+  margin-left:auto; white-space:nowrap;
+}
+.lab-body{padding:16px}
+.lab-foot{
+  padding:11px 16px; border-top:1px solid var(--rule); background:var(--sheet-2);
+  font-size:13.5px; color:var(--ink-2); line-height:1.5;
+}
+.lab-foot b{color:var(--ink)}
+.stage{width:100%; max-width:560px; height:auto; display:block; margin-inline:auto; touch-action:none; cursor:grab}
+.stage.drag{cursor:grabbing}
+
+/* Dividers are drawn as cell borders rather than as 1px grid gaps over a grey
+   backdrop: when the item count does not fill the last row, a gap-based grid
+   leaves the backdrop showing as an empty grey block. */
+.readout{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr)); gap:0;
+  background:var(--sheet); border:1px solid var(--rule); border-radius:2px;
+  margin-top:14px; overflow:hidden;
+}
+.ro{background:var(--sheet); padding:8px 11px;
+  border-right:1px solid var(--rule); border-bottom:1px solid var(--rule)}
+.ro-k{
+  font-family:var(--f-disp); font-size:9px; letter-spacing:.13em; text-transform:uppercase;
+  color:var(--ink-3); margin-bottom:2px;
+  /* was white-space:nowrap, which clipped the longer keys instead of wrapping */
+  white-space:normal; overflow-wrap:break-word; line-height:1.3; min-height:2.6em;
+}
+.ro-v{
+  font-family:var(--f-mono); font-size:15px; font-weight:500; font-variant-numeric:tabular-nums;
+  color:var(--ink); line-height:1.25;
+}
+.ro-v.a{color:var(--s2)} .ro-v.b{color:var(--s1)} .ro-v.c{color:var(--s3)}
+
+.ctl{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:14px}
+.ctl label{
+  font-family:var(--f-disp); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-2); white-space:nowrap;
+}
+input[type=range]{
+  -webkit-appearance:none; appearance:none; height:22px; background:transparent;
+  flex:1 1 160px; min-width:130px; cursor:pointer;
+}
+input[type=range]:focus-visible{outline:2px solid var(--accent); outline-offset:3px}
+input[type=range]::-webkit-slider-runnable-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-moz-range-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:16px; height:16px; border-radius:50%;
+  background:var(--accent); border:2px solid var(--sheet); margin-top:-6.5px;
+}
+input[type=range]::-moz-range-thumb{
+  width:16px; height:16px; border-radius:50%; background:var(--accent);
+  border:2px solid var(--sheet);
+}
+.btn{
+  appearance:none; font-family:var(--f-disp); font-size:11px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:7px 13px; border-radius:2px;
+  border:1px solid var(--rule-strong); background:var(--sheet); color:var(--ink-2); cursor:pointer;
+}
+.btn:hover{border-color:var(--accent); color:var(--accent)}
+.btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.btn.on{background:var(--accent); border-color:var(--accent); color:var(--sheet)}
+
+.legend{display:flex; gap:16px; flex-wrap:wrap; margin-top:12px}
+.lg{display:flex; align-items:center; gap:7px; font-family:var(--f-disp); font-size:12px; color:var(--ink-2)}
+.lg i{width:15px; height:3px; border-radius:2px; flex:none; display:block}
+
+/* ============ MISC ============ */
+.mathbox{overflow-x:auto; overflow-y:hidden; margin:18px 0}
+mjx-container[display="true"]{margin:0 !important}
+.kv{display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:15px; margin:16px 0}
+.kv dt{font-family:var(--f-mono); font-size:13px; color:var(--accent); white-space:nowrap}
+.kv dd{margin:0; color:var(--ink-2)}
+
+details.q{
+  border:1px solid var(--rule); border-radius:3px; background:var(--sheet);
+  margin-bottom:9px; overflow:hidden;
+}
+details.q summary{
+  cursor:pointer; padding:12px 15px; font-weight:600; list-style:none;
+  display:flex; gap:11px; align-items:flex-start; font-size:15.5px;
+}
+details.q summary::-webkit-details-marker{display:none}
+details.q summary::after{
+  content:'+'; margin-left:auto; font-family:var(--f-mono); color:var(--accent);
+  font-size:17px; line-height:1; flex:none; padding-top:2px;
+}
+details.q[open] summary::after{content:'\2212'}
+details.q summary:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
+details.q summary .qn{
+  font-family:var(--f-mono); font-size:12px; color:var(--ink-3); flex:none; padding-top:3px;
+}
+details.q .ans{padding:0 15px 14px 41px; font-size:15.5px; color:var(--ink-2); border-top:1px solid var(--rule); padding-top:13px}
+details.q .ans p:last-child{margin-bottom:0}
+
+.endnote{
+  margin-top:44px; padding-top:20px; border-top:1px solid var(--rule-strong);
+  font-size:13.5px; color:var(--ink-3); font-family:var(--f-disp); line-height:1.55;
+}
+.endnote a{color:var(--accent)}
+
+.srcref{text-decoration:none}
+a.srcref{color:var(--ink-2); transition:none}
+
+</style>
+<style>
+.srcref{text-decoration:none}
+a.srcref{color:var(--ink-2)}
+a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(--accent-soft)}
+.srcref.nolink{opacity:.75; font-style:italic}
+.pv{font-family:var(--f-disp); font-size:9.5px; font-weight:700; letter-spacing:.1em;
+    text-transform:uppercase; padding:2px 7px; border-radius:2px; white-space:nowrap}
+.pv.ok{background:var(--bridge-soft); color:var(--bridge)}
+.pv.add{background:var(--accent-soft); color:var(--accent)}
+.pv.corr{background:var(--brk-soft); color:var(--brk)}
+.flag{display:inline-block; padding:1px 7px; border-radius:2px; font-family:var(--f-disp);
+      font-size:10px; letter-spacing:.1em; text-transform:uppercase; font-weight:700}
+.flag.ok{background:var(--bridge-soft); color:var(--bridge)}
+.flag.bad{background:var(--brk-soft); color:var(--brk)}
+.predict{border:1px solid var(--rule-strong); border-left:3px solid var(--brk);
+  background:var(--brk-soft); border-radius:2px; padding:13px 15px; margin:0 0 14px}
+.predict-h{font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--brk); margin-bottom:6px}
+.predict p{margin:0 0 10px; font-size:15px}
+.predict .opts{display:flex; gap:8px; flex-wrap:wrap}
+.pbtn{appearance:none; font-family:var(--f-disp); font-size:12px; font-weight:600;
+  padding:6px 12px; border-radius:2px; border:1px solid var(--rule-strong);
+  background:var(--sheet); color:var(--ink-2); cursor:pointer}
+.pbtn:hover{border-color:var(--brk); color:var(--brk)}
+.pbtn.picked{background:var(--brk); border-color:var(--brk); color:var(--sheet)}
+.pverdict{margin-top:10px; font-size:14.5px; color:var(--ink-2); display:none}
+.pverdict.show{display:block}
+.pverdict b{color:var(--ink)}
+.gap{border:1px solid var(--rule); border-left:3px solid var(--ink-3); background:var(--sheet-2);
+  border-radius:2px; padding:14px 16px; margin:18px 0}
+.gap-h{font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:7px}
+</style>
+<style>
+/* Sheet 16 part 3. Same page skeleton and palette as part 1 so the three parts match.
+   Categorical series palette copied from Sheet 12, where it was validated with
+   dataviz/validate_palette.js in both modes: light band L 0.43-0.77, dark band L 0.48-0.67,
+   chroma floor, adjacent-pair CVD separation, normal-vision floor and contrast all PASS.
+   Never pair --s1 with --brk (both orange). */
+:root{--c1:#BF5B00; --c2:#0F74C7; --c3:#1F8A4C; --c4:#7A4FBF; --c5:#C2185B}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --c1:#D9782B; --c2:#4A97D6; --c3:#35AC63; --c4:#9575D0; --c5:#D65A82}
+}
+:root[data-theme="dark"]{
+  --c1:#D9782B; --c2:#4A97D6; --c3:#35AC63; --c4:#9575D0; --c5:#D65A82}
+.ro-v.d{color:var(--c4)}
+.mnote{font-family:var(--f-disp); font-size:12.5px; color:var(--ink-3); margin:-8px 0 16px}
+.svgfig{width:100%; height:auto; display:block; color:var(--ink)}
+.chartwrap{overflow-x:auto}
+.chartwrap > .svgfig{min-width:500px}
+.col p code, .col li code, .lab-foot code, td code{overflow-wrap:anywhere}
+.sel{appearance:auto; font-family:var(--f-disp); font-size:12px; padding:5px 8px; border:1px solid var(--rule-strong);
+  border-radius:2px; background:var(--sheet); color:var(--ink)}
+</style>
+
+
+<header class="titleblock">
+  <div class="tb-in">
+    <div class="tb-cell"><div class="tb-k">Chapter</div><div class="tb-v accent">16 &middot; SIMD and GPU Programming</div></div>
+    <div class="tb-cell tb-hide"><div class="tb-k">Sheet</div><div class="tb-v">16 of 20, part 3 of 3</div></div>
+    <div class="tb-cell tb-hide"><div class="tb-k">Reader</div><div class="tb-v">B.E. Mechanical</div></div>
+    <div class="tb-cell tb-hide"><div class="tb-k">Prerequisite</div><div class="tb-v">Sheet 16 part 2</div></div>
+    <div class="tb-cell"><button class="themebtn" id="themebtn" type="button" aria-label="Switch colour theme">Theme</button></div>
+  </div>
+</header>
+
+<div class="shell">
+
+<nav class="rail" aria-label="Chapter contents">
+  <div class="rail-h">Contents</div>
+  <a href="#bridge" class="on"><span class="n">00</span><span>The bridge</span></a>
+  <a href="#riscv"><span class="n">01</span><span>An open standard</span></a>
+  <a href="#vsetvl"><span class="n">02</span><span>One loop, any width</span></a>
+  <a href="#tinyml"><span class="n">03</span><span>TinyML, run</span></a>
+  <a href="#energy"><span class="n">04</span><span>Smaller, not cheaper</span></a>
+  <a href="#control"><span class="n">05</span><span>The control core</span></a>
+  <a href="#vulkan"><span class="n">06</span><span>Vulkan, counted</span></a>
+  <a href="#subgroups"><span class="n">07</span><span>Subgroups are lanes</span></a>
+  <a href="#tree"><span class="n">08</span><span>The whiffletree</span></a>
+  <a href="#portable"><span class="n">09</span><span>The portable kit</span></a>
+  <a href="#small"><span class="n">10</span><span>Small jobs and the browser</span></a>
+  <a href="#worked"><span class="n">11</span><span>Worked example</span></a>
+  <a href="#notcovered"><span class="n">12</span><span>Not covered</span></a>
+  <a href="#recall"><span class="n">13</span><span>Question bank</span></a>
+  <a href="#map"><span class="n">14</span><span>The chapter map</span></a>
+  <a href="#provenance"><span class="n">A</span><span>Provenance</span></a>
+</nav>
+
+<main>
+
+<section id="top" style="padding-top:44px">
+  <div class="col">
+    <p class="eyebrow">Maths, CS &amp; AI Compendium &middot; Chapter 16, part 3 of 3</p>
+    <h1>Smaller, Not Cheaper</h1>
+    <p class="lead" style="margin-top:18px">
+      The last part of Chapter 16 leaves the data centre. One vector loop runs on any width of
+      machine; one shader runs on any vendor&rsquo;s GPU; one model runs on a chip that costs a
+      dollar. Each works the same way: write to the smallest machine you are guaranteed, and ask
+      the real one what it has. The same two laws as parts 1 and 2 price every step.
+    </p>
+    <p>
+      This part covers source file 06 (RISC-V and embedded systems) and file 07 (Vulkan compute and
+      cross-platform GPUs), and closes the chapter with its worked example, question bank, a map of all
+      three parts and its own Appendix A. Part 2 &sect;19 listed six calculations this part owes. They are
+      paid in &sect;02 (RISC-V&rsquo;s vector loop), &sect;07 (Vulkan subgroups as lanes), &sect;08 (file
+      07&rsquo;s reduction tree), &sect;09 (its tiled matmul, priced), &sect;04 (energy per FLOP) and &sect;14
+      (the chapter map).
+    </p>
+    <p>
+      The headline is &sect;04, and it comes from the source&rsquo;s own table of a server GPU, a
+      smartphone and a microcontroller. Divide each one&rsquo;s compute by its power: <b>0.70, 0.50 and 1.00
+      picojoules per FLOP</b>. Across a 700,000-fold range of power, the energy per operation moves by a
+      factor of two, and the cheapest is the phone. The edge is smaller, not cheaper. Part 1&rsquo;s cube law
+      would have predicted the microcontroller at 4.6 femtojoules, 219 times less; part 1 &sect;03 warned that
+      the law ignores leakage, and the table shows how much that matters at the bottom.
+    </p>
+    <p>
+      The other exact result is &sect;02. RISC-V&rsquo;s <code>vsetvl</code> lets the hardware choose how many
+      elements each pass of a loop handles, and even lets it split the last two passes evenly. Checked for
+      every array length up to 3,000 at seven widths, the number of passes is always
+      \(\lceil n/\text{VLMAX}\rceil\): part 1&rsquo;s drilling head, with the spindle count read off the
+      machine.
+    </p>
+    <p class="mnote">
+      No RISC-V board, emulator or GPU was available. The source&rsquo;s vector loop was compiled for RISC-V
+      with clang and read; its three C++ tasks were compiled and run on the x86 build machine; all six GLSL
+      shaders in file 07 were compiled to SPIR-V with glslang (its WebAssembly build). Hardware figures are the
+      source&rsquo;s or marked as reported. Checks are tagged <code>[Ch16p3 sNN]</code> in
+      <code>verify_claims.py</code>.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Corrections to the source in this part. Each is recomputed, simulated or re-run by <code>verify_claims.py</code> under <code>[Ch16p3 sNN]</code>.</caption>
+      <thead><tr><th>Source says</th><th>Computed, simulated or run</th><th>Where</th></tr></thead>
+      <tbody>
+        <tr><td><code>vsetvl</code> &ldquo;processes min(n, hardware_max) elements&rdquo;</td><td>The specification also lets the hardware split the last two passes evenly (reported). The number of passes is \(\lceil n/\text{VLMAX}\rceil\) either way, checked exhaustively.</td><td>&sect;02</td></tr>
+        <tr><td>Task 1: &ldquo;At 160 MHz MCU: ~783 cycles&rdquo;</td><td>The model does 50,816 multiply-adds. The figure is the build machine&rsquo;s time counted in 160 MHz ticks. At one multiply-add per cycle a microcontroller needs 317.6 &micro;s, 65 times longer.</td><td>&sect;03</td></tr>
+        <tr><td>INT8 is &ldquo;2&ndash;4x faster on integer-only hardware&rdquo;; task 3 prints the speedup</td><td>On this machine the printed speedup ranged 0.9&ndash;1.5&times; between runs: the loop walks a column of \(B\), and the delivery station binds whatever the type.</td><td>&sect;03</td></tr>
+        <tr><td>&ldquo;Quantisation (chapter 18)&rdquo;</td><td>Quantisation is chapter 17&rsquo;s first file, and Sheet 17 here.</td><td>&sect;03</td></tr>
+        <tr><td>Vulkan vector addition is &ldquo;~200 lines&rdquo; against CUDA&rsquo;s &ldquo;~30&rdquo;</td><td>Counted: 223 lines of code against 32, 7.0&times;; with blank lines and comments, 288 against 54.</td><td>&sect;06</td></tr>
+        <tr><td>Host-visible memory chosen by <code>flags &amp; (HOST_VISIBLE | HOST_COHERENT)</code></td><td>That accepts a type with either flag. A visible but not coherent type passes, and the program never flushes. The test needs <code>== (VISIBLE | COHERENT)</code>.</td><td>&sect;06</td></tr>
+        <tr><td>The Vulkan program &ldquo;uses the first GPU&rdquo;</td><td>No result is checked. With no device, <code>devices[0]</code> indexes an empty vector.</td><td>&sect;06</td></tr>
+        <tr><td>Kompute&rsquo;s shader, <code>local_size_x = 1</code></td><td>One live lane per subgroup: 3.1% of a 32-lane subgroup, 1.6% of a 64-lane one.</td><td>&sect;07</td></tr>
+        <tr><td>The tiled GLSL matmul, 16&times;16, is portable</td><td>256 invocations per workgroup; Vulkan guarantees 128 (reported). The largest guaranteed one-output tile is 11, at 2.75 FLOP/B.</td><td>&sect;09</td></tr>
+        <tr><td>Task 2&rsquo;s softmax shader &ldquo;applies softmax to a row&rdquo;</td><td>Only a row of 256 or fewer. Simulated at 512, two workgroups each normalise their own half and the outputs sum to 2.000.</td><td>&sect;10</td></tr>
+        <tr><td>The WGSL vector add</td><td>It drops the GLSL version&rsquo;s bounds test. For 1,000 elements it starts 1,024 invocations, 24 past the end.</td><td>&sect;10</td></tr>
+        <tr><td>Task 3: benchmark the 1,024-element dispatch&rsquo;s bandwidth</td><td>Little&rsquo;s law caps it before any overhead: 12,288 bytes in one 400-cycle trip is 60.8 GB/s, 1.8% of 3.3 TB/s.</td><td>&sect;10</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="bridge">
+  <div class="col">
+    <div class="sechead"><span class="secnum">00</span><h2>The bridge</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2016%20-%20SIMD%20and%20GPU%20programming/06.%20RISC-V%20and%20embedded%20systems.md" target="_blank" rel="noopener">src 06. RISC-V &#8599;</a>
+    </div>
+    <p>
+      The verdicts follow the series&rsquo; convention. <b>Identity</b> means the same formula or count,
+      checked numerically. <b>Same structure</b> means the parts correspond one for one but the physics
+      differs. <b>Breaks</b> means the correspondence fails in substance, and the section says where.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>What a GATE-prepared mechanical engineer already owns, and what this part calls it.</caption>
+      <thead><tr><th>What you already know</th><th>What this part calls it</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td>A drilling head whose spindle count you read off the machine (part 1 &sect;&sect;05, 09)</td><td>RISC-V&rsquo;s <code>vsetvl</code> loop</td><td><b style="color:var(--bridge)">Identity</b> in the stroke count, checked exhaustively. See &sect;02.</td></tr>
+        <tr><td>Evening out the last two furnace loads</td><td><code>vsetvl</code>&rsquo;s balanced tail</td><td><b style="color:var(--bridge)">Same structure;</b> the pass count does not change. See &sect;02.</td></tr>
+        <tr><td>Ganging several heads on one slide</td><td>LMUL register groups</td><td><b style="color:var(--bridge)">Same structure.</b> See &sect;02.</td></tr>
+        <tr><td>Reading uncertainty of a graduated scale (Sheet 17 &sect;03)</td><td>Task 2&rsquo;s mean rounding error, a quarter of a step</td><td><b style="color:var(--bridge)">Identity,</b> run. See &sect;03.</td></tr>
+        <tr><td>Specific fuel consumption, and its rise at part load</td><td>Energy per FLOP, and static power</td><td><b style="color:var(--bridge)">Same structure.</b> See &sect;04.</td></tr>
+        <tr><td>The cube law of part 1 &sect;03</td><td>Energy per FLOP at the edge</td><td><b style="color:var(--brk)">Breaks</b> by a factor of 219. See &sect;04.</td></tr>
+        <tr><td>The planner and the floor (part 1 &sect;01)</td><td>A RISC-V control core beside a matrix unit</td><td><b style="color:var(--bridge)">Same structure.</b> See &sect;05.</td></tr>
+        <tr><td>A drawing standard any shop can make parts to</td><td>Vulkan and SPIR-V</td><td><b style="color:var(--bridge)">Same structure.</b> See &sect;06.</td></tr>
+        <tr><td>A drilling head whose spindle count depends on the maker (part 2 &sect;06)</td><td>Subgroups of 32 or 64 lanes</td><td><b style="color:var(--bridge)">Identity:</b> part 2&rsquo;s c = 0 count at a sample of \(s\). See &sect;07.</td></tr>
+        <tr><td>A whiffletree of balance beams</td><td>File 07&rsquo;s tree reduction</td><td><b style="color:var(--bridge)">Same structure:</b> 255 beams, 8 levels. <b style="color:var(--brk)">Breaks</b> on timing and rounding. See &sect;08.</td></tr>
+        <tr><td>Designing to the minimum guaranteed strength</td><td>Writing a shader to Vulkan&rsquo;s minimum limits</td><td><b style="color:var(--bridge)">Same structure.</b> See &sect;09.</td></tr>
+        <tr><td>Little&rsquo;s law (part 2 &sect;05)</td><td>A job too small to fill the pipe</td><td><b style="color:var(--bridge)">Identity.</b> See &sect;10.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="riscv">
+  <div class="col">
+    <div class="sechead"><span class="secnum">01</span><h2>RISC-V: an instruction set as an open standard</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2016%20-%20SIMD%20and%20GPU%20programming/06.%20RISC-V%20and%20embedded%20systems.md" target="_blank" rel="noopener">src 06. RISC-V &#8599;</a>
+    </div>
+    <p>
+      An <b>instruction set architecture</b> (ISA) is the contract between software and a processor: the list
+      of instructions, registers and memory rules that any chip of that family must honour. x86 and ARM are
+      licensed contracts. <b>RISC-V</b>, started at Berkeley in 2010, is an open one: anyone may build a chip
+      to it without a fee. It is modular. A small base (RV32I or RV64I) is extended by letters: M for multiply
+      and divide, A for atomic operations, F and D for floating point, C for compressed instructions, V for
+      vectors. A chip carries only the letters it needs, the way a part drawing calls up only the standards
+      that apply to it.
+    </p>
+    <p>
+      The base has 32 general-purpose registers, <code>x0</code> to <code>x31</code>, with <code>x0</code>
+      wired to zero; the source counts these correctly, where part 1 &sect;09 caught it miscounting
+      ARM&rsquo;s (<code>[Ch16p3 s01]</code>). Instructions are a fixed 32 bits, with 16-bit forms in the C
+      extension, and only loads and stores touch memory. The source&rsquo;s &ldquo;just 47 instructions&rdquo;
+      for the base is reported; the ratified base specification is reported to list 40, the difference being
+      instructions since moved into separate extensions. Its gate counts (about 10,000 for a minimal core
+      against 12,000 for an ARM Cortex-M0) and its list of adopters are reported too.
+    </p>
+  </div>
+</section>
+
+<section id="vsetvl">
+  <div class="col">
+    <div class="sechead"><span class="secnum">02</span><h2>One loop for any width</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2016%20-%20SIMD%20and%20GPU%20programming/06.%20RISC-V%20and%20embedded%20systems.md" target="_blank" rel="noopener">src 06. RISC-V &#8599;</a>
+    </div>
+    <p>
+      <b>Debt 1 of 6.</b> The V extension gives RISC-V vector registers whose width, VLEN, the hardware
+      chooses: any power of two from 128 to 65,536 bits. Code is written without knowing it. The
+      source&rsquo;s vector addition is a strip-mining loop:
+    </p>
+    <div class="mathbox">$$\texttt{vl} = \texttt{vsetvl}(n_{\text{left}}), \quad \text{process } \texttt{vl} \text{ elements}, \quad n_{\text{left}} \leftarrow n_{\text{left}} - \texttt{vl}, \quad \text{repeat while } n_{\text{left}} > 0 .$$</div>
+    <p>
+      The program asks for \(n_{\text{left}}\) elements and the hardware answers with how many it will take this
+      pass. The most it can take is
+    </p>
+    <div class="mathbox">$$\text{VLMAX} = \frac{\text{VLEN} \times \text{LMUL}}{\text{SEW}},$$</div>
+    <p>
+      where SEW is the element width in bits and LMUL the number of registers ganged together. For 32-bit
+      floats and LMUL = 1 that is 4 lanes at VLEN 128 and 2,048 at VLEN 65,536. Compiled for RISC-V with clang,
+      the source&rsquo;s loop is <b>11 instructions per pass</b>: <code>vsetvli</code>, two vector loads, one
+      vector add, one vector store, and six to move pointers, count down and branch (<code>[Ch16p3 s02]</code>).
+      At VLEN 128 that is 2.75 instructions per float; at 65,536, 0.0054. The binary is the same; only the
+      number of passes changes.
+    </p>
+    <p>
+      The source says <code>vsetvl</code> returns \(\min(n, \text{VLMAX})\). The vector specification is
+      reported to allow more: when \(n_{\text{left}}\) lies between VLMAX and \(2\,\text{VLMAX}\), the hardware
+      may return anything from \(\lceil n_{\text{left}}/2 \rceil\) to VLMAX, so it can split the last two passes
+      evenly instead of leaving a scrap for the last one. Simulated both ways for every \(n\) from 1 to 3,000 at
+      seven values of VLMAX, the pass count is the same and equal to
+    </p>
+    <div class="mathbox">$$\text{passes} = \left\lceil \frac{n}{\text{VLMAX}} \right\rceil ,$$</div>
+    <p>
+      and every element is processed exactly once. For 1,000 floats at VLEN 512 that is 63 passes, the last
+      holding 8 of 16 lanes (or two passes of 12 when balanced), with 99.2% of lane-passes doing work.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: part 1&rsquo;s drilling head, with the spindle count read off the machine</div>
+      <p style="margin-bottom:0">
+        Part 1 &sect;05 counted \(\lceil n/W \rceil\) strokes for \(n\) holes on a \(W\)-spindle head, with the spare
+        drills of the last stroke removed. Part 1 &sect;09 met SVE, where <code>svwhilelt</code> builds the mask
+        for a head of unknown width, and part 2 &sect;11 met the same mask in Triton. <code>vsetvl</code> goes one
+        step further: there is no mask in the loop at all, because the machine tells the program how many
+        spindles carry drills on each stroke. The stroke count is the same expression in all four. The balanced
+        tail is the furnace operator&rsquo;s rule of evening out the last two loads rather than running one full
+        and one nearly empty: the number of loads is unchanged and neither is wasteful.
+      </p>
+    </div>
+    <p>
+      <b>LMUL</b> gangs registers. With LMUL = 8 one instruction covers eight registers&rsquo; worth of
+      elements, and the 32 vector registers become 4 groups, as the source says: 32, 16, 8 and 4 groups at
+      LMUL 1, 2, 4 and 8. It is ganging several heads on one slide: more holes per stroke, fewer separate heads
+      to hold the work in progress.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks</div>
+      <p style="margin-bottom:0">
+        A pass count is not a time. Each pass still has its fixed 11 instructions, and a wide machine is only as
+        fast as its memory can feed it, which is part 1&rsquo;s roofline again: a vector add does one FLOP per 12
+        bytes on any VLEN. Fewer registers per group at high LMUL also means fewer independent accumulators,
+        which part 1 &sect;08 showed is what keeps a chain of dependent operations busy. The loop is portable;
+        its speed is not.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">One loop, any width</div><div class="lab-tag">Predict, then change the machine</div></div>
+    <div class="lab-body">
+    <div class="predict">
+      <p style="margin-top:0">
+        The source&rsquo;s vector add runs on 1,000 floats on a core with VLEN = 512, so 16 float lanes. How many
+        passes does the loop make, and how full is the last one?
+      </p>
+      <button class="pbtn" data-p1="a" type="button">62, the last one full</button>
+      <button class="pbtn" data-p1="b" type="button">63, the last one half full</button>
+      <button class="pbtn" data-p1="c" type="button">63, all full: the hardware pads</button>
+      <button class="pbtn" data-p1="d" type="button">1,000, one per element</button>
+      <div class="pverdict" id="pv1"></div>
+    </div>
+    <div class="chartwrap">
+    <svg class="svgfig" id="vS" viewBox="0 0 560 330" role="img"
+         aria-label="Passes of the vector loop for this array at every vector width, and the lanes filled on each pass at the chosen width"></svg>
+    </div>
+    <div class="ctl">
+      <label for="vN">Elements <span class="gk">n</span></label>
+      <input type="range" id="vN" min="1" max="5000" value="1000" step="1">
+      <span class="ro-v" id="vNv" style="min-width:52px">1,000</span>
+    </div>
+    <div class="ctl">
+      <label for="vL"><span class="gk">VLEN</span>, bits</label>
+      <select class="sel" id="vL">
+        <option value="128">128</option><option value="256">256</option><option value="512" selected>512</option>
+        <option value="1024">1,024</option><option value="2048">2,048</option><option value="4096">4,096</option>
+        <option value="8192">8,192</option><option value="16384">16,384</option><option value="32768">32,768</option>
+        <option value="65536">65,536</option>
+      </select>
+      <button class="btn" id="vB" type="button">Balanced tail</button>
+    </div>
+    <div class="ctl">
+      <label for="vE8">Element bits</label>
+      <button class="btn" id="vE8" data-ve="8" type="button">8</button>
+      <button class="btn" data-ve="16" type="button">16</button>
+      <button class="btn on" data-ve="32" type="button">32</button>
+      <button class="btn" data-ve="64" type="button">64</button>
+    </div>
+    <div class="ctl">
+      <label for="vM1">Registers ganged, <span class="gk">LMUL</span></label>
+      <button class="btn on" id="vM1" data-vm="1" type="button">1</button>
+      <button class="btn" data-vm="2" type="button">2</button>
+      <button class="btn" data-vm="4" type="button">4</button>
+      <button class="btn" data-vm="8" type="button">8</button>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Lanes per pass<br><span class="gk">VLMAX</span></div><div class="ro-v a" id="vVm">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Passes,<br>simulated</div><div class="ro-v b" id="vP">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Formula<br><span class="gk">&lceil;n/VLMAX&rceil;</span></div><div class="ro-v c" id="vF">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Last two<br>passes</div><div class="ro-v" id="vT">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Lane-passes<br>used</div><div class="ro-v" id="vU">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Register<br>groups</div><div class="ro-v" id="vG">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Instructions,<br>11 per pass</div><div class="ro-v" id="vI">&mdash;</div></div>
+    </div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    Top: passes for this \(n\) at each of the ten legal widths, on a log scale; the orange bar is the chosen one.
+    Bottom: each pass at the chosen width as a column, filled to the lanes it uses. At rest, <b>63 passes, the
+    last holding 8 of 16 lanes</b>, the answer to the prediction. Press <b>Balanced tail</b> to see the last two
+    become 12 and 12 with the count unchanged. Drag \(n\) and watch the simulated count stay on the formula.
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  var root=document.documentElement;
+  function dk(){var t=root.getAttribute('data-theme');
+    return t?t==='dark':(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);}
+  try{var sv=localStorage.getItem('ch16-theme'); if(sv==='dark'||sv==='light') root.setAttribute('data-theme',sv);}catch(e){}
+  var tb=document.getElementById('themebtn');
+  if(tb) tb.addEventListener('click',function(){var n=dk()?'light':'dark';
+    root.setAttribute('data-theme',n); try{localStorage.setItem('ch16-theme',n);}catch(e){}});
+  function $(id){return document.getElementById(id);}
+  function comma(n){return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,',');}
+  function predict(attr,vid,ans){
+    document.querySelectorAll('['+attr+']').forEach(function(b){
+      b.addEventListener('click',function(){
+        document.querySelectorAll('['+attr+']').forEach(function(o){o.classList.remove('picked');});
+        b.classList.add('picked');
+        var v=$(vid); v.innerHTML=ans[b.getAttribute(attr)]; v.classList.add('show');
+      });
+    });
+  }
+  function rng(seed){var s=seed>>>0; return function(){s=(s+0x6D2B79F5)>>>0; var t=s;
+    t=Math.imul(t^(t>>>15),t|1); t^=t+Math.imul(t^(t>>>7),t|61); return ((t^(t>>>14))>>>0)/4294967296;};}
+  function f1(v){return (+v).toFixed(1);}
+  function txt(x,y,s,st,anchor){return '<text x="'+f1(x)+'" y="'+f1(y)+'"'+(anchor?' text-anchor="'+anchor+'"':'')+
+    ' style="'+(st||'')+'">'+s+'</text>';}
+  function ln(x1,y1,x2,y2,st){return '<line x1="'+f1(x1)+'" y1="'+f1(y1)+'" x2="'+f1(x2)+'" y2="'+f1(y2)+'" style="'+(st||'')+'"/>';}
+  function onBtn(attr,val){document.querySelectorAll('['+attr+']').forEach(function(b){b.classList.toggle('on',b.getAttribute(attr)===String(val));});}
+  var ST={
+    tick:'font-family:var(--f-mono);font-size:10.5px;fill:var(--ink-3)',
+    lab:'font-family:var(--f-disp);font-size:12px;fill:var(--ink-2);font-weight:600',
+    small:'font-family:var(--f-disp);font-size:11px;fill:var(--ink-2)',
+    grid:'stroke:var(--rule);stroke-width:1',
+    axis:'stroke:var(--rule-strong);stroke-width:1'
+  };
+  window.__c16={$:$,comma:comma,predict:predict,rng:rng,txt:txt,ln:ln,onBtn:onBtn,ST:ST,f1:f1};
+})();
+</script>
+
+<script>
+/* ===== LAB 1 -- vsetvl strip-mining: one loop for any width (same rule as strip() in [Ch16p3 s02]) ===== */
+(function(){
+  'use strict';
+  var U=window.__c16, $=U.$, ST=U.ST;
+  var SEW=32, LMUL=1, BAL=false, VLENS=[128,256,512,1024,2048,4096,8192,16384,32768,65536];
+  function strip(n,vm,bal){
+    var out=[], avl=n, vl;
+    while(avl>0){
+      if(avl<=vm) vl=avl; else if(avl<2*vm) vl=bal?Math.ceil(avl/2):vm; else vl=vm;
+      out.push(vl); avl-=vl;
+    }
+    return out;
+  }
+  function draw(){
+    var n=+$('vN').value, vlen=+$('vL').value, vm=vlen*LMUL/SEW;
+    $('vNv').textContent=U.comma(n);
+    var st=strip(n,vm,BAL), S=st.length, h='', i;
+    var X0=64, X1=540, T0=150, T1=26;
+    var counts=VLENS.map(function(v){return strip(n,v*LMUL/SEW,BAL).length;});
+    var top=Math.pow(10,Math.ceil(Math.log10(Math.max(10,counts[0]))));
+    function YT(c){return T0-(T0-T1)*Math.log10(c/0.5)/Math.log10(top/0.5);}
+    for(var d=1;d<=top;d*=10){h+=U.ln(X0,YT(d),X1,YT(d),ST.grid)+U.txt(X0-6,YT(d)+4,U.comma(d),ST.tick,'end');}
+    var bw=(X1-X0)/VLENS.length;
+    VLENS.forEach(function(v,k){
+      var c=counts[k], x=X0+k*bw+bw*0.18, on=(v===vlen);
+      h+='<rect x="'+U.f1(x)+'" y="'+U.f1(YT(c))+'" width="'+U.f1(bw*0.64)+'" height="'+U.f1(T0-YT(c))+'" rx="2" style="fill:'+(on?'var(--c1)':'var(--c2)')+'"/>';
+      h+=U.txt(x+bw*0.32,T0+14,v>=1024?(v/1024)+'K':v,ST.tick,'middle');
+      h+=U.txt(x+bw*0.32,YT(c)-5,U.comma(c),ST.tick,'middle');
+    });
+    h+=U.ln(X0,T0,X1,T0,ST.axis);
+    h+=U.txt(X0+4,T1-12,'passes of the loop for '+U.comma(n)+' elements, at each VLEN (bits, log scale)',ST.small);
+    var B0=310, B1=200, show=[], gap=false;
+    if(S<=120){for(i=0;i<S;i++) show.push(i);} else {for(i=0;i<90;i++) show.push(i); gap=true; for(i=S-30;i<S;i++) show.push(i);}
+    var slots=show.length+(gap?3:0), cw=(X1-X0)/slots, j=0;
+    h+=U.txt(X0+4,B1-12,'each pass at VLEN '+U.comma(vlen)+': column filled to the lanes it uses (of '+U.comma(vm)+')',ST.small);
+    show.forEach(function(p,k){
+      if(gap&&k===90) j+=3;
+      var x=X0+j*cw, f=st[p]/vm, full=f>=1;
+      h+='<rect x="'+U.f1(x+cw*0.1)+'" y="'+B1+'" width="'+U.f1(Math.max(0.6,cw*0.8))+'" height="'+(B0-B1)+'" style="fill:none;stroke:var(--rule-strong);stroke-width:0.6"/>';
+      h+='<rect x="'+U.f1(x+cw*0.1)+'" y="'+U.f1(B0-(B0-B1)*f)+'" width="'+U.f1(Math.max(0.6,cw*0.8))+'" height="'+U.f1((B0-B1)*f)+'" style="fill:'+(full?'var(--c2)':'var(--c1)')+'"/>';
+      j++;
+    });
+    if(gap) h+=U.txt(X0+(90+1.5)*cw,B0-40,'&#8230;',ST.lab,'middle');
+    $('vS').innerHTML=h;
+    $('vVm').textContent=U.comma(vm);
+    $('vP').textContent=U.comma(S);
+    $('vF').textContent=U.comma(Math.ceil(n/vm));
+    $('vT').textContent=S>=2?(st[S-2]+' + '+st[S-1]):String(st[0]);
+    $('vU').textContent=(100*n/(S*vm)).toFixed(1)+'%';
+    $('vG').textContent=32/LMUL;
+    $('vI').textContent=U.comma(11*S);
+  }
+  document.querySelectorAll('[data-ve]').forEach(function(b){b.addEventListener('click',function(){
+    SEW=+b.getAttribute('data-ve'); U.onBtn('data-ve',SEW); draw();});});
+  document.querySelectorAll('[data-vm]').forEach(function(b){b.addEventListener('click',function(){
+    LMUL=+b.getAttribute('data-vm'); U.onBtn('data-vm',LMUL); draw();});});
+  $('vB').addEventListener('click',function(){BAL=!BAL; $('vB').classList.toggle('on',BAL); draw();});
+  ['vN','vL'].forEach(function(id){$(id).addEventListener('input',draw);});
+  U.predict('data-p1','pv1',{
+    a:'<b>No.</b> 62 passes of 16 cover 992 elements; 8 remain, so a 63rd pass runs with 8 of its 16 lanes.',
+    b:'<b>Right.</b> &lceil;1000/16&rceil; = 63, and the last pass takes the 8 left over. Balanced, the last two take 12 and 12: still 63 passes.',
+    c:'<b>No.</b> <code>vsetvl</code> answers 8 for the last pass, and the other 8 lanes do nothing. Nothing is padded or written past the end.',
+    d:'<b>No.</b> That is the scalar loop. Each pass takes up to 16 elements: 63 passes.'});
+  draw();
+})();
+</script>
+
+<script>
+/* Contents rail: mark the section currently in view (desktop only). */
+(function(){
+  'use strict';
+  var links=Array.prototype.slice.call(document.querySelectorAll('.rail a'));
+  if(!links.length||!window.IntersectionObserver) return;
+  var map={}; links.forEach(function(a){map[a.getAttribute('href').slice(1)]=a;});
+  var seen={};
+  var io=new IntersectionObserver(function(es){
+    es.forEach(function(e){seen[e.target.id]=e.isIntersecting;});
+    var ids=Object.keys(map),act=null;
+    for(var i=0;i<ids.length;i++) if(seen[ids[i]]){act=ids[i];break;}
+    if(!act) return;
+    links.forEach(function(a){a.classList.toggle('on',a===map[act]);});
+  },{rootMargin:'-70px 0px -65% 0px',threshold:0});
+  Object.keys(map).forEach(function(id){var el=document.getElementById(id); if(el) io.observe(el);});
+})();
+</script>
+
+<script>
+/* Safety net: if the MathJax bundle cannot be reached, degrade the TeX to
+   readable Unicode instead of leaving raw backslash markup on the page. */
+(function () {
+  'use strict';
+  var GREEK = { theta:'θ', sigma:'σ', delta:'δ', mu:'μ', pi:'π',
+                infty:'∞', alpha:'α', beta:'β', lambda:'λ' };
+  var SUB = { '1':'₁','2':'₂','3':'₃','i':'ᵢ','j':'ⱼ','n':'ₙ','p':'ₚ','x':'ₓ','y':'ᵧ' };
+  var SUP = { '2':'²','3':'³','n':'ⁿ','p':'ᵖ','*':'*' };
+
+  function degrade(t) {
+    t = t.replace(/\$\$/g, '').replace(/\\[()[\]]/g, '');
+    t = t.replace(/\\(?:left|right|textstyle|displaystyle|!|,|;|:)/g, '');
+    t = t.replace(/\\q?quad/g, ' ');
+    t = t.replace(/\\mathbb\{R\}/g, 'ℝ').replace(/\\mathbb\{Z\}/g, 'ℤ')
+         .replace(/\\mathbb\{N\}/g, 'ℕ').replace(/\\mathbb\{Q\}/g, 'ℚ');
+    t = t.replace(/\\(?:mathbf|mathrm|text|textbf|operatorname)\{([^{}]*)\}/g, '$1');
+    t = t.replace(/\\hat\{([^{}]*)\}/g, '$1̂').replace(/\\bar\{([^{}]*)\}/g, '$1̄');
+    t = t.replace(/\\sqrt\{([^{}]*)\}/g, '√($1)');
+    t = t.replace(/\\t?frac\{([^{}]*)\}\{([^{}]*)\}/g, '($1)/($2)');
+    t = t.replace(/\\binom\{([^{}]*)\}\{([^{}]*)\}/g, 'C($1,$2)');
+    t = t.replace(/\\([a-zA-Z]+)/g, function (m, w) {
+      if (GREEK[w]) return GREEK[w];
+      switch (w) {
+        case 'cdot': return '·';
+        case 'times': return '×';
+        case 'le': case 'leq': return '≤';
+        case 'ge': case 'geq': return '≥';
+        case 'neq': return '≠';
+        case 'approx': return '≈';
+        case 'in': return '∈';
+        case 'pm': return '±';
+        case 'to': case 'rightarrow': return '→';
+        case 'Rightarrow': return '⇒';
+        case 'iff': return '⇔';
+        case 'parallel': return '∥';
+        case 'perp': return '⊥';
+        case 'sum': return 'Σ';
+        case 'langle': return '⟨';
+        case 'rangle': return '⟩';
+        case 'wedge': return '∧';
+        case 'ast': return '*';
+        case 'cdots': case 'ldots': case 'dots': return '…';
+        case 'max': case 'min': case 'cos': case 'sin': case 'log': case 'exp': return w;
+        default: return w;
+      }
+    });
+    t = t.replace(/\\\|/g, '‖').replace(/\|\|/g, '‖');
+    t = t.replace(/_\{?([0-9ijnpxy])\}?/g, function (m, c) { return SUB[c] || ('_' + c); });
+    t = t.replace(/\^\{?([23np*])\}?/g, function (m, c) { return SUP[c] || ('^' + c); });
+    t = t.replace(/[{}]/g, '');
+    return t.replace(/[ \t]{2,}/g, ' ');
+  }
+
+  function run() {
+    if (window.MathJax && window.MathJax.startup && window.MathJax.startup.document) return;
+    var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+      acceptNode: function (n) {
+        if (!n.nodeValue || n.nodeValue.indexOf('\\') < 0 && n.nodeValue.indexOf('$$') < 0)
+          return NodeFilter.FILTER_REJECT;
+        var p = n.parentNode;
+        while (p && p !== document.body) {
+          var tag = p.nodeName;
+          if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'CODE' || tag === 'PRE')
+            return NodeFilter.FILTER_REJECT;
+          p = p.parentNode;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    var hits = [], n;
+    while ((n = walker.nextNode())) hits.push(n);
+    hits.forEach(function (node) { node.nodeValue = degrade(node.nodeValue); });
+    document.querySelectorAll('.mathbox').forEach(function (el) {
+      el.style.fontFamily = "'IBM Plex Mono', monospace";
+      el.style.fontSize = '15px';
+      el.style.textAlign = 'center';
+      el.style.padding = '10px 0';
+    });
+  }
+  setTimeout(run, 6000);
+})();
+</script>
+<script>
+/* Long display equations can be wider than their container - especially inside a
+   callout box, which is narrower than the main column. After the typesetter
+   finishes, measure each one and shrink it just enough to fit. Only ever shrinks,
+   never grows, and never below a readable floor - so the worst case is the
+   scrollbar we already had. */
+(function () {
+  'use strict';
+  var MIN_SCALE = 0.70;   /* below this, scrolling beats illegible text */
+
+  function fitOne(box) {
+    try {
+      var c = box.querySelector('mjx-container[display="true"]');
+      if (!c) return;
+      var svg = c.querySelector('svg');
+      if (!svg) return;
+      c.style.fontSize = '';
+      var avail = box.clientWidth;
+      if (!avail) return;
+      var w = svg.getBoundingClientRect().width;
+      if (!w || w <= avail) return;
+      var k = Math.max(MIN_SCALE, (avail / w) * 0.98);
+      c.style.fontSize = (k * 100).toFixed(1) + '%';
+      var w2 = svg.getBoundingClientRect().width;      /* one refinement pass */
+      if (w2 > avail) {
+        k = Math.max(MIN_SCALE, k * (avail / w2) * 0.98);
+        c.style.fontSize = (k * 100).toFixed(1) + '%';
+      }
+    } catch (e) { /* leave the equation exactly as it was */ }
+  }
+
+  /* Inline math cannot wrap and is not inside a scrollable .mathbox, so a long
+     inline expression pushes the whole page sideways.  Shrink any that is wider
+     than the text column it sits in; the ex-based sizing keeps the baseline. */
+  function fitInline(c) {
+    try {
+      var svg = c.querySelector('svg'); if (!svg) return;
+      c.style.fontSize = '';
+      var host = c.parentElement; if (!host) return;
+      var avail = host.clientWidth; if (!avail) return;
+      var w = svg.getBoundingClientRect().width;
+      if (!w || w <= avail) return;
+      c.style.fontSize = (Math.max(MIN_SCALE, (avail / w) * 0.98) * 100).toFixed(1) + '%';
+    } catch (e) { /* leave the expression exactly as it was */ }
+  }
+
+  function fitAll() {
+    try { document.querySelectorAll('.mathbox').forEach(fitOne); } catch (e) {}
+    try {
+      document.querySelectorAll('mjx-container:not([display="true"])').forEach(fitInline);
+    } catch (e) {}
+  }
+
+  function start() {
+    fitAll();
+    var t;
+    window.addEventListener('resize', function () {
+      clearTimeout(t); t = setTimeout(fitAll, 160);
+    });
+  }
+
+  function waitForTypesetter(n) {
+    if (window.MathJax && window.MathJax.startup && window.MathJax.startup.promise) {
+      window.MathJax.startup.promise.then(start, start);
+      return;
+    }
+    if (n > 60) return;            /* typesetter never arrived - nothing to fit */
+    setTimeout(function () { waitForTypesetter(n + 1); }, 200);
+  }
+  waitForTypesetter(0);
+})();
+</script>
