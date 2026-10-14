@@ -892,7 +892,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
       <div class="ro"><div class="ro-k">Least volatility,<br>closed form</div><div class="ro-v a" id="mSig">&mdash;</div></div>
       <div class="ro"><div class="ro-k">Least volatility,<br>search on curve</div><div class="ro-v a" id="mSigG">&mdash;</div></div>
       <div class="ro"><div class="ro-k">Short sale when<br><span class="gk">&rho;</span> &gt; <span class="gk">&sigma;</span>&#8321;/<span class="gk">&sigma;</span>&#8322;</div><div class="ro-v c" id="mThr">&mdash;</div></div>
-      <div class="ro"><div class="ro-k">Multiplier<br>2<span class="gk">&sigma;</span>&sup2;<sub>min</sub></div><div class="ro-v" id="mLam">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Multiplier<br>2<span class="gk">&sigma;</span>&sup2;<sub class="gk">min</sub></div><div class="ro-v" id="mLam">&mdash;</div></div>
     </div>
   </div>
   <div class="lab-foot col">
@@ -1265,9 +1265,9 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
       <span class="ro-v" id="qBv" style="min-width:56px">0&deg;</span>
     </div>
     <div class="ctl">
-      <button class="btn" data-qg="ry90" type="button">R<sub>y</sub>(90&deg;)</button>
+      <button class="btn" data-qg="ry90" type="button"><span class="gk">R<sub>y</sub></span>(90&deg;)</button>
       <button class="btn" data-qg="h" type="button">Hadamard</button>
-      <button class="btn" data-qg="ry360" type="button">R<sub>y</sub>(360&deg;)</button>
+      <button class="btn" data-qg="ry360" type="button"><span class="gk">R<sub>y</sub></span>(360&deg;)</button>
       <button class="btn" data-qg="reset" type="button">Reset</button>
     </div>
     <div class="readout">
@@ -1289,6 +1289,367 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     amplitude plane, the answer to the prediction. <b>R<sub>y</sub>(360&deg;)</b> flips both
     amplitudes&rsquo; signs and moves nothing on the right. <b>Hadamard</b> mirrors the vector in
     the dashed 22.5&deg; line, which swaps the circle&rsquo;s top and right.
+  </div>
+</section>
+
+<section id="plateau">
+  <div class="col">
+    <div class="sechead"><span class="secnum">05</span><h2>Barren plateaus, with an exact case and a measured one</h2>
+      <a class="srcref" href="@SRC@chapter%2020%20-%20bleeding%20edge%20AI/01.%20quantum%20machine%20learning.md" target="_blank" rel="noopener">src 20/01. quantum ML &#8599;</a>
+    </div>
+    <p>
+      A <b>parameterised circuit</b> is a fixed arrangement of gates whose rotation angles
+      \(\theta\) are adjustable, playing the part of a network&rsquo;s weights. Run it, measure,
+      and average the outcomes to get a cost \(C(\theta)\); then adjust the angles by gradient
+      descent, as in Sheet 03 &sect;06. Variational classifiers, VQE and QAOA in the outline
+      are all built this way (reported; none is treated here). Two questions decide whether
+      it can work: how do you get a gradient out of a machine that only returns bits, and how
+      big is that gradient?
+    </p>
+    <h3>The parameter-shift rule is an exact central difference</h3>
+    <p>
+      Each angle enters the amplitudes through \(\cos\frac{\theta}{2}\) and
+      \(\sin\frac{\theta}{2}\), and every probability is quadratic in the amplitudes. So, as a
+      function of one angle with the rest held fixed, the cost is a single sinusoid,
+      \(C(\theta) = A + B\cos\theta + D\sin\theta\). For a sinusoid a central difference with
+      any step \(h\) returns the slope times \(\sin h\):
+    </p>
+  </div>
+  <div class="mathbox col">$$\frac{C(\theta+h) - C(\theta-h)}{2} = \sin h\;\frac{dC}{d\theta} \qquad\Longrightarrow\qquad \frac{dC}{d\theta} = \frac{C\!\left(\theta+\frac{\pi}{2}\right) - C\!\left(\theta-\frac{\pi}{2}\right)}{2}$$</div>
+  <div class="col">
+    <p>
+      At \(h = \pi/2\) the factor is 1 and the difference is the derivative, with no truncation
+      error at all. On a four-qubit, three-layer circuit all twelve shifted differences matched
+      the analytic derivative to \(2\times10^{-10}\), the accuracy of the reference itself,
+      and the \(\sin h\) law held for \(h = 0.9\) (<code>[Ch20 s05]</code>). The large step
+      matters because every \(C\) is measured with shot noise. A textbook difference with a tiny
+      \(h\) divides that noise by \(2h\); a quarter-period step does not amplify it at all. It
+      is the same reason you would read the slope of a known sinusoid from two readings a
+      quarter-period either side rather than two readings close together.
+    </p>
+    <h3>An exact barren plateau, with no entanglement in it</h3>
+    <p>
+      Now the size of the gradient. Start every angle at random, uniformly over a full turn,
+      and ask how much \(\partial C/\partial\theta_1\) varies from one start to another. Its
+      average is zero; its variance is the typical squared slope the optimiser will see. Take
+      the simplest circuit there is, one \(R_y\) gate on each of \(n\) qubits and nothing
+      connecting them, and the <b>global</b> cost &ldquo;did any qubit fail to land on
+      0?&rdquo;, \(C = 1 - \prod_i \cos^2(\theta_i/2)\). Then
+      \(\partial C/\partial\theta_1 = \tfrac12\sin\theta_1\prod_{i>1}\cos^2(\theta_i/2)\), the
+      factors are independent, and \(E[\sin^2\theta]/4 = 1/8\) while
+      \(E[\cos^4(\theta/2)] = 3/8\):
+    </p>
+  </div>
+  <div class="mathbox col">$$\operatorname{Var}\frac{\partial C_{\text{global}}}{\partial\theta_1} = \frac18\left(\frac38\right)^{n-1}, \qquad \operatorname{Var}\frac{\partial\langle Z_1\rangle}{\partial\theta_1} = \frac12, \qquad \operatorname{Var}\frac{\partial C_{\text{local}}}{\partial\theta_1} = \frac{1}{8n^2}$$</div>
+  <div class="col">
+    <p>
+      The middle formula is for measuring qubit 1 alone; the last is the average of the
+      \(n\) single-qubit costs. Sampled with 400,000 random starts for \(n\) = 1 to 6, all
+      three agree with the formulas to within the sampling error, and the circuit simulator
+      reproduces the global gradient draw by draw to \(2\times10^{-16}\)
+      (<code>[Ch20 s05]</code>). Every added qubit multiplies the global variance by 3/8,
+      although no qubit touches any other. A cost that asks one yes-or-no question of every
+      qubit at once is almost always answered &ldquo;yes&rdquo;, and so it is flat in every
+      direction. The same circuit with a local cost has a gradient that shrinks only as
+      \(1/n^2\), or not at all.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same structure: Sheet 03&rsquo;s plateau, now with a number on it</div>
+      <p style="margin-bottom:0">
+        Sheet 03 &sect;08 warned that in many dimensions the trouble is not wrong minima but
+        plateaus where the gradient is tiny and progress stops. A barren plateau is that,
+        measured: the outline&rsquo;s bullet calls it vanishing gradients, and here the rate
+        of vanishing is a closed form.
+      </p>
+    </div>
+    <h3>Entangling circuits, measured on a simulator</h3>
+    <p>
+      Real variational circuits interleave rotations with entangling gates. The verification
+      script simulates layers of \(R_y\) gates followed by a ladder of CZ gates, as many layers
+      as qubits, storing all \(2^n\) amplitudes, for \(n\) = 2 to 10 with 3,000 random starts up
+      to 8 qubits and 2,000 beyond (<code>[Ch20 s05]</code>):
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Variance of the gradient with respect to the first angle, entangling circuit of depth n. Measured values carry sampling error of several per cent.</caption>
+      <thead><tr><th>Qubits n</th><th class="mono">2</th><th class="mono">4</th><th class="mono">6</th><th class="mono">8</th><th class="mono">10</th></tr></thead>
+      <tbody>
+        <tr><td>Global cost, entangling</td><td class="mono">4.27e-2</td><td class="mono">4.55e-3</td><td class="mono">4.11e-4</td><td class="mono">3.91e-5</td><td class="mono">3.13e-6</td></tr>
+        <tr><td>Global cost, no entanglement (exact)</td><td class="mono">4.69e-2</td><td class="mono">6.59e-3</td><td class="mono">9.27e-4</td><td class="mono">1.30e-4</td><td class="mono">1.83e-5</td></tr>
+        <tr><td>Qubit 1 only, entangling</td><td class="mono">0.365</td><td class="mono">0.233</td><td class="mono">0.167</td><td class="mono">0.133</td><td class="mono">0.118</td></tr>
+        <tr><td>Qubit 1 only, no entanglement (exact)</td><td class="mono">0.5</td><td class="mono">0.5</td><td class="mono">0.5</td><td class="mono">0.5</td><td class="mono">0.5</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      Fitted over \(n\) = 4 to 10, the global variance falls by 1.75 bits per qubit, a factor
+      of about 0.30 for each one added and steeper than the exact case&rsquo;s 0.375. The
+      single-qubit cost falls by only 0.17 bits per qubit over the same range
+      (<code>[Ch20 s05]</code>).
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>What ten qubits can show, and what they cannot</div>
+      <p>
+        Seven points on a straight line in a log plot are evidence of exponential decay, not a
+        proof of it. Theorems proving exponential decay for circuits random enough, and for
+        local costs once circuits are deep enough, are reported; nothing on this page derives
+        them. Ten qubits cannot tell you whether the single-qubit curve will steepen at 20 or
+        stay gentle, and the depth used here, one layer per qubit, is a choice that changes the
+        answer.
+      </p>
+      <p style="margin-bottom:0">
+        There is a subtler limit. The gradient&rsquo;s distribution grows heavier-tailed with
+        every qubit: its kurtosis is \(1.5(35/18)^{n-1}\) in the exact case, so the relative
+        error of a variance estimated from 400,000 samples is 1.0% at 6 qubits, 3.9% at 10, and
+        107% at 20 (<code>[Ch20 s05]</code>). Measuring a vanishing quantity by sampling gets
+        harder exactly as it vanishes, which is why the sampled check above stops at six qubits
+        and the formula carries the rest.
+      </p>
+    </div>
+    <h3>What a plateau costs: Sheet 04&rsquo;s sample-size formula</h3>
+    <p>
+      The global cost is estimated from shots whose outcomes are 0 or 1, each with variance at
+      most \(\tfrac14\). The parameter-shift gradient is half the difference of two such
+      estimates, so after \(N\) shots of each circuit its standard error is at most
+      \(\sqrt{1/(8N)}\). Seeing a gradient of typical size \(\sqrt{\operatorname{Var}}\) above
+      that noise needs
+    </p>
+  </div>
+  <div class="mathbox col">$$N \gtrsim \frac{1}{8\,\operatorname{Var}}\quad\text{shots per circuit, per angle, per step}$$</div>
+  <div class="col">
+    <p>
+      which is Sheet 04 &sect;08&rsquo;s margin of error \(E = z\sigma/\sqrt{N}\) solved for
+      \(N\). For the exact global case that is 6,819 shots at 10 qubits,
+      \(1.2\times10^{8}\) at 20 and \(7.5\times10^{20}\) at 50, growing by 8/3 for each qubit
+      (<code>[Ch20 s05]</code>). An exponentially small gradient is not merely slow to
+      descend; it is exponentially expensive to measure.
+    </p>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Watch the gradient vanish</div><div class="lab-tag">Predict, then add qubits</div></div>
+    <div class="predict">
+      <div class="predict-h">Predict</div>
+      <p>
+        One \(R_y\) gate per qubit, nothing connecting them, global cost. Add one qubit. By
+        what factor does the variance of \(\partial C/\partial\theta_1\) change?
+      </p>
+      <div class="opts">
+        <button class="pbtn" data-p5="a" type="button">1: the new qubit does not touch qubit 1</button>
+        <button class="pbtn" data-p5="b" type="button">1/2</button>
+        <button class="pbtn" data-p5="c" type="button">3/8</button>
+        <button class="pbtn" data-p5="d" type="button">1/8</button>
+      </div>
+      <div class="pverdict" id="pv5"></div>
+    </div>
+    <svg class="stage" id="bS" viewBox="0 0 560 270" role="img"
+         aria-label="Gradient variance against the number of qubits on a logarithmic axis: exact lines for the circuit without entanglement, measured points for the entangling circuit, for the global cost and for qubit 1 alone">
+      <g id="bGrid"></g><g id="bLines"></g><g id="bPts"></g><g id="bLab"></g>
+    </svg>
+    <div class="legend">
+      <span class="lg"><i style="background:var(--c1)"></i>global cost</span>
+      <span class="lg"><i style="background:var(--c2)"></i>qubit 1 only</span>
+      <span class="lg">line: no entanglement, exact &middot; dots: entangling, measured</span>
+    </div>
+    <div class="ctl">
+      <label for="bN">Qubits <span class="gk">n</span></label>
+      <input type="range" id="bN" min="2" max="10" step="1" value="6">
+      <span class="ro-v" id="bNv" style="min-width:40px">6</span>
+      <button class="btn on" data-bc="g" type="button">Global cost</button>
+      <button class="btn" data-bc="l" type="button">Qubit 1 only</button>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Variance, no<br>entanglement (exact)</div><div class="ro-v b" id="bVe">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Variance,<br>entangling (measured)</div><div class="ro-v b" id="bVm">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Factor per added<br>qubit, exact</div><div class="ro-v a" id="bFe">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Factor per added<br>qubit, measured</div><div class="ro-v a" id="bFm">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Shots per circuit,<br>exact case</div><div class="ro-v c" id="bNe">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Shots per circuit,<br>entangling</div><div class="ro-v c" id="bNm">&mdash;</div></div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    The vertical axis is logarithmic, one gridline per factor of 10. Lines are the closed forms
+    for the circuit without entanglement; dots are the simulator&rsquo;s measurements for the
+    entangling circuit, copied from the verification run, so they carry its sampling error.
+    The exact factor for the global cost is 0.375 at every \(n\), the answer to the
+    prediction; the measured factor between neighbouring dots wanders around 0.3 because each
+    dot has a few per cent of noise. Switch to <b>Qubit 1 only</b>: the exact line is flat at 0.5
+    and the entangling circuit&rsquo;s dots fall slowly. The shot readouts use
+    \(1/(8\,\mathrm{Var})\) for the 0-or-1 global cost and \(1/(2\,\mathrm{Var})\) for a single
+    qubit&rsquo;s \(\pm1\) outcome.
+  </div>
+</section>
+
+<section id="lif">
+  <div class="col">
+    <div class="sechead"><span class="secnum">06</span><h2>A spiking neuron is a furnace and a quench</h2>
+      <a class="srcref" href="@SRC@chapter%2020%20-%20bleeding%20edge%20AI/02.%20neuromorphic%20computing.md" target="_blank" rel="noopener">src 20/02. neuromorphic &#8599;</a>
+    </div>
+    <p>
+      The neuromorphic outline names integrate-and-fire models, conversion from ordinary
+      networks, and the latency and accuracy of spiking networks. A <b>leaky integrate-and-fire
+      (LIF)</b> neuron has one state, its membrane voltage \(V\), driven by an input current
+      \(I\):
+    </p>
+  </div>
+  <div class="mathbox col">$$\tau\,\frac{dV}{dt} = -V + R\,I(t); \qquad \text{when } V \text{ reaches } V_{\text{th}}: \text{ emit a spike, reset } V \text{ to } 0$$</div>
+  <div class="col">
+    <p>
+      Between spikes it is a first-order lag. A spiking network passes these spikes, events in
+      time, from neuron to neuron instead of passing numbers.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: the GATE lumped-capacitance problem</div>
+      <p>
+        A small body heated in a furnace, with Biot number below 0.1, obeys
+        \(\rho c V\,dT/dt = hA(T_\infty - T)\): the same equation, with time constant
+        \(\tau = \rho c V/(hA)\). A steel ball of 10 mm diameter with \(h = 100\)
+        W/m&sup2;K has \(\tau = \rho c D/6h = 59.80\) s and \(\mathrm{Bi} = 0.0042\). In a furnace
+        at 900 &deg;C it takes
+      </p>
+      <div class="mathbox">$$t = \tau\ln\frac{T_\infty - T_0}{T_\infty - T_{\text{th}}} = 59.80\,\ln\frac{900-30}{900-600} = 63.67\ \text{s}$$</div>
+      <p style="margin-bottom:0">
+        to go from 30 &deg;C to 600 &deg;C (<code>[Ch20 s06]</code>). Quench it whenever it
+        reaches 600 &deg;C and put it back, and it is an LIF neuron firing every 63.67 s. In the
+        neuron&rsquo;s variables the drive is \(u = RI/V_{\text{th}}\), here
+        \((900-30)/(600-30) = 1.526\), and the interval between spikes is
+        \(\tau\ln\big(u/(u-1)\big)\), the same number. A spring and dashpot in parallel creeping
+        under a step load is the same equation once more.
+      </p>
+    </div>
+    <p>
+      So the firing rate follows from the step response. With a refractory pause
+      \(t_{\text{ref}}\) after each spike:
+    </p>
+  </div>
+  <div class="mathbox col">$$f(u) = \frac{1}{t_{\text{ref}} + \tau\ln\dfrac{u}{u-1}}\quad (u > 1), \qquad f = 0\quad (u \le 1)$$</div>
+  <div class="col">
+    <p>
+      An exact-step simulation agrees to \(10^{-13}\) for \(u\) from 1.05 to 20
+      (<code>[Ch20 s06]</code>). Below \(u = 1\) the ball never reaches the quench
+      temperature and the neuron never fires. Just above it the rate rises with unbounded
+      slope. Far above it, with no refractory pause, the rate approaches the straight line
+      \((u - \tfrac12)/\tau\): at \(u = 20\) it is 19.4957/\(\tau\) against 19.5/\(\tau\). With
+      \(t_{\text{ref}} = 2\) ms it saturates near \(1/t_{\text{ref}}\): 495 Hz at \(u = 1000\)
+      (<code>[Ch20 s06]</code>).
+    </p>
+    <p>
+      Sampled at a fixed step \(\Delta t\) with the input held between samples, the membrane is
+      &sect;01&rsquo;s smoother, \(V_k = (1-\alpha)V_{k-1} + \alpha u_k\), with
+      \(\alpha = 1 - e^{-\Delta t/\tau}\). That is exact, to \(10^{-15}\); the forward-Euler
+      value \(\alpha = \Delta t/\tau\) is off by 0.019 after 400 steps at
+      \(\Delta t = 1\) ms, \(\tau = 20\) ms (<code>[Ch20 s06]</code>). Sheet 07 and Sheet 08
+      both met this trap, a discrete object claimed equal to a continuous one; the exact
+      identity is the one with the exponential.
+    </p>
+    <h3>Conversion, and why the leak is taken out</h3>
+    <p>
+      One route to a spiking network is to train an ordinary one and convert it, letting each
+      firing rate stand for an activation. Sheet 06&rsquo;s activation is the ReLU,
+      \(\max(0, z)\). Remove the leak, so the neuron integrates its input exactly, and on reset
+      <em>subtract</em> the threshold instead of returning to zero. Driven by a constant input
+      \(a\) per step against a threshold of 1, it fires exactly \(\lfloor aT\rfloor\) spikes in
+      \(T\) steps when \(a > 0\) and none when \(a \le 0\), checked on 3,000 random inputs
+      (<code>[Ch20 s06]</code>). Its rate is a ReLU, with an error below \(1/T\). Conversion
+      methods use this non-leaky neuron (reported), and the derivation says why.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks: the leaky neuron is not a ReLU</div>
+      <p>
+        At the same current the LIF neuron fires at 0.379 of the non-leaky rate at
+        \(u = 1.1\), 0.721 at \(u = 2\), 0.896 at \(u = 5\) and 0.949 at \(u = 10\)
+        (<code>[Ch20 s06]</code>). Its kink sits at \(u = 1\), not at zero; its slope there is
+        infinite, not 1; and its straight part is offset by \(1/(2\tau)\). A network trained with
+        ReLUs and run on leaky neurons runs with a different activation function.
+      </p>
+      <p style="margin-bottom:0">
+        <b>Reset to zero</b> breaks it too. Returning to 0 throws away whatever the voltage had
+        overshot the threshold by, and the rate becomes \(1/\lceil 1/a\rceil\), a staircase:
+        an input of 0.4 fires at 1/3, 17% low (<code>[Ch20 s06]</code>). Subtracting keeps the
+        overshoot for the next spike.
+      </p>
+    </div>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: rate coding is a frequency counter</div>
+      <p style="margin-bottom:0">
+        A frequency counter counts pulses for a gate time \(T\) and reports count over time,
+        with a resolution of one count, \(1/T\). A rate-coded neuron is read the same way. The
+        mean error over random inputs is \(1/(2T)\): measured 0.0491, 0.00498 and 0.000509 for
+        \(T\) = 10, 100 and 1,000 steps (<code>[Ch20 s06]</code>). One per cent resolution costs
+        about a hundred time steps of waiting per layer. That is the latency&ndash;accuracy
+        trade in the outline&rsquo;s last bullet, derived; the energy side of the comparison is
+        reported, not derived here.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks: a spike has no slope</div>
+      <p style="margin-bottom:0">
+        Training by gradient needs the output to change smoothly with the input. A spike count
+        is a step function: nudging the input by \(10^{-6}\) changed the count over 100 steps in
+        none of 10,000 random cases (<code>[Ch20 s06]</code>). Sheet 03 &sect;08 excused the
+        ReLU&rsquo;s kink because it is one point; a step function is flat everywhere else, so
+        the gradient is zero almost everywhere. <b>Surrogate-gradient</b> training substitutes a
+        smooth bump for the step&rsquo;s derivative in the backward pass only, while the forward
+        pass still spikes (reported). Learning from spike timing (STDP) is not treated.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">A neuron is a furnace</div><div class="lab-tag">Predict, then drive it</div></div>
+    <div class="predict">
+      <div class="predict-h">Predict</div>
+      <p>
+        Drive the leaky neuron at twice the level it needs to fire at all, \(u = 2\). What
+        fraction of the non-leaky neuron&rsquo;s rate does it fire at, for the same current?
+      </p>
+      <div class="opts">
+        <button class="pbtn" data-p6="a" type="button">100%</button>
+        <button class="pbtn" data-p6="b" type="button">72%</button>
+        <button class="pbtn" data-p6="c" type="button">50%</button>
+        <button class="pbtn" data-p6="d" type="button">0%: it never fires</button>
+      </div>
+      <div class="pverdict" id="pv6"></div>
+    </div>
+    <svg class="stage" id="lS" viewBox="0 0 560 270" role="img"
+         aria-label="Left: membrane voltage against time, rising like a heated body and reset at the threshold. Right: firing rate against drive for the leaky neuron and the non-leaky one, which is a ReLU.">
+      <g id="lL"></g><g id="lR"></g>
+    </svg>
+    <div class="legend">
+      <span class="lg"><i style="background:var(--c1)"></i>leaky (LIF)</span>
+      <span class="lg"><i style="background:var(--c2)"></i>no leak (IF) = ReLU</span>
+    </div>
+    <div class="ctl">
+      <label for="lU">Drive <span class="gk">u = RI/V<sub>th</sub></span></label>
+      <input type="range" id="lU" min="0.5" max="6" step="0.01" value="2">
+      <span class="ro-v" id="lUv" style="min-width:48px">2.00</span>
+    </div>
+    <div class="ctl">
+      <button class="btn on" data-lm="lif" type="button">Leaky</button>
+      <button class="btn" data-lm="if" type="button">No leak</button>
+      <button class="btn" id="lRef" type="button">Refractory 2 <span class="gk">ms</span>: off</button>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Interval,<br>formula</div><div class="ro-v b" id="lT">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Interval,<br>simulated</div><div class="ro-v b" id="lTs">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Rate, leaky</div><div class="ro-v a" id="lF">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Rate, no leak<br>(ReLU)</div><div class="ro-v a" id="lFi">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Leaky / no-leak</div><div class="ro-v c" id="lRat">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Steel-ball quench<br>interval, same <span class="gk">u</span></div><div class="ro-v" id="lBall">&mdash;</div></div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    The membrane time constant is \(\tau = 20\) ms. Left: 100 ms of membrane voltage, with the
+    threshold dashed; each reset is a spike. Right: the firing rate against the drive, with
+    the current drive marked. The simulated interval comes from stepping the membrane every
+    0.01 ms and noting the first step past threshold, so it can sit up to 0.01 ms above the
+    formula. At \(u = 2\) the leaky neuron fires every 13.86 ms, 72.1 Hz, against 100 Hz without
+    the leak: 0.721, the answer to the prediction. Below \(u = 1\) the leaky trace levels off
+    under the threshold and never fires, while the non-leaky neuron fires at any positive
+    drive. The last readout scales the same interval to the 10 mm steel ball, \(\tau = 59.8\)
+    s, so \(u = 1.526\) gives the 63.67 s of the worked problem above.
   </div>
 </section>
 
