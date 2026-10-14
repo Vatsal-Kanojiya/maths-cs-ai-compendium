@@ -6459,6 +6459,8 @@ def _ch16p2():
     say("s04", f"streams as a three-station pipeline (Sheet 13 part 1): 8 chunks take {t8*1e3:.2f} ms against {tot*1e3:.2f} "
         f"sequential ({tot/t8:.2f}x); no chunk count beats {tot/tinf:.2f}x, because one direction alone needs {tinf*1e3:.2f} ms",
         near(t8 * 1e3, 2.40, 0.01) and near(tot / t8, 1.79, 0.01) and tot / chunked(10**6) < tot / tinf + 1e-9 and near(tot / tinf, 2.02, 0.01))
+    say("s04", f"a kernel copied over once per use is dock-bound below Peak/BW_PCIe = {PK32/BP:,.0f} FLOP per byte crossing",
+        near(PK32 / BP, 2124, 1))
     I_p = 1024 / 6
     say("s04", f"product mix at the dock for that matmul = 2N^3/12N^2 = N/6 = {I_p:.1f} FLOP/B; dock rate x mix = "
         f"{BP*I_p/1e12:.2f} TFLOP/s, {BP*I_p/PK32:.1%} of the roof", near(BP * I_p / 1e12, 5.38, 0.01))
@@ -6473,6 +6475,9 @@ def _ch16p2():
     say("s05", f"register file 256 KB = {regs:,} registers: warps held at 32/64/128/255 registers per thread = "
         f"{cap(32)}/{cap(64)}/{cap(128)}/{cap(255)}; 40 warps fit only at <= {regs // (32*40)} registers",
         (cap(32), cap(64), cap(128), cap(255)) == (64, 32, 16, 8) and regs // (32 * 40) == 51)
+    shares = {r: min(cap(r) * 128 / 404, BW / FCLK / SMS) / (BW / FCLK / SMS) for r in (32, 51, 64, 128, 255)}
+    say("s05", "rack table, share of bandwidth with one load per warp: " + ", ".join(f"{r} regs {v:.1%}" for r, v in shares.items()),
+        shares[32] == 1 and shares[51] == 1 and near(shares[64], 0.803, 0.001) and near(shares[128], 0.401, 0.001) and near(shares[255], 0.201, 0.001))
     say("s05", f"one load per warp needs {wl/64:.0%} of the 64-warp maximum resident; four loads per warp, {wl/4:.1f} warps",
         near(wl / 64, 0.617, 0.001))
     say("s05", f"FMA chain: 4-cycle latency (reported) x 4 schedulers issuing 1 per cycle = {4*4} warps per SM, "
@@ -6556,6 +6561,17 @@ def _ch16p2():
     pq = 1 - (1 - q)**32
     say("s06", f"branch taken by 1% of threads at random: P(warp must run it) = 1 - 0.99^32 = {pq:.4f}; "
         f"400,000 simulated warps: {sim_q:.4f} (Sheet 15's c = 0 plan with n = 32)", near(pq, 0.2750, 5e-5) and near(sim_q, pq, 0.003))
+    qt = {qq: 1 - (1 - qq)**32 for qq in (0.001, 0.01, 0.05, 0.1)}
+    say("s06", "1 - (1-q)^32 at q = 0.001, 0.01, 0.05, 0.1: " + ", ".join(f"{v:.1%}" for v in qt.values()) +
+        f"; half the warps at q = {1 - 0.5**(1/32):.4f}",
+        [round(100 * v, 1) for v in qt.values()] == [3.2, 27.5, 80.6, 96.6] and near(1 - 0.5**(1 / 32), 0.0214, 1e-4))
+    rl3 = mul32(1606); runA = both = 0; sT = sL = 0.0
+    for _w in range(20000):
+        nA = sum(1 for _l in range(32) if rl3() < 0.01)
+        runA += nA > 0; both += 0 < nA < 32
+        sT += (100 if nA > 0 else 0) + (10 if nA < 32 else 0); sL += (nA * 100 + (32 - nA) * 10) / 32
+    say("s06", f"LAB 3 rest (rng 1606, 20,000 warps, q = 1%): runs A {runA/200:.1f}%, both {both/200:.1f}%, "
+        f"warp time / lane average {sT/sL:.2f}", runA == both and round(runA / 200, 1) == 27.9 and round(sT / sL, 2) == 3.47)
     a_, b_ = 100.0, 10.0
     ec = a_ * pq + b_ * (1 - q**32); ideal = q * a_ + (1 - q) * b_
     say("s06", f"rare path 100, common 10: expected warp time {ec:.1f} against a per-lane average {ideal:.1f} ({ec/ideal:.2f}x)",
@@ -6664,6 +6680,12 @@ def _ch16p2():
         ok &= np.array_equal(C, A @ B) and cyc == K + 2 * n_ - 2 and mc == n_ * n_ * K
         ok &= all(np.array_equal(D[k], np.outer(A[:, k], B[k, :])) for k in range(K))
     say("s10", "output-stationary array, 4 sizes: C = AB exactly, cycles = K + 2n - 2, and wave k adds exactly a_k b_k^T", ok)
+    aV = lambda i, k: 1 + (i + 2 * k) % 4; bV = lambda k, j: 1 + (3 * k + j) % 3
+    A4 = np.array([[aV(i, k) for k in range(4)] for i in range(4)]); B4 = np.array([[bV(k, j) for j in range(4)] for k in range(4)])
+    act5 = sum(1 for i in range(4) for j in range(4) if 0 <= 4 - i - j < 4)
+    done5 = sum(min(4, max(0, 4 - i - j + 1)) for i in range(4) for j in range(4))
+    say("s10", f"LAB 4 rest, 4 x 4 array, K = 4, cycle 5 of {4 + 2*4 - 2}: {act5} cells working, {done5} of 64 multiply-adds done; "
+        f"the lab's matrices give AB row 0 = {[int(v) for v in (A4 @ B4)[0]]}", act5 == 12 and done5 == 32 and systolic(A4, B4)[0].tolist() == (A4 @ B4).tolist())
     util = lambda L, n_: L / (L + 2 * n_ - 2)
     say("s10", f"utilisation L/(L + 2n - 2) for a 128 array: L = 8 -> {util(8,128):.1%}, 128 -> {util(128,128):.1%}, "
         f"1024 -> {util(1024,128):.1%}; a 256 array at L = 8: {util(8,256):.1%}",
@@ -6719,6 +6741,9 @@ def _ch16p2():
         f"{tmb*1e6:.1f} us of its own traffic; tail {ttl*1e6:.1f} us unfused; total {u*1e6:.1f} vs {fz*1e6:.1f} us fused = "
         f"{u/fz:.3f}x; bytes {tr:.2f}x; output-sized arrays (1+2k) = 5 : 1",
         near(u * 1e6, 718.5, 0.1) and near(fz * 1e6, 555.8, 0.1) and near(u / fz, 1.293, 0.001) and near(tr, 2.78, 0.005))
+    mb4 = 2 * (4096 * 4096 + 4096 * 16384 + 4096 * 16384); tl4 = 2 * 2 * 2 * 4096 * 16384
+    say("s12", f"bytes: matmul {mb4/1e6:.0f} MB, output {2*4096*16384/1e6:.0f} MB, unfused tail {tl4/1e6:.0f} MB, total {(mb4+tl4)/1e6:.0f} MB",
+        round(mb4 / 1e6) == 302 and round((mb4 + tl4) / 1e6) == 839 and round(2 * 4096 * 16384 / 1e6) == 134)
     asym = 1 + 2 * 2 * RT / 4096
     say("s12", f"once the matmul is compute-bound the gain is 1 + k s I*/d = 1 + 2 x 2 x {RT:.1f} / 4096 = {asym:.4f} for any token count",
         near(layer(10**6)[0] / layer(10**6)[1], asym, 1e-9) and near(asym, 1.2927, 1e-4))
@@ -6789,7 +6814,8 @@ def _ch16p2():
     say("s14", f"the same 256 block results added in 200 random arrival orders: {distinct} different sums, spread {spread:.0f} ulp "
         f"(relative {(max(res)-min(res))/exact:.1e})", distinct > 5 and spread >= 2)
     say("s14", f"lab rest values: distinct {distinct}, spread {spread:.0f} ulp, sequential {(float(seq)-exact)/ulp:+.1f} ulp, "
-        f"tree {(float(fixed)-exact)/ulp:+.1f} ulp")
+        f"tree {(float(fixed)-exact)/ulp:+.1f} ulp", distinct == 14 and round(spread) == 13 and
+        round((float(seq) - exact) / ulp, 1) == -138.8 and round((float(fixed) - exact) / ulp, 1) == -0.8 and ulp == 2.0**-9)
     a3, b3, c3 = f32(1.0), f32(1e8), f32(-1e8)
     say("s14", f"(1 + 1e8) - 1e8 = {float(f32(f32(a3 + b3) + c3))}, 1 + (1e8 - 1e8) = {float(f32(a3 + f32(b3 + c3)))} in float32",
         float(f32(f32(a3 + b3) + c3)) == 0.0 and float(f32(a3 + f32(b3 + c3))) == 1.0)
@@ -6808,6 +6834,8 @@ def _ch16p2():
     fl1024 = 2 * 1024**3
     tn = fl1024 / (BW * 0.25); t16 = fl1024 / (BW * 4); t128 = fl1024 / min(PK32, BW * 32)
     line = min(PK32, BW * 32, BP * I_p)
+    say("s15", f"tile 32: {BW*8/1e12:.1f} TFLOP/s; stores with the 128 kit: {BW*32/1e12:.1f}; dock {BP*I_p/1e12:.2f}",
+        near(BW * 8 / 1e12, 26.4, 1e-9) and near(BW * 32 / 1e12, 105.6, 1e-9))
     say("s15", f"N = 1024 FP32 matmul: naive {tn*1e3:.2f} ms, 16-tile {t16*1e3:.3f} ms, 128-tile {t128*1e6:.1f} us; "
         f"with the operands crossing the dock the line runs at {line/1e12:.2f} TFLOP/s ({line/PK32:.1%})",
         near(tn * 1e3, 2.60, 0.005) and near(t16 * 1e3, 0.163, 0.0005) and near(t128 * 1e6, 32.1, 0.05) and near(line / 1e12, 5.38, 0.01))
@@ -6815,6 +6843,8 @@ def _ch16p2():
     # ---------------- s17: question bank ------------------------------------------------------------------------
     q9 = 50e12 / 2e12
     say("s17", f"Q9: ridge 50/2 = {q9:.0f} FLOP/B; layer norm 0.625 x 2 = {0.625*2:.2f} TFLOP/s", q9 == 25)
+    say("s17", f"Q10: 32/4 = {32/4:.0f} FLOP/B; two 32x32 float tiles = {2*32*32*4//1024} KiB; {32*32} threads", 2 * 32 * 32 * 4 == 8192)
+    say("s17", f"Q16: 1 + 2 x 3 = {1+2*3} passes against 1", 1 + 2 * 3 == 7)
     q11 = 2e12 / 1.5e9 * 500 / 100 / 128
     say("s17", f"Q11: 2 TB/s / 1.5 GHz x 500 / 100 SMs / 128 B = {q11:.1f} warp-loads per SM", near(q11, 52.1, 0.05))
     say("s17", f"Q12: 65,536 / (32 x 80) = {65536/(32*80):.1f} -> {65536//(32*80)} warps", 65536 // (32 * 80) == 25)

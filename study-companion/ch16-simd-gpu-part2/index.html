@@ -615,7 +615,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
       <div class="note-h"><span class="ic">&#33;</span>Where &ldquo;latency against throughput&rdquo; needs care</div>
       <p style="margin-bottom:0">
         The source&rsquo;s slogan is that a CPU is designed for latency and a GPU for throughput.
-        Sheet 17 &sect;13 found that &ldquo;latency&rdquo; is a lead time and &ldquo;throughput&rdquo; a
+        Sheet 17 &sect;14 found that &ldquo;latency&rdquo; is a lead time and &ldquo;throughput&rdquo; a
         rate, and Little&rsquo;s law ties them: work in process = rate &times; lead time. A GPU&rsquo;s
         individual memory access is slow, 400 cycles; it gets its rate by keeping a great deal of work
         in process. How much is the subject of &sect;05, and the answer is a number, not a slogan.
@@ -1096,7 +1096,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
       That is the rejection probability of Sheet 15 &sect;16&rsquo;s single sampling plan with \(n = 32\)
       and acceptance number \(c = 0\): a lot is rejected if the sample holds even one defective, and a
       warp runs the branch if it holds even one lane that wants it. Some values: \(q = 0.001\) gives
-      3.1%, \(q = 0.01\) gives <b>27.5%</b>, \(q = 0.05\) gives 80.6%, \(q = 0.1\) gives 96.6%. A branch
+      3.2%, \(q = 0.01\) gives <b>27.5%</b>, \(q = 0.05\) gives 80.6%, \(q = 0.1\) gives 96.6%. A branch
       taken by one thread in a hundred is run by more than a quarter of all warps; 400,000 simulated warps
       gave 27.4%. If the rare path costs 100 and the common one 10, a warp takes 37.5 on average, against
       a per-lane average of 10.9: <b>3.44 times</b> the work the threads actually need.
@@ -1226,7 +1226,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
         <tr><td>Stride 2</td><td class="mono">2</td><td class="mono">50%</td><td class="mono">8</td><td class="mono">50%</td></tr>
         <tr><td>Stride 4 (the x of a 16-byte particle)</td><td class="mono">4</td><td class="mono">25%</td><td class="mono">16</td><td class="mono">25%</td></tr>
         <tr><td>Stride 8</td><td class="mono">8</td><td class="mono">12.5%</td><td class="mono">32</td><td class="mono">12.5%</td></tr>
-        <tr><td>Stride 16</td><td class="mono">16</td><td class="mono">6.3%</td><td class="mono">32</td><td class="mono">12.5%</td></tr>
+        <tr><td>Stride 16</td><td class="mono">16</td><td class="mono">6.25%</td><td class="mono">32</td><td class="mono">12.5%</td></tr>
         <tr><td>Stride 32</td><td class="mono">32</td><td class="mono">3.1%</td><td class="mono">32</td><td class="mono">12.5%</td></tr>
         <tr><td>Stride 64</td><td class="mono">32</td><td class="mono">3.1%</td><td class="mono">32</td><td class="mono">12.5%</td></tr>
       </tbody>
@@ -2053,7 +2053,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
           <text x="166" y="276">costs cards</text>
           <text x="93" y="334">bigger kits</text>
           <text x="483" y="334">masks</text>
-          <text x="288" y="424">Sheet 13 part 1 &#167;11</text>
+          <text x="280" y="336" text-anchor="middle">from Sheet 13 part 1 &#167;11</text>
         </g>
       </svg>
       </div>
@@ -2082,7 +2082,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
       calculation:
     </p>
     <ol>
-      <li><b>RISC-V&rsquo;s vector extension as predicates again.</b> Part 1 &sect;09 promised it: file 06&rsquo;s
+      <li><b>RISC-V&rsquo;s vector extension as predicates again.</b> Part 1 &sect;16 promised it, pointing back to its &sect;09: file 06&rsquo;s
         <code>vsetvl</code> loop is SVE&rsquo;s vector-length-agnostic loop and Triton&rsquo;s mask (&sect;11 here).
         Run the source&rsquo;s strip-mining loop and show it makes \(\lceil n/\text{VL} \rceil\) strokes with the
         last one partly filled, part 1 &sect;05&rsquo;s count, for the source&rsquo;s range of VLEN, 128 to 65,536 bits;
