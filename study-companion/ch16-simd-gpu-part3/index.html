@@ -695,6 +695,223 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
   </div>
 </section>
 
+<section id="tinyml">
+  <div class="col">
+    <div class="sechead"><span class="secnum">03</span><h2>TinyML, with the source&rsquo;s three tasks run</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2016%20-%20SIMD%20and%20GPU%20programming/06.%20RISC-V%20and%20embedded%20systems.md" target="_blank" rel="noopener">src 06. RISC-V &#8599;</a>
+    </div>
+    <p>
+      <b>TinyML</b> is machine learning on microcontrollers: kilobytes of memory, a clock in the tens or hundreds
+      of megahertz, a power budget in milliwatts. The source&rsquo;s example framework, TensorFlow Lite Micro,
+      keeps the model as a constant array in flash and does all its work in one <b>arena</b>, a block of RAM
+      reserved at compile time. Nothing is allocated while the program runs, so nothing can run out halfway
+      through an inference. It is a fixture plate with every pocket machined before the first part arrives;
+      the price is that the plate must be sized for the busiest moment of the job.
+    </p>
+    <p>
+      The source gives three C++ tasks and says to compile them with <code>g++</code>. All three were compiled
+      and run on the build machine (<code>[Ch16p3 s03]</code>).
+    </p>
+    <p>
+      <b>Task 1</b> describes a 784&rarr;64&rarr;10 network with 8-bit weights. It prints a model size of 50,890
+      bytes, which fits the 256 KB flash it checks, 74 bytes of activations in a 32 KB arena, and output logits
+      that are all 1, because the mock weights are all 1. Then it prints its latency, 4.9 &micro;s here, and
+      converts that to &ldquo;~783 cycles&rdquo; of a 160 MHz microcontroller (825 on a second run).
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>The cycle count is the build machine&rsquo;s time in someone else&rsquo;s clock</div>
+      <p style="margin-bottom:0">
+        The network does \(784 \times 64 + 64 \times 10 = 50{,}816\) multiply-adds per inference. The printed figure
+        is the x86 machine&rsquo;s time multiplied by 160 MHz, which says how many microcontroller ticks pass while
+        the <em>desktop</em> works, not how many the microcontroller needs. A microcontroller doing one
+        multiply-add per cycle, an assumption, needs at least 50,816 cycles: <b>317.6 &micro;s at 160 MHz</b>, 65
+        times the printed figure. A unit slip of this kind survives because the printed number has the right
+        units.
+      </p>
+    </div>
+    <p>
+      <b>Task 2</b> quantises 100,000 weights to 8-bit integers with one scale. It prints a scale of 0.00292623, a
+      largest error of 0.499995 steps (&ldquo;should be &lt;= 0.5&rdquo;, and is) and a mean absolute error that
+      works out to <b>0.2496 steps</b>. Replayed in float32, the root-mean-square error is 0.2884 steps.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: the reading uncertainty of a graduated scale</div>
+      <p style="margin-bottom:0">
+        Sheet 17 &sect;03 showed that rounding to a step \(\Delta\) leaves an error spread evenly over
+        \(\pm\Delta/2\), whose standard deviation is \(\Delta/\sqrt{12} = 0.2887\,\Delta\), the rectangular
+        uncertainty of a scale reading. The mean of its absolute value is \(\Delta/4\). The source&rsquo;s task
+        measures 0.2496 and 0.2884 against 0.25 and 0.2887. Its &ldquo;4x&rdquo; compression is 400,000 bytes
+        against 100,004 including the scale.
+      </p>
+    </div>
+    <p>
+      <b>Task 3</b> times an 8-bit matrix product against a float one, both 128&times;128, and prints the speedup.
+      Across runs here it printed 0.94, 0.98 and 1.46&times;. The source says 8-bit is &ldquo;2&ndash;4x faster on
+      integer-only hardware&rdquo;; on this machine both loops walk down a column of \(B\), 512 bytes apart in
+      float and 128 in 8-bit, and wait on the same delivery station whatever the arithmetic (part 1 &sect;07). On a
+      microcontroller without floating-point hardware, where every float operation is done in software, the gap
+      would be real (reported). The 4&times; saving in memory, 32 KB against 128 KB, holds on any machine.
+    </p>
+    <p>
+      The source&rsquo;s list of edge optimisations points to the rest of the series: quantisation (it says chapter
+      18; the compendium&rsquo;s quantisation file is chapter 17&rsquo;s, Sheet 17 &sect;&sect;02&ndash;07 here),
+      pruning and distillation (Sheet 17 &sect;12), and fusion, which part 1 &sect;01 and part 2 &sect;12 priced.
+      &ldquo;Even more critical when you have 256 KB of RAM&rdquo;, it says of fusion, and the arena is why: an
+      intermediate result that is never written needs no pocket.
+    </p>
+  </div>
+</section>
+
+<section id="energy">
+  <div class="col">
+    <div class="sechead"><span class="secnum">04</span><h2>Smaller, not cheaper</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2016%20-%20SIMD%20and%20GPU%20programming/06.%20RISC-V%20and%20embedded%20systems.md" target="_blank" rel="noopener">src 06. RISC-V &#8599;</a>
+    </div>
+    <p>
+      <b>Debt 5 of 6, and the headline.</b> The source tabulates three machines to show how extreme the edge is.
+      Its own numbers, with two columns added by division:
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>The source&rsquo;s table (first four columns) and what it implies (last two). <code>[Ch16p3 s04]</code></caption>
+      <thead><tr><th>Device</th><th>Compute</th><th>Power</th><th>Cost</th><th>Energy per FLOP</th><th>Compute per dollar</th></tr></thead>
+      <tbody>
+        <tr><td>Server GPU</td><td class="mono">1,000 TFLOPS</td><td class="mono">700 W</td><td class="mono">$30,000</td><td class="mono">0.70 pJ</td><td class="mono">33 GFLOP/s</td></tr>
+        <tr><td>Smartphone</td><td class="mono">10 TFLOPS</td><td class="mono">5 W</td><td class="mono">$500</td><td class="mono">0.50 pJ</td><td class="mono">20 GFLOP/s</td></tr>
+        <tr><td>Microcontroller</td><td class="mono">0.001 TFLOPS</td><td class="mono">0.001 W</td><td class="mono">$1</td><td class="mono">1.00 pJ</td><td class="mono">1 GFLOP/s</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      Power runs over a factor of 700,000 from top to bottom. Energy per FLOP, power divided by compute, moves by a
+      factor of two, and the cheapest operation is the phone&rsquo;s. Per dollar of hardware the server is cheapest
+      and the microcontroller dearest by a factor of 33. By the source&rsquo;s own figures, the edge does not
+      compute more cheaply. It computes less, in a smaller package, on a smaller budget.
+    </p>
+    <p>
+      Part 1 &sect;03 gave a reason to expect otherwise. Dynamic power is \(P \propto CV^2 f\), and if voltage can fall
+      in proportion to frequency, energy per operation falls as \(f^2\). Scale the server&rsquo;s 0.70 pJ at 1.98 GHz
+      down to a 160 MHz microcontroller (task 1&rsquo;s clock):
+    </p>
+    <div class="mathbox">$$0.70\ \text{pJ} \times \left(\frac{0.16}{1.98}\right)^{2} = 4.57\ \text{fJ per FLOP},$$</div>
+    <p>
+      against the table&rsquo;s 1 pJ, <b>219 times more</b>. Part 1&rsquo;s break box said why the law fails at the
+      bottom: voltage cannot keep falling once it nears the transistor&rsquo;s threshold, and leakage, which flows
+      whether or not anything is computed, takes over. The table puts a number on that warning. Its microcontroller
+      row is also generous: 1 GFLOP/s at 160 MHz is 6.25 floating-point operations per cycle, a vector unit&rsquo;s
+      rate, and real microcontrollers are reported to spend more per operation, not less. That would only widen the
+      gap.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same structure: specific fuel consumption, and why it rises at part load</div>
+      <p style="margin-bottom:0">
+        Energy per FLOP is a specific consumption, like an engine&rsquo;s grams of fuel per kilowatt-hour: energy in
+        per unit of useful work out. A large engine and a small one can have similar figures; what differs is the
+        rating. And both rise at part load for the same reason. An engine&rsquo;s friction and pumping losses do not
+        shrink with output; a chip&rsquo;s static power does not shrink with work done. With a share \(s\) of full
+        power that is fixed, energy per operation at utilisation \(u\) is
+      </p>
+      <div class="mathbox">$$\frac{E(u)}{E(1)} = \frac{s + (1-s)\,u}{u},$$</div>
+      <p style="margin-bottom:0">
+        which with \(s = 30\%\) (an assumption, not the source&rsquo;s) is 1.3&times; at half load and 3.7&times; at 10%.
+        An edge chip that wakes for a few milliseconds and sleeps the rest pays exactly this unless it can switch
+        its static power off, which is why sleep modes matter more than peak rates at the edge.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks, and what the edge does win</div>
+      <p style="margin-bottom:0">
+        A FLOP is not the same work everywhere: the phone&rsquo;s 10 TFLOPS is likely an 8-bit rate from its neural
+        unit, not float32 (reported), and the table mixes formats. And energy per FLOP is the wrong figure of merit
+        for the edge. A sensor on a coin cell needs 1 mW, not 700 W; a microcontroller costs $1 per device; its data
+        never leaves the device and never waits for a network (&sect;05). Those are the edge&rsquo;s gains, and none of
+        them is efficiency per operation. Sheet 17 &sect;17 found the same from the other side: the edge runs at batch
+        one by necessity, and pays for it.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Energy per FLOP</div><div class="lab-tag">Predict, then load the machines</div></div>
+    <div class="lab-body">
+    <div class="predict">
+      <p style="margin-top:0">
+        By the source&rsquo;s own table, which spends the least energy per FLOP: the 700 W server GPU, the 5 W
+        smartphone or the 1 mW microcontroller?
+      </p>
+      <button class="pbtn" data-p2="a" type="button">The microcontroller, by far</button>
+      <button class="pbtn" data-p2="b" type="button">The smartphone, by a little</button>
+      <button class="pbtn" data-p2="c" type="button">The server GPU</button>
+      <button class="pbtn" data-p2="d" type="button">All exactly equal</button>
+      <div class="pverdict" id="pv2"></div>
+    </div>
+    <div class="chartwrap">
+    <svg class="svgfig" id="eS" viewBox="0 0 560 310" role="img"
+         aria-label="Energy per FLOP for the three devices in the source's table at the chosen load, and the part-load curve of energy per operation"></svg>
+    </div>
+    <div class="ctl">
+      <label for="eU">Utilisation</label>
+      <input type="range" id="eU" min="5" max="100" value="100" step="1">
+      <span class="ro-v" id="eUv" style="min-width:48px">100%</span>
+    </div>
+    <div class="ctl">
+      <label for="eSs">Static share of full power</label>
+      <input type="range" id="eSs" min="0" max="60" value="30" step="1">
+      <span class="ro-v" id="eSv" style="min-width:48px">30%</span>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Server GPU,<br><span class="gk">pJ</span> per FLOP</div><div class="ro-v a" id="eG">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Smartphone,<br><span class="gk">pJ</span> per FLOP</div><div class="ro-v b" id="eP">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Microcontroller,<br><span class="gk">pJ</span> per FLOP</div><div class="ro-v c" id="eM">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Part-load<br>factor</div><div class="ro-v" id="eF">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Cube law&rsquo;s<br>microcontroller, <span class="gk">fJ</span></div><div class="ro-v" id="eC">&mdash;</div></div>
+    </div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    Top: energy per FLOP for the three rows of the source&rsquo;s table at the chosen load, on one linear scale. At full
+    load they read <b>0.70, 0.50 and 1.00 pJ</b>: the phone is cheapest, by a little, the answer to the prediction.
+    The cube law&rsquo;s prediction for the microcontroller, 4.57 fJ, would be a sliver at the left edge. Bottom: the
+    part-load factor against utilisation for the chosen static share, the specific-consumption curve of an engine
+    at part load. The static share is an assumption for illustration; the source gives none.
+  </div>
+</section>
+
+<section id="control">
+  <div class="col">
+    <div class="sechead"><span class="secnum">05</span><h2>The control core, and the edge&rsquo;s budgets</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2016%20-%20SIMD%20and%20GPU%20programming/06.%20RISC-V%20and%20embedded%20systems.md" target="_blank" rel="noopener">src 06. RISC-V &#8599;</a>
+    </div>
+    <p>
+      Many AI accelerators, the source says, use RISC-V not to run the model but to run the chip. Its diagram puts a
+      RISC-V <b>control core</b> beside a custom matrix unit (a systolic array, part 2 &sect;10) and an on-chip SRAM
+      buffer. The control core loads weights, schedules layers, moves data between units and talks to the host; the
+      matrix unit does the arithmetic. That is part 1 &sect;01&rsquo;s split between the planner and the floor, built
+      into one chip. RISC-V suits the planner&rsquo;s job because it is free to license, small, and open to added
+      instructions. The companies the source names are reported.
+    </p>
+    <p>
+      The source&rsquo;s edge constraints are budgets, and two of them are arithmetic. A battery device with 100 mW in
+      all, running a 50 mW model, leaves 50 mW for its sensors, radio and display. And latency: a wake word must answer
+      within about 200 ms, a driving perception stack within about 30 ms, while a round trip to the cloud takes 50&ndash;200
+      ms. The perception budget is exceeded by the network alone, by 20 ms at its very best, before any computing is
+      done; the wake word keeps between 0 and 150 ms for itself (<code>[Ch16p3 s06]</code>). Privacy and offline
+      operation are the other two reasons the source gives, and neither is a number.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same structure: the planner and the floor, on one die</div>
+      <p style="margin-bottom:0">
+        A control core is small because the planner&rsquo;s work is small: it issues orders and the floor does the
+        work. Where it breaks: on one chip the planner and the floor share the same clock and memory, so a slow planner
+        stalls the floor directly. An accelerator&rsquo;s control core must keep its matrix unit fed, which is part 2
+        &sect;05&rsquo;s problem of keeping enough work in flight, now on the planner&rsquo;s desk.
+      </p>
+    </div>
+  </div>
+</section>
+
 </main>
 </div>
 
@@ -801,6 +1018,57 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     b:'<b>Right.</b> &lceil;1000/16&rceil; = 63, and the last pass takes the 8 left over. Balanced, the last two take 12 and 12: still 63 passes.',
     c:'<b>No.</b> <code>vsetvl</code> answers 8 for the last pass, and the other 8 lanes do nothing. Nothing is padded or written past the end.',
     d:'<b>No.</b> That is the scalar loop. Each pass takes up to 16 elements: 63 passes.'});
+  draw();
+})();
+</script>
+
+<script>
+/* ===== LAB 2 -- energy per FLOP from the source's table, and the part-load curve ([Ch16p3 s04]) ===== */
+(function(){
+  'use strict';
+  var U=window.__c16, $=U.$, ST=U.ST;
+  var DEV=[['Server GPU',1000e12,700],['Smartphone',10e12,5],['Microcontroller',0.001e12,0.001]];
+  var CUBE=0.70*Math.pow(0.16/1.98,2)*1000;   /* fJ */
+  function factor(u,s){return (s+(1-s)*u)/u;}
+  function draw(){
+    var u=+$('eU').value/100, s=+$('eSs').value/100, k=factor(u,s);
+    $('eUv').textContent=Math.round(u*100)+'%'; $('eSv').textContent=Math.round(s*100)+'%';
+    var vals=DEV.map(function(d){return d[2]/d[1]*1e12*k;});
+    var vmax=Math.max(2,Math.ceil(Math.max.apply(null,vals)*1.15));
+    var X0=130, X1=520, h='', i;
+    function X(v){return X0+(X1-X0)*v/vmax;}
+    var step=vmax<=4?0.5:(vmax<=10?1:(vmax<=24?4:10));
+    for(var t=0;t<=vmax+1e-9;t+=step){h+=U.ln(X(t),20,X(t),128,ST.grid)+U.txt(X(t),142,t%1?t.toFixed(1):String(t),ST.tick,'middle');}
+    h+=U.txt((X0+X1)/2,158,'picojoules per FLOP at this load',ST.lab,'middle');
+    var col=['var(--c2)','var(--c1)','var(--c3)'];
+    DEV.forEach(function(d,j){
+      var y=28+j*32;
+      h+=U.txt(X0-8,y+15,d[0],ST.lab,'end');
+      h+='<rect x="'+X0+'" y="'+y+'" width="'+U.f1(X(vals[j])-X0)+'" height="20" rx="2" style="fill:'+col[j]+'"/>';
+      h+=U.txt(X(vals[j])+6,y+15,vals[j].toFixed(2),ST.tick);
+    });
+    h+=U.ln(X0,20,X0,128,ST.axis);
+    var Y0=286, Y1=186, P0=X0, P1=X1, fmax=Math.max(2,Math.ceil(factor(0.05,s)));
+    function PX(v){return P0+(P1-P0)*(v-0.05)/0.95;}
+    function PY(v){return Y0-(Y0-Y1)*(v-1)/(fmax-1);}
+    var fs=fmax<=4?0.5:(fmax<=8?1:2);
+    for(var f=1;f<=fmax+1e-9;f+=fs){h+=U.ln(P0,PY(f),P1,PY(f),ST.grid)+U.txt(P0-6,PY(f)+4,f.toFixed(1)+'×',ST.tick,'end');}
+    [0.05,0.25,0.5,0.75,1].forEach(function(v){h+=U.txt(PX(v),Y0+14,Math.round(v*100)+'%',ST.tick,'middle');});
+    h+=U.ln(P0,Y0,P1,Y0,ST.axis)+U.ln(P0,Y0,P0,Y1,ST.axis);
+    var pts=[]; for(i=0;i<=95;i++){var uu=0.05+i/100; pts.push(U.f1(PX(uu))+','+U.f1(PY(factor(uu,s))));}
+    h+='<polyline points="'+pts.join(' ')+'" style="fill:none;stroke:var(--c4);stroke-width:2.2"/>';
+    h+='<circle cx="'+U.f1(PX(u))+'" cy="'+U.f1(PY(k))+'" r="6" style="fill:var(--c4);stroke:var(--sheet);stroke-width:2"/>';
+    h+=U.txt(P0+4,Y1-6,'energy per FLOP against full load, by utilisation',ST.small);
+    $('eS').innerHTML=h;
+    $('eG').textContent=vals[0].toFixed(2); $('eP').textContent=vals[1].toFixed(2); $('eM').textContent=vals[2].toFixed(2);
+    $('eF').textContent='×'+k.toFixed(2); $('eC').textContent=CUBE.toFixed(2);
+  }
+  ['eU','eSs'].forEach(function(id){$(id).addEventListener('input',draw);});
+  U.predict('data-p2','pv2',{
+    a:'<b>No.</b> The microcontroller is the dearest per operation: 0.001 W / 0.001 TFLOP/s = <b>1.00 pJ</b>, against 0.70 for the server and 0.50 for the phone.',
+    b:'<b>Right.</b> 5 W / 10 TFLOP/s = 0.50 pJ, against 0.70 for the server and 1.00 for the microcontroller: a factor of two across a 700,000-fold range of power.',
+    c:'<b>Close, not cheapest.</b> 700 W / 1,000 TFLOP/s = 0.70 pJ. The phone does 0.50.',
+    d:'<b>Nearly, not exactly:</b> 0.70, 0.50 and 1.00 pJ. Within a factor of two, which is the surprise.'});
   draw();
 })();
 </script>
