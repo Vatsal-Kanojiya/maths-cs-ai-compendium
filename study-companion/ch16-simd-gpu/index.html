@@ -500,7 +500,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
         <tr><td><code>_mm512_reduce_add_ps</code>: &ldquo;built-in horizontal sum (no manual reduction!)&rdquo;</td><td>GCC expands it into 9 instructions, 4 of them adds.</td><td>&sect;10</td></tr>
         <tr><td>File 01&rsquo;s bandwidth benchmark (it printed about 1,000 GB/s here)</td><td>The optimiser ran one of the 100 identical trials. The real figure is 10.7&ndash;11.7 GB/s.</td><td>&sect;11</td></tr>
         <tr><td>File 03&rsquo;s alignment benchmark</td><td>Prints about \(10^{-6}\) ms: the loop&rsquo;s result is unused, so it was deleted. Measured properly, misalignment halves an L1-bound dot product and does nothing to a memory-bound one.</td><td>&sect;&sect;10, 11</td></tr>
-        <tr><td>Unroll the ReLU &ldquo;to hide FMA latency&rdquo;</td><td>ReLU has no chain to break. Scalar, AVX2 and unrolled all ran at 12.5 ms, the memory rate.</td><td>&sect;11</td></tr>
+        <tr><td>Unroll the ReLU &ldquo;to hide FMA latency&rdquo;</td><td>ReLU has no chain to break. Scalar, AVX2 and unrolled all ran at 12.5 ms, the memory rate; on both containers the unrolled loop matched plain AVX2.</td><td>&sect;11</td></tr>
         <tr><td>File 00&rsquo;s layout task shows a 6&times; column-major slowdown</td><td>Its row-major loop is a single float-add chain (21 ms floor). Against a row pass that runs at memory speed (7.5 ms) the column walk is about 22&times; slower.</td><td>&sect;07</td></tr>
       </tbody>
     </table>
@@ -1133,8 +1133,10 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
         motor limit must be fed more slowly. Wider vectors draw more power, and many Intel cores
         lower their clock under heavy AVX-512 load. On the build machine AVX-512 chains delivered
         <b>164&ndash;165 GFLOP/s</b> per core against AVX2&rsquo;s 87&ndash;101 in separate runs,
-        <b>1.6&ndash;1.9&times;</b> rather than 2&times; (1.5&ndash;1.7&times; on the second container).
-        This measurement cannot separate a clock drop from other limits (<code>[Ch16 s10]</code>).
+        <b>1.6&ndash;1.9&times;</b> rather than 2&times;. On the second container it ranged from 1.5&times;
+        to 2.1&times; across runs, so there the shortfall is inside the noise. These timings cannot
+        separate a clock drop from other limits; the frequency penalty itself is reported
+        (<code>[Ch16 s10]</code>).
       </p>
     </div>
   </div>
@@ -1800,7 +1802,7 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
         <tr><td>File 01 task 2, Python vs NumPy</td><td>&ldquo;parallel&rdquo; speed-up</td><td>single-thread SIMD</td><td>1.00 CPU-s per wall-s</td></tr>
         <tr><td>File 02 tasks 1&ndash;3</td><td>NEON speed-ups</td><td>not run: no ARM CPU; compiled for AArch64</td><td>one-register chain confirmed in the code</td></tr>
         <tr><td>File 03 task 1, dot product</td><td>8-wide SIMD speed-up</td><td>scalar: the add chain; AVX2: memory</td><td>13.9&ndash;14.8 ms vs 7.5&ndash;8.0 ms: 1.9&times;</td></tr>
-        <tr><td>File 03 task 2, ReLU</td><td>SIMD and unrolling</td><td>memory, three times</td><td>12.5 ms each; the scalar loop was auto-vectorised</td></tr>
+        <tr><td>File 03 task 2, ReLU</td><td>SIMD and unrolling</td><td>memory, three times</td><td>12.5 ms each; the scalar loop was auto-vectorised. Second container, arrays held in its 260 MiB L3: unrolled = AVX2, the compiler&rsquo;s loop 1.1&ndash;1.6&times; slower</td></tr>
         <tr><td>File 03 task 3, alignment</td><td>aligned vs unaligned loads</td><td>nothing: the loop was deleted</td><td>about \(10^{-6}\) ms per 64 MB pass</td></tr>
       </tbody>
     </table>
