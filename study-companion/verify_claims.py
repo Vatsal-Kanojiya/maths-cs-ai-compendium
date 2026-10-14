@@ -7137,6 +7137,10 @@ def _ch16p3():
     t_sc = macs / 160e6; e_sc = t_sc * 0.001
     say("s13", f"scalar at 1 MAC/cycle: {t_sc*1e6:.1f} us, {e_sc*1e6:.3f} uJ at 1 mW; 10 inferences a second use {10*t_sc:.2%} of the time; "
         f"one stroke per cycle at VLEN 128: {s128/160e6*1e6:.1f} us", near(t_sc * 1e6, 317.6, 0.05) and near(s128 / 160e6 * 1e6, 19.85, 0.01))
+    say("s13", f"VLEN 1024: {s1024/160e6*1e6:.2f} us; strokes fall {s128/s1024:.2f}x for 8x the lanes; scalar time is "
+        f"{t_sc/0.2:.2%} of the 200 ms budget; average power at 10/s {e_sc*10*1e6:.2f} uW against 300 uW static at 30% "
+        f"({300/(e_sc*10*1e6):.0f}x)", near(s1024 / 160e6 * 1e6, 2.86, 0.01) and near(s128 / s1024, 6.93, 0.01)
+        and near(t_sc / 0.2, 0.00159, 1e-5) and near(e_sc * 10 * 1e6, 3.18, 0.01) and round(300 / (e_sc * 10 * 1e6)) == 94)
     say("s13", f"fits: {50890:,} B of weights in 1 MB of flash ({50890/2**20:.1%}); 74 B of activations in a 32 KiB arena",
         50890 < 2**20 and 74 < 32768)
 
@@ -7148,7 +7152,10 @@ def _ch16p3():
     say("s16", f"Q13: tile 8 to 128 invocations? {8*8} invocations, I = {8/4}", 8 * 8 <= 128)
     say("s16", f"Q14: static 40%, 25% use: x{part_load(0.25,0.4):.2f}", near(part_load(0.25, 0.4), 2.2, 1e-9))
     say("s16", f"Q15: 1,000 floats, VLMAX 64: {-(-1000//64)} strokes, last {1000-15*64} lanes", -(-1000 // 64) == 16 and 1000 - 15 * 64 == 40)
-    say("s16", f"Q16: 4,096 floats in one 400-cycle trip at 1.98 GHz: {4096*4/lat/1e9:.0f} GB/s", near(4096 * 4 / lat / 1e9, 81.1, 0.1))
+    say("s16", f"Q16: 4,096 floats in one 400-cycle trip at 1.98 GHz: {4096*4/lat/1e9:.0f} GB/s, {4096*4/lat/BW:.1%} of 3.3 TB/s",
+        near(4096 * 4 / lat / 1e9, 81.1, 0.1) and near(4096 * 4 / lat / BW, 0.0246, 0.0005))
+    say("s16", f"Q09 last pass {100-3*32}; Q10 against q = 1% on 32 lanes: {1-0.995**64:.3f} vs {1-0.99**32:.3f}",
+        100 - 3 * 32 == 4 and abs((1 - 0.995**64) - (1 - 0.99**32)) < 0.002)
 
     # ---------------- s20: lab rest values ------------------------------------------------------------------------------
     say("s20", f"LAB 1 rest: VLMAX 16, 63 strokes, last 8, 99.2%, {63*k11} instructions")
