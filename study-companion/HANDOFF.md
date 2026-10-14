@@ -11,7 +11,7 @@ in `NEXT_SESSION_PROMPT.md`.
 Chapter 15–18 session, because that session was bound to this branch name. Everything from
 Sheet 15 on is only on `claude/nifty-pascal-e4h18c`.
 
-Sheets 15–18 and a combined 19–20 coda were built by **parallel runs** in that session, each in
+Sheets 15, 16 part 1, 17, 18 and a combined 19–20 coda were built by **parallel runs** in that session, each in
 its own git worktree, pushing to the one branch with fetch–rebase–push. To keep them from
 colliding, `verify_claims.py` was given one stub function per run (`_ch15`, `_ch16p1`…`_ch16p3`,
 `_ch17`, `_ch18`, `_ch1920`) separated by unchanged guard lines, and each run wrote its state row,
@@ -41,25 +41,24 @@ browser probe those runs used is now in the repo: `tools/probe.js` (see the prob
 | 16 | SIMD and GPU Programming **pt 1/3** (the CPU) | `ch16-simd-gpu/` | https://claude.ai/artifact/PkFJKQedyFn3SNLNqWGKCy |
 | 17 | AI Inference | `ch17-ai-inference/` | https://claude.ai/artifact/UdoN6PEmWrY6pHxACELcxr |
 | 18 | ML Systems Design | `ch18-ml-systems-design/` | https://claude.ai/artifact/Swz1BNJbZVNzbMcUyZVtdh |
+| 19–20 | Applied AI; Bleeding-edge AI (coda) | `ch19-20-coda/` | https://claude.ai/artifact/BRYcFocRMW6VkHCMbECTie |
 
-`verify_claims.py` stands at **612 checks, 0 failures**, covering chapters 01–14. Run it first in
-any new session — it is the fastest way to confirm nothing has rotted. It needs numpy and scipy,
-which a fresh container will not have: `pip install numpy scipy`. The Chapter 14 blocks live
-inside two functions, `_ch14p1()` and `_ch14p2()` (tags `[Ch14 sNN]` and `[Ch14p2 sNN]`), so none
-of their names can collide with the shared module namespace — do the same for every new block.
-Also run `python3 study-companion/audit_classes.py` (see Known issues).
+`verify_claims.py` stands at **1,072 checks, 0 failures**, covering every published sheet (01–18
+and the 19–20 coda). Run it first in any new session. It needs numpy and scipy (`pip install numpy
+scipy`) and now takes about **three minutes**, longer than the Bash tool's 120 s default — run it
+with a long timeout or in the background, alone. Each chapter's block lives in its own function
+(`_ch14p1`, `_ch15`, `_ch16p1`, `_ch17`, `_ch18`, `_ch1920`, …); empty stubs `_ch16p2()` and
+`_ch16p3()` are waiting. **Sheet 16 part 1's measured-timing checks (s01, s08, s10, s11) are
+flaky under CPU load** — see Known issues. Also run `python3 study-companion/audit_classes.py`.
 
-Next up, two candidates — pick deliberately:
-
-1. **Chapter 15 — production software engineering**, a single run. Bank entry: version control ↔
-   drawing revision control / ECN, testing ↔ inspection and QA, CI/CD ↔ line automation,
-   containers ↔ jigs and fixtures. Chapter 14 part 2 §18 already promised that the longest common
-   subsequence "becomes version control" in Sheet 15, and §22 promised hashing as the way
-   version-control systems name what they store — pay both.
-2. **The skeleton repair of Chapters 09–13** (seven published pages), described under Known
-   issues. Mechanical, about one probe-and-republish cycle per page, and it fixes a sticky
-   header that covers ~40% of a phone screen on every sheet from 09 to 13. Worth doing before
-   the series is called finished; arguably before Chapter 15.
+**What is left: Sheet 16 parts 2 and 3, nothing else.** Part 1 (the CPU) is published and its §16
+is the contract for part 2 — seven calculations, listed in `handoff-notes/ch16-part1.md` §6. Part 2
+is files 04–05 (GPU and CUDA; Triton, TPUs and Pallas) into `ch16-simd-gpu-part2/`; part 3 is files
+06–07 (RISC-V and embedded; Vulkan compute) plus the chapter's concept map joining all three parts,
+into `ch16-simd-gpu-part3/`. Part 2 also owes Sheet 15 §21/§27's promise: why a GPU run is not
+bit-exactly repeatable (reduction order). Part 2 was started once and stopped by the user's choice
+before it saved anything; there is nothing half-built on the branch. Sheets 17 and 18 cite "Sheet
+16" by number only, so nothing needs renumbering when parts 2–3 land.
 
 Copy the **page skeleton from `ch14-data-structures-algorithms-part2/`**, not from Chapters 09–13.
 
@@ -381,17 +380,18 @@ load-duration curve / load factor / base-load plant / diversity factor from **po
 engineering** (not in the bank, and the cleanest exact identities on the sheet), checkpoint =
 EOQ, Kafka = transfer-line buffer (Groover's `E0`/`E∞`), G90/G91 = idempotency.
 
-**19–20.** Outline stubs in the source (six files are empty). Either skip, or write them
-as genuine surveys and mark them clearly as not derived from the compendium.
-**Decided in the Chapter 15–18 session: one combined coda sheet, not two surveys.** A survey of
-AlphaFold, trading systems or Loihi would be built from claims this series cannot compute, which
-breaks rules 2, 3 and 5 at once. But several outline bullets have a derivable mathematical core
-that lands squarely on the reader's training — a leaky integrate-and-fire neuron is a first-order
-lag, Markowitz mean-variance is a Lagrange-multiplier problem on a covariance matrix, VaR by Monte
-Carlo is Sheet 05's tolerance analysis, a quantum gate is a unitary matrix and a qubit's state
-angle is halved on the Bloch sphere where Mohr's circle doubles it. The coda covers only such
-cores, says on its front page that the source chapters are outlines with six empty files, and
-names everything it leaves out rather than surveying it.
+**19–20.** ~~Outline stubs ... decided: one combined coda sheet~~ **Written as a coda.** All four
+bank cores held, two with corrections. LIF = first-order lag: exact; its f–I curve is **not** a
+ReLU (kink at u = 1, infinite slope, offset 1/(2tau); 0.721 of the no-leak rate at u = 2) — only
+the no-leak IF neuron with reset-by-subtraction is (floor(aT) spikes, 3,000 inputs). Markowitz =
+Lagrange: held, and is MVDR exactly. VaR by MC: held, but **Sheet 05 contains no Monte Carlo
+tolerance analysis** (the bank's Ch05 line was never written up) — the page derives it fresh.
+Bloch vs Mohr: **the bank had the direction wrong** — the Bloch sphere does not halve where Mohr
+doubles; *both* double (the density matrix is quadratic in the amplitudes, as stress is in n),
+and what is halved is the angle inside the gate. Also: **Sheet 04 has no EWMA chart**; the
+exponential-smoothing bridge goes to Sheet 07 §04 / Sheet 11 §§09–10 instead. Added beyond the
+bank: smoothing constant = Kalman gain; ARIMA(0,1,1) as the error form; series reliability as
+VaR's failure; the exact (3/8)^n plateau; rate coding = frequency counter.
 
 ## Known issues
 
@@ -425,6 +425,18 @@ names everything it leaves out rather than surveying it.
   show the broken layout**; they are superseded, not deleted (deleting is the user's call). The
   new artifacts were published after this session hit the 10-watch cap, so none of them is
   watched.
+- **Sheet 16 part 1's measured-timing checks are flaky.** `[Ch16 s01]`, `s08`, `s10` and `s11` time
+  real loops on a shared VM; under CPU load (another verifier, a probe, a parallel run) one of them
+  fails now and then. A quiet full run passes all 1,072. Fix in the Sheet 16 part 2 session:
+  best-of-N with wider bounds, or move them behind a `--timing` flag so the default run is
+  deterministic. Until then, read any FAIL by its tag before blaming your own block.
+- **Two wrong cross-references in published sheets, found by the coda, not fixed:** Sheet 06 §06
+  sends Adam's moving average to "Chapter 04 §02", which has no EWMA; Sheet 09 §19 sends Lagrange
+  multipliers to "Chapter 03 §08" — they are in §07. The coda cites the right targets. Fixing them
+  means republishing two artifacts.
+- **A stray copy of Sheet 18 exists** at https://claude.ai/artifact/FrjRrsZ4e8egRpAAQCL7nf (no
+  figures), created by a failed republish attempt. The real one is Swz1BNJbZVNzbMcUyZVtdh. Deleting
+  the stray is the user's call.
 - **Sheet 13 part 2 §10 overstates containers.** It says a container "runs identically
   everywhere"; Sheet 15 §19 qualifies this, because the kernel and the GPU driver belong to the
   host, not the image. Sheet 15 says so in the open; the Sheet 13 sentence itself is unchanged,
@@ -1102,6 +1114,28 @@ variance, which is what turned its nameplate capacity into a planning capacity.
   full run exceeds the Bash tool's 120 s default. Run it alone, in the background or with a long
   timeout, and read FAILs by tag before blaming your own block.
 
+## The Chapters 19–20 coda lesson worth generalising
+
+**Even an outline has a bank, and the bank's mechanical claims need the same checking as a
+source's.** Two of the four pre-worked cores were stated wrongly (Bloch "halves"; "Sheet 04's
+EWMA" / "Sheet 05's tolerance analysis" pointed at sections that do not exist). Read the cited
+sheet before citing it. Second: **when a sampled check fails, look for an exact route first.**
+The sampled (3/8)^n check failed at n = 10 because the gradient's kurtosis grows 1.94x per qubit;
+quadrature of the two one-angle averages proves the formula, and the heavy tail became a
+paragraph on why simulations cannot see large-n plateaus — better than the check that failed.
+
+**New traps from the coda.**
+
+- **A lab that embeds measured data needs its own RNG in the verifier.** Adding checks earlier
+  in `_ch1920` shifted the shared generator and changed every embedded plateau number. The block
+  now uses `gEnt = default_rng(20051)` for that simulation and asserts the page's embedded values
+  equal the run's to 3 figures.
+- **`\uXXXX` written through the Write tool lands as the literal character** in the file; a later
+  replace keyed on the escape matches nothing. Harmless in a UTF-8 page; grep before replacing.
+- **Two-panel 560-unit SVGs are unreadable at 390 px** (10 px text renders ~6 px). Fix used:
+  `@media (max-width:600px){ .stage .tk, .stage .tkb{font-size:15px} }`, re-placing labels
+  that then collide; the concept map scrolls inside `.mapwrap{overflow-x:auto}` (min-width 520).
+
 ## On splitting a chapter into parts
 
 Chapter 09 (3,250 source lines) was built in four runs and Chapter 10 (1,900) in two, against
@@ -1130,17 +1164,16 @@ push every part; never leave a part uncommitted at the end of a run.
 
 ## What is actually left
 
-Chapters 15–20, of which 19 and 20 are outline stubs (20 and 21 lines respectively) and may
-not be worth writing as chapters at all. That makes the real remaining work **chapters 15–18,
-four sheets**, of which one (Chapter 16) needs splitting. The bridge bank has a pre-worked entry for each;
-Chapters 08 through 13 have all found their headline bridge *outside* the bank, and Ch12 and
-Ch13 both found bank entries that were plainly *wrong* (Gauss–Seidel; "pipelining is like an
-assembly line" undersold as a simile). Treat it as a floor, and check it.
+**Sheet 16 parts 2 and 3.** Everything else in the series is written and published: chapters
+01–15, 16 part 1, 17, 18, and the 19–20 coda. Part 2's contract is part 1 §16; part 3's is part 2's
+own last section plus part 1's promise of RVV as SVE-style predicates, Vulkan subgroups as lanes,
+and a chapter-wide concept map. Both are single runs at about 1,000 source lines each.
 
-All of 13–20 are now measured, so every split decision is already made. Chapter 16 is the
-largest source in the series after Chapter 09 and will want three parts; Chapter 14 is done, in
-two parts. Everything else is a single run.
+Optional clean-ups, each needing artifacts republished: the flaky timing checks, the two
+cross-references, Sheet 13 part 2's container sentence, and the nine sheets with display
+equations wider than their box at 390 px (all under Known issues).
 
-Separately from new chapters, **seven published pages (Chapters 09–13) need the skeleton repair
-described under Known issues**. It is mechanical, and it should be done before the series is
-called finished.
+**On running parallel agents** (learned in the Chapter 15–18 session): three Opus runs at once hit
+the account's usage limit roughly every two finished sheets, and each limit stopped everything
+for hours. Pushing after every chunk is what made that harmless — every stop lost at most the
+chunk in progress. Keep that discipline whatever the parallelism.

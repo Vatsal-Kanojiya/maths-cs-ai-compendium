@@ -54,9 +54,10 @@ merely structural, that is said plainly.
 | 14 | Data Structures and Algorithms *(pt 1: foundations, arrays, lists)* | [`ch14-data-structures-algorithms/`](ch14-data-structures-algorithms/index.html) | [Read online](https://claude.ai/artifact/TCQEggFEntAofLXcUbunbd) |
 | 14 | Data Structures and Algorithms *(pt 2: trees, graphs, search + end matter)* | [`ch14-data-structures-algorithms-part2/`](ch14-data-structures-algorithms-part2/index.html) | [Read online](https://claude.ai/artifact/NESj33J7qvUysyK9djgRed) |
 | 15 | Production Software Engineering | [`ch15-production-software-engineering/`](ch15-production-software-engineering/index.html) | [Read online](https://claude.ai/artifact/FGGLCb4G11EoK8UXHnVhHs) |
-| 16 | SIMD and GPU Programming *(pt 1: the CPU)* | [`ch16-simd-gpu/`](ch16-simd-gpu/index.html) | [Read online](https://claude.ai/artifact/PkFJKQedyFn3SNLNqWGKCy) |
+| 16 | SIMD and GPU Programming *(pt 1 of 3: the CPU; parts 2–3 not yet written)* | [`ch16-simd-gpu/`](ch16-simd-gpu/index.html) | [Read online](https://claude.ai/artifact/PkFJKQedyFn3SNLNqWGKCy) |
 | 17 | AI Inference | [`ch17-ai-inference/`](ch17-ai-inference/index.html) | [Read online](https://claude.ai/artifact/UdoN6PEmWrY6pHxACELcxr) |
 | 18 | ML Systems Design | [`ch18-ml-systems-design/`](ch18-ml-systems-design/index.html) | [Read online](https://claude.ai/artifact/Swz1BNJbZVNzbMcUyZVtdh) |
+| 19–20 | Applied AI; Bleeding-edge AI *(coda: derivable cores of two outline chapters)* | [`ch19-20-coda/`](ch19-20-coda/index.html) | [Read online](https://claude.ai/artifact/BRYcFocRMW6VkHCMbECTie) |
 
 ## What's in a chapter page
 
@@ -93,8 +94,8 @@ chapters rely on the linked chips instead.
 
 ## Verification
 
-`verify_claims.py` checks the load-bearing mathematical claims across chapters 01-14
-(612 checks, zero failures)
+`verify_claims.py` checks the load-bearing mathematical claims across every published sheet
+(1,072 checks, zero failures at the last full run; it takes about three minutes)
 against independent computation rather than against anybody's memory — the von Mises and
 Tresca norm identities, the unit-change nearest-neighbour flip, the worked bracket example,
 the `1/sqrt(d)` concentration of cosine similarity, the inertia tensor eigenvalues, polar
@@ -166,7 +167,13 @@ availability, the beta-factor floor by Monte Carlo, a two-station transfer line 
 token-bucket bound, the exact quantile `F^-1(0.99^(1/n))` of a fan-out and hedging, the screening
 rule for reserved capacity against brute force, Young's checkpoint interval against the exact
 exponential optimum and a simulation, ring all-reduce's `2(N-1)/N`, the 6ND cost table, A/B sample
-sizes, PSI in sigmas, and every number in file 05.
+sizes, PSI in sigmas, and every number in file 05; and -- for the Chapters 19-20 coda --
+exponential smoothing against the sampled LIF membrane (`alpha = 1 - e^(-dt/tau)`), the optimal
+smoothing constant against the steady-state Kalman gain, the EWMA chart limits, minimum-variance
+weights against Sheet 09's MVDR with `d = 1`, VaR's failure of subadditivity against expected
+shortfall, the Monte Carlo VaR error as binomial error over density, the Born rule as the
+stress-transformation formula, the parameter-shift rule as an exact central difference, the
+unentangled barren plateau `(1/8)(3/8)^(n-1)` by quadrature, and the LIF f-I curve against a ReLU.
 
 Several checks exist because they caught an error. The suite has overturned claims in the
 source material (what neighbour-averaging consensus converges to; whether four legs are
