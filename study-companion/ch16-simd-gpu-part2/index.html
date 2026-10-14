@@ -1404,6 +1404,364 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
   </div>
 </section>
 
+<section id="systolic">
+  <div class="col">
+    <div class="sechead"><span class="secnum">10</span><h2>The systolic array is a pipeline of outer products</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2016%20-%20SIMD%20and%20GPU%20programming/05.%20triton%2C%20TPUs%20and%20pallax.md" target="_blank" rel="noopener">src 05. Triton, TPUs &#8599;</a>
+    </div>
+    <p>
+      <b>Debt 5 of 7, second half.</b> Google&rsquo;s TPU does its matrix products in a <b>matrix multiply
+      unit</b> (MXU), which the source describes as a 128&times;128 or 256&times;256 <b>systolic array</b>: a
+      grid of multiply-accumulate cells through which data flows from the edges, each cell doing one
+      multiply-add per cycle and passing its inputs to its neighbours. No threads, no warps, no divergence.
+      The name is from the heart: data pulses through the grid on every beat.
+    </p>
+    <p>
+      Here is the simplest version, simulated exactly. Cell \((i, j)\) keeps \(c_{ij}\). Row \(i\) of \(A\)
+      enters from the left, delayed by \(i\) cycles; column \(j\) of \(B\) enters from the top, delayed by
+      \(j\) cycles. Each cell passes its \(a\) to the right and its \(b\) downward. Because of the delays, at
+      cycle \(t\) cell \((i, j)\) holds the pair with index \(k = t - i - j\), and does
+    </p>
+    <div class="mathbox">$$c_{ij} \;\mathrel{+}=\; a_{ik}\, b_{kj}, \qquad k = t - i - j, \quad 0 \le k < K .$$</div>
+    <p>
+      Every cell meets every \(k\) exactly once, on a diagonal wavefront. In wave \(k\) every cell adds
+      \(a_{ik} b_{kj}\), which is the whole outer product \(\mathbf a_k \mathbf b_k^{\mathsf T}\), skewed in time
+      across the grid. So the array computes \(\sum_k \mathbf a_k \mathbf b_k^{\mathsf T}\), Sheet 02&rsquo;s
+      sum, one outer product per wave: SME&rsquo;s instruction of part 1, pipelined in space. The simulation
+      checks it for four shapes: \(C = AB\) exactly, every wave equal to its outer product, and the pass taking
+      exactly \(K + 2n - 2\) cycles on an \(n \times n\) array (<code>[Ch16p2 s10]</code>).
+    </p>
+    <p>
+      Those extra \(2n - 2\) cycles are the array filling and draining: the last cell starts \(2n - 2\) cycles
+      after the first. Of the \(n^2 (K + 2n - 2)\) multiply-add slots, \(n^2 K\) do work:
+    </p>
+    <div class="mathbox">$$\text{utilisation} = \frac{K}{K + 2n - 2}.$$</div>
+    <p>
+      For a 128&times;128 array, a stream of 8 rows uses <b>3.1%</b> of the slots, 128 rows 33.5%, 1,024 rows
+      80.1%. A 256&times;256 array at 8 rows uses 1.5%. The TPU&rsquo;s array is reported to hold its weights
+      in place and stream the activations through, rather than the arrangement simulated here. Then the
+      stream is the rows of the batch, and the same fill-and-drain count applies to its length: a batch of one
+      uses 1 slot in 255.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: a line filling and draining</div>
+      <p style="margin-bottom:0">
+        Sheet 13 part 1 &sect;13 timed \(L\) items through a line of depth \(D\) as \(D + L - 1\) cycles. The
+        wavefront crosses \(2n - 1\) diagonals, so \(D = 2n - 1\) and the pass takes \((2n - 1) + K - 1 = K + 2n
+        - 2\) cycles. A systolic array is a deep line that pays its fill and drain on every pass, which is why
+        it rewards long streams and large batches, and why the source can say it is &ldquo;extremely
+        energy-efficient for matrix multiplication&rdquo; and nothing else: a non-matrix operation gets none of
+        the grid, and goes to a separate vector unit.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks</div>
+      <p style="margin-bottom:0">
+        The formula is for one isolated pass. A well-fed array starts the next tile&rsquo;s wave while the last
+        one drains, which hides much of the fill (reported), and loading the weights into a weight-stationary
+        array costs cycles this count leaves out (reported). The bound that survives is the one that matters
+        for small batches: no arrangement makes a single row keep 16,384 cells busy.
+      </p>
+    </div>
+    <p>
+      <b>The rest of the TPU.</b> TPUs pioneered <b>bfloat16</b>: the 8 exponent bits of float32 with 7 bits of
+      fraction instead of 23. Its largest value is \(3.39 \times 10^{38}\), float32&rsquo;s range, against
+      float16&rsquo;s 65,504, so gradients do not overflow; it gives up precision instead, about 2.4 significant figures against
+      float32&rsquo;s 7.2, as Sheet 17 &sect;02 tabulates. The source&rsquo;s other TPU facts (16 GB of HBM on v5e, 95 GB on v5p, an inter-chip
+      network for pods, Google Cloud only) are reported here, as is its GPU-against-TPU table, which is a
+      list of judgements rather than calculations.
+    </p>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">The systolic array</div><div class="lab-tag">Predict, then step the waves</div></div>
+    <div class="lab-body">
+    <div class="predict">
+      <p style="margin-top:0">
+        A 128&times;128 systolic array multiplies a batch of 8 rows by a 128&times;128 matrix in one pass. What
+        share of its multiply-add slots do useful work during that pass?
+      </p>
+      <button class="pbtn" data-p4="a" type="button">About 100%</button>
+      <button class="pbtn" data-p4="b" type="button">About 50%</button>
+      <button class="pbtn" data-p4="c" type="button">About 25%</button>
+      <button class="pbtn" data-p4="d" type="button">About 3%</button>
+      <div class="pverdict" id="pv4"></div>
+    </div>
+    <div class="chartwrap">
+    <svg class="svgfig" id="sS" viewBox="0 0 560 420" role="img"
+         aria-label="A 4 by 4 systolic array at one cycle: rows of A waiting at the left, columns of B waiting at the top, the active diagonal of cells and each cell's running sum"></svg>
+    </div>
+    <div class="ctl">
+      <label for="sT">Cycle</label>
+      <input type="range" id="sT" min="0" max="9" value="4" step="1">
+      <span class="ro-v" id="sTv" style="min-width:32px">5</span>
+      <button class="btn on" data-sk="4" type="button"><span class="gk">K</span> = 4</button>
+      <button class="btn" data-sk="8" type="button"><span class="gk">K</span> = 8</button>
+    </div>
+    <div class="ctl">
+      <label for="sL">Rows streamed, big array</label>
+      <input type="range" id="sL" min="0" max="12" value="3" step="1">
+      <span class="ro-v" id="sLv" style="min-width:48px">8</span>
+      <button class="btn on" data-sn="128" type="button">128&times;128</button>
+      <button class="btn" data-sn="256" type="button">256&times;256</button>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Cycle,<br>of the pass</div><div class="ro-v a" id="sCy">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Multiply-adds<br>this cycle</div><div class="ro-v b" id="sMa">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Multiply-adds<br>done</div><div class="ro-v c" id="sDn">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Big array,<br>utilisation</div><div class="ro-v" id="sUt">&mdash;</div></div>
+    </div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    The 4&times;4 array multiplies a 4&times;\(K\) matrix \(A\) by a \(K\)&times;4 matrix \(B\). Values still to
+    enter wait at the left (rows of \(A\)) and the top (columns of \(B\)), each row and column delayed one
+    cycle more than the last. Orange cells are working this cycle and show the product they add; the large
+    number is the cell&rsquo;s running \(c_{ij}\). At rest, cycle 5 of 10, twelve cells work on the
+    anti-diagonals and 32 of the 64 multiply-adds are done. Step to the last cycle and the grid holds
+    \(AB\). The second slider prices a full-size array: 8 rows through a 128&times;128 array uses <b>3.1%</b>
+    of its slots, the answer to the prediction.
+  </div>
+</section>
+
+<section id="triton">
+  <div class="col">
+    <div class="sechead"><span class="secnum">11</span><h2>Triton and Pallas: writing for the whole head</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2016%20-%20SIMD%20and%20GPU%20programming/05.%20triton%2C%20TPUs%20and%20pallax.md" target="_blank" rel="noopener">src 05. Triton, TPUs &#8599;</a>
+    </div>
+    <p>
+      CUDA has you write the program for one thread, one spindle, and lets the hardware gang 32 of them into a
+      warp. <b>Triton</b>, OpenAI&rsquo;s kernel language, has you write it for a whole block of data at once:
+      <code>offsets = block_start + tl.arange(0, BLOCK_SIZE)</code> is a vector of 1,024 positions, and
+      <code>x + y</code> adds 1,024 pairs. That is part 1&rsquo;s view of SIMD, writing for the whole drilling
+      head, with the compiler deciding how the work maps onto warps, shared memory and coalesced loads.
+    </p>
+    <p>
+      The boundary is handled by a mask: <code>mask = offsets &lt; n_elements</code>, and every load and store
+      carries it. For the source&rsquo;s \(10^6\) elements in blocks of 1,024 the launch asks for
+      \(\lceil 10^6/1024 \rceil = 977\) programs, and the last one has 576 live lanes: 99.96% of lanes do work.
+      The source compares the mask to AVX-512&rsquo;s mask registers. It is closer still to SVE&rsquo;s
+      <code>svwhilelt</code> predicate of part 1 &sect;09, which switches on exactly the lanes whose index is
+      below \(n\): the same test, written once for every stroke (<code>[Ch16p2 s11]</code>).
+    </p>
+    <p>
+      The source&rsquo;s softmax kernel gives each row to one program and keeps the whole row in registers
+      between its passes, which is fusion (&sect;12); it needs the block to be at least as long as the row,
+      since the source shows no launcher that guarantees it. Its <b>autotuning</b> tries a list of tile shapes
+      on the real machine and keeps the fastest, which is trial cuts before a production run. &sect;08 computed
+      what those three shapes are worth on the roofline.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>The source&rsquo;s Pallas kernel drops the tail. Run, it leaves NaN.</div>
+      <p style="margin-bottom:0">
+        <b>Pallas</b> is JAX&rsquo;s kernel language, the source&rsquo;s only route to custom TPU kernels. Its
+        <code>add_pallas</code> launches <code>grid=(x.shape[0] // 128,)</code>: floor division, and no mask.
+        For 1,000 elements that is 7 blocks covering 896; the last 104 elements are never written. For 100
+        elements the grid is empty and nothing is written. The example was run here as printed, under JAX 0.11.2
+        on the CPU with Pallas in its interpreter mode: <b>896 of 1,000 outputs correct, every one from index 896
+        on left as NaN</b>, uninitialised memory (<code>[Ch16p2 s11]</code>). It is correct only when the length
+        is a multiple of 128. The Triton example a page earlier rounds up (<code>triton.cdiv</code>) and masks;
+        the Pallas one needs the same two things.
+      </p>
+    </div>
+    <p>
+      The source&rsquo;s comparison tables, Triton against CUDA and GPU against TPU, and its claim that Triton
+      reaches &ldquo;80% of CUDA&rsquo;s performance with 20% of the effort&rdquo;, are judgements about
+      tools, reported here and not computed.
+    </p>
+  </div>
+</section>
+
+<section id="fusion">
+  <div class="col">
+    <div class="sechead"><span class="secnum">12</span><h2>Fusion, priced</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2016%20-%20SIMD%20and%20GPU%20programming/05.%20triton%2C%20TPUs%20and%20pallax.md" target="_blank" rel="noopener">src 05. Triton, TPUs &#8599;</a>
+    </div>
+    <p>
+      <b>Debt 6 of 7.</b> Part 1 &sect;01 counted the bytes fusion saves: after a matrix product writes its
+      output once, each of \(k\) elementwise steps reads and writes an output-sized array again, so unfused
+      traffic on that array is \((1 + 2k)\) passes against 1 fused. Done-in-one machining: one setup, one trip
+      out. The source calls fusion &ldquo;the single most impactful GPU optimisation for ML&rdquo; and says that
+      for memory-bound operations it &ldquo;eliminates the traffic entirely&rdquo;. Both claims can be priced.
+    </p>
+    <p>
+      <b>The source&rsquo;s Triton task 2</b> computes \(\max(xw + b, 0)\) on \(10^7\) floats. Unfused, PyTorch
+      runs three kernels: <code>x*w</code> reads 2 arrays and writes 1, <code>+b</code> reads 2 and writes 1,
+      <code>relu</code> reads 1 and writes 1. That is 8 arrays of 40 MB against the fused kernel&rsquo;s 4 (three
+      in, one out): <b>2.0&times;</b>, 97 &micro;s against 48.5 &micro;s at 3.3 TB/s. For a chain of elementwise
+      operations, all on the delivery side of the ridge, the traffic ratio is the time ratio.
+    </p>
+    <p>
+      <b>A real layer.</b> Take a transformer&rsquo;s feed-forward up-projection: 4,096 tokens, 4,096 features in,
+      16,384 out, in bfloat16 on the tensor cores, followed by a bias and an activation (\(k = 2\)). The matmul does
+      \(2 \times 4096 \times 4096 \times 16384 = 5.5 \times 10^{11}\) FLOPs: <b>555.9 &micro;s</b> at 989 TFLOP/s.
+      Its own traffic, with perfect staging, is 302 MB, 91.5 &micro;s, hidden under the arithmetic. The output is
+      134 MB, and the two unfused elementwise passes move four times that: <b>162.7 &micro;s</b> more.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>The feed-forward layer, fused and unfused (bf16, 989 TFLOP/s, 3.3 TB/s; <code>[Ch16p2 s12]</code>).</caption>
+      <thead><tr><th>Count</th><th>Unfused</th><th>Fused</th><th>Ratio</th></tr></thead>
+      <tbody>
+        <tr><td>Passes over the output array</td><td class="mono">5</td><td class="mono">1</td><td class="mono">5 = 1 + 2k</td></tr>
+        <tr><td>All bytes moved</td><td class="mono">839 MB</td><td class="mono">302 MB</td><td class="mono">2.78</td></tr>
+        <tr><td>Time</td><td class="mono">718.6 &micro;s</td><td class="mono">555.9 &micro;s</td><td class="mono">1.29</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      The traffic count is exact, and fusion does remove four-fifths of the output traffic. The layer gets
+      <b>1.29&times;</b> faster, because the matmul is on the machining side of the ridge and its time does not
+      move. Once the matmul is compute-bound the gain no longer depends on the token count at all. With \(s\)
+      bytes per element and \(d\) input features,
+    </p>
+    <div class="mathbox">$$\frac{t_{\text{unfused}}}{t_{\text{fused}}} = 1 + \frac{k\,s\,\text{Peak}}{\text{BW}\; d} = 1 + \frac{k\,s\,I^{*}}{d} = 1 + \frac{2 \times 2 \times 299.7}{4096} = 1.293 .$$</div>
+    <p>
+      The ridge is in the numerator: the faster the machining station, the more the elementwise tail costs in
+      proportion, so fusion matters more on tensor cores (1.29&times;) than on FP32 lanes (1.04&times;), and more
+      for narrow layers than wide ones. For a single token, as in decoding, the matmul is delivery-bound by its
+      weights and the tail is a few kilobytes: 1.001&times;. There the saving that remains is the launches, a
+      few microseconds each (reported).
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same structure: done-in-one machining, with the saving priced at the bottleneck</div>
+      <p style="margin-bottom:0">
+        Removing a trip to the stores saves exactly that trip&rsquo;s handling, and the line speeds up only if
+        handling was the constraint. When the tail is all there is, as in the elementwise task, the full traffic
+        ratio arrives as time. When a compute-bound matmul leads the line, fusion removes work from a station
+        that was already waiting on another, and the gain is capped at \(1 + ksI^*/d\).
+      </p>
+    </div>
+    <p>
+      <b>Softmax</b> fuses for the same reason. The source says <code>F.softmax</code> launches three kernels
+      (maximum, exponentiate-and-sum, divide). Reported elsewhere, PyTorch&rsquo;s built-in softmax is already a
+      single kernel; the count fits a softmax composed of separate operations, which is what Triton&rsquo;s own
+      tutorial compares against. For that composition the traffic is 3 row-reads and 2 row-writes against the
+      fused kernel&rsquo;s 1 and 1, <b>2.5&times;</b>; written as five separate operations it is <b>4.0&times;</b>.
+      The source&rsquo;s &ldquo;2&ndash;4&times; faster&rdquo; brackets both.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>JAX task 3 cannot be one kernel; compiled, it is four</div>
+      <p style="margin-bottom:0">
+        The task chains <code>x*2</code>, <code>+1</code>, a ReLU and <code>x / jnp.sum(x)</code>, and prints
+        &ldquo;XLA fuses the 4 operations into 1 kernel&rdquo;. The divide needs the sum of all \(10^7\) values
+        before it can produce its first output, so no single pass can do it: the earliest plan reads \(x\) once
+        to sum, then again to scale. Compiled here by XLA (CPU back end), the function became <b>four fused
+        kernels</b>: one writing the full ReLU array, a reduction, a scalar reciprocal, and one that re-reads
+        \(x\), recomputes and scales. Eager mode makes 9 passes over 40 MB arrays, 360 MB; that plan makes 5, 200
+        MB; the least possible is 3, 120 MB (<code>[Ch16p2 s12]</code>). The GPU back end may choose differently
+        (reported), but not one pass. The source&rsquo;s timing of the eager loop is also asynchronous until its
+        final <code>block_until_ready</code>, which is right; it is the caption that is wrong.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Fusion, priced</div><div class="lab-tag">Predict, then change the layer</div></div>
+    <div class="lab-body">
+    <div class="predict">
+      <p style="margin-top:0">
+        Fusing the bias and activation into a 4,096-token, 4,096&rarr;16,384 bfloat16 matmul removes 4 of the 5
+        passes over its output. How much faster is the layer?
+      </p>
+      <button class="pbtn" data-p5="a" type="button">About 5&times;</button>
+      <button class="pbtn" data-p5="b" type="button">About 2.8&times;</button>
+      <button class="pbtn" data-p5="c" type="button">About 1.3&times;</button>
+      <button class="pbtn" data-p5="d" type="button">No faster</button>
+      <div class="pverdict" id="pv5"></div>
+    </div>
+    <div class="chartwrap">
+    <svg class="svgfig" id="fS" viewBox="0 0 560 330" role="img"
+         aria-label="Time bars for the unfused and fused layer, split into the matmul and the elementwise passes, and the speedup against token count with its ceiling"></svg>
+    </div>
+    <div class="ctl">
+      <label for="fT">Tokens</label>
+      <input type="range" id="fT" min="0" max="16" value="12" step="1">
+      <span class="ro-v" id="fTv" style="min-width:56px">4,096</span>
+    </div>
+    <div class="ctl">
+      <label for="fk1">Elementwise steps <span class="gk">k</span></label>
+      <button class="btn" id="fk1" data-fk="1" type="button">1</button>
+      <button class="btn on" data-fk="2" type="button">2</button>
+      <button class="btn" data-fk="3" type="button">3</button>
+      <button class="btn" data-fk="4" type="button">4</button>
+      <button class="btn on" data-fp="tc" type="button">bf16, tensor cores</button>
+      <button class="btn" data-fp="fp" type="button">fp32, lanes</button>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Unfused,<br><span class="gk">&micro;s</span></div><div class="ro-v a" id="fU">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Fused,<br><span class="gk">&micro;s</span></div><div class="ro-v b" id="fF">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Speedup</div><div class="ro-v c" id="fX">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Bytes,<br>unfused / fused</div><div class="ro-v" id="fB">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Ceiling<br><span class="gk">1 + ksI*/d</span></div><div class="ro-v" id="fC">&mdash;</div></div>
+    </div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    Top: the two bars on one time scale. Blue is the matmul, at the larger of its arithmetic and its own
+    traffic; orange is each unfused elementwise pass. Bottom: the speedup against token count, with the ceiling
+    \(1 + ksI^*/d\) dashed. At rest the layer is the one in the text: <b>718.6 against 555.9 &micro;s, 1.29&times;</b>,
+    the answer to the prediction, while the bytes fall 2.78&times;. Drag the tokens to 1 to see the tail vanish
+    under the weight read; switch to fp32 lanes to see the ceiling drop to 1.04.
+  </div>
+</section>
+
+<section id="flash">
+  <div class="col">
+    <div class="sechead"><span class="secnum">13</span><h2>Flash attention: the tile that never goes back to stores</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2016%20-%20SIMD%20and%20GPU%20programming/05.%20triton%2C%20TPUs%20and%20pallax.md" target="_blank" rel="noopener">src 05. Triton, TPUs &#8599;</a>
+    </div>
+    <p>
+      Attention computes \(\text{softmax}(QK^{\mathsf T}/\sqrt d)\,V\) for \(n\) tokens. The middle matrix is
+      \(n \times n\). The source&rsquo;s figure checks: at \(n = 128\text{K} = 131{,}072\),
+      \(n^2 \times 4\ \text{B} = 68{,}719{,}476{,}736\) bytes, <b>64 GiB</b>, for one head of one sequence
+      (<code>[Ch16p2 s13]</code>). <b>Flash attention</b> (Dao and others, 2022, reported) never builds it. It
+      loads a block of \(Q\) rows into shared memory, streams blocks of \(K\) and \(V\) past it, and keeps only
+      a running result per row.
+    </p>
+    <p>
+      The traffic is countable. The standard method writes the \(n \times n\) scores, reads them to take the
+      softmax, writes the probabilities and reads them again: about \(4n^2 + 4nd\) elements. The tiled method
+      reads each \(Q\) block once and all of \(K\) and \(V\) once per \(Q\) block of \(B_r\) rows:
+      \(2nd + 2n^2d/B_r\). For \(n = 4{,}096\), \(d = 64\), \(B_r = 128\): 68.2 million elements against 17.3 million,
+      <b>3.94&times;</b> less. Halve the block and \(K\) and \(V\) are read twice as often. The block is set by
+      the shared memory, so traffic falls in proportion to the SRAM size, the source&rsquo;s &ldquo;reuse factor
+      proportional to the SRAM size&rdquo;: this is &sect;08&rsquo;s kit again, with \(B_r\) as the kit size.
+    </p>
+    <p>
+      The hard part is the softmax, which needs a row&rsquo;s maximum before it can start. The <b>online
+      softmax</b> keeps a running maximum \(m\), a running sum \(\ell\) and a running output, and when a new
+      block raises the maximum it rescales what it already has:
+    </p>
+    <div class="mathbox">$$m' = \max(m,\ \max_j s_j), \qquad \ell' = \ell\, e^{\,m - m'} + \sum_j e^{\,s_j - m'} .$$</div>
+    <p>
+      In 64-column blocks over random scores, the result equals the one-pass softmax times \(V\) to
+      \(4.4 \times 10^{-16}\), rounding (<code>[Ch16p2 s13]</code>).
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same structure: re-referencing readings to a new datum</div>
+      <p style="margin-bottom:0">
+        A survey reduced to one benchmark must be re-referenced when a higher benchmark is adopted: every
+        reading already taken shifts by the same amount. The online softmax does that, with one twist: its
+        readings are exponentials, so the shift is a multiplication by \(e^{m - m'}\). The algebra is exact; the
+        datum exists only to keep \(e^{s}\) from overflowing, the guard every softmax needs.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>&ldquo;~100&times; faster&rdquo; than HBM</div>
+      <p style="margin-bottom:0">
+        The source explains the speed by SRAM being &ldquo;~100x faster to access than HBM&rdquo;. Its own memory
+        table gives shared memory ~20 TB/s against HBM&rsquo;s 1&ndash;3.3 TB/s, <b>6&ndash;20&times;</b> in
+        bandwidth, and ~5 against ~400 cycles, <b>80&times;</b> in latency. A tile streamed through shared memory
+        is limited by bandwidth, so the 6&ndash;20&times; is the figure that applies; the larger win is that the
+        \(n \times n\) matrix never goes to HBM at all.
+      </p>
+    </div>
+  </div>
+</section>
+
 </main>
 </div>
 
@@ -1666,6 +2024,131 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     b:'<b>Too low.</b> Each warp is a sample of 32 lanes, and one lane is enough: 1 &minus; 0.99<sup>32</sup> = <b>27.5%</b>.',
     c:'<b>Right.</b> 1 &minus; 0.99<sup>32</sup> = 0.275, the rejection probability of a c = 0 sampling plan with a sample of 32. The 20,000 simulated warps land on it.',
     d:'<b>Too high</b> for 1%: half the warps would need q = 1 &minus; 0.5<sup>1/32</sup> = 2.1%. At 1% it is <b>27.5%</b>.'});
+  draw();
+})();
+</script>
+
+<script>
+/* ===== LAB 4 -- the systolic array: waves of outer products, and fill and drain ===== */
+(function(){
+  'use strict';
+  var U=window.__c16, $=U.$, ST=U.ST;
+  var n=4, K=4, NB=128;
+  function aV(i,k){return 1+((i+2*k)%4);}
+  function bV(k,j){return 1+((3*k+j)%3);}
+  var gx=214, gy=176, cs=58;
+  function draw(){
+    gy=58+(K+n-2)*13;
+    $('sS').setAttribute('viewBox','0 0 560 '+(gy+n*cs+22));
+    var tot=K+2*n-2, sl=$('sT');
+    sl.max=String(tot-1); var t=Math.min(+sl.value,tot-1); sl.value=String(t);
+    $('sTv').textContent=t+1;
+    var h='', i, j, k, pos, done=0, act=0;
+    h+=U.txt(20,22,'blue: rows of A, entering from the left, one cycle later per row','font-family:var(--f-disp);font-size:11px;fill:var(--c2)');
+    h+=U.txt(20,38,'green: columns of B, entering from the top, one cycle later per column','font-family:var(--f-disp);font-size:11px;fill:var(--c3)');
+    for(i=0;i<n;i++){
+      h+=U.txt(gx-6,gy+i*cs+cs/2+4,'',ST.tick,'end');
+      for(k=0;k<K;k++){ pos=k-(t-i);
+        if(pos>0) h+=U.txt(gx-14-(pos-1)*17,gy+i*cs+cs/2+4,aV(i,k),'font-family:var(--f-mono);font-size:11px;fill:var(--c2)','end'); }
+    }
+    for(j=0;j<n;j++){
+      for(k=0;k<K;k++){ pos=k-(t-j);
+        if(pos>0) h+=U.txt(gx+j*cs+cs/2,gy-10-(pos-1)*13,bV(k,j),'font-family:var(--f-mono);font-size:11px;fill:var(--c3)','middle'); }
+    }
+    var full=true;
+    for(i=0;i<n;i++) for(j=0;j<n;j++){
+      var kk=t-i-j, on=kk>=0&&kk<K, c=0, m=Math.min(K,Math.max(0,kk+1));
+      for(k=0;k<m;k++) c+=aV(i,k)*bV(k,j);
+      var ref=0; for(k=0;k<K;k++) ref+=aV(i,k)*bV(k,j);
+      if(c!==ref) full=false;
+      done+=m; if(on) act++;
+      var x=gx+j*cs, y=gy+i*cs;
+      h+='<rect x="'+x+'" y="'+y+'" width="'+(cs-6)+'" height="'+(cs-6)+'" rx="3" style="fill:'+(on?'var(--brk-soft)':'var(--sheet)')+';stroke:'+(on?'var(--c1)':'var(--rule-strong)')+';stroke-width:'+(on?2:1)+'"/>';
+      h+=U.txt(x+(cs-6)/2,y+25,c,'font-family:var(--f-mono);font-size:15px;font-weight:600;fill:var(--ink)','middle');
+      if(on) h+=U.txt(x+(cs-6)/2,y+43,'+'+aV(i,kk)+'&#215;'+bV(kk,j),'font-family:var(--f-mono);font-size:10.5px;fill:var(--c1)','middle');
+    }
+    h+=U.txt(gx+n*cs+4,gy+n*cs-2,'',ST.small);
+    h+=U.txt(540,gy+n*cs+10,full?'the grid now holds AB':'wave k reaches cell (i, j) at cycle i + j + k',full?'font-family:var(--f-disp);font-size:12px;font-weight:700;fill:var(--c3)':ST.small,'end');
+    $('sS').innerHTML=h;
+    var L=Math.pow(2,+$('sL').value); $('sLv').textContent=U.comma(L);
+    $('sCy').textContent=(t+1)+' of '+tot;
+    $('sMa').textContent=act;
+    $('sDn').textContent=done+' of '+(n*n*K);
+    $('sUt').textContent=(100*L/(L+2*NB-2)).toFixed(1)+'%';
+  }
+  document.querySelectorAll('[data-sk]').forEach(function(b){b.addEventListener('click',function(){
+    K=+b.getAttribute('data-sk'); U.onBtn('data-sk',K); draw();});});
+  document.querySelectorAll('[data-sn]').forEach(function(b){b.addEventListener('click',function(){
+    NB=+b.getAttribute('data-sn'); U.onBtn('data-sn',NB); draw();});});
+  ['sT','sL'].forEach(function(id){$(id).addEventListener('input',draw);});
+  U.predict('data-p4','pv4',{
+    a:'<b>No.</b> The grid is full only in the middle of a long stream. Eight rows take 8 + 2 &times; 128 &minus; 2 = 262 cycles, and each cell works in 8 of them: <b>3.1%</b>.',
+    b:'<b>No.</b> Half would need the stream to be as long as the fill and drain, 254 rows. Eight rows give 8/262 = <b>3.1%</b>.',
+    c:'<b>Still too high.</b> A quarter needs about 85 rows. Eight rows give 8/(8 + 254) = <b>3.1%</b>.',
+    d:'<b>Right.</b> 8/(8 + 2 &times; 128 &minus; 2) = 3.1%. The array spends 254 cycles filling and draining around 8 cycles of work: Sheet 13&rsquo;s line, depth 255.'});
+  draw();
+})();
+</script>
+
+<script>
+/* ===== LAB 5 -- fusion priced on a feed-forward layer (same model as layer() in [Ch16p2 s12]) ===== */
+(function(){
+  'use strict';
+  var U=window.__c16, $=U.$, ST=U.ST;
+  var PK32=16896*1.98e9*2, PKT=989e12, BW=3.3e12, D=4096, F=16384;
+  var k=2, mode='tc';
+  function layer(T,kk,s,P){
+    var fl=2*T*D*F, mb=s*(T*D+D*F+T*F), tail=2*kk*s*T*F, tm=Math.max(fl/P,mb/BW);
+    return {u:tm+tail/BW, f:tm, tr:(mb+tail)/mb, tail:tail/BW};
+  }
+  function us(v){return v>=100?v.toFixed(1):(v>=1?v.toFixed(2):v.toFixed(3));}
+  function draw(){
+    var e=+$('fT').value, T=Math.pow(2,e); $('fTv').textContent=U.comma(T);
+    var s=mode==='tc'?2:4, P=mode==='tc'?PKT:PK32, L=layer(T,k,s,P), ceil=1+k*s*P/(BW*D);
+    var h='', X0=118, X1=540, i;
+    function BX(v){return X0+(X1-X0)*v/L.u;}
+    h+=U.txt(X0-10,46,'unfused',ST.lab,'end')+U.txt(X0-10,60,us(L.u*1e6)+' µs',ST.tick,'end');
+    h+=U.txt(X0-10,96,'fused',ST.lab,'end')+U.txt(X0-10,110,us(L.f*1e6)+' µs',ST.tick,'end');
+    h+='<rect x="'+X0+'" y="36" width="'+U.f1(BX(L.f)-X0)+'" height="26" rx="2" style="fill:var(--c2)"/>';
+    var seg=L.tail/k;
+    for(i=0;i<k;i++){
+      var a=BX(L.f+i*seg)+2, b=BX(L.f+(i+1)*seg);
+      if(b-a>0.5) h+='<rect x="'+U.f1(a)+'" y="36" width="'+U.f1(b-a)+'" height="26" rx="2" style="fill:var(--c1)"/>';
+    }
+    h+='<rect x="'+X0+'" y="86" width="'+U.f1(BX(L.f)-X0)+'" height="26" rx="2" style="fill:var(--c2)"/>';
+    h+=U.txt(X0+6,28,'matmul',ST.small)+U.txt(X1,28,k+' elementwise pass'+(k>1?'es':''),ST.small,'end');
+    var Y0=292, Y1=158, ymax=Math.max(1.35,Math.ceil((ceil+0.02)*20)/20);
+    function X(v){return X0+(X1-X0)*v/16;}
+    function Y(v){return Y0-(Y0-Y1)*(v-1)/(ymax-1);}
+    for(i=0;i<=16;i+=4){h+=U.ln(X(i),Y0,X(i),Y0+5,ST.axis)+U.txt(X(i),Y0+18,U.comma(Math.pow(2,i)),ST.tick,'middle');}
+    var step=ymax-1>0.6?0.2:0.1;
+    for(var v=1;v<=ymax+1e-9;v+=step){h+=U.ln(X0,Y(v),X1,Y(v),ST.grid)+U.txt(X0-6,Y(v)+4,v.toFixed(1)+'×',ST.tick,'end');}
+    h+=U.ln(X0,Y0,X1,Y0,ST.axis)+U.ln(X0,Y0,X0,Y1,ST.axis);
+    h+=U.txt((X0+X1)/2,Y0+34,'tokens in the batch (log scale)',ST.lab,'middle');
+    h+=U.txt(X0+6,Y1-8,'speedup from fusion',ST.small);
+    h+=U.ln(X0,Y(ceil),X1,Y(ceil),'stroke:var(--ink-3);stroke-width:1.4;stroke-dasharray:6 4');
+    h+=U.txt(X1,Y(ceil)-6,'ceiling '+ceil.toFixed(3),ST.small,'end');
+    var pts=[];
+    for(var x=0;x<=16.0001;x+=0.25){var l=layer(Math.pow(2,x),k,s,P); pts.push(U.f1(X(x))+','+U.f1(Y(l.u/l.f)));}
+    h+='<polyline points="'+pts.join(' ')+'" style="fill:none;stroke:var(--c3);stroke-width:2.2"/>';
+    h+='<circle cx="'+U.f1(X(e))+'" cy="'+U.f1(Y(L.u/L.f))+'" r="6" style="fill:var(--c3);stroke:var(--sheet);stroke-width:2"/>';
+    $('fS').innerHTML=h;
+    $('fU').textContent=us(L.u*1e6);
+    $('fF').textContent=us(L.f*1e6);
+    $('fX').textContent=(L.u/L.f).toFixed(L.u/L.f<1.01?3:2)+'×';
+    $('fB').textContent=L.tr.toFixed(2)+'×';
+    $('fC').textContent=ceil.toFixed(3);
+  }
+  document.querySelectorAll('[data-fk]').forEach(function(b){b.addEventListener('click',function(){
+    k=+b.getAttribute('data-fk'); U.onBtn('data-fk',k); draw();});});
+  document.querySelectorAll('[data-fp]').forEach(function(b){b.addEventListener('click',function(){
+    mode=b.getAttribute('data-fp'); U.onBtn('data-fp',mode); draw();});});
+  $('fT').addEventListener('input',draw);
+  U.predict('data-p5','pv5',{
+    a:'<b>No.</b> 5 = 1 + 2k is the traffic ratio on the output array alone. The matmul does 5.5 &times; 10<sup>11</sup> FLOPs, 556 &micro;s at 989 TFLOP/s, and fusion does not touch that: 718.6/555.9 = <b>1.29&times;</b>.',
+    b:'<b>No.</b> 2.78 is the ratio of all bytes moved. The layer is machining-bound, so bytes are not time: <b>1.29&times;</b>.',
+    c:'<b>Right.</b> Unfused 555.9 + 162.7 &micro;s, fused 555.9: 1.29&times;, the ceiling 1 + 2 &times; 2 &times; 299.7 / 4096 that holds for any compute-bound batch.',
+    d:'<b>It is faster</b>, by the 162.7 &micro;s the two elementwise passes cost: <b>1.29&times;</b>. Only the matmul itself does not speed up.'});
   draw();
 })();
 </script>
