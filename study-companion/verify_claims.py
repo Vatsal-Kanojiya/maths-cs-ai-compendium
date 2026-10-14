@@ -7298,6 +7298,14 @@ def _ch18():
     best = taus[int(np.argmax(fr))]
     say("s16", "simulated useful fraction, delta = 1 min: " + ", ".join(f"tau {a_:g} -> {b_:.3f}" for a_, b_ in zip(taus, fr))
         + f"; best of these {best}", best in (15, 18.3, 22) and abs(max(fr) - (1 - math.sqrt(2/M))) < 0.02)
+    lam_ = 1/M; exact = lambda tau, dl: lam_*tau/(math.exp(lam_*(tau+dl)) - 1)
+    say("s16", f"exact useful fraction lambda tau/(e^(lambda(tau+delta)) - 1): tau 18.3 -> {exact(18.3,1):.4f} (sim {fr[3]:.4f}); "
+        f"tau 60 -> {exact(60,1):.4f} (sim {fr[-1]:.4f})", abs(exact(18.3,1) - fr[3]) < 0.004 and abs(exact(60,1) - fr[-1]) < 0.006)
+    tg = np.linspace(5, 60, 55001); ev = np.array([exact(t_, 1.0) for t_ in tg]); topt = tg[int(np.argmax(ev))]
+    say("s16", f"exact optimum {topt:.1f} min vs Young {math.sqrt(2*M):.1f}; useful fraction differs by {ev.max() - exact(math.sqrt(2*M),1):.1e}",
+        abs(topt - 17.6) < 0.1 and ev.max() - exact(math.sqrt(2*M), 1) < 1e-4)
+    say("s16", f"source's 20-60 min is optimal for writes of {20**2/(2*M):.1f} to {60**2/(2*M):.1f} min at this M",
+        abs(20**2/(2*M) - 1.2) < 0.05 and abs(60**2/(2*M) - 10.8) < 0.05)
     # checkpoint size
     P70 = 70e9
     say("s16", f"70B with Adam: source 70B x 4 x 2 = {P70*8/1e9:.0f} GB; fp32 master + m + v = 12 B/param = {P70*12/1e9:.0f} GB; "
@@ -7349,6 +7357,7 @@ def _ch18():
     fl405 = 6*405e9*15e12; gh405 = fl405/rate/3600
     say("s18", f"405B, 15T tokens: {gh405/1e6:.1f}M GPU-h: ${gh405*8/1e6:.0f}M at $8/h, ${gh405*ownh/1e6:.0f}M at ${ownh:.2f}/h "
         f"(source: $50-100M); {gh405/16384/24:.0f} days on 16,384 GPUs", 30 < gh405*ownh/1e6 < 60)
+    say("s18", f"405B x 15T x 6 = {fl405:.3e} FLOP; 15T/1.4T cost ratio {15/1.4:.1f}x", abs(fl405 - 3.645e25) < 1e22)
     say("s18", f"$30K x 16,000 = ${30000*16000/1e6:.0f}M", 30000*16000 == 480_000_000)
     say("s18", f"$2M buys {2e6/8:,.0f} GPU-h at $8 = {2e6/8*3600*rate:.2e} FLOP = {2e6/8*3600*rate/(6*70e9)/1e12:.2f}T tokens for 70B",
         True)

@@ -1537,3 +1537,484 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     helping. With one shard the two distributions coincide.
   </div>
 </section>
+
+<section id="day">
+  <div class="col">
+    <div class="sechead"><span class="secnum">13</span><h2>The day&rsquo;s load, and the 60% that is 40%</h2>
+      <a class="srcref" href="@F2@" target="_blank" rel="noopener">src 02. cloud computing &#8599;</a>
+    </div>
+    <p>
+      Demand is not flat. File 02 makes the point with an example: &ldquo;a model server that
+      needs 10 GPUs at peak and 2 at night saves ~60% by autoscaling vs running 10 GPUs
+      24/7.&rdquo; Power plant engineering has the tool for this, the <b>load-duration
+      curve</b>: take a period&rsquo;s hourly demand and sort it from highest to lowest. The
+      curve&rsquo;s height at the left is the peak, and the area under it is the energy, or
+      here the GPU-hours, actually needed. Its ratio to the rectangle under the peak is the
+      <b>load factor</b>, average load over peak load.
+    </p>
+    <p>
+      A fleet sized for the peak and left running pays for the rectangle. Perfect autoscaling,
+      which runs exactly as many GPUs as each hour needs, pays for the area. The saving is
+      therefore
+    </p>
+    <div class="mathbox">$$\text{saving} = 1 - \frac{\text{average}}{\text{peak}} = 1 - \text{load factor}$$</div>
+    <p>
+      exactly, for any profile; it held on 200 random weekly profiles
+      (<code>[Ch18 s13]</code>). The source&rsquo;s example does not say how long the peak
+      lasts. Twelve hours at 10 and twelve at 2 average 6 GPUs, so the saving is 40%. A 60%
+      saving needs an average of 4, which means a peak of only 6 hours a day, or 8.4 hours on
+      weekdays if weekends stay at 2 (<code>[Ch18 s13]</code>). The method is right and the
+      figure needs its missing assumption.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: load factor, and the diversity factor</div>
+      <p>
+        A power station with a load factor of 0.4 needs installed capacity of 2.5 times its
+        average load, and a GPU fleet does too. The power engineer&rsquo;s second number, the
+        <b>diversity factor</b>, is the sum of the individual peak demands divided by the peak
+        of their total. It is above 1 whenever consumers peak at different times, and it is
+        the whole case for sharing a cluster between teams, or a serving fleet between regions.
+      </p>
+      <p style="margin-bottom:0">
+        Three regions whose demand is \(1 + 0.6\sin\) of the hour of day, eight hours apart,
+        each peak at 1.6. Their total is exactly 3 at every hour, because three sinusoids
+        120&deg; apart sum to zero, the balanced three-phase supply you met in electrical
+        engineering. Sized separately they need 4.8; shared, 3; the diversity factor is 1.6
+        (<code>[Ch18 s13]</code>).
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks: triplen harmonics, and latency</div>
+      <p style="margin-bottom:0">
+        Real daily curves are not sinusoids. Give each region a third harmonic, a component
+        with an eight-hour period, of amplitude 0.2, and the three copies of it are in phase:
+        they add instead of cancelling, and the shared total ripples by 1.2, three times twice
+        the amplitude (<code>[Ch18 s13]</code>). It is the same reason third-harmonic currents
+        add in the neutral of a three-phase system. And sharing across regions is not free:
+        serving Tokyo from the United States adds at least 81 ms to every round trip (&sect;14).
+        Autoscaling also needs warning, since a new server takes minutes to start (&sect;03);
+        the curve it can follow is the demand forecast, not the demand.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">The week&rsquo;s load-duration curve</div><div class="lab-tag">Predict, then sort the week</div></div>
+    <div class="lab-body">
+    <div class="predict">
+      <div class="predict-h">Commit before you look</div>
+      <p>
+        A service needs 10 GPUs for 12 hours a day and 2 GPUs for the other 12. Against
+        keeping 10 running all day, how much does perfect autoscaling save?
+      </p>
+      <div class="opts">
+        <button class="pbtn" data-p5="a" type="button">80%</button>
+        <button class="pbtn" data-p5="b" type="button">60%, as the source says</button>
+        <button class="pbtn" data-p5="c" type="button">40%</button>
+        <button class="pbtn" data-p5="d" type="button">20%</button>
+      </div>
+      <div class="pverdict" id="pv5"></div>
+    </div>
+    <svg class="stage" id="dS" viewBox="0 0 560 340" role="img"
+         aria-label="Top: GPU demand hour by hour over a week, with the reserved level drawn across it. Bottom: the same hours sorted from highest to lowest demand, the load-duration curve, split into reserved and on-demand areas.">
+      <g id="dTop"></g><g id="dBot"></g>
+    </svg>
+    <div class="ctl">
+      <button class="btn" data-dm="h12" type="button">10 / 2, 12-hour peak</button>
+      <button class="btn" data-dm="h6" type="button">10 / 2, 6-hour peak</button>
+      <button class="btn" data-dm="smooth" type="button">A smooth week</button>
+    </div>
+    <div class="ctl"><label for="dA">Daily swing</label><input type="range" id="dA" min="0" max="0.9" step="0.05" value="0.6"><span class="ro-v" id="dAv">0.60</span></div>
+    <div class="ctl"><label for="dD">Reserved discount</label><input type="range" id="dD" min="0" max="0.7" step="0.05" value="0.4"><span class="ro-v" id="dDv">40%</span></div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Load factor,<br>mean/peak</div><div class="ro-v" id="dLF">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Autoscaling<br>saves</div><div class="ro-v a" id="dSv">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Reserve, by the<br>duration rule</div><div class="ro-v c" id="dR">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Reserve, by<br>trying every level</div><div class="ro-v b" id="dRb">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Week, fixed<br>fleet on demand</div><div class="ro-v" id="dC0">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Week, reserved<br>+ on demand</div><div class="ro-v" id="dC1">&mdash;</div></div>
+    </div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    Top: a week of hourly demand in GPUs. Bottom: the same 168 hours sorted, highest first.
+    The saving from perfect autoscaling is the empty part of the rectangle above the curve,
+    one minus the load factor: 40% for the 12-hour peak, which answers the prediction, and 60%
+    for the 6-hour one. The green band is the reserved capacity, the orange the on-demand
+    hours above it. The duration rule reserves every GPU that is busy for more than
+    \(1 - \text{discount}\) of the hours, marked by the dashed vertical line; the readout
+    beside it finds the cheapest level by trying all of them, and they agree. Costs are at the
+    source&rsquo;s $8.00 an hour on demand.
+  </div>
+</section>
+
+<section id="tariff">
+  <div class="col">
+    <div class="sechead"><span class="secnum">14</span><h2>Base load and peak load: reserved, on-demand, spot</h2>
+      <a class="srcref" href="@F2@" target="_blank" rel="noopener">src 02. cloud computing &#8599;</a>
+    </div>
+    <p>
+      File 02 lists three ways to rent a GPU. <b>On-demand</b> costs \(o\) per hour used.
+      <b>Reserved</b> capacity costs a discounted rate \(r = (1-d)\,o\) for every hour of a
+      one- to three-year term, used or not. <b>Spot</b> capacity is spare capacity at 60&ndash;90%
+      off (the file also says 60&ndash;70% two sections later) that the provider can reclaim
+      at 30 seconds to 2 minutes&rsquo; notice.
+    </p>
+    <p>
+      Which GPUs to reserve? Number the units of capacity from the bottom of the
+      load-duration curve upward. Unit \(k\) is needed in the fraction \(f_k\) of hours when
+      demand is at least \(k\). Reserving it costs \(r\) every hour; renting it costs \(o\)
+      in the hours it is needed. So reserve it if and only if
+    </p>
+    <div class="mathbox">$$f_k \;>\; \frac{r}{o} \;=\; 1 - d$$</div>
+    <p>
+      At a 40% discount, reserve every GPU that is busy more than 60% of the time. The rule
+      matched a brute-force search over every reserved level on 100 weekly profiles
+      (<code>[Ch18 s14]</code>).
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: base-load and peaking plants</div>
+      <p style="margin-bottom:0">
+        A utility meets the bottom of its load-duration curve with base-load plant, which is
+        expensive to build and cheap to run, and the top with peaking plant, which is cheap to
+        build and expensive to run. The boundary sits where a unit&rsquo;s hours of use make
+        the two costs equal, which is the inequality above with fixed and running costs in
+        place of reserved and on-demand rates. Reserved instances are base-load plant;
+        on-demand GPUs are the peaking plant; spot is interruptible supply, sold cheap because
+        the buyer accepts being cut off. It suits work that can stop and resume, which with
+        the checkpointing of &sect;16 includes training, and it does not suit serving.
+      </p>
+    </div>
+    <p>
+      <b>Buying</b> is the extreme base-load plant. The source says owning beats renting by
+      &ldquo;~2-3x lower TCO over 3 years&rdquo; above about 1,000 GPUs. Its own figures give
+      the comparison: a GPU at $30,000, and GPUs at 70&ndash;80% of a cluster&rsquo;s cost, put
+      the whole cost near $40,000 per GPU over three years, or $1.52 an hour if it runs every
+      hour. On-demand at $8.00 is 5.3 times that; reserved at 30&ndash;60% off is 3.7 to 2.1
+      times (<code>[Ch18 s14]</code>). So the source&rsquo;s 2&ndash;3&times; is the comparison
+      against reserved capacity, which is the fair one, and owning breaks even against
+      on-demand at 19% utilisation.
+    </p>
+    <h3>The cost figures, checked</h3>
+    <p>
+      Sixty-four GPUs at $8 are $512 an hour, the source&rsquo;s &ldquo;~$500&rdquo;; its month
+      of &ldquo;~$360,000&rdquo; is 720 hours at $500, and $368,640 at $512. Checkpoints of
+      10 GB, 100 per experiment, 50 experiments: 50 TB, $1,150 a month at $0.023 per GB, as
+      stated. A 140 GB model loaded at 1 GB/s takes 2.33 minutes; the source says about 2.5
+      (<code>[Ch18 s14]</code>).
+    </p>
+    <p>
+      One figure has a physical floor. File 02 says a user in Tokyo reaching a US server
+      &ldquo;adds ~150ms network round trip&rdquo;. Tokyo to San Francisco is 8,272 km on a
+      great circle and Tokyo to northern Virginia 10,872 km; light in glass fibre travels at
+      about \(c/1.47\) (reported refractive index), so the round trip can be no shorter than
+      81 ms and 106 ms (<code>[Ch18 s14]</code>). Cables do not follow great circles, and
+      150 ms is 1.4 to 1.8 times the floor, which is plausible. No engineering removes the
+      floor. Only a server nearer the user does, which is the case for a region in Japan.
+    </p>
+  </div>
+</section>
+
+<section id="series">
+  <div class="col">
+    <div class="sechead"><span class="secnum">15</span><h2>A training job is a 16,384-element series system</h2>
+      <a class="srcref" href="@F3@" target="_blank" rel="noopener">src 03. large scale infrastructure &#8599;</a>
+    </div>
+    <p>
+      Synchronous data-parallel training (Sheet 06 &sect;11) waits at every step for all its
+      GPUs to finish and exchange gradients. If any one GPU, host, link or switch fails, the
+      step cannot complete and the job stops. For reliability, the job is a series system of
+      every component it touches, and Sheet 05 &sect;03&rsquo;s series rule applies: failure
+      rates add. With exponential lives the job&rsquo;s MTBF is the component MTBF divided by
+      the number of components; a simulation of 64 such parts gives 711 hours against the
+      predicted 712 (<code>[Ch18 s15]</code>).
+    </p>
+    <p>
+      File 03 reports that Meta&rsquo;s Llama 3 run on 16,384 H100s saw about 466 job
+      interruptions in 54 days. That is one every 2.78 hours. If each interruption were one
+      GPU&rsquo;s fault, each GPU would be failing once in 45,566 hours, or 5.2 years
+      (<code>[Ch18 s15]</code>): an unremarkable component life, which 16,384-way series
+      turns into a job that cannot run three hours without a stop. Not every interruption
+      was a GPU (the run also had hosts, switches and software), and the series contains all
+      of them; the 5.2 years is what a GPU-only explanation would need. The chance of 54 days
+      without a stop at that rate is \(e^{-466}\). The source&rsquo;s &ldquo;mean time between
+      failures for a 16,000-GPU cluster is measured in hours&rdquo; is exactly right.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: \(\lambda_{\text{system}} = \sum \lambda_i\), and elastic training as k-out-of-n</div>
+      <p style="margin-bottom:0">
+        A conveyor line with 16,384 stations and no buffers stops whenever any station does,
+        and its MTBF is the station MTBF over 16,384. File 03&rsquo;s two defences are the two
+        a reliability engineer would reach for. <b>Checkpointing</b> limits how much work a
+        stop destroys (&sect;16). <b>Elastic training</b>, which carries on with 498 nodes when
+        2 of 500 fail, turns the series system into a \(k\)-out-of-\(n\) one: the job stops
+        only when fewer than \(k\) nodes remain. And the source&rsquo;s periodic GPU health
+        checks are proof testing, finding a degraded unit before it fails in service.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks: failures that are not independent, and failures that do not stop</div>
+      <p style="margin-bottom:0">
+        The sum of rates assumes independent failures, and a switch that drops 32 nodes at once
+        is a common cause (&sect;09). Worse, the series model counts only failures that stop
+        the job. A GPU that keeps running and computes wrong numbers corrupts every replica of
+        the model through the next gradient exchange; large operators report such silent data
+        corruption as a real problem (reported). That failure mode needs detection, not
+        redundancy, and the series rule says nothing about it.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="checkpoint">
+  <div class="col">
+    <div class="sechead"><span class="secnum">16</span><h2>The checkpoint interval is an economic order quantity</h2>
+      <a class="srcref" href="@F3@" target="_blank" rel="noopener">src 03. large scale infrastructure &#8599;</a>
+    </div>
+    <p>
+      File 03 states the trade-off: &ldquo;frequent checkpoints &hellip; waste less compute on
+      failure but slow down training; infrequent checkpoints &hellip; waste up to 2 hours of
+      compute on failure. Most teams checkpoint every 20-60 minutes.&rdquo; Write it down.
+      Saving a checkpoint stops the job for \(\delta\); checkpointing every \(\tau\) costs
+      \(\delta/\tau\) of the time. Failures arrive every \(M\) on average, and each destroys
+      the work since the last checkpoint, on average half an interval, so the loss is
+      \(\tau/(2M)\) of the time. The waste is
+    </p>
+    <div class="mathbox">$$C(\tau) = \frac{\delta}{\tau} + \frac{\tau}{2M} \quad\Longrightarrow\quad \tau^\ast = \sqrt{2\delta M}, \qquad C(\tau^\ast) = \sqrt{\frac{2\delta}{M}}$$</div>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: setup cost against holding cost</div>
+      <p style="margin-bottom:0">
+        The economic order quantity minimises \(DS/Q + HQ/2\) and gives
+        \(Q^\ast = \sqrt{2DS/H}\). Put the checkpoint write \(\delta\) in place of the setup
+        cost \(S\), the interval \(\tau\) in place of the lot \(Q\), and \(1/M\) in place of
+        the holding cost \(H\), with \(D = 1\), and the two are one formula. Sheet 13 part 2
+        &sect;05 found the same shape in a processor&rsquo;s time quantum. The flat bottom comes
+        with it: an interval twice or half the best costs exactly 25% more waste
+        (<code>[Ch18 s16]</code>), so a rough \(M\) is good enough. In the literature this is
+        Young&rsquo;s formula (reported).
+      </p>
+    </div>
+    <p>
+      With the Llama 3 rate of &sect;15, \(M\) = 166.9 minutes (<code>[Ch18 s16]</code>):
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Best interval and waste for a 2.78-hour job MTBF.</caption>
+      <thead><tr><th class="mono">Checkpoint write &delta;</th><th class="mono">Best interval &tau;*</th><th class="mono">Waste at &tau;*</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">10 s</td><td class="mono">7.5 min</td><td class="mono">4.5%</td></tr>
+        <tr><td class="mono">60 s</td><td class="mono">18.3 min</td><td class="mono">10.9%</td></tr>
+        <tr><td class="mono">300 s</td><td class="mono">40.8 min</td><td class="mono">24.5%</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      The source&rsquo;s &ldquo;every 20&ndash;60 minutes&rdquo; is the optimum for writes of
+      1.2 to 10.8 minutes at this failure rate. Waste falls only as the square root of the
+      write time, so halving the waste needs a write four times shorter, which is why file 03
+      recommends asynchronous checkpoints to local NVMe first. A one-minute write gives about
+      11%, consistent with the reported 90% useful time for Llama 3; consistent, since the
+      run&rsquo;s actual write and restart times are not given.
+    </p>
+    <p>
+      The formula is a first-order expansion. With exponential failures and a restart from the
+      last checkpoint, the exact useful fraction is
+      \(\lambda\tau/(e^{\lambda(\tau+\delta)} - 1)\) with \(\lambda = 1/M\). A simulation over
+      two million minutes gives 0.895 at \(\tau\) = 18.3 and 0.818 at \(\tau\) = 60, against
+      0.894 and 0.815 from the exact expression. The exact optimum is 17.6 minutes rather than
+      18.3, and the useful fraction there differs by less than 0.0001
+      (<code>[Ch18 s16]</code>). The flat bottom again.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>A correction: Adam keeps two moments</div>
+      <p style="margin-bottom:0">
+        File 03 sizes a 70B checkpoint at &ldquo;~560 GB per checkpoint (70B &times; 4 bytes
+        &times; 2 for optimiser)&rdquo;: weights plus one optimiser number per parameter. Adam
+        keeps two, the running mean \(m\) and the running mean square \(v\), and mixed-precision
+        training keeps an fp32 master copy of the weights besides. That is 12 bytes per
+        parameter, 840 GB, or 980 GB with the bf16 working copy (<code>[Ch18 s16]</code>).
+        Hourly for 90 days is 2,160 checkpoints, 1.81 PB at 840 GB; the source&rsquo;s 1.1 PB is
+        its own 560 GB times about 2,000. At 100 GB/s of storage, 840 GB takes 8.4 s to write;
+        at 10 GB/s, 84 s, and \(\delta\) is the whole subject of the table above.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">How often to checkpoint</div><div class="lab-tag">Predict, then set the interval</div></div>
+    <div class="lab-body">
+    <div class="predict">
+      <div class="predict-h">Commit before you drag</div>
+      <p>
+        A job runs on 16,384 GPUs, each failing on average once in 5.2 years. A checkpoint
+        takes one minute to write. How often should the job checkpoint?
+      </p>
+      <div class="opts">
+        <button class="pbtn" data-p6="a" type="button">Every 5 hours</button>
+        <button class="pbtn" data-p6="b" type="button">Every hour</button>
+        <button class="pbtn" data-p6="c" type="button">About every 18 minutes</button>
+        <button class="pbtn" data-p6="d" type="button">Every minute</button>
+      </div>
+      <div class="pverdict" id="pv6"></div>
+    </div>
+    <svg class="stage" id="kS" viewBox="0 0 560 290" role="img"
+         aria-label="Wasted fraction of time against the checkpoint interval: a U-shaped curve with a flat bottom at the best interval, with your interval and the simulated waste marked.">
+      <g id="kPlot"></g>
+    </svg>
+    <div class="ctl"><label for="kN">GPUs</label><input type="range" id="kN" min="0" max="6" step="1" value="5"><span class="ro-v" id="kNv">16,384</span></div>
+    <div class="ctl"><label for="kM">GPU MTBF, years</label><input type="range" id="kM" min="1" max="10" step="0.1" value="5.2"><span class="ro-v" id="kMv">5.2</span></div>
+    <div class="ctl"><label for="kD">Write time <span class="gk">&delta;</span>, s</label><input type="range" id="kD" min="5" max="600" step="5" value="60"><span class="ro-v" id="kDv">60</span></div>
+    <div class="ctl"><label for="kT">Interval <span class="gk">&tau;</span>, min</label><input type="range" id="kT" min="2" max="120" step="1" value="60"><span class="ro-v" id="kTv">60</span></div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Job MTBF<br><span class="gk">M</span></div><div class="ro-v" id="kJM">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Best interval<br><span class="gk">&radic;(2&delta;M)</span></div><div class="ro-v c" id="kTs">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Waste at best,<br>formula</div><div class="ro-v" id="kWs">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Waste at your <span class="gk">&tau;</span>,<br>formula</div><div class="ro-v a" id="kW">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Waste at your <span class="gk">&tau;</span>,<br>exact</div><div class="ro-v a" id="kWe">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Waste at your <span class="gk">&tau;</span>,<br>simulated</div><div class="ro-v b" id="kWm">&mdash;</div></div>
+    </div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    The blue curve is the waste \(\delta/\tau + \tau/2M\); the grey dashed one is the exact
+    expression for exponential failures, which it overstates at long intervals. The green
+    mark is the best interval, 18.3 minutes for these settings, which answers the
+    prediction; the orange dot is your interval with its waste from a simulation of 3,000
+    failures. At the rest setting of 60 minutes the waste is about 18%, against 11% at the
+    best interval. Halve the GPU count or double the GPU life and the best interval grows by
+    \(\sqrt2\); cut the write time fourfold and the waste halves.
+  </div>
+</section>
+
+<section id="fabric">
+  <div class="col">
+    <div class="sechead"><span class="secnum">17</span><h2>The fabric: links, trees and a ring</h2>
+      <a class="srcref" href="@F3@" target="_blank" rel="noopener">src 03. large scale infrastructure &#8599;</a>
+    </div>
+    <p>
+      Inside a training node, eight GPUs talk over <b>NVLink</b>; between nodes, over
+      <b>InfiniBand</b>. File 03 gives NVLink as 900 GB/s per GPU on the H100 and calls it
+      &ldquo;30x faster than PCIe&rdquo;, the ordinary expansion bus. The 900 GB/s is the
+      total of both directions, 450 GB/s each way (reported specification). A PCIe 5.0
+      slot with 16 lanes at 32 GT/s, after its 128b/130b line coding, carries
+      \(32 \times 16 \times 128/130 / 8 = 63.0\) GB/s each way. Like for like, NVLink is 7.1
+      times faster. The 30&times; is 900 against PCIe 4.0 counted in one direction, 28.6&times;
+      (<code>[Ch18 s17]</code>), a comparison of a two-way figure with a one-way one on an
+      older bus.
+    </p>
+    <p>
+      Eight InfiniBand ports of 400 Gb/s per node give \(8 \times 400/8 = 400\) GB/s per node,
+      which the source calls &ldquo;400 GB/s total bisection bandwidth per node&rdquo;. The
+      arithmetic is right; the term is not. Bisection bandwidth belongs to the network: it is
+      the capacity across the narrowest cut that splits the machines into two halves. The
+      per-node figure is injection bandwidth. Per GPU it is 50 GB/s each way, a ninth of
+      NVLink, which is why the source keeps tensor parallelism, the most talkative split,
+      inside a node.
+    </p>
+  </div>
+  <figure class="col">
+    <div class="paper"><img src="img/gpu_cluster_topology.svg" alt="A GPU node with eight H100s joined by NVLink at 900 GB/s per GPU and eight InfiniBand ports at 400 Gb/s each; nodes joined by a fat-tree network of leaf and spine switches; scale examples from 64 to 16,000 GPUs, with the note that MTBF at 16K GPUs is hours." width="750"></div>
+    <figcaption><b>Fig. 18.3</b> &mdash; Two tiers of bandwidth: NVLink inside the node, InfiniBand in a fat tree between nodes. The note at the bottom right is &sect;15&rsquo;s series system. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+  <div class="col">
+    <p>
+      A <b>fat tree</b> connects the nodes so that every level of switches carries as much
+      traffic up as it receives from below, giving full bisection bandwidth. Built from
+      switches with \(k\) ports, two tiers connect \(k^2/2\) machines and three tiers
+      \(k^3/4\). With 64-port switches that is 2,048 and 65,536, so a 16,384-GPU cluster
+      needs three tiers (<code>[Ch18 s17]</code>). It is a manifold whose trunk is sized to the
+      sum of its branches: no level is allowed to be the constriction.
+    </p>
+    <p>
+      Gradients are summed by <b>ring all-reduce</b> (Sheet 06 &sect;11). Simulated for 2, 4,
+      8 and 16 GPUs, it produces the correct sums, and each GPU sends exactly
+      \(2(N-1)/N\) times the gradient&rsquo;s size: 1.75 at 8, 1.875 at 16, never more than 2
+      (<code>[Ch18 s17]</code>). That is the sense in which its cost is independent of the
+      number of GPUs. The number of message steps, \(2(N-1)\), is not, and at thousands of
+      GPUs each step&rsquo;s fixed start-up time matters, which is why large clusters reduce
+      inside nodes first and then across them (reported).
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>The data a text model reads is small</div>
+      <p style="margin-bottom:0">
+        File 03 says a 16,000-GPU cluster &ldquo;needs to read ~100 GB/s of data
+        continuously&rdquo;. Count tokens instead. Training costs about \(6P\) FLOPs per token
+        for \(P\) parameters (&sect;18). A 405B model on 16,384 GPUs at 40% of 989 TFLOPS
+        processes 2.67 million tokens a second, 11 MB/s at 4 bytes a token; a 70B model, 62
+        MB/s (<code>[Ch18 s17]</code>). That is 1,600 to 9,400 times below 100 GB/s. The
+        figure fits image and video training, or writing an 840 GB checkpoint in 8.4 seconds,
+        not reading text.
+      </p>
+    </div>
+    <p>
+      File 03 also quotes the H100&rsquo;s peak as &ldquo;989 TFLOPS (FP8)&rdquo; and judges
+      training by <b>model FLOPs utilisation</b> (MFU), the useful arithmetic done divided by
+      that peak. Sheet 17 &sect;01 found the 989 to be the dense FP16/BF16 rate, with FP8
+      twice that (reported). The label matters: the same run has half the MFU against the FP8
+      peak that it has against the BF16 one. Ask which peak an MFU is measured against.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same structure: GPU fragmentation is trim loss</div>
+      <p style="margin-bottom:0">
+        File 03&rsquo;s scheduling problem, 200 GPUs free but scattered four to a node so a
+        128-GPU job cannot start, is bin packing, which Sheet 13 part 1 &sect;09 showed is
+        NP-hard and the reason line balancing uses heuristics. Free GPUs stranded across nodes
+        are the offcuts of a cutting-stock plan. The source&rsquo;s fixes, migrating jobs to
+        consolidate free GPUs and placing jobs with the topology in mind, are re-nesting the
+        stock.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="budget">
+  <div class="col">
+    <div class="sechead"><span class="secnum">18</span><h2>What training costs, from one formula</h2>
+      <a class="srcref" href="@F3@" target="_blank" rel="noopener">src 03. large scale infrastructure &#8599;</a>
+    </div>
+    <p>
+      Every weight takes part in one multiply-add per token on the forward pass, 2 FLOPs, and
+      in two on the backward pass, one for the gradient with respect to its input and one for
+      the gradient with respect to itself, 4 FLOPs. So training a model of \(N\) parameters on
+      \(D\) tokens costs about
+    </p>
+    <div class="mathbox">$$\text{FLOPs} \approx 6ND$$</div>
+    <p>
+      Divide by the delivered rate, 40% of 989 TFLOPS per GPU, and multiply by a price
+      (<code>[Ch18 s18]</code>):
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>GPU-hours and cost at 40% of 989 TFLOPS. $8.00/h is the source&rsquo;s on-demand H100; $1.52/h is owned (&sect;14).</caption>
+      <thead><tr><th>Run</th><th class="mono">6ND, FLOPs</th><th class="mono">GPU-hours</th><th class="mono">At $8.00/h</th><th class="mono">At $1.52/h</th></tr></thead>
+      <tbody>
+        <tr><td>70B, 1.4T tokens (20 per parameter)</td><td class="mono">5.88e23</td><td class="mono">0.41M</td><td class="mono">$3.3M</td><td class="mono">$0.63M</td></tr>
+        <tr><td>70B, 15T tokens</td><td class="mono">6.30e24</td><td class="mono">4.42M</td><td class="mono">$35M</td><td class="mono">$6.7M</td></tr>
+        <tr><td>405B, 15T tokens</td><td class="mono">3.65e25</td><td class="mono">25.6M</td><td class="mono">$205M</td><td class="mono">$39M</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      The source&rsquo;s &ldquo;training a 70B model requires ~$2M in compute&rdquo; fits a
+      model trained on the compute-optimal 20 tokens per parameter of Sheet 07 &sect;08:
+      $2M buys 250,000 GPU-hours at $8, enough for 0.85 trillion tokens. Models trained far
+      past that ratio, as recent open models are reported to be, cost ten times more. Its
+      &ldquo;$50-100M&rdquo; for a 400B+ model sits between the owned and rented prices of
+      the last row, and 25.6 million GPU-hours on 16,384 GPUs is 65 days. Its hardware figure,
+      $30,000 &times; 16,000 = $480M, is exact (<code>[Ch18 s18]</code>).
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks: the utilisation is a guess</div>
+      <p style="margin-bottom:0">
+        Every row scales inversely with the 40%, which is the source&rsquo;s &ldquo;good&rdquo;
+        and a reported figure, not a law. Halve it and every cost doubles. Add the roughly 10%
+        lost to failures (&sect;16), the experiments that precede the final run, and the data
+        work, and the formula gives the floor of a budget, not the budget.
+      </p>
+    </div>
+  </div>
+</section>
