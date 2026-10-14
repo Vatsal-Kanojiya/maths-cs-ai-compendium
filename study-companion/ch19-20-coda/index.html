@@ -2096,6 +2096,9 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
 .tkb{fill:var(--ink-2); font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600}
 .col p code, .col li code, .lab-foot code{overflow-wrap:anywhere}
 #sS, #mS, #vS, #qS, #bS, #lS{cursor:default}
+/* inset the lab contents from the lab border; the header still spans the full width */
+.lab{padding:0 16px 16px}
+.lab > .lab-h{margin:0 -16px 14px}
 @media (max-width:600px){ .stage .tk, .stage .tkb{font-size:15px} }
 .mapwrap{overflow-x:auto}
 .mapwrap > svg{min-width:520px}
