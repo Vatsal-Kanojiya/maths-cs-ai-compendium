@@ -1,0 +1,527 @@
+<title>Lags, Tails, Qubits</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(', '\\)']], displayMath: [['$$', '$$']], processEscapes: true },
+  svg: { fontCache: 'global', scale: 1.0 },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-svg.js" id="MathJax-script" async></script>
+
+<style>
+/* ============ TOKENS: light is complete and authoritative ============ */
+:root{
+  --ground:#F0F2F1;
+  --sheet:#FBFCFB;
+  --sheet-2:#F4F6F5;
+  --ink:#14181A;
+  --ink-2:#4E575B;
+  --ink-3:#77838A;
+  --rule:#D3DAD7;
+  --rule-strong:#A8B4B0;
+  --accent:#12507E;
+  --accent-ink:#0E4267;
+  --accent-soft:#E4EEF6;
+  --bridge:#1F8A4C;
+  --bridge-soft:#E4F2EA;
+  --brk:#A8500F;
+  --brk-soft:#FAEBDF;
+  --s1:#BF5B00;
+  --s2:#0F74C7;
+  --s3:#1F8A4C;
+  --paper:#FFFFFF;            /* pasted-drawing ground, both themes */
+  --paper-ink:#1b1b1b;
+  --shadow:0 1px 2px rgba(20,24,26,.06), 0 6px 18px rgba(20,24,26,.05);
+  --f-disp:'Archivo Narrow', 'Arial Narrow', Helvetica, sans-serif;
+  --f-body:'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --f-mono:'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+    --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+    --rule:#293134; --rule-strong:#3F494C;
+    --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+    --bridge:#35AC63; --bridge-soft:#11281B;
+    --brk:#E0913F; --brk-soft:#2E2012;
+    --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+  --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+  --rule:#293134; --rule-strong:#3F494C;
+  --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+  --bridge:#35AC63; --bridge-soft:#11281B;
+  --brk:#E0913F; --brk-soft:#2E2012;
+  --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:var(--f-body); font-size:17px; line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ============ TITLE BLOCK (engineering drawing header) ============ */
+.titleblock{
+  position:sticky; top:env(safe-area-inset-top,0px); z-index:40;
+  background:var(--sheet); border-bottom:1px solid var(--rule-strong);
+}
+.tb-in{
+  max-width:1240px; margin:0 auto; padding:0 16px;
+  display:flex; align-items:stretch; gap:0; min-height:46px;
+}
+.tb-cell{
+  display:flex; flex-direction:column; justify-content:center;
+  padding:5px 14px; border-right:1px solid var(--rule);
+  font-family:var(--f-disp);
+}
+.tb-cell:first-child{padding-left:0}
+.tb-cell:last-child{border-right:0; margin-left:auto; padding-right:0}
+.tb-k{
+  font-size:8.5px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); line-height:1.4;
+}
+.tb-v{font-size:13px; font-weight:700; letter-spacing:.02em; color:var(--ink); line-height:1.3}
+.tb-v.accent{color:var(--accent)}
+.tb-hide{display:none}
+@media (min-width:680px){ .tb-hide{display:flex} }
+
+.themebtn{
+  appearance:none; background:transparent; border:1px solid var(--rule-strong);
+  color:var(--ink-2); font-family:var(--f-disp); font-size:10px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:6px 10px; border-radius:2px;
+  cursor:pointer; align-self:center; white-space:nowrap;
+}
+.themebtn:hover{border-color:var(--accent); color:var(--accent)}
+.themebtn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+/* ============ SHELL ============ */
+.shell{max-width:1240px; margin:0 auto; padding:0 16px; padding-block:0 64px}
+@media (min-width:1080px){
+  .shell{display:grid; grid-template-columns:212px minmax(0,1fr); gap:44px; align-items:start}
+}
+.rail{display:none}
+@media (min-width:1080px){
+  .rail{
+    display:block; position:sticky; top:calc(env(safe-area-inset-top,0px) + 70px);
+    padding-block:28px; font-family:var(--f-disp); font-size:12.5px;
+  }
+}
+.rail-h{
+  font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-3);
+  padding-bottom:8px; border-bottom:1px solid var(--rule); margin-bottom:10px;
+}
+.rail a{
+  display:flex; gap:9px; padding:4px 0; color:var(--ink-2); text-decoration:none;
+  border-left:2px solid transparent; padding-left:9px; margin-left:-11px; line-height:1.35;
+}
+.rail a:hover{color:var(--accent)}
+.rail a.on{color:var(--accent); border-left-color:var(--accent); font-weight:700}
+.rail a .n{font-family:var(--f-mono); font-size:10.5px; color:var(--ink-3); flex:none; padding-top:1px}
+.rail a.on .n{color:var(--accent)}
+
+main{min-width:0; padding-block:0 0}
+.col{max-width:70ch}
+
+/* ============ TYPE ============ */
+h1,h2,h3,h4{font-family:var(--f-disp); text-wrap:balance; margin:0; line-height:1.14}
+h1{font-size:clamp(34px,7vw,58px); font-weight:700; letter-spacing:-.015em}
+h2{font-size:clamp(25px,4.2vw,34px); font-weight:700; letter-spacing:-.01em}
+h3{font-size:19px; font-weight:700; letter-spacing:.005em; margin-top:2px}
+h4{font-size:14px; font-weight:700; letter-spacing:.06em; text-transform:uppercase}
+p{margin:0 0 1.05em}
+a{color:var(--accent-ink)}
+strong{font-weight:600}
+em{font-style:italic}
+code{font-family:var(--f-mono); font-size:.87em; background:var(--sheet-2); padding:1px 5px; border-radius:2px; border:1px solid var(--rule)}
+.lead{font-size:19.5px; line-height:1.56; color:var(--ink-2)}
+.eyebrow{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--ink-3); margin:0 0 10px;
+}
+.srcref{
+  font-family:var(--f-mono); font-size:11px; color:var(--ink-3);
+  border:1px solid var(--rule); border-radius:2px; padding:2px 7px; display:inline-block;
+  background:var(--sheet-2); white-space:nowrap;
+}
+
+/* ============ SECTION ============ */
+section{padding-block:38px 0; scroll-margin-top:calc(env(safe-area-inset-top,0px) + 62px)}
+.sechead{display:flex; align-items:baseline; gap:13px; margin-bottom:6px; flex-wrap:wrap}
+.secnum{
+  font-family:var(--f-mono); font-size:12px; font-weight:600; color:var(--accent);
+  border:1px solid var(--accent); border-radius:2px; padding:2px 7px; flex:none;
+  background:var(--accent-soft);
+}
+.rule-h{border:0; border-top:1px solid var(--rule); margin:0 0 22px}
+.rule-d{border:0; border-top:1px dashed var(--rule-strong); margin:34px 0}
+
+/* ============ CALLOUTS ============ */
+.note{
+  border:1px solid var(--rule); border-left:3px solid var(--accent);
+  background:var(--sheet); border-radius:2px; padding:16px 18px; margin:22px 0;
+}
+/* Greek letters must never be uppercased: text-transform turns beta into
+   a capital Beta, which is the Latin letter B on screen -- likewise eta->H,
+   kappa->K, lambda->A-shape.  Any Greek inside an uppercased label wears .gk. */
+.gk{text-transform:none}
+.note.bridge{border-left-color:var(--bridge); background:var(--bridge-soft)}
+.note.brk{border-left-color:var(--brk); background:var(--brk-soft)}
+.note-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; margin-bottom:7px; display:flex; align-items:center; gap:8px;
+}
+.note.bridge .note-h{color:var(--bridge)}
+.note.brk .note-h{color:var(--brk)}
+.note .note-h{color:var(--accent)}
+.note p:last-child, .note ul:last-child{margin-bottom:0}
+.note-h .ic{
+  width:15px; height:15px; border-radius:50%; border:1.5px solid currentColor; flex:none;
+  display:grid; place-items:center; font-size:9.5px; font-weight:700; font-family:var(--f-mono);
+}
+ul,ol{margin:0 0 1.05em; padding-left:1.25em}
+li{margin-bottom:.4em}
+li::marker{color:var(--ink-3)}
+
+/* ============ DEFINITION BLOCK ============ */
+.defn{
+  background:var(--sheet); border:1px solid var(--rule); border-radius:3px;
+  padding:18px 20px; margin:22px 0; box-shadow:var(--shadow);
+}
+.defn-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:10px;
+  padding-bottom:8px; border-bottom:1px solid var(--rule);
+}
+.defn p:last-child{margin-bottom:0}
+
+/* ============ TABLES ============ */
+.tw{overflow-x:auto; margin:22px 0; border:1px solid var(--rule); border-radius:3px; background:var(--sheet)}
+table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:480px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule); vertical-align:top}
+thead th{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); background:var(--sheet-2); font-weight:700; white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:0}
+td.mono,th.mono{font-family:var(--f-mono); font-size:13px; font-variant-numeric:tabular-nums}
+.tw caption{
+  caption-side:bottom; text-align:left; padding:9px 14px; font-size:12.5px;
+  color:var(--ink-3); border-top:1px solid var(--rule); font-family:var(--f-disp);
+}
+
+/* ============ FIGURES ============ */
+figure{margin:24px 0}
+.paper{
+  background:var(--paper); border:1px solid var(--rule-strong); border-radius:3px;
+  padding:16px; display:flex; justify-content:center; box-shadow:var(--shadow);
+}
+.paper img{max-width:100%; height:auto; display:block}
+figcaption{
+  font-family:var(--f-disp); font-size:12.5px; color:var(--ink-3); margin-top:9px;
+  line-height:1.45; padding-left:2px;
+}
+figcaption b{color:var(--ink-2); font-weight:700; letter-spacing:.04em}
+
+/* ============ INTERACTIVE PANELS ============ */
+.lab{
+  background:var(--sheet); border:1px solid var(--rule-strong); border-radius:3px;
+  margin:26px 0; overflow:hidden; box-shadow:var(--shadow);
+}
+.lab-h{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:11px 16px; border-bottom:1px solid var(--rule); background:var(--sheet-2);
+}
+.lab-t{font-family:var(--f-disp); font-size:13px; font-weight:700; letter-spacing:.05em; text-transform:uppercase}
+.lab-tag{
+  font-family:var(--f-mono); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--accent); border:1px solid var(--accent); border-radius:2px; padding:2px 6px;
+  margin-left:auto; white-space:nowrap;
+}
+.lab-body{padding:16px}
+.lab-foot{
+  padding:11px 16px; border-top:1px solid var(--rule); background:var(--sheet-2);
+  font-size:13.5px; color:var(--ink-2); line-height:1.5;
+}
+.lab-foot b{color:var(--ink)}
+.stage{width:100%; max-width:560px; height:auto; display:block; margin-inline:auto; touch-action:none; cursor:grab}
+.stage.drag{cursor:grabbing}
+
+/* Dividers are drawn as cell borders rather than as 1px grid gaps over a grey
+   backdrop: when the item count does not fill the last row, a gap-based grid
+   leaves the backdrop showing as an empty grey block. */
+.readout{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr)); gap:0;
+  background:var(--sheet); border:1px solid var(--rule); border-radius:2px;
+  margin-top:14px; overflow:hidden;
+}
+.ro{background:var(--sheet); padding:8px 11px;
+  border-right:1px solid var(--rule); border-bottom:1px solid var(--rule)}
+.ro-k{
+  font-family:var(--f-disp); font-size:9px; letter-spacing:.13em; text-transform:uppercase;
+  color:var(--ink-3); margin-bottom:2px;
+  /* was white-space:nowrap, which clipped the longer keys instead of wrapping */
+  white-space:normal; overflow-wrap:break-word; line-height:1.3; min-height:2.6em;
+}
+.ro-v{
+  font-family:var(--f-mono); font-size:15px; font-weight:500; font-variant-numeric:tabular-nums;
+  color:var(--ink); line-height:1.25;
+}
+.ro-v.a{color:var(--s2)} .ro-v.b{color:var(--s1)} .ro-v.c{color:var(--s3)}
+
+.ctl{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:14px}
+.ctl label{
+  font-family:var(--f-disp); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-2); white-space:nowrap;
+}
+input[type=range]{
+  -webkit-appearance:none; appearance:none; height:22px; background:transparent;
+  flex:1 1 160px; min-width:130px; cursor:pointer;
+}
+input[type=range]:focus-visible{outline:2px solid var(--accent); outline-offset:3px}
+input[type=range]::-webkit-slider-runnable-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-moz-range-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:16px; height:16px; border-radius:50%;
+  background:var(--accent); border:2px solid var(--sheet); margin-top:-6.5px;
+}
+input[type=range]::-moz-range-thumb{
+  width:16px; height:16px; border-radius:50%; background:var(--accent);
+  border:2px solid var(--sheet);
+}
+.btn{
+  appearance:none; font-family:var(--f-disp); font-size:11px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:7px 13px; border-radius:2px;
+  border:1px solid var(--rule-strong); background:var(--sheet); color:var(--ink-2); cursor:pointer;
+}
+.btn:hover{border-color:var(--accent); color:var(--accent)}
+.btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.btn.on{background:var(--accent); border-color:var(--accent); color:var(--sheet)}
+
+.legend{display:flex; gap:16px; flex-wrap:wrap; margin-top:12px}
+.lg{display:flex; align-items:center; gap:7px; font-family:var(--f-disp); font-size:12px; color:var(--ink-2)}
+.lg i{width:15px; height:3px; border-radius:2px; flex:none; display:block}
+
+/* ============ MISC ============ */
+.mathbox{overflow-x:auto; overflow-y:hidden; margin:18px 0}
+mjx-container[display="true"]{margin:0 !important}
+.kv{display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:15px; margin:16px 0}
+.kv dt{font-family:var(--f-mono); font-size:13px; color:var(--accent); white-space:nowrap}
+.kv dd{margin:0; color:var(--ink-2)}
+
+details.q{
+  border:1px solid var(--rule); border-radius:3px; background:var(--sheet);
+  margin-bottom:9px; overflow:hidden;
+}
+details.q summary{
+  cursor:pointer; padding:12px 15px; font-weight:600; list-style:none;
+  display:flex; gap:11px; align-items:flex-start; font-size:15.5px;
+}
+details.q summary::-webkit-details-marker{display:none}
+details.q summary::after{
+  content:'+'; margin-left:auto; font-family:var(--f-mono); color:var(--accent);
+  font-size:17px; line-height:1; flex:none; padding-top:2px;
+}
+details.q[open] summary::after{content:'\2212'}
+details.q summary:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
+details.q summary .qn{
+  font-family:var(--f-mono); font-size:12px; color:var(--ink-3); flex:none; padding-top:3px;
+}
+details.q .ans{padding:0 15px 14px 41px; font-size:15.5px; color:var(--ink-2); border-top:1px solid var(--rule); padding-top:13px}
+details.q .ans p:last-child{margin-bottom:0}
+
+.endnote{
+  margin-top:44px; padding-top:20px; border-top:1px solid var(--rule-strong);
+  font-size:13.5px; color:var(--ink-3); font-family:var(--f-disp); line-height:1.55;
+}
+.endnote a{color:var(--accent)}
+
+.srcref{text-decoration:none}
+a.srcref{color:var(--ink-2); transition:none}
+
+</style>
+<style>
+.srcref{text-decoration:none}
+a.srcref{color:var(--ink-2)}
+a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(--accent-soft)}
+.srcref.nolink{opacity:.75; font-style:italic}
+.pv{font-family:var(--f-disp); font-size:9.5px; font-weight:700; letter-spacing:.1em;
+    text-transform:uppercase; padding:2px 7px; border-radius:2px; white-space:nowrap}
+.pv.ok{background:var(--bridge-soft); color:var(--bridge)}
+.pv.add{background:var(--accent-soft); color:var(--accent)}
+.pv.corr{background:var(--brk-soft); color:var(--brk)}
+.flag{display:inline-block; padding:1px 7px; border-radius:2px; font-family:var(--f-disp);
+      font-size:10px; letter-spacing:.1em; text-transform:uppercase; font-weight:700}
+.flag.ok{background:var(--bridge-soft); color:var(--bridge)}
+.flag.bad{background:var(--brk-soft); color:var(--brk)}
+.predict{border:1px solid var(--rule-strong); border-left:3px solid var(--brk);
+  background:var(--brk-soft); border-radius:2px; padding:13px 15px; margin:0 0 14px}
+.predict-h{font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--brk); margin-bottom:6px}
+.predict p{margin:0 0 10px; font-size:15px}
+.predict .opts{display:flex; gap:8px; flex-wrap:wrap}
+.pbtn{appearance:none; font-family:var(--f-disp); font-size:12px; font-weight:600;
+  padding:6px 12px; border-radius:2px; border:1px solid var(--rule-strong);
+  background:var(--sheet); color:var(--ink-2); cursor:pointer}
+.pbtn:hover{border-color:var(--brk); color:var(--brk)}
+.pbtn.picked{background:var(--brk); border-color:var(--brk); color:var(--sheet)}
+.pverdict{margin-top:10px; font-size:14.5px; color:var(--ink-2); display:none}
+.pverdict.show{display:block}
+.pverdict b{color:var(--ink)}
+.gap{border:1px solid var(--rule); border-left:3px solid var(--ink-3); background:var(--sheet-2);
+  border-radius:2px; padding:14px 16px; margin:18px 0}
+.gap-h{font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:7px}
+</style>
+
+<header class="titleblock">
+  <div class="tb-in">
+    <div class="tb-cell"><div class="tb-k">Chapters</div><div class="tb-v accent">19&ndash;20 &middot; Applied AI; Bleeding-edge AI</div></div>
+    <div class="tb-cell tb-hide"><div class="tb-k">Sheet</div><div class="tb-v">Sheets 19&ndash;20 of 20 &middot; coda</div></div>
+    <div class="tb-cell tb-hide"><div class="tb-k">Reader</div><div class="tb-v">B.E. Mechanical</div></div>
+    <div class="tb-cell tb-hide"><div class="tb-k">Prerequisite</div><div class="tb-v">Sheets 03&ndash;05, 09, 11, 12</div></div>
+    <div class="tb-cell"><button class="themebtn" id="themebtn" type="button" aria-label="Switch colour theme">Theme</button></div>
+  </div>
+</header>
+
+<div class="shell">
+
+<nav class="rail" aria-label="Sheet contents">
+  <div class="rail-h">Contents</div>
+  <a href="#bridge" class="on"><span class="n">00</span><span>The bridge</span></a>
+  <a href="#smooth"><span class="n">01</span><span>Smoothing is a lag</span></a>
+  <a href="#minvar"><span class="n">02</span><span>A portfolio beamformer</span></a>
+  <a href="#var"><span class="n">03</span><span>VaR is a series system</span></a>
+  <a href="#qubit"><span class="n">04</span><span>A qubit&rsquo;s Mohr circle</span></a>
+  <a href="#plateau"><span class="n">05</span><span>Barren plateaus</span></a>
+  <a href="#lif"><span class="n">06</span><span>Furnace and quench</span></a>
+  <a href="#worked"><span class="n">07</span><span>Worked example</span></a>
+  <a href="#breaks"><span class="n">08</span><span>Where it breaks</span></a>
+  <a href="#gaps"><span class="n">09</span><span>Not covered</span></a>
+  <a href="#recall"><span class="n">10</span><span>Question bank</span></a>
+  <a href="#map"><span class="n">11</span><span>The map</span></a>
+  <a href="#provenance"><span class="n">A</span><span>Provenance</span></a>
+</nav>
+
+<main>
+
+<section id="top" style="padding-top:44px">
+  <div class="col">
+    <p class="eyebrow">Maths, CS &amp; AI Compendium &middot; Chapters 19 and 20 &middot; the coda</p>
+    <h1>Lags, Tails, Qubits</h1>
+    <p class="lead" style="margin-top:18px">
+      Exponential smoothing of a price series and the membrane of a spiking neuron obey the
+      same difference equation, and it is the one you wrote for a thermocouple. A
+      minimum-variance portfolio is the beamformer of Sheet 09. Value at risk fails the way a
+      series reliability calculation does. And a qubit, restricted to real amplitudes, has a
+      Mohr&rsquo;s circle.
+    </p>
+  </div>
+  <div class="note brk col">
+    <div class="note-h"><span class="ic">&#33;</span>Read this first: the source chapters are outlines</div>
+    <p>
+      Chapters 19 and 20 of the compendium are not written. Of their ten files,
+      <b>six are empty</b>: drug discovery, agentic systems and healthcare in Chapter 19;
+      datacentres in space, decentralised AI and brain&ndash;machine interfaces in Chapter 20.
+      The other four hold a heading and eight or nine one-line bullets each, 33 bullets in
+      all, naming topics without explaining any of them.
+    </p>
+    <p style="margin-bottom:0">
+      So this sheet is a <b>coda</b>, not a survey. A survey of AlphaFold, trading systems or
+      neuromorphic chips would have to be built from claims this series cannot compute, and
+      every sheet so far has refused to do that. Instead the coda picks six bullets whose
+      mathematical core can be derived here and lands on your training, derives each one,
+      checks every number in <code>verify_claims.py</code>, and names everything else in
+      &sect;09 without pretending to teach it. Anything not derived on this page is marked
+      <b>reported</b>.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>The ten source files, and what this sheet takes from each. Line counts are of the files at commit 9850ee5.</caption>
+      <thead><tr><th>File</th><th>Contents</th><th>Taken here</th></tr></thead>
+      <tbody>
+        <tr><td>19 / 01 AI for finance</td><td>10 lines, 8 bullets</td><td>Exponential smoothing (&sect;01), Markowitz minimum variance (&sect;02), VaR, expected shortfall and Monte Carlo (&sect;03)</td></tr>
+        <tr><td>19 / 02 protein design</td><td>10 lines, 8 bullets (headed &ldquo;AI for Biology&rdquo;)</td><td>Nothing. No bullet has a core this series can compute; see &sect;09</td></tr>
+        <tr><td>19 / 03 drug discovery<br>19 / 04 agentic systems<br>19 / 05 healthcare</td><td>Empty</td><td>&mdash;</td></tr>
+        <tr><td>20 / 01 quantum machine learning</td><td>11 lines, 9 bullets</td><td>Qubits, gates and measurement (&sect;04); parameterised circuits and barren plateaus (&sect;05)</td></tr>
+        <tr><td>20 / 02 neuromorphic computing</td><td>10 lines, 8 bullets</td><td>Integrate-and-fire neurons, conversion from ordinary networks, and the latency&ndash;accuracy trade of rate coding (&sect;06)</td></tr>
+        <tr><td>20 / 03 datacentres in space<br>20 / 04 decentralised AI<br>20 / 05 brain&ndash;machine interfaces</td><td>Empty</td><td>&mdash;</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      Nine of the 33 bullets are touched, six of them properly. That is a small fraction, and
+      it is the right one: each of the six turned out to be something you have already
+      computed under another name, and most of the correspondences are identities rather than
+      likenesses. The price of the method is &sect;09, which is long.
+    </p>
+    <p>
+      The headline is a repetition. The first-order lag
+      \(x_{k} = (1-\alpha)\,x_{k-1} + \alpha\,u_k\) is exponential smoothing in Chapter 19
+      (&sect;01) and the sampled membrane of a leaky integrate-and-fire neuron in Chapter 20
+      (&sect;06), where \(\alpha = 1 - e^{-\Delta t/\tau}\) exactly. Sheet 08 found that the
+      same mathematics turning up twice under two names is the strongest signal a chapter can
+      give. Here it turns up in two chapters, in finance and in neuroscience, and both times
+      it is the equation of a thermocouple in a furnace.
+    </p>
+    <p>
+      The best single result is also in &sect;01: the smoothing constant that minimises
+      forecast error is not a matter of taste. It is the steady-state Kalman gain of Sheet 11,
+      the first-order sibling of that sheet&rsquo;s 0.707 servo. The most useful warning is in
+      &sect;07: value at risk, the number many risk reports lead with, calls splitting an order
+      between two suppliers riskier than single-sourcing it.
+    </p>
+  </div>
+</section>
+
+<section id="bridge">
+  <div class="col">
+    <div class="sechead"><span class="secnum">00</span><h2>The bridge</h2>
+      <span class="srcref nolink" title="Summary of the whole sheet">whole sheet</span>
+    </div>
+    <p>
+      The verdict column uses the series&rsquo; convention. <b>Identity</b> means the same
+      formula or procedure, checked numerically. <b>Same structure</b> means the shape
+      transfers and the meaning differs. <b>Breaks</b> means it fails, and the section says
+      where.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>What a GATE-prepared mechanical engineer already owns, and what Chapters 19 and 20 call it.</caption>
+      <thead><tr><th>What you already know</th><th>What the coda calls it</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td>A first-order lag sampled at a fixed step: thermocouple, RC circuit, settling tank</td><td>Exponential smoothing; the EWMA control-chart statistic</td><td><b style="color:var(--bridge)">Identity.</b> See &sect;01.</td></tr>
+        <tr><td>Sheet 11&rsquo;s steady-state Kalman filter</td><td>The best smoothing constant</td><td><b style="color:var(--bridge)">Identity</b> for a random walk seen through noise. See &sect;01.</td></tr>
+        <tr><td>A Lagrange multiplier; Sheet 09&rsquo;s MVDR beamformer</td><td>The minimum-variance portfolio</td><td><b style="color:var(--bridge)">Identity,</b> with the steering vector all ones. See &sect;02.</td></tr>
+        <tr><td>RSS tolerance stack-up, Sheet 04 &sect;05</td><td>Diversification</td><td><b style="color:var(--bridge)">Identity.</b> Worst-case stacking is the same formula with every correlation set to 1. See &sect;02.</td></tr>
+        <tr><td>A dummy strain gauge that cancels temperature</td><td>A negative portfolio weight</td><td><b style="color:var(--bridge)">Same structure.</b> See &sect;02.</td></tr>
+        <tr><td>Series reliability, Sheet 05 &sect;03</td><td>Why value at risk is not subadditive</td><td><b style="color:var(--bridge)">Identity</b> in the counterexample. See &sect;03.</td></tr>
+        <tr><td>The centroid of an area, Sheet 04 &sect;01</td><td>Expected shortfall</td><td><b style="color:var(--bridge)">Identity:</b> the centroid of the tail. See &sect;03.</td></tr>
+        <tr><td>Estimating a defect rate from a sample</td><td>The Monte Carlo error of a VaR</td><td><b style="color:var(--bridge)">Identity,</b> plus a density term that makes tails expensive. See &sect;03.</td></tr>
+        <tr><td>A direction cosine matrix, Sheet 02 &sect;04</td><td>A quantum gate</td><td><b style="color:var(--bridge)">Identity</b> for real gates; complex ones are new. See &sect;04.</td></tr>
+        <tr><td>A uniaxial stress and its Mohr&rsquo;s circle</td><td>A real qubit state, its density matrix and the Bloch circle</td><td><b style="color:var(--bridge)">Identity,</b> scale factor 2. See &sect;04.</td></tr>
+        <tr><td>The transformation formula for normal stress</td><td>The Born rule for measurement probabilities</td><td><b style="color:var(--bridge)">Identity</b> on real states. See &sect;04.</td></tr>
+        <tr><td>A central difference</td><td>The parameter-shift rule</td><td><b style="color:var(--bridge)">Identity,</b> with a step that makes it exact. See &sect;05.</td></tr>
+        <tr><td>Sample size from a margin of error, Sheet 04 &sect;08</td><td>The shot cost of a barren plateau</td><td><b style="color:var(--bridge)">Identity.</b> See &sect;05.</td></tr>
+        <tr><td>Lumped-capacitance heating to a set temperature, then a quench</td><td>A leaky integrate-and-fire neuron</td><td><b style="color:var(--bridge)">Identity.</b> See &sect;06.</td></tr>
+        <tr><td>A frequency counter&rsquo;s gate time</td><td>The latency of rate coding</td><td><b style="color:var(--bridge)">Identity:</b> resolution \(1/T\). See &sect;06.</td></tr>
+        <tr><td>Sheet 06&rsquo;s ReLU</td><td>A spiking neuron&rsquo;s firing rate</td><td><b style="color:var(--brk)">Breaks</b> for the leaky neuron; exact only without the leak. See &sect;06.</td></tr>
+        <tr><td>&mdash;</td><td>Complex phase; entanglement; learning from spike timing</td><td><b style="color:var(--brk)">No counterpart.</b> See &sect;&sect;04, 09.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
