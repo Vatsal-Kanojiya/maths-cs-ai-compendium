@@ -7388,6 +7388,8 @@ def _ch18():
     prec = 0.99*0.001/(0.99*0.001 + 0.01*0.999)
     say("s19", f"fraud at 0.1%, detector 99% sensitive and 99% specific: precision {prec:.1%} (Sheet 05's alarm)",
         abs(prec - 0.0902) < 0.001)
+    say("s19", f"false alarms per caught fraud: {0.01*0.999/(0.99*0.001):.2f}; relative vs absolute reading differ by 1/p^2 = "
+        f"{nab(0.02, 2e-5)/nab(0.02, 1e-3):,.0f} at p = 2%", abs(nab(0.02, 2e-5)/nab(0.02, 1e-3) - 2500) < 1e-6)
     cfp, cfn = 5.0, 500.0
     say("s19", f"flag when P(fraud) > C_FP/(C_FP + C_FN): costs $5 and $500 -> threshold {cfp/(cfp+cfn):.4f}",
         abs(cfp/(cfp+cfn) - 0.0099) < 1e-4)
@@ -7403,6 +7405,8 @@ def _ch18():
     for Mh in (16, 32):
         say("s20", f"HNSW M = {Mh}: 2M = {2*Mh} links x 4 B = {2*Mh*4} B per vector against 512 B: +{2*Mh*4/512:.0%} "
             "(source: ~2x, which needs M = 64)", True)
+    say("s20", f"index with links: 51.2 GB x 1.25 = {51.2*1.25:.1f} GB (M=16), x 1.5 = {51.2*1.5:.1f} GB (M=32)",
+        abs(51.2*1.25 - 64.0) < 1e-9 and abs(51.2*1.5 - 76.8) < 1e-9)
     img = 1e9*512*2; links = 1e9*32*4
     say("s20", f"image index: 1B x 512 x 2 B = {img/1e12:.3f} TB of vectors + {links/1e9:.0f} GB of links (M = 16); "
         f"source's 128 GB equals the links alone; PQ at 64 B/vector = {1e9*64/1e9:.0f} GB",
@@ -7452,9 +7456,13 @@ def _ch18():
     say("s21", f"profile 1 + 0.8 cos (peak {prof.max():,.0f}, trough {prof.min():,.0f}): fixed fleet {Ntot} x 24 h = ${fixed:,.0f}/day; "
         f"autoscaled with spares {spare.sum()} server-hours = ${scaled:,.0f}/day ({1-scaled/fixed:.0%} less)",
         abs(prof.max() - 32400) < 1e-6 and scaled < fixed)
+    say("s21", f"source-style fleet of {naive} at peak carries {peak/naive:,.0f} tok/s each (cap {X(100):,.0f}); "
+        f"{naive} x 24 h x $8 = ${naive*24*8:,}; peak at nameplate needs {peak/X(100):.2f} -> {math.ceil(peak/X(100))}",
+        peak/naive == 4050 and naive*24*8 == 1536)
     R_ = best_reserved(spare, 0.6*8.0, 8.0)[0]
+    mixc = R_*24*4.8 + 8*np.maximum(spare-R_,0).sum()
     say("s21", f"at a 40% reservation discount, reserve {R_} servers (on duty more than 60% of hours); "
-        f"day cost ${R_*24*4.8 + 8*np.maximum(spare-R_,0).sum():,.0f}", True)
+        f"day cost ${mixc:,.0f} = {mixc/1536:.3f} x the failing 8-server fleet", R_ == 9 and abs(mixc/1536 - 1.097) < 0.001)
 
 _ch18()
 # ----- end of Chapter 18 block -----

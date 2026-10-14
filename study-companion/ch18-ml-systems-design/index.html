@@ -2018,3 +2018,267 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     </div>
   </div>
 </section>
+
+<section id="lifecycle">
+  <div class="col">
+    <div class="sechead"><span class="secnum">19</span><h2>The ML lifecycle is a quality system</h2>
+      <a class="srcref" href="@F4@" target="_blank" rel="noopener">src 04. ML systems design &#8599;</a>
+    </div>
+    <p>
+      File 04 lays out the lifecycle of an ML system: frame the problem, collect and validate
+      data, compute features, train, evaluate, deploy, monitor, repeat. Most of its
+      machinery is quality control under other names, and Sheet 15 &sect;&sect;21&ndash;22 has
+      already matched experiment tracking to traceability and drift scores to control charts.
+      This section takes the four places where the plant view adds a number or a correction.
+    </p>
+    <p>
+      <b>Data validation</b> (&ldquo;expected 1M rows, got 500K&rdquo;) is incoming
+      inspection: each batch is checked against its specification before it enters
+      production. <b>Training&ndash;serving skew</b>, where a feature is computed one way for
+      training and another way when serving, is a gauge-correlation failure: a part measured
+      in process with one gauge and at final inspection with another can pass one and fail
+      the other. The fix in both trades is one gauge, one method, and the source&rsquo;s
+      feature store is that: the same code computes a feature for training and for serving.
+    </p>
+    <h3>An A/B test is an acceptance plan</h3>
+    <p>
+      An A/B test splits users at random between the old model and the new and compares a
+      rate, usually click-through (CTR). It is a hypothesis test, so Sheet 04 &sect;07&rsquo;s
+      two risks set its size: \(\alpha\), the producer&rsquo;s risk of shipping a change that
+      does nothing, and \(\beta\), the consumer&rsquo;s risk of missing one that works. For a
+      base rate \(p\) and a lift \(\delta\) to detect, each arm needs
+    </p>
+    <div class="mathbox">$$n = \frac{(z_{\alpha/2} + z_\beta)^2\; 2p(1-p)}{\delta^2}$$</div>
+    <p>
+      users. With the conventional \(\alpha = 0.05\) and 80% power (<code>[Ch18 s19]</code>):
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Users per arm to detect a lift in click-through rate.</caption>
+      <thead><tr><th class="mono">Base CTR</th><th class="mono">Relative lift of 0.1%</th><th class="mono">Absolute lift of 0.1 point</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">1%</td><td class="mono">1.55 billion</td><td class="mono">155,408</td></tr>
+        <tr><td class="mono">2%</td><td class="mono">769 million</td><td class="mono">307,676</td></tr>
+        <tr><td class="mono">5%</td><td class="mono">298 million</td><td class="mono">745,644</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      The source says &ldquo;a 0.1% improvement in click-through rate requires millions of
+      impressions to detect&rdquo;. Read as a relative improvement it takes hundreds of
+      millions to billions per arm; read as 0.1 percentage points it takes a few hundred
+      thousand. The sample size goes as \(1/\delta^2\), so the two readings differ by a factor
+      of \(1/p^2\), and the sentence needs to say which it means. The figure below shows
+      4.2% against 4.5% with \(p = 0.02\): that difference is +0.3 points, or +7.1%, and it
+      reaches \(p = 0.02\) with about 50,000 users per arm (<code>[Ch18 s19]</code>).
+    </p>
+  </div>
+  <figure class="col">
+    <div class="paper"><img src="img/ab_testing.svg" alt="A/B test: all users split at random into a control on the old model with CTR 4.2% and a treatment on the new model with CTR 4.5%; the difference of 0.3 points is significant at p = 0.02 and guardrails pass, so the new model ships." width="650"></div>
+    <figcaption><b>Fig. 18.4</b> &mdash; An acceptance test on a model: two samples, a difference, a significance level. 4.2% against 4.5% reaches \(p = 0.02\) at about 50,000 users per arm. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+  <div class="col">
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: sampling plans, including when to sample</div>
+      <p style="margin-bottom:0">
+        An acceptance plan fixes \(n\) from the two risks before inspection starts, and so must
+        an A/B test; stopping the moment the difference looks significant inflates \(\alpha\),
+        as stopping inspection at the first good-looking run of parts would. The
+        source&rsquo;s advice to run for one or two full weeks is the inspector&rsquo;s rule to
+        sample across every shift: the units must represent the population, and a Monday is
+        not a Saturday.
+      </p>
+    </div>
+    <h3>Drift, in sigmas</h3>
+    <p>
+      The source&rsquo;s population stability index (PSI) is Sheet 15 &sect;22&rsquo;s
+      Kullback&ndash;Leibler divergence taken both ways, with alarm levels of 0.1 and 0.25 by
+      convention. What do those levels mean? For a normal input whose mean shifts by
+      \(d\) standard deviations, the two-way divergence is exactly \(d^2\). Binned into
+      deciles of the training distribution, a shift of 0.32&sigma; gives a PSI of 0.095 and
+      a shift of 0.5&sigma; gives 0.238 (<code>[Ch18 s19]</code>). So &ldquo;significant
+      shift, PSI above 0.25&rdquo; means about half a standard deviation, and &ldquo;moderate,
+      0.1&rdquo; about a third: shifts a control chart would flag only after many samples.
+    </p>
+    <h3>Rare events, and where to set the threshold</h3>
+    <p>
+      Fraud is 0.1% of transactions in the source. A detector that is 99% sensitive and 99%
+      specific then flags ten good transactions for every fraud it catches: precision 9.0%
+      (<code>[Ch18 s19]</code>). It is Sheet 05 &sect;05&rsquo;s alarm that is probably
+      wrong. The source&rsquo;s remedy is the right one, a cost matrix: block a transaction
+      when the expected loss from letting it through exceeds the expected cost of blocking
+      it, which for a calibrated probability \(p\) means
+    </p>
+    <div class="mathbox">$$p > \frac{C_{\text{FP}}}{C_{\text{FP}} + C_{\text{FN}}}$$</div>
+    <p>
+      With a $5 cost for blocking a good customer and $500 for a missed fraud, that is 0.0099
+      (<code>[Ch18 s19]</code>), not 0.5. The source&rsquo;s text sends probabilities between
+      0.3 and 0.7 to human review, and its figure blocks above 0.9 and reviews 0.3 to 0.9; both
+      bands are placed as if the costs were equal. With costs like these, most of the review
+      band lies far below 0.3.
+    </p>
+  </div>
+  <figure class="col">
+    <div class="paper"><img src="img/fraud_detection_pipeline.svg" alt="Fraud detection pipeline: a transaction passes a feature pipeline, an ML model giving P(fraud) = 0.82 and a decision engine that blocks above 0.9, reviews between 0.3 and 0.9 and allows the rest, with human review labels fed back for retraining." width="750"></div>
+    <figcaption><b>Fig. 18.5</b> &mdash; The decision engine&rsquo;s bands, 0.3 and 0.9, would suit equal costs. A cost-weighted threshold for $5 against $500 is near 0.01. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+  <div class="col">
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same structure: a loop with dead time hunts</div>
+      <p>
+        The source describes two feedback loops. In the first, recommending popular items
+        makes them more popular: positive feedback, which runs away until something
+        saturates. In the second, a fraud model that catches all of fraud type A removes type A
+        from the next training set, the next model forgets it, and type A returns. The source
+        calls that a negative feedback loop, and in control terms it is one: the correction
+        opposes the error. Its danger is the delay. The model reacts to last cycle&rsquo;s
+        fraud, so the loop is \(x_{k+1} = x_k - Kx_{k-1}\), which oscillates once the gain
+        \(K\) exceeds 1/4 and diverges once it exceeds 1 (<code>[Ch18 s19]</code>): a
+        controller hunting because of dead time.
+      </p>
+      <p style="margin-bottom:0">
+        The source&rsquo;s best mitigation is the <b>holdout</b>, a random slice of traffic
+        served without the model. In control language it is a sensor the actuator cannot
+        affect. Without it, the only measurement of fraud comes through the model that is
+        suppressing it.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="audit">
+  <div class="col">
+    <div class="sechead"><span class="secnum">20</span><h2>Every number in the design examples, recomputed</h2>
+      <a class="srcref" href="@F5@" target="_blank" rel="noopener">src 05. ML design examples &#8599;</a>
+    </div>
+    <p>
+      File 05 works seven designs and gives back-of-envelope numbers for four of them. This
+      is the reader&rsquo;s own method, order-of-magnitude estimation, and the useful check on
+      it is the one every engineer applies to a hand calculation: carry the units, and
+      compute the key number a second way. Each row below is recomputed under
+      <code>[Ch18 s20]</code> or the section named.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>File 05&rsquo;s numbers. &check; holds; &times; fails; ~ holds with a stated assumption.</caption>
+      <thead><tr><th>Design</th><th>Source says</th><th>Computed</th><th></th></tr></thead>
+      <tbody>
+        <tr><td>Recommendation</td><td>100M &times; 256 &times; float16 = 50 GB</td><td>51.2 GB</td><td>&check;</td></tr>
+        <tr><td></td><td>HNSW adds ~2&times;, so ~100 GB</td><td>2\(M\) links of 4 bytes per vector: +25% at \(M=16\), +50% at \(M=32\); 64&ndash;77 GB</td><td>&times;</td></tr>
+        <tr><td></td><td>Fits one 128 GB machine, or 4 &times; 32 GB</td><td>Yes, even at the source&rsquo;s 100 GB</td><td>&check;</td></tr>
+        <tr><td></td><td>~50 user-embedding replicas; 20 ANN replicas</td><td>Both are the offered load: 100% utilisation (&sect;02)</td><td>&times;</td></tr>
+        <tr><td></td><td>~10 A10G GPUs for ranking</td><td>1,000 at the stated 0.1 ms a candidate, or 100 requests in flight per GPU (&sect;02)</td><td>&times;</td></tr>
+        <tr><td></td><td>5 + 2 + 100 ms within 200 ms; figure: 50 + 100 + 10 = ~160 ms</td><td>107 ms and 160 ms</td><td>&check;</td></tr>
+        <tr><td></td><td>$50K&ndash;$100K a month in all</td><td>Ranking alone is $7,300 a month at 10 GPUs or $730,000 at 1,000; CPU prices are not given</td><td>~</td></tr>
+        <tr><td>Search</td><td>100 + 200 + 100 ms + overhead within 500 ms</td><td>400 ms before overhead</td><td>&check;</td></tr>
+        <tr><td>Ads</td><td>100,000 auctions/s, 10 ms each</td><td>1,000 predictions in flight at any instant (&sect;01)</td><td>&check;</td></tr>
+        <tr><td>Fraud</td><td>Review band 0.3&ndash;0.7 (text), 0.3&ndash;0.9 (figure)</td><td>The two disagree; for $5 against $500 the threshold is 0.0099 (&sect;19)</td><td>&times;</td></tr>
+        <tr><td>Moderation</td><td>1B posts/day = ~12K/s</td><td>11,574/s</td><td>&check;</td></tr>
+        <tr><td></td><td>~60 text, ~240 image, ~12 hash servers &ldquo;plus redundancy&rdquo;</td><td>The offered loads; the redundancy is not optional (&sect;&sect;02&ndash;03)</td><td>~</td></tr>
+        <tr><td></td><td>2% flagged = 20M/day; 200K reviewers at 100 each</td><td>20,000,000 and 200,000</td><td>&check;</td></tr>
+        <tr><td></td><td>Each 0.1% fewer false positives saves 1M reviews/day</td><td>0.1 point of 1B = 1,000,000</td><td>&check;</td></tr>
+        <tr><td></td><td>5 + 20 + 1 ms within 500 ms; 600 frames for a 10-minute video</td><td>26 ms; 600 calls, 12 s at 20 ms each</td><td>&check;</td></tr>
+        <tr><td>RAG chatbot</td><td>10K pages &times; 2,000 tokens = 20M; ~44K chunks of 500 with 50 overlap</td><td>44,444 if the corpus is one stream; 50,000 chunked page by page</td><td>~</td></tr>
+        <tr><td></td><td>44K &times; 768 &times; float16 = ~65 MB; 10M chunks ~15 GB</td><td>68.3 MB (65.1 MiB); 15.4 GB</td><td>&check;</td></tr>
+        <tr><td></td><td>5 + 2 + 20 + 500&ndash;2,000 ms = ~600&ndash;2,100 ms</td><td>527&ndash;2,027 ms before overhead</td><td>&check;</td></tr>
+        <tr><td></td><td>$3/M tokens: 1,000 queries &times; 2K tokens = ~$6/day</td><td>$6.00</td><td>&check;</td></tr>
+        <tr><td></td><td>At 1M queries/day, a 7B model on 2 A10Gs (~$50/day) is 100&times; cheaper</td><td>$6,000 against $48 is 125&times;; but 23,148 tokens/s needs 324 TFLOP/s, about 6.5 cards at 40% of a 125-TFLOPS A10 (reported peak)</td><td>&times;</td></tr>
+        <tr><td>Image search</td><td>~128 GB for 1B &times; 512 &times; float16 + graph</td><td>1.024 TB of vectors + 128 GB of links; 64 GB with 64-byte product-quantised codes</td><td>&times;</td></tr>
+        <tr><td></td><td>~20 ms to embed, ~10 ms to search, within 500 ms</td><td>Within budget; the shard fan-out is &sect;12&rsquo;s tail</td><td>&check;</td></tr>
+        <tr><td>File 04</td><td>100M &times; 256 &times; float16 = 50 GB embedding table</td><td>51.2 GB</td><td>&check;</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <figure class="col">
+    <div class="paper"><img src="img/recommendation_pipeline.svg" alt="Recommendation pipeline: 100 million items narrowed to about 1,000 by candidate generation in about 50 ms, ranked to about 100 by a deep network in about 100 ms, and re-ranked to the 20 a user sees in about 10 ms; total about 160 ms against a 200 ms budget." width="750"></div>
+    <figcaption><b>Fig. 18.6</b> &mdash; The two-stage funnel. Its latencies add to 160 ms as stated; its server counts are where the arithmetic slips. <i>Figure from the compendium.</i></figcaption>
+  </figure>
+  <div class="col">
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>What the misses have in common</div>
+      <p style="margin-bottom:0">
+        The method is sound and most rows hold. The large misses are unit slips that carrying
+        the units would have caught. &ldquo;1000 GPU-seconds per second&rdquo; has the unit
+        GPUs, so the next word cannot be ten. A billion vectors of 512 two-byte numbers is
+        \(10^9 \times 10^3\) bytes, a terabyte, before any graph is added. And a replica count
+        equal to the offered load has left out the one term a plant engineer never leaves out:
+        the margin. The source&rsquo;s own advice for the interview is &ldquo;tradeoff
+        awareness (every choice has a cost)&rdquo;; the margin is that cost, written as a number.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="worked">
+  <div class="col">
+    <div class="sechead"><span class="secnum">21</span><h2>Worked example: Sheet 17&rsquo;s help desk becomes a plant</h2>
+      <span class="srcref nolink" title="Written for this sheet; not in the source chapter">files 02 and 03</span>
+    </div>
+    <p>
+      Sheet 17 &sect;20 sized one inference server for a help desk: 6 requests a second, 300
+      tokens each, 1,800 tokens/s. The server reads 40 GB of weights in 20 ms per step and
+      0.4 GB of cache per conversation in 0.2 ms, holds at most 100 conversations in 80 GB,
+      and so delivers at most 2,500 tokens/s; the target is at most 50 ms per output token.
+      That sheet ended where this one starts: &ldquo;demand has peaks, servers fail&rdquo;.
+    </p>
+    <p>
+      Now the help desk grows tenfold, to 18,000 tokens/s on average, following the working
+      day as \(1 + 0.8\cos\) of the hour from a 14:00 peak: 32,400 tokens/s at 14:00 and 3,600
+      at 02:00. Each server is up 99% of the time (an assumption), and the plant must have
+      enough servers up at the peak with probability 0.999. How many servers, and what does
+      the day cost at the source&rsquo;s $8.00 an hour? Solve it twice
+      (<code>[Ch18 s21]</code>).
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>The same plant sized two ways.</caption>
+      <thead><tr><th>Step</th><th>The source&rsquo;s method</th><th>A plant engineer&rsquo;s method</th></tr></thead>
+      <tbody>
+        <tr><td>Capacity of one server</td><td>Nameplate: 2,500 tokens/s</td><td>Batch under the 100-sequence cap on 99% of steps: 2,050 tokens/s (&sect;03)</td></tr>
+        <tr><td>Demand sized for</td><td>The average, 18,000</td><td>The peak, 32,400</td></tr>
+        <tr><td>Servers working</td><td>18,000 / 2,500 = 7.2 &rarr; 8</td><td>32,400 / 2,050 = 15.8 &rarr; 16</td></tr>
+        <tr><td>Spares for failure</td><td>None</td><td>P(&ge; 16 of \(N\) up) &ge; 0.999 at 99% each: 17 gives 0.9877, 18 gives 0.9993 &rarr; 18 (&sect;08)</td></tr>
+        <tr><td>Time per token at peak</td><td>Each of 8 would carry 4,050 tokens/s, past the 2,500 cap: the queue grows for hours</td><td>2,025 tokens/s each, \(\rho\) = 0.405, \(t_w/(1-\rho)\) = 33.6 ms</td></tr>
+        <tr><td>Cost of a day</td><td>8 &times; 24 h = $1,536, and it fails at midday</td><td>Fixed 18 &times; 24 h = $3,456; scaled hour by hour, 259 server-hours = $2,072 (40% less)</td></tr>
+        <tr><td>With a 40% reservation discount</td><td>&mdash;</td><td>Reserve the 9 servers needed in more than 60% of hours: $1,685 a day (&sect;14)</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      The two answers differ by a factor of more than two in servers at the peak, and every
+      step of the difference is a sheet section. The plant engineer sized for the peak, not
+      the average (&sect;13); derated the nameplate by safety stock (&sect;03); added spares
+      by the \(k\)-out-of-\(n\) sum (&sect;08); checked the lead time against Sheet 17&rsquo;s
+      cliff; and then bought the capacity the way a utility buys plant, base load reserved and
+      peaks rented (&sect;14). The cheapest of the plant engineer&rsquo;s answers, $1,685 a
+      day, costs only 10% more than the source-style answer that fails every afternoon.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Both columns use the same law</div>
+      <p style="margin-bottom:0">
+        Little&rsquo;s law is in every row: in the batch that sets the capacity of a server
+        (Sheet 17 &sect;14), in the offered load of the fleet, and in the token rate per
+        server. The difference between the columns is not a different theory. The plant
+        column takes the mean from Little&rsquo;s law and then asks for the spread, the
+        failures and the peak, which is what &ldquo;capacity planning&rdquo; means in the
+        source&rsquo;s own words and what a production planner does with any line.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>What this plan still leaves out</div>
+      <p style="margin-bottom:0">
+        Prefill, the time to read each prompt, which Sheet 17 &sect;20 also set aside. Traffic
+        burstier than Poisson (&sect;03). Common-cause failure: 18 servers in one region share
+        its fate, and the 99% availability was assumed, not measured (&sect;09). Start-up
+        time: a server ordered at 13:00 may not be serving by the 14:00 peak, so the scaling
+        must follow a forecast, an hour or more ahead. And the hourly steps hide the ramps
+        inside each hour. Each of these adds servers; none removes any.
+      </p>
+    </div>
+  </div>
+</section>
