@@ -1061,6 +1061,349 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
   </div>
 </section>
 
+<section id="diverge">
+  <div class="col">
+    <div class="sechead"><span class="secnum">06</span><h2>Divergence: thirty-two spindles, one feed</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2016%20-%20SIMD%20and%20GPU%20programming/04.%20GPU%20architecture%20and%20CUDA.md" target="_blank" rel="noopener">src 04. GPU and CUDA &#8599;</a>
+    </div>
+    <p>
+      <b>Debt 4 of 7.</b> Part 1 &sect;05 drew SIMD as a multi-spindle drilling head: one feed drives
+      every spindle, so holes of two depths in one group take two strokes, each with the other
+      kind&rsquo;s drills removed. A warp is a head with 32 spindles. When the threads of one warp
+      disagree at an <code>if</code>, the warp runs one side with the disagreeing lanes switched off,
+      then the other side with the rest switched off. The source calls this <b>warp divergence</b>.
+      Let \(p\) of the 32 lanes take path A, which costs \(a\), and the rest take path B, which costs
+      \(b\). The warp&rsquo;s time is exact:
+    </p>
+    <div class="mathbox">$$t_{\text{warp}} = a\,[\,p > 0\,] + b\,[\,p < 32\,], \qquad \text{useful share} = \frac{p\,a + (32-p)\,b}{32\;t_{\text{warp}}},$$</div>
+    <p>
+      where a bracket is 1 when its condition holds and 0 otherwise. The source&rsquo;s example sends
+      even threads one way and odd threads the other. Every warp holds both, so every warp pays
+      \(a + b\), and with equal paths half the lane-slots do work: &ldquo;this halves
+      performance&rdquo;, as it says. The same 50/50 split laid out differently costs nothing. Send the
+      first half of \(2^{24}\) threads one way and the second half the other: the boundary falls between
+      warps, and <b>0 of 524,288</b> warps diverge, against all 524,288 for even and odd
+      (<code>[Ch16p2 s06]</code>). What a branch costs depends on how its condition is laid out across
+      the lanes, not on how often it is true.
+    </p>
+    <h3 style="margin-top:24px">A rare branch is a sampling plan with c = 0</h3>
+    <p>
+      Now let a branch be taken by a fraction \(q\) of threads, scattered at random, as an error check or
+      a clipped value would be. A warp must run path A if any one of its 32 lanes needs it:
+    </p>
+    <div class="mathbox">$$P(\text{warp runs A}) = 1 - (1-q)^{32}.$$</div>
+    <p>
+      That is the rejection probability of Sheet 15 &sect;16&rsquo;s single sampling plan with \(n = 32\)
+      and acceptance number \(c = 0\): a lot is rejected if the sample holds even one defective, and a
+      warp runs the branch if it holds even one lane that wants it. Some values: \(q = 0.001\) gives
+      3.1%, \(q = 0.01\) gives <b>27.5%</b>, \(q = 0.05\) gives 80.6%, \(q = 0.1\) gives 96.6%. A branch
+      taken by one thread in a hundred is run by more than a quarter of all warps; 400,000 simulated warps
+      gave 27.4%. If the rare path costs 100 and the common one 10, a warp takes 37.5 on average, against
+      a per-lane average of 10.9: <b>3.44 times</b> the work the threads actually need.
+    </p>
+    <p>
+      Loops diverge the same way. A loop whose trip count differs by lane runs, for the whole warp, as many
+      times as its longest lane needs. A stroke lasts as long as its deepest hole. With trip counts 1 to
+      32 across the lanes, the warp makes 32 trips and 51.6% of lane-trips do work. Nest five two-way
+      branches on the bits of the thread number and the 32 lanes take 32 different paths: one lane in 32
+      works at a time.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same structure, exact count: the drilling head with 32 spindles</div>
+      <p style="margin-bottom:0">
+        Part 1&rsquo;s stroke count carries over unchanged: a group pays for every branch any member takes.
+        Two pieces of your QC and machining training compute it exactly. The chance that a warp pays for a
+        rare branch is the <b>c = 0 plan&rsquo;s rejection probability</b> with a sample of 32, and a loop
+        costs what its <b>deepest hole</b> costs. Neither is an analogy; both are the same expression.
+      </p>
+    </div>
+    <p>
+      <b>What SIMT adds beyond a CPU mask.</b> On a CPU, part 1&rsquo;s masked code is written for the
+      whole register: compute both sides, blend with a mask. On a GPU you write ordinary code for
+      <em>one</em> thread, and the hardware forms the masks, runs each side and rejoins the lanes after the
+      branch. That is the &ldquo;single instruction, multiple threads&rdquo; of the source. It also lets
+      every lane run a loop of its own length, and load from an address of its own, which &sect;07 prices.
+      Since the Volta generation each thread also keeps its own place in the program, so the hardware may
+      interleave the two sides of a branch (reported). The lanes still share one feed: interleaving
+      changes the order of the strokes, not their number.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where the drilling head breaks</div>
+      <p style="margin-bottom:0">
+        A head&rsquo;s spindles sit at a fixed pitch; a warp&rsquo;s lanes can each point anywhere in memory,
+        and the cost of a scattered request is counted in pallets (&sect;07), not strokes. A head waiting
+        for its next part stands idle; a waiting warp is swapped for another at no cost (&sect;05). And
+        part 1 said a head has no path from one spindle to the next. A warp has one: a <em>shuffle</em>
+        instruction passes values between lanes, so part 1&rsquo;s butterfly sum takes five shuffles across
+        32 lanes. The head picture covers the arithmetic and the branch count; it does not cover addressing,
+        switching or exchange.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Task 3 should print a speedup of about 1.0</div>
+      <p style="margin-bottom:0">
+        The divergence task times an even/odd kernel against a branchless one. Each launch reads and writes
+        \(2^{24}\) floats: 134 MB, <b>40.7 &micro;s</b> at 3.3 TB/s. Its arithmetic is one multiply-add per
+        element, <b>0.50 &micro;s</b> at the FP32 roof. Doubling the arithmetic for divergence, and multiplying
+        it by ten for overhead, still leaves it under the memory time: the kernel sits at 0.25 FLOP/B, far
+        left of the ridge, and divergence spends issue slots the line was not short of. The prediction is a
+        printed speedup near 1.0, not 2. A short <code>if</code>/<code>else</code> like this is also often
+        compiled into predicated instructions with no branch at all (reported). One more thing the run
+        would do: the even elements double each launch from zero, \(x_k = 2^k - 1\), and overflow to
+        infinity at launch <b>128</b>, the 28th launch of the branchless kernel. It does not change the
+        timing; it is still worth a glance at the data a benchmark leaves behind (<code>[Ch16p2 s06]</code>).
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Thirty-two spindles</div><div class="lab-tag">Predict, then scatter the branch</div></div>
+    <div class="lab-body">
+    <div class="predict">
+      <p style="margin-top:0">
+        A branch is taken by 1% of threads, scattered at random. On what fraction of warps must the whole
+        warp step through it?
+      </p>
+      <button class="pbtn" data-p3="a" type="button">About 1%</button>
+      <button class="pbtn" data-p3="b" type="button">About 10%</button>
+      <button class="pbtn" data-p3="c" type="button">About 27%</button>
+      <button class="pbtn" data-p3="d" type="button">About 50%</button>
+      <div class="pverdict" id="pv3"></div>
+    </div>
+    <div class="chartwrap">
+    <svg class="svgfig" id="dS" viewBox="0 0 560 300" role="img"
+         aria-label="Sixteen warps of 32 lanes, each lane coloured by the path it takes, with the passes each warp must run"></svg>
+    </div>
+    <div class="ctl">
+      <button class="btn" data-dp="even" type="button">Even / odd (source)</button>
+      <button class="btn" data-dp="half" type="button">First half / second half</button>
+      <button class="btn on" data-dp="rand" type="button">Random</button>
+    </div>
+    <div class="ctl">
+      <label for="dQ">Share taking path A, <span class="gk">q</span></label>
+      <input type="range" id="dQ" min="-3" max="-0.301" value="-2" step="0.01">
+      <span class="ro-v" id="dQv" style="min-width:56px">1.00%</span>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Warps running A,<br>of 20,000</div><div class="ro-v a" id="dSim">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Formula<br><span class="gk">1&minus;(1&minus;q)&sup3;&sup2;</span></div><div class="ro-v b" id="dF">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Warps running<br>both passes</div><div class="ro-v c" id="dB">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Warp time over<br>lane average</div><div class="ro-v" id="dX">&mdash;</div></div>
+    </div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    Each row is one warp of 32 lanes; an orange cell takes path A (cost 100), a blue one path B (cost 10).
+    The two boxes at the right of a row are the passes that warp must run. At rest 1% of lanes take A,
+    scattered: the simulation of 20,000 warps finds about <b>27%</b> of warps running A, on the formula,
+    the answer to the prediction, and the warps take <b>3.44 times</b> the per-lane average. <b>Even /
+    odd</b> makes every warp run both passes; <b>First half / second half</b> gives the same 50/50 split
+    with no warp running both.
+  </div>
+</section>
+
+<section id="coalesce">
+  <div class="col">
+    <div class="sechead"><span class="secnum">07</span><h2>Coalescing: pallets for a warp</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2016%20-%20SIMD%20and%20GPU%20programming/04.%20GPU%20architecture%20and%20CUDA.md" target="_blank" rel="noopener">src 04. GPU and CUDA &#8599;</a>
+    </div>
+    <p>
+      Part 1 &sect;05 delivered memory in 64-byte pallets, cache lines, and counted how often a load
+      needs two. A GPU&rsquo;s pallet, in the source&rsquo;s account, is a 128-byte transaction. One load
+      instruction asks for 32 floats, one per lane. If lane \(i\) reads element \(i\), the 32 floats are
+      128 consecutive bytes, one pallet: the request is <b>coalesced</b>. If lane \(i\) reads element
+      \(s\,i\), a stride of \(s\), the lanes touch \(\min(s, 32)\) different pallets and each pallet
+      delivers 128 bytes of which the warp uses \(128/\min(s,32)\).
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Transactions for one warp loading 32 floats at stride \(s\) (<code>[Ch16p2 s07]</code>). The 32-byte sector model is how recent GPUs are reported to fetch; the source&rsquo;s model is the 128-byte one.</caption>
+      <thead><tr><th>Access</th><th>128-byte transactions</th><th>Bytes used</th><th>32-byte sectors (reported)</th><th>Bytes used</th></tr></thead>
+      <tbody>
+        <tr><td>Stride 1, aligned</td><td class="mono">1</td><td class="mono">100%</td><td class="mono">4</td><td class="mono">100%</td></tr>
+        <tr><td>Stride 1, one float off</td><td class="mono">2</td><td class="mono">50%</td><td class="mono">5</td><td class="mono">80%</td></tr>
+        <tr><td>Stride 2</td><td class="mono">2</td><td class="mono">50%</td><td class="mono">8</td><td class="mono">50%</td></tr>
+        <tr><td>Stride 4 (the x of a 16-byte particle)</td><td class="mono">4</td><td class="mono">25%</td><td class="mono">16</td><td class="mono">25%</td></tr>
+        <tr><td>Stride 8</td><td class="mono">8</td><td class="mono">12.5%</td><td class="mono">32</td><td class="mono">12.5%</td></tr>
+        <tr><td>Stride 16</td><td class="mono">16</td><td class="mono">6.3%</td><td class="mono">32</td><td class="mono">12.5%</td></tr>
+        <tr><td>Stride 32</td><td class="mono">32</td><td class="mono">3.1%</td><td class="mono">32</td><td class="mono">12.5%</td></tr>
+        <tr><td>Stride 64</td><td class="mono">32</td><td class="mono">3.1%</td><td class="mono">32</td><td class="mono">12.5%</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      The source says &ldquo;a stride of 32 is the worst case&rdquo; at 3% use. It is the first stride that
+      reaches the worst case; every larger stride is exactly as bad, because a warp cannot touch more than
+      32 pallets. With 32-byte sectors the floor is 12.5% and arrives at stride 8. The layout advice that
+      follows in the source is the same count. An array of structures holding <code>{x, y, z, mass}</code>
+      puts consecutive <code>x</code> values 16 bytes apart, stride 4, so a warp reading all the
+      <code>x</code> values uses <b>25%</b> of what it fetches in either model. A structure of arrays puts
+      them 4 bytes apart and uses all of it.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity in the count: one requisition, as many pallets as it touches</div>
+      <p style="margin-bottom:0">
+        A warp&rsquo;s load is one requisition for 32 parts, and the store issues every pallet that holds at
+        least one of them. Parts stored side by side come on one pallet; parts stored a pallet apart come on
+        32. The number of pallets is the number of distinct 128-byte blocks among the 32 addresses, which is
+        what the table counts.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks</div>
+      <p style="margin-bottom:0">
+        The count is per load instruction and assumes the pallet goes back unused. A real GPU keeps recent
+        pallets in L1 and L2, so a neighbouring warp that wants the rest of a pallet may find it there
+        (reported); strided access costs bandwidth from the next level up, not always from HBM. And the
+        pallet size itself is a property of the generation, which is why the table gives both models.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="kit">
+  <div class="col">
+    <div class="sechead"><span class="secnum">08</span><h2>The kit in shared memory</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2016%20-%20SIMD%20and%20GPU%20programming/04.%20GPU%20architecture%20and%20CUDA.md" target="_blank" rel="noopener">src 04. GPU and CUDA &#8599;</a>
+    </div>
+    <p>
+      <b>Debt 3 of 7.</b> Part 1 &sect;07 showed that tiling a matrix product is kitting: stage a kit at the
+      machine so that many operations happen per trip to the stores. A \(b \times b\) tile does \(2b^3\)
+      FLOPs for \(2b^2\) floats fetched, so its intensity is \(b/4\) FLOP per byte, a volume over a surface.
+      On the CPU the bin was a cache that chose for itself what to evict. The source&rsquo;s CUDA kernel
+      stocks the bin by hand. Each block of \(16 \times 16\) threads copies one 16&times;16 tile of \(A\) and
+      one of \(B\) into <code>__shared__</code> arrays, waits at <code>__syncthreads()</code>, does 16
+      multiply-adds per thread from the bin, waits again, and moves along \(k\).
+    </p>
+    <p>
+      The count is exact. For the source&rsquo;s task, \(N = 1024\), the tiled kernel loads
+      \(2N^3/16 = 134{,}217{,}728\) floats from global memory and the naive kernel \(2N^3 = 2{,}147{,}483{,}648\):
+      the ratio is <b>16, the tile size</b>, as the source says. Run part 1&rsquo;s own lab case, a
+      32&times;32 product in 8&times;8 tiles, through a planned bin and it fetches 8,192 words plus 1,024
+      written, <b>9,216</b>, exactly the formula \(n^2 + 2n^3/b\), with a bin of two tiles, 128 words. Part 1
+      found that an LRU cache needed 512 words of room to match that figure; at the bare kit size it fetched
+      12,240. A planned bin does not need the slack (<code>[Ch16p2 s08]</code>).
+    </p>
+    <p>
+      Now check the kit against the GPU&rsquo;s ridge. The source&rsquo;s tile gives \(16/4 = 4\) FLOP/B
+      against a ridge of 20.3, so the kernel is delivery-bound at 13.2 TFLOP/s, a fifth of the roof
+      (&sect;03). To clear the ridge needs \(b \ge 4 \times 20.3\), so \(b \ge 82\). The source&rsquo;s design
+      gives each thread one output, so an 82-tile needs 6,724 threads in a block, and a block may hold
+      1,024. The largest legal tile is 32&times;32, at 8 FLOP/B and <b>39.5% of the roof</b>. No tile with one
+      thread per output can reach the ridge.
+    </p>
+    <p>
+      The way out is to give each thread several outputs. A block of 256 threads computing a 128&times;128
+      tile, 64 outputs per thread, moves \(B_K(B_M + B_N)\) elements per step of depth \(B_K\) for
+      \(2B_MB_NB_K\) FLOPs:
+    </p>
+    <div class="mathbox">$$I = \frac{2\,B_M B_N B_K}{s\,B_K\,(B_M+B_N)} = \frac{2\,B_M B_N}{s\,(B_M+B_N)} = \frac{2 \times 128 \times 128}{4 \times 256} = 32\ \text{FLOP/B},$$</div>
+    <p>
+      with \(s\) bytes per element; a square tile with \(s = 4\) gives back \(b/4\). At 32 FLOP/B the block
+      tile clears the FP32 ridge. Its kit, with \(B_K = 32\), is \((128 \times 32 + 32 \times 128) \times 4\)
+      bytes = 32 KiB, well inside the source&rsquo;s 228 KB. The three tile shapes in the source&rsquo;s Triton
+      autotune list, with 2-byte elements, reach 64, 51.2 and 51.2 FLOP/B. All three clear the FP32 ridge;
+      none comes near the tensor-core ridge of 300. What closes that gap is that neighbouring blocks read the
+      same tiles and the L2 cache serves the repeats, so HBM sees far less than each block asks for. This page
+      does not model the L2.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same structure: kitting with a planned bin, and the two-bin system</div>
+      <p style="margin-bottom:0">
+        Shared memory is a line-side bin the planner stocks, so part 1&rsquo;s complaint about LRU, that
+        nobody chooses what leaves the bin, is answered: the count is exact at the kit&rsquo;s own size.
+        The next step is <b>double buffering</b>: two kits, one being used while the other is refilled. That
+        is the two-bin system, and its rule is Little&rsquo;s law: a bin must last at least as long as its
+        refill takes. One SM does 256 FLOPs per cycle, so a 16-tile step (8,192 FLOPs) lasts <b>32
+        cycles</b> against a <b>400-cycle</b> refill: 12.5 kits must be in flight, which only many resident
+        blocks can supply. A 128&times;128&times;32 step lasts <b>4,096 cycles</b>, so two bins are plenty.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where kitting breaks, and where &sect;05 comes back</div>
+      <p style="margin-bottom:0">
+        A kit is consumed; a tile is reused by every thread in the block, which is where \(b/4\) comes from.
+        The two barriers per step also stop the whole cell, the transfer-line index of &sect;02, unless another
+        block is resident to use the time. And the big tile has a price that &sect;05 already named: 64
+        outputs per thread need at least 64 accumulator registers, so the rack holds 32 warps at best and
+        about 16 in practice. Too few cards for one load each. Fast kernels therefore issue their next
+        kit&rsquo;s loads early and keep several in flight per warp: the double buffer is how a register-hungry
+        kernel buys back its cards.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="tensor">
+  <div class="col">
+    <div class="sechead"><span class="secnum">09</span><h2>Tensor cores: the outer product again</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2016%20-%20SIMD%20and%20GPU%20programming/04.%20GPU%20architecture%20and%20CUDA.md" target="_blank" rel="noopener">src 04. GPU and CUDA &#8599;</a>
+    </div>
+    <p>
+      <b>Debt 5 of 7, first half.</b> Part 1 &sect;&sect;09&ndash;10 met two matrix engines on CPUs. ARM&rsquo;s SME
+      adds one 16&times;16 outer product per instruction, 256 multiply-accumulates (MACs); Intel&rsquo;s AMX
+      multiplies a 16&times;32 tile by a 32&times;16 tile, 8,192 MACs. Sheet 02 showed why both work: a matrix
+      product is a sum of outer products, column of \(A\) times row of \(B\),
+    </p>
+    <div class="mathbox">$$AB = \sum_{k} \mathbf a_k\, \mathbf b_k^{\mathsf T}.$$</div>
+    <p>
+      A <b>tensor core</b> is NVIDIA&rsquo;s version. The source says one &ldquo;computes a 4&times;4 matrix
+      multiply (D = A&times;B + C) in one cycle&rdquo;, where regular cores &ldquo;would need 64 FMA
+      operations&rdquo;. Both numbers are right: \(4 \times 4 \times 4 = 64\) MACs, four outer products of
+      length-4 vectors summed. But that is one tensor core&rsquo;s work per cycle. The instruction in the
+      source&rsquo;s own code, <code>wmma::mma_sync</code>, is issued by a whole warp on fragments that are
+      commonly 16&times;16&times;16 (reported), <b>4,096 MACs per instruction</b>, spread over several tensor
+      cores and cycles.
+    </p>
+    <p>
+      The per-cycle figure explains the source&rsquo;s generation table. Volta had 640 tensor cores at 1.53 GHz
+      (both reported): \(640 \times 64 \times 2 \times 1.53\ \text{GHz} = 125.3\) TFLOP/s, the table&rsquo;s 125,
+      with an FMA counted as two. Tensor cores multiply 16-bit inputs, so that is an FP16 rate. The table
+      labels it &ldquo;125 TFLOPS TF32&rdquo;, while its next row lists TF32 as Ampere&rsquo;s innovation:
+      Volta had no TF32. The A100&rsquo;s 312 and the H100&rsquo;s 989 are also reported elsewhere as 16-bit
+      rates, with TF32 at half the first and FP8 at twice the second, so the precision column looks shifted
+      by one row throughout (reported; not derivable here). Per SM, Volta had 64 FP32 lanes and 8 tensor
+      cores (reported): 512 against 64 MACs per cycle, 8&times;; on the reference GPU 989 against 66.9
+      TFLOP/s is 14.8&times;. The source&rsquo;s &ldquo;8&ndash;16&times; the rate of FP32 CUDA cores&rdquo;
+      holds at both ends (<code>[Ch16p2 s09]</code>).
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Matrix engines side by side. Every one computes \(\sum_k \mathbf a_k \mathbf b_k^{\mathsf T}\); they differ in how many \(k\) one instruction covers (<code>[Ch16p2 s09]</code>).</caption>
+      <thead><tr><th>Engine</th><th>Shape</th><th>MACs</th><th>Per</th><th>Outer products per step</th></tr></thead>
+      <tbody>
+        <tr><td>Tensor core (the source&rsquo;s figure)</td><td class="mono">4&times;4&times;4</td><td class="mono">64</td><td>core, cycle</td><td class="mono">4 of size 4&times;4</td></tr>
+        <tr><td>ARM SME <code>FMOPA</code>, 512-bit (part 1 &sect;09)</td><td class="mono">16&times;16&times;1</td><td class="mono">256</td><td>instruction</td><td class="mono">1 of size 16&times;16</td></tr>
+        <tr><td>CUDA <code>wmma::mma_sync</code></td><td class="mono">16&times;16&times;16</td><td class="mono">4,096</td><td>warp instruction</td><td class="mono">16 of size 16&times;16</td></tr>
+        <tr><td>Intel AMX <code>TDPBF16PS</code> (part 1 &sect;10)</td><td class="mono">16&times;16&times;32</td><td class="mono">8,192</td><td>instruction</td><td class="mono">32 of size 16&times;16</td></tr>
+        <tr><td>TPU systolic array, 128&times;128 (&sect;10)</td><td class="mono">128&times;128</td><td class="mono">16,384</td><td>cycle</td><td>one per wave, pipelined</td></tr>
+        <tr><td>TPU systolic array, 256&times;256</td><td class="mono">256&times;256</td><td class="mono">65,536</td><td>cycle</td><td>one per wave, pipelined</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      <b>Mixed precision.</b> The source&rsquo;s comment on the tensor-core call reads D (FP32) = A (FP16) &times;
+      B (FP16) + C (FP32). Products of 16-bit numbers are summed in 32 bits, so a long sum does not lose its
+      small terms the way Sheet 13 part 1 &sect;11 showed a short float can (&sect;14 measures it). Halving
+      the bytes per element also doubles every intensity on this page, which matters more than the speed of
+      the multiply wherever the stores bind.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: every matrix engine is Sheet 02&rsquo;s sum of outer products</div>
+      <p style="margin-bottom:0">
+        SME takes one \(\mathbf a_k \mathbf b_k^{\mathsf T}\) per instruction, AMX 32, a warp&rsquo;s
+        <code>mma_sync</code> 16. The hardware differs in how many terms of the same sum it commits to at once,
+        and therefore in how big the kit must be before the engine has enough to do. The bigger the engine, the
+        higher its ridge: that is the price of 989 TFLOP/s.
+      </p>
+    </div>
+  </div>
+</section>
+
 </main>
 </div>
 
@@ -1263,6 +1606,66 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     b:'<b>That is what the kernel would need</b>: 39.5 of 64 warps, 62% occupancy. The rack holds only 16, so it reaches <b>40%</b>.',
     c:'<b>Right.</b> 65,536 / (32 &times; 128) = 16 warps. Little&rsquo;s law: 16 &times; 128 B / 404 cycles = 5.07 B per cycle against 12.63, <b>40.1%</b>. The simulation lands on it.',
     d:'<b>Too low.</b> 16 is the number of warps. Sixteen of the 39.5 needed carry <b>40%</b> of the bandwidth.'});
+  draw();
+})();
+</script>
+
+<script>
+/* ===== LAB 3 -- divergence on 32 lanes; the rare branch as a c = 0 plan =====
+   20,000 warps from rng(1606), the same stream verify_claims.py replays [Ch16p2 s06]. */
+(function(){
+  'use strict';
+  var U=window.__c16, $=U.$, ST=U.ST;
+  var NW=20000, CA=100, CB=10, pat='rand';
+  function mask(q){
+    var m=new Uint8Array(NW*32), i;
+    if(pat==='rand'){ var r=U.rng(1606); for(i=0;i<NW*32;i++) m[i]=r()<q?1:0; }
+    else if(pat==='even'){ for(i=0;i<NW*32;i++) m[i]=(i%2===0)?1:0; }
+    else { for(i=0;i<NW*32;i++) m[i]=(i<NW*16)?1:0; }
+    return m;
+  }
+  function draw(){
+    var q=Math.pow(10,+$('dQ').value);
+    $('dQv').textContent=(100*q).toFixed(2)+'%';
+    var m=mask(q), w, l, nA, runA=0, both=0, sumT=0, sumLane=0;
+    for(w=0;w<NW;w++){
+      nA=0; for(l=0;l<32;l++) nA+=m[w*32+l];
+      var hA=nA>0, hB=nA<32;
+      if(hA) runA++; if(hA&&hB) both++;
+      sumT+=(hA?CA:0)+(hB?CB:0);
+      sumLane+=(nA*CA+(32-nA)*CB)/32;
+    }
+    var w0=pat==='half'?NW/2-8:0;
+    var h='', cw=12, chh=13, gx=66, gy=34;
+    h+=U.txt(gx,gy-10,'lane 0',ST.tick)+U.txt(gx+31*cw+cw,gy-10,'lane 31',ST.tick,'end');
+    h+=U.txt(480,gy-10,'pass A',ST.tick,'middle')+U.txt(524,gy-10,'pass B',ST.tick,'middle');
+    for(var row=0;row<16;row++){
+      w=w0+row; var y=gy+row*(chh+2); nA=0;
+      h+=U.txt(gx-6,y+10,'warp '+w,ST.tick,'end');
+      for(l=0;l<32;l++){
+        var a=m[w*32+l]; nA+=a;
+        h+='<rect x="'+(gx+l*cw)+'" y="'+y+'" width="'+(cw-2)+'" height="'+chh+'" rx="1.5" style="fill:'+(a?'var(--c1)':'var(--c2)')+';opacity:'+(a?1:0.55)+'"/>';
+      }
+      var pA=nA>0, pB=nA<32;
+      h+='<rect x="466" y="'+y+'" width="28" height="'+chh+'" rx="2" style="fill:'+(pA?'var(--c1)':'none')+';stroke:var(--c1);stroke-width:1.2"/>';
+      h+='<rect x="510" y="'+y+'" width="28" height="'+chh+'" rx="2" style="fill:'+(pB?'var(--c2)':'none')+';stroke:var(--c2);stroke-width:1.2"/>';
+    }
+    h+=U.txt(gx,gy+16*(chh+2)+16,'orange: path A, cost 100  |  blue: path B, cost 10  |  filled box: the warp runs that pass',ST.small);
+    $('dS').innerHTML=h;
+    var f=pat==='rand'?1-Math.pow(1-q,32):(pat==='even'?1:0.5);
+    $('dSim').textContent=(100*runA/NW).toFixed(1)+'%';
+    $('dF').textContent=(100*f).toFixed(1)+'%';
+    $('dB').textContent=(100*both/NW).toFixed(1)+'%';
+    $('dX').textContent=(sumT/sumLane).toFixed(2)+'×';
+  }
+  document.querySelectorAll('[data-dp]').forEach(function(b){b.addEventListener('click',function(){
+    pat=b.getAttribute('data-dp'); U.onBtn('data-dp',pat); draw();});});
+  $('dQ').addEventListener('input',draw);
+  U.predict('data-p3','pv3',{
+    a:'<b>No.</b> 1% is the share of threads. A warp runs the branch if any one of its 32 lanes needs it: 1 &minus; 0.99<sup>32</sup> = <b>27.5%</b> of warps.',
+    b:'<b>Too low.</b> Each warp is a sample of 32 lanes, and one lane is enough: 1 &minus; 0.99<sup>32</sup> = <b>27.5%</b>.',
+    c:'<b>Right.</b> 1 &minus; 0.99<sup>32</sup> = 0.275, the rejection probability of a c = 0 sampling plan with a sample of 32. The 20,000 simulated warps land on it.',
+    d:'<b>Too high</b> for 1%: half the warps would need q = 1 &minus; 0.5<sup>1/32</sup> = 2.1%. At 1% it is <b>27.5%</b>.'});
   draw();
 })();
 </script>
