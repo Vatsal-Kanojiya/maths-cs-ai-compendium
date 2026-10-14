@@ -1762,6 +1762,220 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
   </div>
 </section>
 
+<section id="order">
+  <div class="col">
+    <div class="sechead"><span class="secnum">14</span><h2>Same numbers, different sum</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2016%20-%20SIMD%20and%20GPU%20programming/05.%20triton%2C%20TPUs%20and%20pallax.md" target="_blank" rel="noopener">src 05. Triton, TPUs &#8599;</a>
+    </div>
+    <p>
+      <b>Sheet 15&rsquo;s debt.</b> Sheet 15 &sect;21 said that a container image cannot make a GPU training run
+      repeat exactly, because GPU arithmetic adds numbers in a varying order, and promised that this sheet would
+      say why. Sheet 13 part 1 &sect;11 supplied the cause: floating-point addition is not associative. In
+      float32, where one unit in the last place (an <em>ulp</em>) at \(10^8\) is 8,
+    </p>
+    <div class="mathbox">$$(1 + 10^{8}) - 10^{8} = 0, \qquad 1 + (10^{8} - 10^{8}) = 1 .$$</div>
+    <p>
+      A GPU sums a long array in two stages. Each block reduces its own share in a fixed tree: 256 values to
+      128 to 64 down to 1, the pattern file 07 prints and part 1&rsquo;s butterfly. That order never changes, so
+      it gives the same bits every time. The block totals must then be combined. A second pass in a fixed order
+      is repeatable. Adding each block&rsquo;s total into one place with an <em>atomic add</em>, as soon as the
+      block finishes, is not: blocks finish in an order that depends on timing. Library routines also split
+      the same sum differently for a different GPU, batch size or version (reported).
+    </p>
+    <p>
+      Simulated, with the lab&rsquo;s data: 65,536 float32 values in \([0, 1)\), exact sum 32,707.5328, where
+      one ulp is \(2^{-9} = 0.00195\). Tree-summed in 256 blocks and combined in block order, the total is 0.8
+      ulp from exact. Combined in 200 random arrival orders, it comes out <b>14 different ways, spread over 13
+      ulp</b>, a relative spread of \(7.8 \times 10^{-7}\). One running total over all 65,536 values, the order a
+      single CPU loop uses, is <b>138.8 ulp</b> low. On the source&rsquo;s JAX array, \(10^7\) values of
+      \(\max(2x + 1, 0)\), one running float32 total is <b>0.25%</b> low, while NumPy&rsquo;s pairwise sum is off
+      by \(4.9 \times 10^{-9}\) (<code>[Ch16p2 s14]</code>).
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same structure: a tolerance stack, whose chain length the order sets</div>
+      <p style="margin-bottom:0">
+        Sheet 17 &sect;08 found that errors through a network stack like tolerances. A sum does the same: every
+        addition may add up to half an ulp of the running total, and a value&rsquo;s error is carried by every
+        addition after it. A single running total is a chain of \(n - 1\) links, worst case \((n-1)u\) of the
+        sum of magnitudes with \(u = 2^{-24}\): \(3.9 \times 10^{-3}\) at \(n = 65{,}536\). A tree is a chain of
+        \(\log_2 n = 16\) links: \(9.5 \times 10^{-7}\). Reordering a sum is reassembling a stack in a different
+        sequence: the nominal is unchanged, the stack-up is not.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks: rounding is not random</div>
+      <p style="margin-bottom:0">
+        A tolerance stack describes parts that vary. Rounding does not vary: the same additions in the same order
+        give the same bits, every time, on any machine that follows the IEEE rules. So a GPU sum is not noisy; it
+        is a different calculation each time the order changes. That is why the cure is a fixed order, not more
+        precision: deterministic modes in the frameworks remove the atomics and pin the algorithms, at some cost
+        in speed (reported). Accumulating in float32 under 16-bit inputs (&sect;09) narrows the spread but does
+        not make it zero. In training, the last-digit differences feed every later step, which is why two runs
+        drift apart instead of staying a few ulp apart (reported; this page does not simulate training).
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Same numbers, different sum</div><div class="lab-tag">Predict, then rerun</div></div>
+    <div class="lab-body">
+    <div class="predict">
+      <p style="margin-top:0">
+        The same 65,536 numbers are summed 200 times on a GPU whose 256 blocks add their partial sums into one
+        total in whatever order they finish. How many different totals come out?
+      </p>
+      <button class="pbtn" data-p6="a" type="button">One: same numbers, same sum</button>
+      <button class="pbtn" data-p6="b" type="button">Two or three</button>
+      <button class="pbtn" data-p6="c" type="button">About 10 to 20</button>
+      <button class="pbtn" data-p6="d" type="button">About 200, all different</button>
+      <div class="pverdict" id="pv6"></div>
+    </div>
+    <div class="chartwrap">
+    <svg class="svgfig" id="oS" viewBox="0 0 560 270" role="img"
+         aria-label="Histogram of the float32 totals in ulps from the exact sum, over many arrival orders, with the in-order tree total and the running total marked"></svg>
+    </div>
+    <div class="ctl">
+      <button class="btn" id="oA" type="button">Add 1 run</button>
+      <button class="btn" id="oH" type="button">Add 100 runs</button>
+      <button class="btn" id="oR" type="button">Back to 200 runs</button>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Runs</div><div class="ro-v a" id="oN">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Different<br>totals</div><div class="ro-v b" id="oD">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Spread,<br>ulp</div><div class="ro-v c" id="oSp">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Tree in order,<br>ulp from exact</div><div class="ro-v" id="oTr">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Running total,<br>ulp from exact</div><div class="ro-v" id="oSq">&mdash;</div></div>
+    </div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    Every number is computed in your browser in float32, with the same data and the same orders as the verifier.
+    Each bar is one distinct total and its height the number of runs that produced it; the dashed line is the
+    exact sum, the green dotted line the 256 block totals added in block order. At rest, 200 runs give <b>14 different
+    totals over 13 ulp</b>, the answer to the prediction. The running total, 138.8 ulp low, is off the left edge:
+    order matters ten times more there than among the arrival orders.
+  </div>
+</section>
+
+<section id="worked">
+  <div class="col">
+    <div class="sechead"><span class="secnum">15</span><h2>Worked example: the source&rsquo;s matmul, solved twice</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2016%20-%20SIMD%20and%20GPU%20programming/04.%20GPU%20architecture%20and%20CUDA.md" target="_blank" rel="noopener">src 04. GPU and CUDA &#8599;</a>
+    </div>
+    <div class="defn">
+      <div class="defn-h">The problem</div>
+      <p>
+        File 04&rsquo;s task 2 multiplies two \(1024 \times 1024\) float32 matrices. On the reference GPU
+        (66.9 TFLOP/s FP32, 3.3 TB/s HBM, PCIe 31.5 GB/s each way): (a) what do the naive kernel and the
+        source&rsquo;s 16&times;16-tiled kernel attain? (b) What tile reaches the FP32 roof, and can the
+        source&rsquo;s one-thread-per-output design build it? (c) If \(A\) and \(B\) come from the host and \(C\)
+        goes back on every call, which station binds?
+      </p>
+    </div>
+    <h3>Solved as a production line</h3>
+    <p>
+      Three stations in series: the dock (31.5 GB/s), the stores (3.3 TB/s) and the machines (66.9 TFLOP/s). The
+      kit sets the product mix at the stores. A naive kernel fetches two floats per multiply-add, 0.25 FLOP/B, so
+      the stores supply \(3.3 \times 0.25 = 0.825\) TFLOP/s of work and the product takes
+      \(2 \times 1024^3 / 0.825 \times 10^{12} = 2.60\) ms. The source&rsquo;s 16-kit makes it 4 FLOP/B: 13.2 TFLOP/s,
+      <b>0.163 ms</b>, still waiting on the stores. Balance needs 20.3 FLOP/B, a kit edge of 82, which needs 6,724
+      one-output operators in a cell that holds 1,024. So each operator must take 64 outputs: a 128&times;128 kit
+      at 32 FLOP/B, which the machines now limit, <b>32.1 &micro;s</b>.
+    </p>
+    <p>
+      Now the dock. Each call brings in two matrices and sends one back, \(12N^2 = 12.6\) MB. The work per byte at
+      the dock is \(2N^3/12N^2 = N/6 = 170.7\) FLOP/B, so the dock supplies \(0.0315 \times 170.7 = 5.38\) TFLOP/s
+      of work: <b>8% of the machines</b>. The transfers alone take 0.399 ms, twelve times the 128-kit&rsquo;s
+      arithmetic, and the choice of kit no longer matters. Keep the matrices on the GPU, or send larger ones: the
+      dock stops binding at \(N^* = 12{,}741\).
+    </p>
+    <h3>Solved as a roofline</h3>
+    <p>
+      Attainable \(= \min(66.9,\ 3.3\,I,\ 0.0315\,I_{\text{PCIe}})\) TFLOP/s with \(I_{\text{PCIe}} = 170.7\). Naive,
+      \(I = 0.25\): 0.825. Tiled 16: 13.2. Tiled 32, the largest legal one-output tile: 26.4. Block tile 128: 66.9,
+      on the roof. With the dock in the line: \(\min(66.9, 105.6, 5.38) = 5.38\) TFLOP/s, whatever the kernel
+      (<code>[Ch16p2 s15]</code>).
+    </p>
+    <p>
+      The two solutions are one calculation. The shop version says why the answer has its shape: a kit sized by
+      volume over surface, a cell with a fixed number of operators, and a dock that sets the pace for material
+      bought in fresh every time. The roofline version is quicker to draw. Use whichever lets you see the
+      bottleneck first.
+    </p>
+  </div>
+</section>
+
+<section id="notcovered">
+  <div class="col">
+    <div class="sechead"><span class="secnum">16</span><h2>What this part does not cover</h2>
+      <span class="srcref nolink">scope</span>
+    </div>
+    <p>A full treatment of GPU programming would include each of these, and this part does not:</p>
+    <ul>
+      <li><b>Measurements on a GPU.</b> None was available. Every hardware figure is the source&rsquo;s or reported,
+        and every performance number is derived or simulated.</li>
+      <li><b>How a warp scheduler really works</b>: instruction latencies beyond the reported 4 cycles, dependency
+        tracking, and the GPU&rsquo;s memory-ordering rules.</li>
+      <li><b>Shared-memory bank conflicts</b>, which the source names: 32 banks, and the access patterns that
+        serialise them.</li>
+      <li><b>What the caches absorb</b>: how much of a naive kernel&rsquo;s traffic L1 and L2 catch, and the L2 reuse
+        between blocks that lets real matrix kernels approach the tensor-core roof.</li>
+      <li><b>Asynchronous tile copies</b> and the other hardware recent GPUs add to keep tensor cores fed.</li>
+      <li><b>Several GPUs</b>: NVLink, collective operations such as all-reduce, and the reduction order they
+        introduce. Sheet 18 takes multi-machine systems at plant scale.</li>
+      <li><b>Sparsity and 8-bit formats</b>: the source&rsquo;s 2:4 structured sparsity and FP8 Transformer Engine
+        are named, not computed. Sheet 17 covers quantisation.</li>
+      <li><b>Flash attention&rsquo;s backward pass</b>, which recomputes the tiles instead of storing them.</li>
+      <li><b>Compiler internals</b>: how Triton, XLA and <code>torch.compile</code> choose tiles and fusions.</li>
+      <li><b>Profiling</b> with the source&rsquo;s Nsight tools, and <b>memory pools</b> (its &ldquo;~1 ms per
+        <code>cudaMalloc</code>&rdquo; is reported).</li>
+      <li><b>TPU pods</b>: the inter-chip network and how a model is split across thousands of chips.</li>
+      <li>RISC-V, embedded targets and Vulkan, which are part 3.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="recall">
+  <div class="col">
+    <div class="sechead"><span class="secnum">17</span><h2>Question bank</h2>
+      <span class="srcref nolink">24 prompts</span>
+    </div>
+    <p>
+      Eight to recall, eight to apply, eight to judge. Answer before opening. The numerical answers are recomputed
+      by the verifier under <code>[Ch16p2 s17]</code>.
+    </p>
+    <h3 style="margin:18px 0 10px">Recall</h3>
+    <details class="q"><summary><span class="qn">01</span>What is a warp, and what does SIMT add to SIMD?</summary><div class="ans"><p>32 threads that issue one instruction at a time together: a drilling head with 32 spindles. With SIMT you write code for one thread and the hardware forms the masks, runs both sides of a branch and rejoins the lanes; each lane may also loop its own number of times and load from its own address.</p></div></details>
+    <details class="q"><summary><span class="qn">02</span>Give the source&rsquo;s GPU memory levels with their latencies.</summary><div class="ans"><p>Registers ~0 cycles, shared memory ~5, L1 ~30, L2 ~200, HBM ~400. Ahead of them all, host memory across PCIe at 31.5 GB/s each way.</p></div></details>
+    <details class="q"><summary><span class="qn">03</span>What does <code>__syncthreads()</code> do, and why does the tiled matmul call it twice per step?</summary><div class="ans"><p>It holds every thread of the block until all arrive. Once so nobody computes on a kit still being stocked, once so nobody restocks a kit still in use. The time through it is the slowest thread&rsquo;s, like a transfer line&rsquo;s index.</p></div></details>
+    <details class="q"><summary><span class="qn">04</span>What is a coalesced load?</summary><div class="ans"><p>One whose 32 addresses fall in as few 128-byte transactions as possible: consecutive lanes on consecutive floats, one transaction. Cost is counted in distinct pallets touched.</p></div></details>
+    <details class="q"><summary><span class="qn">05</span>How many multiply-adds does a tensor core do per cycle, by the source, and how many does one 16&times;16&times;16 <code>mma_sync</code> cover?</summary><div class="ans"><p>\(4\times4\times4 = 64\) per core per cycle; \(16^3 = 4{,}096\) per warp instruction.</p></div></details>
+    <details class="q"><summary><span class="qn">06</span>How does an output-stationary systolic array compute \(AB\)?</summary><div class="ans"><p>Cell \((i,j)\) keeps \(c_{ij}\); rows of \(A\) enter from the left and columns of \(B\) from the top, each delayed one cycle per row or column. At cycle \(t\) the cell adds \(a_{ik}b_{kj}\) with \(k = t-i-j\). Wave \(k\) adds the outer product \(\mathbf a_k\mathbf b_k^{\mathsf T}\).</p></div></details>
+    <details class="q"><summary><span class="qn">07</span>What does Triton&rsquo;s <code>mask</code> do, and which CPU feature is it?</summary><div class="ans"><p>It switches off the lanes whose offset is at or past the end of the array, so the last block needs no clean-up loop. It is SVE&rsquo;s <code>svwhilelt</code> predicate (part 1 &sect;09), or an AVX-512 mask built from the same test.</p></div></details>
+    <details class="q"><summary><span class="qn">08</span>Why is a GPU run not bit-exactly repeatable?</summary><div class="ans"><p>Float addition is not associative, and some GPU sums are combined in an order set by timing (atomic adds as blocks finish) or by library choices. Different orders give totals that differ in the last bits: 14 different totals in 200 runs in &sect;14.</p></div></details>
+
+    <h3 style="margin:22px 0 10px">Apply</h3>
+    <details class="q"><summary><span class="qn">09</span>A GPU has 50 TFLOP/s in FP32 and 2 TB/s. Ridge, and what does layer norm attain?</summary><div class="ans"><p>Ridge \(50/2 = 25\) FLOP/B. Layer norm at 0.625 FLOP/B: \(2 \times 0.625 = 1.25\) TFLOP/s, 2.5% of peak.</p></div></details>
+    <details class="q"><summary><span class="qn">10</span>A 32&times;32 shared-memory tile: intensity, shared memory, threads?</summary><div class="ans"><p>\(32/4 = 8\) FLOP/B; two tiles of \(32^2\) floats, 8 KiB; 1,024 threads, the most a block may have.</p></div></details>
+    <details class="q"><summary><span class="qn">11</span>Memory latency 500 cycles, 2 TB/s, clock 1.5 GHz, 100 SMs. How many 128-byte warp-loads must each SM keep in flight?</summary><div class="ans"><p>\(2\times10^{12}/1.5\times10^{9} = 1{,}333\) bytes per cycle; \(\times 500 = 666{,}667\) bytes; per SM 6,667 bytes, <b>52.1</b> warp-loads.</p></div></details>
+    <details class="q"><summary><span class="qn">12</span>65,536 registers per SM and 80 registers per thread. How many warps fit?</summary><div class="ans"><p>\(\lfloor 65{,}536/(32 \times 80) \rfloor = \lfloor 25.6 \rfloor = 25\).</p></div></details>
+    <details class="q"><summary><span class="qn">13</span>A branch is taken by 2% of threads at random. What share of warps must run it?</summary><div class="ans"><p>\(1 - 0.98^{32} = 0.476\): nearly half.</p></div></details>
+    <details class="q"><summary><span class="qn">14</span>A warp loads 32 floats at stride 8. How many 128-byte transactions, and what share of the bytes is used?</summary><div class="ans"><p>8 transactions, 12.5%. With 32-byte sectors also 12.5%.</p></div></details>
+    <details class="q"><summary><span class="qn">15</span>A 128&times;128 systolic array streams 64 rows in one pass. Utilisation?</summary><div class="ans"><p>\(64/(64 + 254) = 20.1\%\).</p></div></details>
+    <details class="q"><summary><span class="qn">16</span>A matmul followed by three elementwise operations: passes over the output array, unfused against fused?</summary><div class="ans"><p>\(1 + 2 \times 3 = 7\) against 1. The time saved depends on which station binds (&sect;12).</p></div></details>
+
+    <h3 style="margin:22px 0 10px">Judge</h3>
+    <details class="q"><summary><span class="qn">17</span>A kernel uses 128 registers per thread, keeps one load in flight per warp, and reaches 40% of HBM bandwidth. Launch more threads?</summary><div class="ans"><p>They will not become resident: the register file holds 16 warps, and Little&rsquo;s law gives \(16 \times 128/404 = 5.07\) of 12.63 bytes per cycle, 40.1%, exactly what was measured. Either keep several loads in flight per warp (double buffering) or bring the registers down to 51 or fewer.</p></div></details>
+    <details class="q"><summary><span class="qn">18</span>The source&rsquo;s divergence task would print a speedup near 1.0. Is divergence free?</summary><div class="ans"><p>No. That kernel sits at 0.25 FLOP/B, deep on the delivery side, so the doubled arithmetic was hidden behind memory. In a compute-bound kernel a divergent warp pays \(a + b\) in full.</p></div></details>
+    <details class="q"><summary><span class="qn">19</span>Should you fuse bias and activation into a large bf16 matmul, and what should you expect?</summary><div class="ans"><p>Yes, but expect at most \(1 + ksI^*/d\): 1.29&times; at \(d = 4096\) on the reference GPU. The \(1 + 2k\) cut applies to the tail&rsquo;s traffic, not to the matmul&rsquo;s time.</p></div></details>
+    <details class="q"><summary><span class="qn">20</span>A colleague offloads a 2048&times;2048 FP32 matmul to the GPU, copying both operands in and the result out every call. Worth it?</summary><div class="ans"><p>Not as written. The link takes 1.60 ms against 0.257 ms of arithmetic at the roof; the dock binds below \(N \approx 12{,}700\). Keep the data on the GPU between calls.</p></div></details>
+    <details class="q"><summary><span class="qn">21</span>Is a TPU&rsquo;s systolic array a good fit for batch-1 inference?</summary><div class="ans"><p>Poor. One row through a 128&times;128 array keeps it 1/255 = 0.39% busy for that pass; the array needs long streams to amortise its fill and drain. A GPU at batch 1 is also limited, by reading the weights for every token (Sheet 17).</p></div></details>
+    <details class="q"><summary><span class="qn">22</span>Can a GPU training run be made bit-exact, and what does it cost?</summary><div class="ans"><p>On one machine, mostly: fix every reduction order (no float atomics, deterministic algorithms, the same library version and launch shapes). It costs speed (reported), and a different GPU model may still choose a different order.</p></div></details>
+    <details class="q"><summary><span class="qn">23</span>&ldquo;Coalescing no longer matters because GPUs fetch 32-byte sectors.&rdquo; Agree?</summary><div class="ans"><p>Partly. Large strides waste 87.5% instead of up to 97%. But a stride of 4 (an array of 16-byte structures) uses 25% in both models, so structure-of-arrays still moves 4&times; fewer bytes.</p></div></details>
+    <details class="q"><summary><span class="qn">24</span>The JAX task claims XLA fuses its four operations into one kernel. How would you check, and what is the best possible?</summary><div class="ans"><p>Compile it and read the optimised program: here it showed four fused kernels. The divide needs the whole sum first, so at least two passes are needed; the least traffic is 3 array passes, 120 MB, against eager mode&rsquo;s 360 MB.</p></div></details>
+  </div>
+</section>
+
 </main>
 </div>
 
@@ -2150,6 +2364,79 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     c:'<b>Right.</b> Unfused 555.9 + 162.7 &micro;s, fused 555.9: 1.29&times;, the ceiling 1 + 2 &times; 2 &times; 299.7 / 4096 that holds for any compute-bound batch.',
     d:'<b>It is faster</b>, by the 162.7 &micro;s the two elementwise passes cost: <b>1.29&times;</b>. Only the matmul itself does not speed up.'});
   draw();
+})();
+</script>
+
+<script>
+/* ===== LAB 6 -- one array, many arrival orders: float32 sums in the browser =====
+   Same data (rng 16), same block trees and same orders (rng 99) as [Ch16p2 s14]. */
+(function(){
+  'use strict';
+  var U=window.__c16, $=U.$, ST=U.ST, fr=Math.fround;
+  var N=65536, NB=256, BS=256;
+  var r1=U.rng(16), data=new Float32Array(N), i, j, exact=0;
+  for(i=0;i<N;i++){ data[i]=fr(r1()); exact+=data[i]; }
+  var seq=0; for(i=0;i<N;i++) seq=fr(seq+data[i]);
+  var parts=new Float32Array(NB);
+  for(var b=0;b<NB;b++){
+    var s=Array.prototype.slice.call(data.subarray(b*BS,(b+1)*BS));
+    for(var st=BS/2;st>=1;st>>=1){ for(i=0;i<st;i++) s[i]=fr(s[i]+s[i+st]); }
+    parts[b]=s[0];
+  }
+  var ulp=Math.pow(2,Math.floor(Math.log2(exact))-23);
+  function addOrder(ord){var t=0; for(var k=0;k<ord.length;k++) t=fr(t+parts[ord[k]]); return t;}
+  var fixed=(function(){var o=[]; for(var k=0;k<NB;k++) o.push(k); return addOrder(o);})();
+  var r2, res;
+  function reset(){ r2=U.rng(99); res=[]; more(200); }
+  function more(m){
+    for(var run=0;run<m;run++){
+      var p=[]; for(i=0;i<NB;i++) p.push(i);
+      for(i=NB-1;i>0;i--){ j=Math.floor(r2()*(i+1)); var tmp=p[i]; p[i]=p[j]; p[j]=tmp; }
+      res.push(addOrder(p));
+    }
+  }
+  function draw(){
+    var counts={}, k, lo=1e9, hi=-1e9;
+    res.forEach(function(v){counts[v]=(counts[v]||0)+1; var u=(v-exact)/ulp; lo=Math.min(lo,u); hi=Math.max(hi,u);});
+    var keys=Object.keys(counts).map(Number).sort(function(a,b){return a-b;});
+    var tf=(fixed-exact)/ulp, sq=(seq-exact)/ulp;
+    var xa=Math.floor(Math.min(lo,tf,0))-3, xb=Math.ceil(Math.max(hi,tf,0))+3;
+    var X0=60, X1=540, Y0=214, Y1=34, cmax=0;
+    keys.forEach(function(v){cmax=Math.max(cmax,counts[v]);});
+    var ymax=Math.max(10,Math.ceil(cmax/10)*10);
+    function X(u){return X0+(X1-X0)*(u-xa)/(xb-xa);}
+    function Y(c){return Y0-(Y0-Y1)*c/ymax;}
+    var h='', step=ymax>50?20:(ymax>20?10:5);
+    for(k=0;k<=ymax;k+=step){h+=U.ln(X0,Y(k),X1,Y(k),ST.grid)+U.txt(X0-6,Y(k)+4,k,ST.tick,'end');}
+    var xs=(xb-xa)>40?10:((xb-xa)>16?4:2);
+    for(k=Math.ceil(xa/xs)*xs;k<=xb;k+=xs){h+=U.ln(X(k),Y0,X(k),Y0+5,ST.axis)+U.txt(X(k),Y0+18,(k>0?'+':'')+k,ST.tick,'middle');}
+    h+=U.ln(X0,Y0,X1,Y0,ST.axis)+U.ln(X0,Y0,X0,Y1,ST.axis);
+    h+=U.txt((X0+X1)/2,Y0+36,'float32 total, in ulp from the exact sum (one ulp = 2⁻⁹)',ST.lab,'middle');
+    h+=U.txt(X0+4,Y1-10,'runs giving that total',ST.small);
+    h+=U.ln(X(0),Y0,X(0),Y1,'stroke:var(--ink-3);stroke-width:1.4;stroke-dasharray:5 4')+U.txt(X(0)+4,Y1+10,'exact',ST.small);
+    var bw=Math.max(3,Math.min(14,(X1-X0)/(xb-xa)*0.7));
+    keys.forEach(function(v){var u=(v-exact)/ulp, c=counts[v];
+      h+='<rect x="'+U.f1(X(u)-bw/2)+'" y="'+U.f1(Y(c))+'" width="'+U.f1(bw)+'" height="'+U.f1(Y0-Y(c))+'" rx="2" style="fill:var(--c2)"/>';});
+    h+=U.ln(X(tf),Y0,X(tf),Y1,'stroke:var(--c3);stroke-width:1.6;stroke-dasharray:2 3');
+    h+=U.txt(X(tf)-5,Y1+10,'tree, in order',ST.small,'end');
+    h+='<path d="M'+(X0+4)+','+(Y1+34)+' l10,-6 l0,12 z" style="fill:var(--c1)"/>';
+    h+=U.txt(X0+18,Y1+38,'running total: '+sq.toFixed(1)+' ulp, off scale',ST.small);
+    $('oS').innerHTML=h;
+    $('oN').textContent=res.length;
+    $('oD').textContent=keys.length;
+    $('oSp').textContent=Math.round(hi-lo);
+    $('oTr').textContent=(tf>0?'+':'')+tf.toFixed(1);
+    $('oSq').textContent=sq.toFixed(1);
+  }
+  $('oA').addEventListener('click',function(){more(1); draw();});
+  $('oH').addEventListener('click',function(){more(100); draw();});
+  $('oR').addEventListener('click',function(){reset(); draw();});
+  U.predict('data-p6','pv6',{
+    a:'<b>No.</b> Same numbers, different order: float addition is not associative. 200 arrival orders gave <b>14</b> different totals, 13 ulp apart.',
+    b:'<b>More than that.</b> The 256 block totals can arrive in 256! orders, and the rounding differs among many of them: <b>14</b> different totals in 200 runs.',
+    c:'<b>Right.</b> 14 different totals spread over 13 ulp, a relative spread under 10<sup>&minus;6</sup>. Small, and never zero unless the order is fixed.',
+    d:'<b>Too many.</b> Most orders round to one of a handful of nearby values: <b>14</b> distinct totals in 200 runs.'});
+  reset(); draw();
 })();
 </script>
 
