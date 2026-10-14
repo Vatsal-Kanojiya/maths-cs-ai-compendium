@@ -1,0 +1,913 @@
+<title>SIMD and the GPU</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(', '\\)']], displayMath: [['$$', '$$']], processEscapes: true },
+  svg: { fontCache: 'global', scale: 1.0 },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-svg.js" id="MathJax-script" async></script>
+
+<style>
+/* ============ TOKENS: light is complete and authoritative ============ */
+:root{
+  --ground:#F0F2F1;
+  --sheet:#FBFCFB;
+  --sheet-2:#F4F6F5;
+  --ink:#14181A;
+  --ink-2:#4E575B;
+  --ink-3:#77838A;
+  --rule:#D3DAD7;
+  --rule-strong:#A8B4B0;
+  --accent:#12507E;
+  --accent-ink:#0E4267;
+  --accent-soft:#E4EEF6;
+  --bridge:#1F8A4C;
+  --bridge-soft:#E4F2EA;
+  --brk:#A8500F;
+  --brk-soft:#FAEBDF;
+  --s1:#BF5B00;
+  --s2:#0F74C7;
+  --s3:#1F8A4C;
+  --paper:#FFFFFF;            /* pasted-drawing ground, both themes */
+  --paper-ink:#1b1b1b;
+  --shadow:0 1px 2px rgba(20,24,26,.06), 0 6px 18px rgba(20,24,26,.05);
+  --f-disp:'Archivo Narrow', 'Arial Narrow', Helvetica, sans-serif;
+  --f-body:'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --f-mono:'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+    --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+    --rule:#293134; --rule-strong:#3F494C;
+    --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+    --bridge:#35AC63; --bridge-soft:#11281B;
+    --brk:#E0913F; --brk-soft:#2E2012;
+    --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+  --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+  --rule:#293134; --rule-strong:#3F494C;
+  --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+  --bridge:#35AC63; --bridge-soft:#11281B;
+  --brk:#E0913F; --brk-soft:#2E2012;
+  --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:var(--f-body); font-size:17px; line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ============ TITLE BLOCK (engineering drawing header) ============ */
+.titleblock{
+  position:sticky; top:env(safe-area-inset-top,0px); z-index:40;
+  background:var(--sheet); border-bottom:1px solid var(--rule-strong);
+}
+.tb-in{
+  max-width:1240px; margin:0 auto; padding:0 16px;
+  display:flex; align-items:stretch; gap:0; min-height:46px;
+}
+.tb-cell{
+  display:flex; flex-direction:column; justify-content:center;
+  padding:5px 14px; border-right:1px solid var(--rule);
+  font-family:var(--f-disp);
+}
+.tb-cell:first-child{padding-left:0}
+.tb-cell:last-child{border-right:0; margin-left:auto; padding-right:0}
+.tb-k{
+  font-size:8.5px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); line-height:1.4;
+}
+.tb-v{font-size:13px; font-weight:700; letter-spacing:.02em; color:var(--ink); line-height:1.3}
+.tb-v.accent{color:var(--accent)}
+.tb-hide{display:none}
+@media (min-width:680px){ .tb-hide{display:flex} }
+
+.themebtn{
+  appearance:none; background:transparent; border:1px solid var(--rule-strong);
+  color:var(--ink-2); font-family:var(--f-disp); font-size:10px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:6px 10px; border-radius:2px;
+  cursor:pointer; align-self:center; white-space:nowrap;
+}
+.themebtn:hover{border-color:var(--accent); color:var(--accent)}
+.themebtn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+/* ============ SHELL ============ */
+.shell{max-width:1240px; margin:0 auto; padding:0 16px; padding-block:0 64px}
+@media (min-width:1080px){
+  .shell{display:grid; grid-template-columns:212px minmax(0,1fr); gap:44px; align-items:start}
+}
+.rail{display:none}
+@media (min-width:1080px){
+  .rail{
+    display:block; position:sticky; top:calc(env(safe-area-inset-top,0px) + 70px);
+    padding-block:28px; font-family:var(--f-disp); font-size:12.5px;
+  }
+}
+.rail-h{
+  font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-3);
+  padding-bottom:8px; border-bottom:1px solid var(--rule); margin-bottom:10px;
+}
+.rail a{
+  display:flex; gap:9px; padding:4px 0; color:var(--ink-2); text-decoration:none;
+  border-left:2px solid transparent; padding-left:9px; margin-left:-11px; line-height:1.35;
+}
+.rail a:hover{color:var(--accent)}
+.rail a.on{color:var(--accent); border-left-color:var(--accent); font-weight:700}
+.rail a .n{font-family:var(--f-mono); font-size:10.5px; color:var(--ink-3); flex:none; padding-top:1px}
+.rail a.on .n{color:var(--accent)}
+
+main{min-width:0; padding-block:0 0}
+.col{max-width:70ch}
+
+/* ============ TYPE ============ */
+h1,h2,h3,h4{font-family:var(--f-disp); text-wrap:balance; margin:0; line-height:1.14}
+h1{font-size:clamp(34px,7vw,58px); font-weight:700; letter-spacing:-.015em}
+h2{font-size:clamp(25px,4.2vw,34px); font-weight:700; letter-spacing:-.01em}
+h3{font-size:19px; font-weight:700; letter-spacing:.005em; margin-top:2px}
+h4{font-size:14px; font-weight:700; letter-spacing:.06em; text-transform:uppercase}
+p{margin:0 0 1.05em}
+a{color:var(--accent-ink)}
+strong{font-weight:600}
+em{font-style:italic}
+code{font-family:var(--f-mono); font-size:.87em; background:var(--sheet-2); padding:1px 5px; border-radius:2px; border:1px solid var(--rule)}
+.lead{font-size:19.5px; line-height:1.56; color:var(--ink-2)}
+.eyebrow{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--ink-3); margin:0 0 10px;
+}
+.srcref{
+  font-family:var(--f-mono); font-size:11px; color:var(--ink-3);
+  border:1px solid var(--rule); border-radius:2px; padding:2px 7px; display:inline-block;
+  background:var(--sheet-2); white-space:nowrap;
+}
+
+/* ============ SECTION ============ */
+section{padding-block:38px 0; scroll-margin-top:calc(env(safe-area-inset-top,0px) + 62px)}
+.sechead{display:flex; align-items:baseline; gap:13px; margin-bottom:6px; flex-wrap:wrap}
+.secnum{
+  font-family:var(--f-mono); font-size:12px; font-weight:600; color:var(--accent);
+  border:1px solid var(--accent); border-radius:2px; padding:2px 7px; flex:none;
+  background:var(--accent-soft);
+}
+.rule-h{border:0; border-top:1px solid var(--rule); margin:0 0 22px}
+.rule-d{border:0; border-top:1px dashed var(--rule-strong); margin:34px 0}
+
+/* ============ CALLOUTS ============ */
+.note{
+  border:1px solid var(--rule); border-left:3px solid var(--accent);
+  background:var(--sheet); border-radius:2px; padding:16px 18px; margin:22px 0;
+}
+/* Greek letters must never be uppercased: text-transform turns beta into
+   a capital Beta, which is the Latin letter B on screen -- likewise eta->H,
+   kappa->K, lambda->A-shape.  Any Greek inside an uppercased label wears .gk. */
+.gk{text-transform:none}
+.note.bridge{border-left-color:var(--bridge); background:var(--bridge-soft)}
+.note.brk{border-left-color:var(--brk); background:var(--brk-soft)}
+.note-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; margin-bottom:7px; display:flex; align-items:center; gap:8px;
+}
+.note.bridge .note-h{color:var(--bridge)}
+.note.brk .note-h{color:var(--brk)}
+.note .note-h{color:var(--accent)}
+.note p:last-child, .note ul:last-child{margin-bottom:0}
+.note-h .ic{
+  width:15px; height:15px; border-radius:50%; border:1.5px solid currentColor; flex:none;
+  display:grid; place-items:center; font-size:9.5px; font-weight:700; font-family:var(--f-mono);
+}
+ul,ol{margin:0 0 1.05em; padding-left:1.25em}
+li{margin-bottom:.4em}
+li::marker{color:var(--ink-3)}
+
+/* ============ DEFINITION BLOCK ============ */
+.defn{
+  background:var(--sheet); border:1px solid var(--rule); border-radius:3px;
+  padding:18px 20px; margin:22px 0; box-shadow:var(--shadow);
+}
+.defn-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:10px;
+  padding-bottom:8px; border-bottom:1px solid var(--rule);
+}
+.defn p:last-child{margin-bottom:0}
+
+/* ============ TABLES ============ */
+.tw{overflow-x:auto; margin:22px 0; border:1px solid var(--rule); border-radius:3px; background:var(--sheet)}
+table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:480px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule); vertical-align:top}
+thead th{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); background:var(--sheet-2); font-weight:700; white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:0}
+td.mono,th.mono{font-family:var(--f-mono); font-size:13px; font-variant-numeric:tabular-nums}
+.tw caption{
+  caption-side:bottom; text-align:left; padding:9px 14px; font-size:12.5px;
+  color:var(--ink-3); border-top:1px solid var(--rule); font-family:var(--f-disp);
+}
+
+/* ============ FIGURES ============ */
+figure{margin:24px 0}
+.paper{
+  background:var(--paper); border:1px solid var(--rule-strong); border-radius:3px;
+  padding:16px; display:flex; justify-content:center; box-shadow:var(--shadow);
+}
+.paper img{max-width:100%; height:auto; display:block}
+figcaption{
+  font-family:var(--f-disp); font-size:12.5px; color:var(--ink-3); margin-top:9px;
+  line-height:1.45; padding-left:2px;
+}
+figcaption b{color:var(--ink-2); font-weight:700; letter-spacing:.04em}
+
+/* ============ INTERACTIVE PANELS ============ */
+.lab{
+  background:var(--sheet); border:1px solid var(--rule-strong); border-radius:3px;
+  margin:26px 0; overflow:hidden; box-shadow:var(--shadow);
+}
+.lab-h{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:11px 16px; border-bottom:1px solid var(--rule); background:var(--sheet-2);
+}
+.lab-t{font-family:var(--f-disp); font-size:13px; font-weight:700; letter-spacing:.05em; text-transform:uppercase}
+.lab-tag{
+  font-family:var(--f-mono); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--accent); border:1px solid var(--accent); border-radius:2px; padding:2px 6px;
+  margin-left:auto; white-space:nowrap;
+}
+.lab-body{padding:16px}
+.lab-foot{
+  padding:11px 16px; border-top:1px solid var(--rule); background:var(--sheet-2);
+  font-size:13.5px; color:var(--ink-2); line-height:1.5;
+}
+.lab-foot b{color:var(--ink)}
+.stage{width:100%; max-width:560px; height:auto; display:block; margin-inline:auto; touch-action:none; cursor:grab}
+.stage.drag{cursor:grabbing}
+
+/* Dividers are drawn as cell borders rather than as 1px grid gaps over a grey
+   backdrop: when the item count does not fill the last row, a gap-based grid
+   leaves the backdrop showing as an empty grey block. */
+.readout{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr)); gap:0;
+  background:var(--sheet); border:1px solid var(--rule); border-radius:2px;
+  margin-top:14px; overflow:hidden;
+}
+.ro{background:var(--sheet); padding:8px 11px;
+  border-right:1px solid var(--rule); border-bottom:1px solid var(--rule)}
+.ro-k{
+  font-family:var(--f-disp); font-size:9px; letter-spacing:.13em; text-transform:uppercase;
+  color:var(--ink-3); margin-bottom:2px;
+  /* was white-space:nowrap, which clipped the longer keys instead of wrapping */
+  white-space:normal; overflow-wrap:break-word; line-height:1.3; min-height:2.6em;
+}
+.ro-v{
+  font-family:var(--f-mono); font-size:15px; font-weight:500; font-variant-numeric:tabular-nums;
+  color:var(--ink); line-height:1.25;
+}
+.ro-v.a{color:var(--s2)} .ro-v.b{color:var(--s1)} .ro-v.c{color:var(--s3)}
+
+.ctl{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:14px}
+.ctl label{
+  font-family:var(--f-disp); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-2); white-space:nowrap;
+}
+input[type=range]{
+  -webkit-appearance:none; appearance:none; height:22px; background:transparent;
+  flex:1 1 160px; min-width:130px; cursor:pointer;
+}
+input[type=range]:focus-visible{outline:2px solid var(--accent); outline-offset:3px}
+input[type=range]::-webkit-slider-runnable-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-moz-range-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:16px; height:16px; border-radius:50%;
+  background:var(--accent); border:2px solid var(--sheet); margin-top:-6.5px;
+}
+input[type=range]::-moz-range-thumb{
+  width:16px; height:16px; border-radius:50%; background:var(--accent);
+  border:2px solid var(--sheet);
+}
+.btn{
+  appearance:none; font-family:var(--f-disp); font-size:11px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:7px 13px; border-radius:2px;
+  border:1px solid var(--rule-strong); background:var(--sheet); color:var(--ink-2); cursor:pointer;
+}
+.btn:hover{border-color:var(--accent); color:var(--accent)}
+.btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.btn.on{background:var(--accent); border-color:var(--accent); color:var(--sheet)}
+
+.legend{display:flex; gap:16px; flex-wrap:wrap; margin-top:12px}
+.lg{display:flex; align-items:center; gap:7px; font-family:var(--f-disp); font-size:12px; color:var(--ink-2)}
+.lg i{width:15px; height:3px; border-radius:2px; flex:none; display:block}
+
+/* ============ MISC ============ */
+.mathbox{overflow-x:auto; overflow-y:hidden; margin:18px 0}
+mjx-container[display="true"]{margin:0 !important}
+.kv{display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:15px; margin:16px 0}
+.kv dt{font-family:var(--f-mono); font-size:13px; color:var(--accent); white-space:nowrap}
+.kv dd{margin:0; color:var(--ink-2)}
+
+details.q{
+  border:1px solid var(--rule); border-radius:3px; background:var(--sheet);
+  margin-bottom:9px; overflow:hidden;
+}
+details.q summary{
+  cursor:pointer; padding:12px 15px; font-weight:600; list-style:none;
+  display:flex; gap:11px; align-items:flex-start; font-size:15.5px;
+}
+details.q summary::-webkit-details-marker{display:none}
+details.q summary::after{
+  content:'+'; margin-left:auto; font-family:var(--f-mono); color:var(--accent);
+  font-size:17px; line-height:1; flex:none; padding-top:2px;
+}
+details.q[open] summary::after{content:'\2212'}
+details.q summary:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
+details.q summary .qn{
+  font-family:var(--f-mono); font-size:12px; color:var(--ink-3); flex:none; padding-top:3px;
+}
+details.q .ans{padding:0 15px 14px 41px; font-size:15.5px; color:var(--ink-2); border-top:1px solid var(--rule); padding-top:13px}
+details.q .ans p:last-child{margin-bottom:0}
+
+.endnote{
+  margin-top:44px; padding-top:20px; border-top:1px solid var(--rule-strong);
+  font-size:13.5px; color:var(--ink-3); font-family:var(--f-disp); line-height:1.55;
+}
+.endnote a{color:var(--accent)}
+
+.srcref{text-decoration:none}
+a.srcref{color:var(--ink-2); transition:none}
+
+</style>
+<style>
+.srcref{text-decoration:none}
+a.srcref{color:var(--ink-2)}
+a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(--accent-soft)}
+.srcref.nolink{opacity:.75; font-style:italic}
+.pv{font-family:var(--f-disp); font-size:9.5px; font-weight:700; letter-spacing:.1em;
+    text-transform:uppercase; padding:2px 7px; border-radius:2px; white-space:nowrap}
+.pv.ok{background:var(--bridge-soft); color:var(--bridge)}
+.pv.add{background:var(--accent-soft); color:var(--accent)}
+.pv.corr{background:var(--brk-soft); color:var(--brk)}
+.flag{display:inline-block; padding:1px 7px; border-radius:2px; font-family:var(--f-disp);
+      font-size:10px; letter-spacing:.1em; text-transform:uppercase; font-weight:700}
+.flag.ok{background:var(--bridge-soft); color:var(--bridge)}
+.flag.bad{background:var(--brk-soft); color:var(--brk)}
+.predict{border:1px solid var(--rule-strong); border-left:3px solid var(--brk);
+  background:var(--brk-soft); border-radius:2px; padding:13px 15px; margin:0 0 14px}
+.predict-h{font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--brk); margin-bottom:6px}
+.predict p{margin:0 0 10px; font-size:15px}
+.predict .opts{display:flex; gap:8px; flex-wrap:wrap}
+.pbtn{appearance:none; font-family:var(--f-disp); font-size:12px; font-weight:600;
+  padding:6px 12px; border-radius:2px; border:1px solid var(--rule-strong);
+  background:var(--sheet); color:var(--ink-2); cursor:pointer}
+.pbtn:hover{border-color:var(--brk); color:var(--brk)}
+.pbtn.picked{background:var(--brk); border-color:var(--brk); color:var(--sheet)}
+.pverdict{margin-top:10px; font-size:14.5px; color:var(--ink-2); display:none}
+.pverdict.show{display:block}
+.pverdict b{color:var(--ink)}
+.gap{border:1px solid var(--rule); border-left:3px solid var(--ink-3); background:var(--sheet-2);
+  border-radius:2px; padding:14px 16px; margin:18px 0}
+.gap-h{font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:7px}
+</style>
+<style>
+/* Sheet 16 part 2. Same page skeleton and palette as part 1 so the three parts match.
+   Categorical series palette copied from Sheet 12, where it was validated with
+   dataviz/validate_palette.js in both modes: light band L 0.43-0.77, dark band L 0.48-0.67,
+   chroma floor, adjacent-pair CVD separation, normal-vision floor and contrast all PASS.
+   Never pair --s1 with --brk (both orange). */
+:root{--c1:#BF5B00; --c2:#0F74C7; --c3:#1F8A4C; --c4:#7A4FBF; --c5:#C2185B}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --c1:#D9782B; --c2:#4A97D6; --c3:#35AC63; --c4:#9575D0; --c5:#D65A82}
+}
+:root[data-theme="dark"]{
+  --c1:#D9782B; --c2:#4A97D6; --c3:#35AC63; --c4:#9575D0; --c5:#D65A82}
+.ro-v.d{color:var(--c4)}
+.mnote{font-family:var(--f-disp); font-size:12.5px; color:var(--ink-3); margin:-8px 0 16px}
+.svgfig{width:100%; height:auto; display:block; color:var(--ink)}
+.chartwrap{overflow-x:auto}
+.chartwrap > .svgfig{min-width:500px}
+.col p code, .col li code, .lab-foot code, td code{overflow-wrap:anywhere}
+.sel{appearance:auto; font-family:var(--f-disp); font-size:12px; padding:5px 8px; border:1px solid var(--rule-strong);
+  border-radius:2px; background:var(--sheet); color:var(--ink)}
+</style>
+
+
+<header class="titleblock">
+  <div class="tb-in">
+    <div class="tb-cell"><div class="tb-k">Chapter</div><div class="tb-v accent">16 &middot; SIMD and GPU Programming</div></div>
+    <div class="tb-cell tb-hide"><div class="tb-k">Sheet</div><div class="tb-v">16 of 20, part 2 of 3</div></div>
+    <div class="tb-cell tb-hide"><div class="tb-k">Reader</div><div class="tb-v">B.E. Mechanical</div></div>
+    <div class="tb-cell tb-hide"><div class="tb-k">Prerequisite</div><div class="tb-v">Sheet 16 part 1</div></div>
+    <div class="tb-cell"><button class="themebtn" id="themebtn" type="button" aria-label="Switch colour theme">Theme</button></div>
+  </div>
+</header>
+
+<div class="shell">
+
+<nav class="rail" aria-label="Chapter contents">
+  <div class="rail-h">Contents</div>
+  <a href="#bridge" class="on"><span class="n">00</span><span>The bridge</span></a>
+  <a href="#lanes"><span class="n">01</span><span>Lanes, not cores</span></a>
+  <a href="#cuda"><span class="n">02</span><span>CUDA in shop terms</span></a>
+  <a href="#roofline"><span class="n">03</span><span>The GPU roofline</span></a>
+  <a href="#dock"><span class="n">04</span><span>The receiving dock</span></a>
+  <a href="#warps"><span class="n">05</span><span>Warps are kanban cards</span></a>
+  <a href="#diverge"><span class="n">06</span><span>Thirty-two spindles</span></a>
+  <a href="#coalesce"><span class="n">07</span><span>Pallets for a warp</span></a>
+  <a href="#kit"><span class="n">08</span><span>The kit in shared memory</span></a>
+  <a href="#tensor"><span class="n">09</span><span>Tensor cores</span></a>
+  <a href="#systolic"><span class="n">10</span><span>The systolic array</span></a>
+  <a href="#triton"><span class="n">11</span><span>Triton and Pallas</span></a>
+  <a href="#fusion"><span class="n">12</span><span>Fusion, priced</span></a>
+  <a href="#flash"><span class="n">13</span><span>Flash attention</span></a>
+  <a href="#order"><span class="n">14</span><span>Same numbers, different sum</span></a>
+  <a href="#worked"><span class="n">15</span><span>Worked example</span></a>
+  <a href="#notcovered"><span class="n">16</span><span>Not covered</span></a>
+  <a href="#recall"><span class="n">17</span><span>Question bank</span></a>
+  <a href="#map"><span class="n">18</span><span>The map</span></a>
+  <a href="#next"><span class="n">19</span><span>What part 3 owes</span></a>
+  <a href="#provenance"><span class="n">A</span><span>Provenance</span></a>
+</nav>
+
+<main>
+
+<section id="top" style="padding-top:44px">
+  <div class="col">
+    <p class="eyebrow">Maths, CS &amp; AI Compendium &middot; Chapter 16, part 2 of 3</p>
+    <h1>Warps Are Kanban Cards</h1>
+    <p class="lead" style="margin-top:18px">
+      Part 1 found two shop-floor laws running a CPU core. A line runs at the rate of its slowest
+      station, and work in process equals throughput times lead time. A GPU obeys both laws with
+      every number moved. The first now has three stations, the second counts its cards in warps,
+      and the rack that holds the cards is the register file.
+    </p>
+    <p>
+      This is the middle part of Chapter 16. It covers source file 04 (GPU architecture and CUDA)
+      and file 05 (Triton, TPUs and Pallas). Part 1 was the CPU and closed with seven calculations
+      it said this part owes you; each is paid below, by computation, and the section says which.
+      Part 3 takes RISC-V, Vulkan and the chapter&rsquo;s end matter, and &sect;19 says exactly what
+      it owes.
+    </p>
+    <p>
+      The headline is &sect;05. The source quotes a memory latency of about 400 cycles and a
+      bandwidth of 3.3 TB/s. Little&rsquo;s law multiplies them: about 667 KB must be on its way at
+      every instant, which is <b>39.5 warp-loads in flight on each of the 132 multiprocessors</b>.
+      Each warp in flight is a kanban card, and the cards live in the register file. Its 65,536
+      registers hold 40 warps only if each thread uses <b>51 registers or fewer</b>. A kernel that
+      uses 128 gets 16 cards, and the law caps it at <b>40% of its memory bandwidth</b> unless each
+      warp keeps several loads going at once. A simulated multiprocessor lands on that bound.
+    </p>
+    <p>
+      The roofline moved too (&sect;03). The ridge rises from part 1&rsquo;s 2.56 FLOP/B to
+      <b>20.3</b>, so the source&rsquo;s own 16&times;16 shared-memory tile, at 4 FLOP/B, sits on the
+      delivery side at a fifth of the roof. No tile with one thread per output can reach the ridge:
+      the block limit of 1,024 threads caps the tile at 32 (&sect;08).
+    </p>
+    <p class="mnote">
+      There is no GPU in the build container. Hardware figures are the source&rsquo;s, or are
+      marked as reported. Everything else is derived, simulated in Python or in your browser, or
+      run on the CPU: the source&rsquo;s JAX and Pallas code ran under JAX 0.11.2 on the CPU, with
+      Pallas in its interpreter mode. Checks are tagged <code>[Ch16p2 sNN]</code> in
+      <code>verify_claims.py</code>.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Corrections to the source in this part. Each is recomputed, simulated or re-run by <code>verify_claims.py</code> under <code>[Ch16p2 sNN]</code>.</caption>
+      <thead><tr><th>Source says</th><th>Computed, simulated or run</th><th>Where</th></tr></thead>
+      <tbody>
+        <tr><td>Over 10,000 CUDA cores against 4&ndash;128 CPU cores, a &ldquo;100&ndash;1000&times; core advantage&rdquo;</td><td>A CUDA core is one floating-point lane. The source&rsquo;s own table gives a peak ratio of 6&ndash;80&times; and a bandwidth ratio of 10&ndash;60&times; (it says 10&ndash;30&times;).</td><td>&sect;01</td></tr>
+        <tr><td><code>vector_add</code> prints <code>c[0]</code>, &ldquo;expected 3.0&rdquo;</td><td>It copies <code>d_a</code> back instead of <code>d_c</code>, so it prints 1.000000.</td><td>&sect;02</td></tr>
+        <tr><td>&ldquo;By default&hellip; the CPU launches a kernel, waits for it to finish, then launches the next&rdquo;</td><td>A launch returns at once; the GPU runs the queue in order. The source&rsquo;s own timing code calls <code>cudaEventSynchronize</code> five times for exactly that reason.</td><td>&sect;02</td></tr>
+        <tr><td>Task 1&rsquo;s ReLU prints a &ldquo;Bandwidth&rdquo; for the GPU</td><td>The two copies over PCIe take 99.1% of the timed interval. It prints the link&rsquo;s rate, about 31 GB/s at best, not the GPU&rsquo;s.</td><td>&sect;04</td></tr>
+        <tr><td>Task 3: divergence &ldquo;halves performance (or worse)&rdquo;</td><td>True of the arithmetic, invisible in this kernel: it moves 40.7 &micro;s of memory per launch against 0.5 &micro;s of arithmetic. Predicted speedup about 1.0&times;.</td><td>&sect;06</td></tr>
+        <tr><td>&ldquo;A stride of 32 is the worst case&rdquo;</td><td>Every stride from 32 up is equally bad (3.1%). With 32-byte sectors (reported) the floor is 12.5%, reached at stride 8.</td><td>&sect;07</td></tr>
+        <tr><td>Tiling in shared memory is &ldquo;the key to writing fast CUDA kernels&rdquo;, with <code>TILE 16</code></td><td>The 16-tile cuts traffic 16&times;, exactly, and still reaches only 4 FLOP/B, a fifth of the roof. One thread per output caps any tile at 32 (8 FLOP/B).</td><td>&sect;08</td></tr>
+        <tr><td>A tensor-core instruction &ldquo;computes a 4&times;4 matrix multiply in one cycle&rdquo;</td><td>That is one tensor core&rsquo;s work per cycle, 64 multiply-adds. The warp-level instruction in the source&rsquo;s own code covers 16&times;16&times;16, 4,096 of them.</td><td>&sect;09</td></tr>
+        <tr><td>Volta: &ldquo;125 TFLOPS TF32&rdquo;</td><td>The same table makes TF32 Ampere&rsquo;s innovation. 640 &times; 64 &times; 2 &times; 1.53 GHz = 125.3 TFLOP/s is Volta&rsquo;s FP16 tensor rate. The A100 and H100 rows look one precision off too (reported).</td><td>&sect;09</td></tr>
+        <tr><td>Pallas <code>add_pallas</code>, <code>grid=(x.shape[0] // 128,)</code></td><td>Run: for 1,000 elements it writes 896 and leaves 104 unwritten (NaN here). For 100 elements it writes nothing.</td><td>&sect;11</td></tr>
+        <tr><td>&ldquo;XLA fuses the 4 operations into 1 kernel&rdquo;</td><td>Impossible: the divide must wait for the whole sum. Compiled here: four fused kernels, two of them writing a full array. The least possible traffic is 3 passes against eager&rsquo;s 9.</td><td>&sect;12</td></tr>
+        <tr><td>Fusion is &ldquo;the single most impactful GPU optimisation&rdquo;</td><td>Priced: 2.0&times; on the source&rsquo;s Triton task; 1.29&times; on a real compute-bound layer, where the most it can give is \(1 + ksI^*/d\).</td><td>&sect;12</td></tr>
+        <tr><td>Flash attention&rsquo;s SRAM is &ldquo;~100&times; faster to access than HBM&rdquo;</td><td>The source&rsquo;s own table: 6&ndash;20&times; in bandwidth, 80&times; in latency. A streaming tile cares about the first.</td><td>&sect;13</td></tr>
+        <tr><td>Prefetch &ldquo;64 elements ahead&rdquo;</td><td>Little&rsquo;s law with part 1&rsquo;s measured core (10 GB/s, 210 ns) puts the distance at about 525 floats. Sixty-four cover 26 ns.</td><td>&sect;05</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="bridge">
+  <div class="col">
+    <div class="sechead"><span class="secnum">00</span><h2>The bridge</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2016%20-%20SIMD%20and%20GPU%20programming/04.%20GPU%20architecture%20and%20CUDA.md" target="_blank" rel="noopener">src 04. GPU and CUDA &#8599;</a>
+    </div>
+    <p>
+      The verdicts follow the series&rsquo; convention. <b>Identity</b> means the same formula or count,
+      checked numerically. <b>Same structure</b> means the parts correspond one for one but the
+      physics differs. <b>Breaks</b> means the correspondence fails in substance, and the section
+      says where.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>What a GATE-prepared mechanical engineer already owns, and what this part calls it.</caption>
+      <thead><tr><th>What you already know</th><th>What this part calls it</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td>A serial line runs at its slowest station (part 1 &sect;06)</td><td>The GPU roofline</td><td><b style="color:var(--bridge)">Identity,</b> every number moved. See &sect;03.</td></tr>
+        <tr><td>A receiving dock ahead of the stores</td><td>The PCIe link from host to GPU</td><td><b style="color:var(--bridge)">Identity:</b> a third station in the same min. See &sect;04.</td></tr>
+        <tr><td>A line filling and draining (Sheet 13 part 1 &sect;13)</td><td>Overlapping copies with streams; the systolic array&rsquo;s utilisation</td><td><b style="color:var(--bridge)">Identity,</b> both. See &sect;&sect;04, 10.</td></tr>
+        <tr><td>Kanban cards in a CONWIP loop (part 1 &sect;08)</td><td>Warps resident on a multiprocessor</td><td><b style="color:var(--bridge)">Identity</b> in the bound, simulated. <b style="color:var(--brk)">Breaks</b> on who sets the card count. See &sect;05.</td></tr>
+        <tr><td>A card rack of fixed size</td><td>The register file divided by registers per thread</td><td><b style="color:var(--bridge)">Same structure.</b> See &sect;05.</td></tr>
+        <tr><td>A drilling head with drills removed (part 1 &sect;05)</td><td>Warp divergence on 32 lanes</td><td><b style="color:var(--bridge)">Same structure,</b> exact cost count. <b style="color:var(--brk)">Breaks</b> at addressing and warp switching. See &sect;06.</td></tr>
+        <tr><td>A zero-acceptance sampling plan, \(c = 0\) (Sheet 15 &sect;16)</td><td>The chance a warp must run a rare branch, \(1-(1-q)^{32}\)</td><td><b style="color:var(--bridge)">Identity.</b> See &sect;06.</td></tr>
+        <tr><td>A stroke lasts as long as its deepest hole</td><td>A loop runs for its longest lane</td><td><b style="color:var(--bridge)">Identity.</b> See &sect;06.</td></tr>
+        <tr><td>Pallets of fixed size (part 1 &sect;05)</td><td>128-byte memory transactions; coalescing</td><td><b style="color:var(--bridge)">Identity</b> in the count. See &sect;07.</td></tr>
+        <tr><td>Kitting with a planned bin (part 1 &sect;07)</td><td>Tiling in shared memory</td><td><b style="color:var(--bridge)">Same structure;</b> the count is now exact at the bin&rsquo;s size. See &sect;08.</td></tr>
+        <tr><td>The two-bin system</td><td>Double buffering</td><td><b style="color:var(--bridge)">Same structure,</b> sized by Little&rsquo;s law. See &sect;08.</td></tr>
+        <tr><td>A transfer line that indexes only when every station is done</td><td><code>__syncthreads()</code></td><td><b style="color:var(--bridge)">Same structure.</b> See &sect;02.</td></tr>
+        <tr><td>A matrix product as a sum of outer products (Sheet 02)</td><td>Tensor cores, the systolic array</td><td><b style="color:var(--bridge)">Identity,</b> simulated. See &sect;&sect;09&ndash;10.</td></tr>
+        <tr><td>Done-in-one machining (part 1 &sect;01)</td><td>A fused kernel</td><td><b style="color:var(--bridge)">Same structure.</b> The traffic count is exact; the time saved depends on the station. See &sect;12.</td></tr>
+        <tr><td>Re-referencing readings to a new datum</td><td>Online softmax in flash attention</td><td><b style="color:var(--bridge)">Same structure;</b> the algebra is exact. See &sect;13.</td></tr>
+        <tr><td>A tolerance stack, worst case against a short chain (Sheet 17 &sect;08)</td><td>Rounding error of a sum, by order of addition</td><td><b style="color:var(--bridge)">Same structure.</b> <b style="color:var(--brk)">Breaks:</b> rounding is fixed once the order is. See &sect;14.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="lanes">
+  <div class="col">
+    <div class="sechead"><span class="secnum">01</span><h2>Lanes, not cores</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2016%20-%20SIMD%20and%20GPU%20programming/04.%20GPU%20architecture%20and%20CUDA.md" target="_blank" rel="noopener">src 04. GPU and CUDA &#8599;</a>
+    </div>
+    <p>
+      The source sets the two designs side by side. A CPU spends its transistors on making one
+      thread fast: large caches, branch prediction, out-of-order execution (part 1 &sect;04). A GPU
+      spends them on arithmetic units and runs thousands of slow threads at once. One is built to
+      finish a single job quickly; the other to finish many jobs per second. Its table gives the
+      CPU 4&ndash;128 cores at 3&ndash;5 GHz, 1&ndash;5 TFLOPS in FP32 and 50&ndash;100 GB/s of memory,
+      and the GPU 1,000&ndash;20,000 cores at 1&ndash;2.5 GHz, 30&ndash;80 TFLOPS and 1&ndash;3 TB/s.
+    </p>
+    <p>
+      Then it counts the wrong thing. &ldquo;Over 10,000 CUDA cores&rdquo; against 4&ndash;128 CPU cores
+      is called a 100&ndash;1000&times; advantage. A CUDA core is one floating-point <em>lane</em>, a
+      spindle in part 1&rsquo;s drilling head. The thing that corresponds to a CPU core is the
+      <b>streaming multiprocessor</b> (SM): it has its own instruction issue, registers and on-chip
+      memory, and on the GPU used below it drives 128 FP32 lanes. A CPU core drives lanes too:
+      part 1&rsquo;s had two FMA units of 8 lanes each, 16 in all, and an AVX-512 core has 32. Count
+      lanes and a 128-core AVX-512 server has 4,096 against the GPU&rsquo;s 16,896, a factor of 4.1;
+      a 4-core AVX2 laptop has 64, a factor of 264. The clock pulls the other way. The source&rsquo;s
+      own table settles it: its peaks differ by <b>6&ndash;80&times;</b> and its bandwidths by
+      <b>10&ndash;60&times;</b>, not the 10&ndash;30&times; it states (<code>[Ch16p2 s01]</code>).
+    </p>
+    <div class="defn">
+      <div class="defn-h">The reference GPU used on this page</div>
+      <p>
+        Every calculation below uses one H100-class part, built from the source&rsquo;s own figures
+        where it gives them. <b>From the source:</b> 3.3 TB/s of HBM (the top of its range), about 400
+        cycles to HBM and 200 to L2, about 6 TB/s from L2 and 20 TB/s from shared memory, 256 KB of
+        registers and up to 228 KB of shared memory per SM, at most 255 registers per thread and 1,024
+        threads per block, warps of 32, and 989 TFLOP/s from its tensor cores. <b>Reported, not in
+        the source:</b> 132 SMs, 16,896 FP32 lanes, a 1.98 GHz clock, 4 warp schedulers per SM, and at
+        most 64 warps resident per SM.
+      </p>
+      <p>
+        Its FP32 peak is then a calculation, with a fused multiply-add counted as two operations as
+        part 1 &sect;06 insists: \(16{,}896 \times 1.98\ \text{GHz} \times 2 = 66.9\) TFLOP/s, inside
+        the source&rsquo;s 30&ndash;80. Counting an FMA once gives 33.5, also inside it, so the range
+        alone cannot say which convention the source used.
+      </p>
+    </div>
+    <p>
+      The source&rsquo;s memory hierarchy is part 1 &sect;07&rsquo;s staging again, with one level the
+      CPU did not have. Sheet 13 named the vocabulary; it carries over.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>The GPU memory hierarchy as the source gives it (latency in cycles), with the staging name each level takes in this series.</caption>
+      <thead><tr><th>Level</th><th>Size</th><th>Latency</th><th>Bandwidth</th><th>Staging name</th></tr></thead>
+      <tbody>
+        <tr><td>Registers</td><td class="mono">~256 KB per SM</td><td class="mono">0</td><td>highest</td><td>in the operator&rsquo;s hand</td></tr>
+        <tr><td>Shared memory</td><td class="mono">48&ndash;228 KB per SM</td><td class="mono">~5</td><td class="mono">~20 TB/s</td><td>a line-side bin you stock yourself (&sect;08)</td></tr>
+        <tr><td>L1 cache</td><td class="mono">128&ndash;256 KB per SM</td><td class="mono">~30</td><td>&mdash;</td><td>a line-side bin that stocks itself</td></tr>
+        <tr><td>L2 cache</td><td class="mono">4&ndash;96 MB</td><td class="mono">~200</td><td class="mono">~6 TB/s</td><td>the shared stock</td></tr>
+        <tr><td>HBM (global)</td><td class="mono">24&ndash;192 GB</td><td class="mono">~400</td><td class="mono">1&ndash;3.3 TB/s</td><td>the plant store</td></tr>
+        <tr><td>Host memory, over PCIe</td><td>the host&rsquo;s</td><td>&mdash;</td><td class="mono">31.5 GB/s each way</td><td>an outside supplier at the receiving dock (&sect;04)</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where &ldquo;latency against throughput&rdquo; needs care</div>
+      <p style="margin-bottom:0">
+        The source&rsquo;s slogan is that a CPU is designed for latency and a GPU for throughput.
+        Sheet 17 &sect;13 found that &ldquo;latency&rdquo; is a lead time and &ldquo;throughput&rdquo; a
+        rate, and Little&rsquo;s law ties them: work in process = rate &times; lead time. A GPU&rsquo;s
+        individual memory access is slow, 400 cycles; it gets its rate by keeping a great deal of work
+        in process. How much is the subject of &sect;05, and the answer is a number, not a slogan.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="cuda">
+  <div class="col">
+    <div class="sechead"><span class="secnum">02</span><h2>CUDA in shop terms</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2016%20-%20SIMD%20and%20GPU%20programming/04.%20GPU%20architecture%20and%20CUDA.md" target="_blank" rel="noopener">src 04. GPU and CUDA &#8599;</a>
+    </div>
+    <p>
+      CUDA is NVIDIA&rsquo;s way of programming its GPUs. You write a <b>kernel</b>, one function that
+      every thread runs, each on its own piece of the data. Threads come in three levels. A
+      <b>thread</b> handles one element. A <b>block</b> of up to 1,024 threads runs on one SM, shares
+      that SM&rsquo;s fast shared memory, and can wait for all its members at a barrier. A
+      <b>grid</b> is every block of one launch. Inside a block the hardware runs threads 32 at a time
+      as a <b>warp</b>: one instruction, 32 lanes, part 1&rsquo;s drilling head with 32 spindles.
+    </p>
+    <p>
+      Each thread finds its element from its position:
+      <code>idx = blockIdx.x * blockDim.x + threadIdx.x</code>. It is a serial number in mixed radix,
+      the way a part numbered &ldquo;pallet 3, slot 17&rdquo; on 256-slot pallets is part
+      \(3 \times 256 + 17\); every thread gets a different number and no number is skipped
+      (<code>[Ch16p2 s02]</code>). The launch <code>vector_add&lt;&lt;&lt;grid_size, block_size&gt;&gt;&gt;</code>
+      asks for \(\lceil n/256 \rceil\) blocks, so for \(n = 10^6\) it starts 3,907 blocks, 1,000,192
+      threads, and the test <code>if (idx &lt; n)</code> switches off the last 192. That is part 1
+      &sect;05&rsquo;s last stroke with its spare drills removed.
+    </p>
+    <p>
+      Memory is explicit. <code>cudaMalloc</code> reserves space in the GPU&rsquo;s own memory,
+      <code>cudaMemcpy</code> copies across the link between host and GPU, and the kernel works only on
+      what has been copied over.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>The source&rsquo;s first kernel prints 1.0</div>
+      <p style="margin-bottom:0">
+        <code>vector_add</code> fills <code>a</code> with 1.0 and <code>b</code> with 2.0, adds them into
+        <code>d_c</code> on the GPU, and copies the answer back with
+        <code>cudaMemcpy(h_c, d_a, bytes, cudaMemcpyDeviceToHost)</code>. That copies <code>d_a</code>,
+        the untouched input. The program prints <code>c[0] = 1.000000 (expected 3.0)</code>. With
+        <code>d_c</code> in that call it prints 3.000000. No GPU was needed to find it; the copies
+        were replayed on host arrays (<code>[Ch16p2 s02]</code>).
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>A launch does not wait</div>
+      <p style="margin-bottom:0">
+        The source says that by default &ldquo;the CPU launches a kernel, waits for it to finish, then
+        launches the next one.&rdquo; The GPU does run one stream&rsquo;s work in order, but the launch
+        call returns to the CPU at once. The source&rsquo;s own benchmarks show it: each records a
+        start event, launches ten or a hundred kernels, records a stop event and then calls
+        <code>cudaEventSynchronize(stop)</code>, five times across the file, to wait for work the CPU
+        would otherwise have run ahead of. A blocking <code>cudaMemcpy</code> waits too, which is why
+        task 1&rsquo;s timer (&sect;04) measures what it does.
+      </p>
+    </div>
+    <p>
+      <b>The barrier.</b> <code>__syncthreads()</code> stops every thread of a block until all of them
+      have reached it. A transfer line with a rotary table indexes only when every station has
+      finished its operation, so the index waits for the slowest station; the barrier waits for the
+      slowest thread in the same way. The tiled kernel of &sect;08 calls it twice per step: once so that
+      nobody computes on a kit still being stocked, once so that nobody restocks a kit still in use.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Same structure: the indexing transfer line</div>
+      <p style="margin-bottom:0">
+        The time between indexes is the longest station time, exactly as the time through a barrier is
+        the longest thread time. Where it breaks: a transfer line indexes every cycle by design, while a
+        kernel puts a barrier only where threads must exchange data, and threads in other blocks never
+        wait for it. A whole-grid barrier is a different and much costlier thing; the usual one is the
+        end of the kernel.
+      </p>
+    </div>
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  var root=document.documentElement;
+  function dk(){var t=root.getAttribute('data-theme');
+    return t?t==='dark':(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);}
+  try{var sv=localStorage.getItem('ch16-theme'); if(sv==='dark'||sv==='light') root.setAttribute('data-theme',sv);}catch(e){}
+  var tb=document.getElementById('themebtn');
+  if(tb) tb.addEventListener('click',function(){var n=dk()?'light':'dark';
+    root.setAttribute('data-theme',n); try{localStorage.setItem('ch16-theme',n);}catch(e){}});
+  function $(id){return document.getElementById(id);}
+  function comma(n){return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,',');}
+  function predict(attr,vid,ans){
+    document.querySelectorAll('['+attr+']').forEach(function(b){
+      b.addEventListener('click',function(){
+        document.querySelectorAll('['+attr+']').forEach(function(o){o.classList.remove('picked');});
+        b.classList.add('picked');
+        var v=$(vid); v.innerHTML=ans[b.getAttribute(attr)]; v.classList.add('show');
+      });
+    });
+  }
+  function rng(seed){var s=seed>>>0; return function(){s=(s+0x6D2B79F5)>>>0; var t=s;
+    t=Math.imul(t^(t>>>15),t|1); t^=t+Math.imul(t^(t>>>7),t|61); return ((t^(t>>>14))>>>0)/4294967296;};}
+  function f1(v){return (+v).toFixed(1);}
+  function txt(x,y,s,st,anchor){return '<text x="'+f1(x)+'" y="'+f1(y)+'"'+(anchor?' text-anchor="'+anchor+'"':'')+
+    ' style="'+(st||'')+'">'+s+'</text>';}
+  function ln(x1,y1,x2,y2,st){return '<line x1="'+f1(x1)+'" y1="'+f1(y1)+'" x2="'+f1(x2)+'" y2="'+f1(y2)+'" style="'+(st||'')+'"/>';}
+  function onBtn(attr,val){document.querySelectorAll('['+attr+']').forEach(function(b){b.classList.toggle('on',b.getAttribute(attr)===String(val));});}
+  var ST={
+    tick:'font-family:var(--f-mono);font-size:10.5px;fill:var(--ink-3)',
+    lab:'font-family:var(--f-disp);font-size:12px;fill:var(--ink-2);font-weight:600',
+    small:'font-family:var(--f-disp);font-size:11px;fill:var(--ink-2)',
+    grid:'stroke:var(--rule);stroke-width:1',
+    axis:'stroke:var(--rule-strong);stroke-width:1'
+  };
+  window.__c16={$:$,comma:comma,predict:predict,rng:rng,txt:txt,ln:ln,onBtn:onBtn,ST:ST,f1:f1};
+})();
+</script>
+
+<script>
+/* Contents rail: mark the section currently in view (desktop only). */
+(function(){
+  'use strict';
+  var links=Array.prototype.slice.call(document.querySelectorAll('.rail a'));
+  if(!links.length||!window.IntersectionObserver) return;
+  var map={}; links.forEach(function(a){map[a.getAttribute('href').slice(1)]=a;});
+  var seen={};
+  var io=new IntersectionObserver(function(es){
+    es.forEach(function(e){seen[e.target.id]=e.isIntersecting;});
+    var ids=Object.keys(map),act=null;
+    for(var i=0;i<ids.length;i++) if(seen[ids[i]]){act=ids[i];break;}
+    if(!act) return;
+    links.forEach(function(a){a.classList.toggle('on',a===map[act]);});
+  },{rootMargin:'-70px 0px -65% 0px',threshold:0});
+  Object.keys(map).forEach(function(id){var el=document.getElementById(id); if(el) io.observe(el);});
+})();
+</script>
+
+<script>
+/* Safety net: if the MathJax bundle cannot be reached, degrade the TeX to
+   readable Unicode instead of leaving raw backslash markup on the page. */
+(function () {
+  'use strict';
+  var GREEK = { theta:'θ', sigma:'σ', delta:'δ', mu:'μ', pi:'π',
+                infty:'∞', alpha:'α', beta:'β', lambda:'λ' };
+  var SUB = { '1':'₁','2':'₂','3':'₃','i':'ᵢ','j':'ⱼ','n':'ₙ','p':'ₚ','x':'ₓ','y':'ᵧ' };
+  var SUP = { '2':'²','3':'³','n':'ⁿ','p':'ᵖ','*':'*' };
+
+  function degrade(t) {
+    t = t.replace(/\$\$/g, '').replace(/\\[()[\]]/g, '');
+    t = t.replace(/\\(?:left|right|textstyle|displaystyle|!|,|;|:)/g, '');
+    t = t.replace(/\\q?quad/g, ' ');
+    t = t.replace(/\\mathbb\{R\}/g, 'ℝ').replace(/\\mathbb\{Z\}/g, 'ℤ')
+         .replace(/\\mathbb\{N\}/g, 'ℕ').replace(/\\mathbb\{Q\}/g, 'ℚ');
+    t = t.replace(/\\(?:mathbf|mathrm|text|textbf|operatorname)\{([^{}]*)\}/g, '$1');
+    t = t.replace(/\\hat\{([^{}]*)\}/g, '$1̂').replace(/\\bar\{([^{}]*)\}/g, '$1̄');
+    t = t.replace(/\\sqrt\{([^{}]*)\}/g, '√($1)');
+    t = t.replace(/\\t?frac\{([^{}]*)\}\{([^{}]*)\}/g, '($1)/($2)');
+    t = t.replace(/\\binom\{([^{}]*)\}\{([^{}]*)\}/g, 'C($1,$2)');
+    t = t.replace(/\\([a-zA-Z]+)/g, function (m, w) {
+      if (GREEK[w]) return GREEK[w];
+      switch (w) {
+        case 'cdot': return '·';
+        case 'times': return '×';
+        case 'le': case 'leq': return '≤';
+        case 'ge': case 'geq': return '≥';
+        case 'neq': return '≠';
+        case 'approx': return '≈';
+        case 'in': return '∈';
+        case 'pm': return '±';
+        case 'to': case 'rightarrow': return '→';
+        case 'Rightarrow': return '⇒';
+        case 'iff': return '⇔';
+        case 'parallel': return '∥';
+        case 'perp': return '⊥';
+        case 'sum': return 'Σ';
+        case 'langle': return '⟨';
+        case 'rangle': return '⟩';
+        case 'wedge': return '∧';
+        case 'ast': return '*';
+        case 'cdots': case 'ldots': case 'dots': return '…';
+        case 'max': case 'min': case 'cos': case 'sin': case 'log': case 'exp': return w;
+        default: return w;
+      }
+    });
+    t = t.replace(/\\\|/g, '‖').replace(/\|\|/g, '‖');
+    t = t.replace(/_\{?([0-9ijnpxy])\}?/g, function (m, c) { return SUB[c] || ('_' + c); });
+    t = t.replace(/\^\{?([23np*])\}?/g, function (m, c) { return SUP[c] || ('^' + c); });
+    t = t.replace(/[{}]/g, '');
+    return t.replace(/[ \t]{2,}/g, ' ');
+  }
+
+  function run() {
+    if (window.MathJax && window.MathJax.startup && window.MathJax.startup.document) return;
+    var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+      acceptNode: function (n) {
+        if (!n.nodeValue || n.nodeValue.indexOf('\\') < 0 && n.nodeValue.indexOf('$$') < 0)
+          return NodeFilter.FILTER_REJECT;
+        var p = n.parentNode;
+        while (p && p !== document.body) {
+          var tag = p.nodeName;
+          if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'CODE' || tag === 'PRE')
+            return NodeFilter.FILTER_REJECT;
+          p = p.parentNode;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    var hits = [], n;
+    while ((n = walker.nextNode())) hits.push(n);
+    hits.forEach(function (node) { node.nodeValue = degrade(node.nodeValue); });
+    document.querySelectorAll('.mathbox').forEach(function (el) {
+      el.style.fontFamily = "'IBM Plex Mono', monospace";
+      el.style.fontSize = '15px';
+      el.style.textAlign = 'center';
+      el.style.padding = '10px 0';
+    });
+  }
+  setTimeout(run, 6000);
+})();
+</script>
+<script>
+/* Long display equations can be wider than their container - especially inside a
+   callout box, which is narrower than the main column. After the typesetter
+   finishes, measure each one and shrink it just enough to fit. Only ever shrinks,
+   never grows, and never below a readable floor - so the worst case is the
+   scrollbar we already had. */
+(function () {
+  'use strict';
+  var MIN_SCALE = 0.70;   /* below this, scrolling beats illegible text */
+
+  function fitOne(box) {
+    try {
+      var c = box.querySelector('mjx-container[display="true"]');
+      if (!c) return;
+      var svg = c.querySelector('svg');
+      if (!svg) return;
+      c.style.fontSize = '';
+      var avail = box.clientWidth;
+      if (!avail) return;
+      var w = svg.getBoundingClientRect().width;
+      if (!w || w <= avail) return;
+      var k = Math.max(MIN_SCALE, (avail / w) * 0.98);
+      c.style.fontSize = (k * 100).toFixed(1) + '%';
+      var w2 = svg.getBoundingClientRect().width;      /* one refinement pass */
+      if (w2 > avail) {
+        k = Math.max(MIN_SCALE, k * (avail / w2) * 0.98);
+        c.style.fontSize = (k * 100).toFixed(1) + '%';
+      }
+    } catch (e) { /* leave the equation exactly as it was */ }
+  }
+
+  /* Inline math cannot wrap and is not inside a scrollable .mathbox, so a long
+     inline expression pushes the whole page sideways.  Shrink any that is wider
+     than the text column it sits in; the ex-based sizing keeps the baseline. */
+  function fitInline(c) {
+    try {
+      var svg = c.querySelector('svg'); if (!svg) return;
+      c.style.fontSize = '';
+      var host = c.parentElement; if (!host) return;
+      var avail = host.clientWidth; if (!avail) return;
+      var w = svg.getBoundingClientRect().width;
+      if (!w || w <= avail) return;
+      c.style.fontSize = (Math.max(MIN_SCALE, (avail / w) * 0.98) * 100).toFixed(1) + '%';
+    } catch (e) { /* leave the expression exactly as it was */ }
+  }
+
+  function fitAll() {
+    try { document.querySelectorAll('.mathbox').forEach(fitOne); } catch (e) {}
+    try {
+      document.querySelectorAll('mjx-container:not([display="true"])').forEach(fitInline);
+    } catch (e) {}
+  }
+
+  function start() {
+    fitAll();
+    var t;
+    window.addEventListener('resize', function () {
+      clearTimeout(t); t = setTimeout(fitAll, 160);
+    });
+  }
+
+  function waitForTypesetter(n) {
+    if (window.MathJax && window.MathJax.startup && window.MathJax.startup.promise) {
+      window.MathJax.startup.promise.then(start, start);
+      return;
+    }
+    if (n > 60) return;            /* typesetter never arrived - nothing to fit */
+    setTimeout(function () { waitForTypesetter(n + 1); }, 200);
+  }
+  waitForTypesetter(0);
+})();
+</script>
