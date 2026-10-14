@@ -38,6 +38,7 @@ browser probe those runs used is now in the repo: `tools/probe.js` (see the prob
 | 14 | Data Structures and Algorithms **pt 1/2** | `ch14-data-structures-algorithms/` | https://claude.ai/artifact/TCQEggFEntAofLXcUbunbd |
 | 14 | Data Structures and Algorithms **pt 2/2** | `ch14-data-structures-algorithms-part2/` | https://claude.ai/artifact/NESj33J7qvUysyK9djgRed |
 | 15 | Production Software Engineering | `ch15-production-software-engineering/` | https://claude.ai/artifact/FGGLCb4G11EoK8UXHnVhHs |
+| 16 | SIMD and GPU Programming **pt 1/3** (the CPU) | `ch16-simd-gpu/` | https://claude.ai/artifact/PkFJKQedyFn3SNLNqWGKCy |
 | 17 | AI Inference | `ch17-ai-inference/` | https://claude.ai/artifact/UdoN6PEmWrY6pHxACELcxr |
 
 `verify_claims.py` stands at **612 checks, 0 failures**, covering chapters 01–14. Run it first in
@@ -344,8 +345,13 @@ CI ↔ line automation became **jidoka** (the stop must be wired: required check
 fixtures became a **palletised fixture** whose machine (kernel, GPU driver) stays behind. Outside
 the bank: layer order as delayed differentiation (exact ratio rule); pipe as kanban loop.
 
-**16 SIMD and GPU.** Where Ch02's matmul lands. SIMD ↔ multi-spindle machining. Memory
-bandwidth ↔ material-flow bottleneck.
+**16 SIMD and GPU.** ~~Where Ch02's matmul lands. SIMD ↔ multi-spindle machining. Memory bandwidth ↔
+material-flow bottleneck.~~ **Part 1 written.** Bandwidth ↔ material flow held and was undersold:
+the roofline **is** the two-station line's throughput formula, the ridge is the balance point, and
+the ridge moves with cores. The SIMD entry named a family: only the **drilling head** is SIMD; the
+**multi-spindle automatic is a pipeline**. Ch02's matmul lands as **kitting** with intensity
+`b/4` (exact LRU counts). The headline was outside the bank: **Little's law / the CONWIP best case**
+sets accumulator counts and per-core memory bandwidth, measured. Parts 2–3 still to write.
 
 **17 AI inference.** ~~Quantisation ↔ measurement resolution and significant figures.
 **Batching ↔ batch production versus one-piece flow** in lean manufacturing; latency versus
@@ -1036,6 +1042,29 @@ impossible past the memory cap, false for MoE's setup.
   `K`, `C`, colliding with takt `T`. Wrap symbols, not just Greek, in `.gk`.
 - **Chapters 09–14 put lab contents flush to the lab border** (no `.lab-body`); 01–08 used it.
   This sheet uses `.lab-body` again. Worth backporting.
+
+## The Chapter 16 part 1 lesson worth generalising
+
+**Measurements are claims about a machine, and the machine changed under me twice.** The container
+switched between a Cascade Lake and a Sapphire Rapids-class CPU across cut-offs. Constants moved
+(float-add latency 4 -> 2 cycles; a 260 MiB L3 held arrays that were DRAM-bound on the other), and
+three verifier checks that encoded one machine's constants failed on the other. The fix was to
+assert the **law, not the constant**: test `unrolled ~ AVX2` rather than "all three equal",
+derive floors from a measured add latency, take the best of several runs, and widen bounds that
+rest on a clock calibration under turbo. Report both machines on the page. The structural result
+(the knee at latency x units, the plateau of misses in flight) held on both.
+
+**New traps from Chapter 16 part 1.**
+
+- **The optimiser is a participant in every benchmark.** Two of the source's six x86 programs
+  measured nothing (a hoisted repeat, a dead loop). Use every result, or pass it through an empty
+  `asm volatile`; compute the floor first; a result that beats the floor is wrong.
+- **Shared-VM timing noise is 20–30% per run** and other parallel runs load the same CPUs: any
+  measured assertion needs best-of-N and a bound with room for it, or it flakes in the coordinator's run.
+- **Lab SVGs at 390px scale text to ~6px.** Wrapping each in `.chartwrap{overflow-x:auto}` with
+  `.chartwrap > .svgfig{min-width:500px}` keeps labels legible and passes the probe.
+- **Sheet 13 already named the staging vocabulary** (line-side bin, cell supermarket, plant store;
+  bench and stores). Grep the earlier sheets for a bridge before coining new words for it.
 
 ## On splitting a chapter into parts
 

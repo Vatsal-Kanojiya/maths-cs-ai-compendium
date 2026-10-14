@@ -54,6 +54,7 @@ merely structural, that is said plainly.
 | 14 | Data Structures and Algorithms *(pt 1: foundations, arrays, lists)* | [`ch14-data-structures-algorithms/`](ch14-data-structures-algorithms/index.html) | [Read online](https://claude.ai/artifact/TCQEggFEntAofLXcUbunbd) |
 | 14 | Data Structures and Algorithms *(pt 2: trees, graphs, search + end matter)* | [`ch14-data-structures-algorithms-part2/`](ch14-data-structures-algorithms-part2/index.html) | [Read online](https://claude.ai/artifact/NESj33J7qvUysyK9djgRed) |
 | 15 | Production Software Engineering | [`ch15-production-software-engineering/`](ch15-production-software-engineering/index.html) | [Read online](https://claude.ai/artifact/FGGLCb4G11EoK8UXHnVhHs) |
+| 16 | SIMD and GPU Programming *(pt 1: the CPU)* | [`ch16-simd-gpu/`](ch16-simd-gpu/index.html) | [Read online](https://claude.ai/artifact/PkFJKQedyFn3SNLNqWGKCy) |
 | 17 | AI Inference | [`ch17-ai-inference/`](ch17-ai-inference/index.html) | [Read online](https://claude.ai/artifact/UdoN6PEmWrY6pHxACELcxr) |
 
 ## What's in a chapter page
@@ -148,7 +149,12 @@ update as static condensation (`-K_rr^-1 K_rj == H^-1_rj / H^-1_jj` to 5e-12), R
 linear error growth through a residual stream, the expected distinct experts `8(1-(3/4)^b)` of
 a batched MoE, continuous batching's batch against the lean minimum lot `t_w/(T - t_kv)` and
 `TPOT = t_w/(1-rho)` by simulation, and speculative decoding's `(1-a^(k+1))/(1-a)` with the
-rejection rule's exactness.
+rejection rule's exactness; and -- for Chapter 16 part 1 -- the source's own C++ compiled and
+run (its bandwidth benchmark printing ~1,000 GB/s because GCC ran 1 of 100 trials, its alignment
+benchmark deleted as dead code), `min(K/4, 2)` against measured FMA chains, Little's law against a
+K-chain pointer chase, exact LRU traffic of naive and tiled matmul by stack distance against direct
+simulation, `16x16x32 = 8,192` MACs for AMX run with and without its setup, and the cube-law
+equal-power Amdahl crossover `s* = (n^-1/3 - 1/n)/(1 - 1/n)`.
 
 Several checks exist because they caught an error. The suite has overturned claims in the
 source material (what neighbour-averaging consensus converges to; whether four legs are
