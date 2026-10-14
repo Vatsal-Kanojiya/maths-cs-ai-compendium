@@ -695,6 +695,372 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
   </div>
 </section>
 
+<section id="roofline">
+  <div class="col">
+    <div class="sechead"><span class="secnum">03</span><h2>The GPU roofline: the same line, every number moved</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2016%20-%20SIMD%20and%20GPU%20programming/04.%20GPU%20architecture%20and%20CUDA.md" target="_blank" rel="noopener">src 04. GPU and CUDA &#8599;</a>
+    </div>
+    <p>
+      <b>Debt 1 of 7.</b> Part 1 &sect;06 showed that the roofline is a two-station serial line: a
+      delivery station that brings bytes at the memory bandwidth BW, a machining station that does
+      FLOPs at the peak rate, and a product mix \(I\), the FLOPs a kernel does per byte it moves. The
+      line runs at the slower station, \(\min(\text{Peak}, \text{BW}\times I)\), and balances at the
+      ridge \(I^* = \text{Peak}/\text{BW}\). On the reference GPU of &sect;01:
+    </p>
+    <div class="mathbox">$$\begin{aligned} \text{Peak} &= 16{,}896 \times 1.98\ \text{GHz} \times 2 = 66.9\ \text{TFLOP/s}, \\ I^{*} &= \frac{66.9\ \text{TFLOP/s}}{3.3\ \text{TB/s}} = 20.3\ \text{FLOP/B}. \end{aligned}$$</div>
+    <p>
+      Part 1&rsquo;s single core had a ridge of 2.56. Its eight cores sharing 50 GB/s had 20.48. The GPU
+      is balanced almost exactly like that eight-core CPU, at 523 times its machining rate and 66 times
+      its delivery rate. So a kernel that was waiting on memory speeds up 66&times; on the GPU, and one
+      that was waiting on arithmetic speeds up 523&times;. Here are part 1&rsquo;s operations placed on
+      the new roof:
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Part 1&rsquo;s operations on the reference GPU&rsquo;s FP32 roof (66.9 TFLOP/s, 3.3 TB/s). Part 1&rsquo;s core: 128 GFLOP/s, 50 GB/s, ridge 2.56 (<code>[Ch16p2 s03]</code>).</caption>
+      <thead><tr><th>Operation</th><th>FLOP/B</th><th>Attainable, <span class="gk">TFLOP/s</span></th><th>Of roof</th><th>On part 1&rsquo;s core</th><th>On the GPU</th></tr></thead>
+      <tbody>
+        <tr><td>ReLU</td><td class="mono">0.125</td><td class="mono">0.41</td><td class="mono">0.6%</td><td>delivery</td><td>delivery</td></tr>
+        <tr><td>Naive matmul</td><td class="mono">0.25</td><td class="mono">0.83</td><td class="mono">1.2%</td><td>delivery</td><td>delivery</td></tr>
+        <tr><td>Layer norm</td><td class="mono">0.625</td><td class="mono">2.06</td><td class="mono">3.1%</td><td>delivery</td><td>delivery</td></tr>
+        <tr><td>Matmul, 16&times;16 tiles (the source&rsquo;s)</td><td class="mono">4</td><td class="mono">13.2</td><td class="mono">19.7%</td><td>machining</td><td><b>delivery</b></td></tr>
+        <tr><td>Matmul, 32&times;32 tiles</td><td class="mono">8</td><td class="mono">26.4</td><td class="mono">39.5%</td><td>machining</td><td><b>delivery</b></td></tr>
+        <tr><td>Matmul, 64&times;64 tiles</td><td class="mono">16</td><td class="mono">52.8</td><td class="mono">78.9%</td><td>machining</td><td><b>delivery</b></td></tr>
+        <tr><td>Matmul, 128&times;128 block tile (&sect;08)</td><td class="mono">32</td><td class="mono">66.9</td><td class="mono">100%</td><td>machining</td><td>machining</td></tr>
+        <tr><td>Conv 3&times;3, 64&rarr;128 channels, 32&times;32</td><td class="mono">139.6</td><td class="mono">66.9</td><td class="mono">100%</td><td>machining</td><td>machining</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: the constraint moved, and these are the operations it moved past</div>
+      <p style="margin-bottom:0">
+        The roofline is the same formula; only the two station rates changed, and the ridge moved from
+        2.56 to 20.3 with them. Every tiled matmul with \(2.56 \le b/4 < 20.3\), every tile edge from 11
+        to 81, changes station: machining-bound on part 1&rsquo;s core, delivery-bound here. That
+        includes the 16&times;16 tile the source teaches, which reaches <b>13.2 TFLOP/s, 19.7% of the
+        roof</b>. The convolution stays machining-bound. Move to the tensor cores and the machining
+        station jumps to 989 TFLOP/s, the ridge to <b>300 FLOP/B</b>, and the convolution changes station
+        as well: 46.6% of that roof with 4-byte operands, 93% with 2-byte ones, still just short of the
+        ridge (<code>[Ch16p2 s03]</code>).
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks</div>
+      <p style="margin-bottom:0">
+        The \(\min\) assumes the stations overlap. Part 1&rsquo;s core overlapped them by out-of-order
+        execution; a GPU does it by switching to another warp while one waits, and &sect;05 counts how
+        many warps that takes. A GPU also has two machining stations, the FP32 lanes and the tensor
+        cores, and which one serves a kernel depends on its instructions and number format, not on the
+        kernel&rsquo;s intensity. And the naive matmul&rsquo;s 0.25 FLOP/B assumes every operand comes
+        from HBM. On real hardware the L1 and L2 caches catch part of its re-reads (reported), so 0.25
+        is the floor for that kernel, not its measured intensity.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">The GPU roofline, three stations</div><div class="lab-tag">Predict, then move the roof</div></div>
+    <div class="lab-body">
+    <div class="predict">
+      <p style="margin-top:0">
+        The source&rsquo;s 16&times;16 shared-memory tile does 4 FLOP per byte. On the reference GPU
+        (66.9 TFLOP/s in FP32, 3.3 TB/s), which station binds?
+      </p>
+      <button class="pbtn" data-p1="a" type="button">Machining: it is a tiled matmul</button>
+      <button class="pbtn" data-p1="b" type="button">Delivery: 4 is below the ridge</button>
+      <button class="pbtn" data-p1="c" type="button">Neither: the line is balanced</button>
+      <div class="pverdict" id="pv1"></div>
+    </div>
+    <div class="chartwrap">
+    <svg class="svgfig" id="gS" viewBox="0 0 560 330" role="img"
+         aria-label="Roofline on log axes for the reference GPU, with part 1's CPU core for comparison and the PCIe dock as an optional third roof"></svg>
+    </div>
+    <div class="chartwrap">
+    <svg class="svgfig" id="gL" viewBox="0 0 560 104" role="img"
+         aria-label="The same operating point drawn as a line of three stations: dock, stores and machines, with the binding one marked"></svg>
+    </div>
+    <div class="ctl">
+      <label for="gOp">Operation</label>
+      <select class="sel" id="gOp">
+        <option value="0.125">ReLU (0.125)</option>
+        <option value="0.25">Naive matmul (0.25)</option>
+        <option value="0.625">Layer norm (0.625)</option>
+        <option value="4" selected>Matmul, 16&times;16 tiles (4)</option>
+        <option value="8">Matmul, 32&times;32 tiles (8)</option>
+        <option value="16">Matmul, 64&times;64 tiles (16)</option>
+        <option value="32">Matmul, 128&times;128 block tile (32)</option>
+        <option value="139.64">Conv 3&times;3 (139.6)</option>
+      </select>
+      <button class="btn on" data-gr="fp" type="button">FP32 lanes</button>
+      <button class="btn" data-gr="tc" type="button">Tensor cores</button>
+    </div>
+    <div class="ctl">
+      <label for="gB">HBM bandwidth <span class="gk">TB/s</span></label>
+      <input type="range" id="gB" min="1" max="3.3" value="3.3" step="0.1">
+      <span class="ro-v" id="gBv" style="min-width:40px">3.3</span>
+    </div>
+    <div class="ctl">
+      <button class="btn" id="gD" type="button">Data crosses PCIe</button>
+      <label for="gU">Uses per transfer</label>
+      <input type="range" id="gU" min="0" max="4" value="0" step="0.25">
+      <span class="ro-v" id="gUv" style="min-width:52px">1</span>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Peak<br><span class="gk">TFLOP/s</span></div><div class="ro-v a" id="gP">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Ridge<br>FLOP/B</div><div class="ro-v b" id="gR">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Attainable<br><span class="gk">TFLOP/s</span></div><div class="ro-v c" id="gA">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Share of<br>the roof</div><div class="ro-v" id="gF">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Binding<br>station</div><div class="ro-v" id="gK">&mdash;</div></div>
+    </div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    The blue roof is the GPU, the grey dashed roof part 1&rsquo;s CPU core (128 GFLOP/s, 50 GB/s), drawn
+    on the same axes. At rest the source&rsquo;s 16-tile sits on the GPU&rsquo;s sloped roof at
+    <b>13.2 TFLOP/s</b>, the answer to the prediction: delivery binds. Pick the 128&times;128 block tile to
+    clear the ridge; press <b>Tensor cores</b> to watch the ridge jump to 300 and every matmul fall back
+    under the slope. <b>Data crosses PCIe</b> adds the dock of &sect;04 as an orange roof at
+    31.5 GB/s &times; uses &times; \(I\): with one use per transfer it binds for every operation here.
+  </div>
+</section>
+
+<section id="dock">
+  <div class="col">
+    <div class="sechead"><span class="secnum">04</span><h2>The receiving dock: PCIe as a third station</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2016%20-%20SIMD%20and%20GPU%20programming/04.%20GPU%20architecture%20and%20CUDA.md" target="_blank" rel="noopener">src 04. GPU and CUDA &#8599;</a>
+    </div>
+    <p>
+      <b>Debt 7 of 7.</b> Before the stores can deliver anything, the material has to come in at the
+      dock. A GPU&rsquo;s data starts in the host&rsquo;s memory and crosses the PCIe link. Part 1
+      &sect;09 derived its rate: 16 GT/s per lane (reported), 128b/130b coding, sixteen lanes,
+      \(31.5\ \text{GB/s}\) in each direction. The HBM behind it is 104.7 times faster. With the dock
+      in front, the line has three stations in series:
+    </p>
+    <div class="mathbox">$$\text{attainable} = \min\!\left(\text{Peak},\ \ \text{BW}_{\text{HBM}}\, I,\ \ \text{BW}_{\text{PCIe}}\, I_{\text{PCIe}}\right),$$</div>
+    <p>
+      where \(I_{\text{PCIe}}\) is the FLOPs done per byte that crosses the link. A kernel that reads its
+      input from HBM once per use, with the data copied over once per use, has \(I_{\text{PCIe}} = I\),
+      and then the dock binds whenever it is the slowest of the three: always, for anything that is not
+      already compute-bound at more than \(66.9/0.0315 = 2{,}124\) FLOP per byte.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Task 1 measures the dock, not the GPU</div>
+      <p style="margin-bottom:0">
+        The ReLU task times the copy in, the kernel and the copy out together, then prints
+        &ldquo;Bandwidth&rdquo; as \(2 \times\) bytes / time. The array is \(2^{24}\) floats, 64 MiB.
+        Each copy takes \(67.1\ \text{MB} / 31.5\ \text{GB/s} = 2.13\) ms; the kernel moves 134 MB inside
+        the GPU at 3.3 TB/s in <b>40.7 &micro;s</b>. The copies are <b>99.1%</b> of the timed interval, and
+        the line prints <b>31.2 GB/s</b>, the link&rsquo;s own rate, a hundredth of the memory it claims
+        to describe (<code>[Ch16p2 s04]</code>). The source says the task &ldquo;teaches the host&harr;device
+        transfer bottleneck&rdquo;; it does, provided you read the printed number as the dock&rsquo;s.
+        With ordinary <code>malloc</code> memory on the host the copies are usually slower still
+        (reported).
+      </p>
+    </div>
+    <p>
+      For any elementwise kernel the ratio is fixed: the same bytes cross the dock and the stores, so
+      the copy takes 104.7 times as long as the kernel, whatever the size. A matrix product does better,
+      because its work grows as \(N^3\) while its operands grow as \(N^2\). With \(A\) and \(B\) sent
+      over and \(C\) sent back, in float32:
+    </p>
+    <div class="mathbox">$$\frac{2N^{3}}{\text{Peak}} = \frac{12N^{2}}{\text{BW}_{\text{PCIe}}} \quad\Longrightarrow\quad N^{*} = \frac{6\,\text{Peak}}{\text{BW}_{\text{PCIe}}} = 12{,}741 .$$</div>
+    <p>
+      Below about 12,700 the dock binds even at the FP32 roof. The source&rsquo;s task 2 multiplies
+      1024&times;1024 matrices: sent across each time, the link would take <b>0.399 ms</b> against
+      <b>0.032 ms</b> of arithmetic, 12.4 times longer. Its benchmark copies once and runs the kernel ten
+      times, which is what the GPU wants: material that arrives once and is used many times.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: a receiving dock ahead of the stores, and streams as line overlap</div>
+      <p style="margin-bottom:0">
+        A third station in series enters the same \(\min\). The source&rsquo;s cure is <b>streams</b>:
+        split the work into chunks and let the copy of chunk 2 overlap the kernel on chunk 1. That is
+        Sheet 13 part 1 &sect;13&rsquo;s pipeline. With \(c\) chunks the time is one chunk&rsquo;s trip
+        through every stage plus \(c-1\) more of the longest stage. For the ReLU task, with copies in
+        both directions running at once (the link is full duplex; a GPU needs a copy engine for each
+        direction, reported), 8 chunks take <b>2.40 ms</b> against 4.30 ms in sequence, 1.79&times;. No
+        number of chunks beats <b>2.02&times;</b>, because one direction alone needs 2.13 ms. Overlap hides
+        the shorter stations; it cannot shorten the longest.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks</div>
+      <p style="margin-bottom:0">
+        The dock is a station only for material that crosses it per use. A model&rsquo;s weights are
+        copied once and then read from HBM for every step; activations are made and consumed on the GPU.
+        In training the dock carries only each new batch, so it binds for small models and cheap steps
+        and almost never otherwise. Real overlap also needs page-locked host memory, which
+        <code>cudaMemcpyAsync</code> from ordinary memory does not get (reported). PCIe 5.0 doubles the
+        rate (reported); links between GPUs, which the source names (NVLink), are further docks this
+        page does not model.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="warps">
+  <div class="col">
+    <div class="sechead"><span class="secnum">05</span><h2>Warps are kanban cards</h2>
+      <a class="srcref" href="https://github.com/Vatsal-Kanojiya/maths-cs-ai-compendium/blob/9850ee5/chapter%2016%20-%20SIMD%20and%20GPU%20programming/04.%20GPU%20architecture%20and%20CUDA.md" target="_blank" rel="noopener">src 04. GPU and CUDA &#8599;</a>
+    </div>
+    <p>
+      <b>Debt 2 of 7, and the headline.</b> Part 1 &sect;08 derived the best-case bound for a closed
+      line with \(w\) jobs in it, raw process time \(T_0\) and bottleneck rate \(r_b\):
+    </p>
+    <div class="mathbox">$$\text{TH}(w) \le \min\!\left(\frac{w}{T_0},\ r_b\right), \qquad w_0 = r_b\,T_0 .$$</div>
+    <p>
+      It ran a CPU core twice: eight FMA chains kept two units busy, and about fifteen cache misses in
+      flight saturated one core&rsquo;s memory. A GPU&rsquo;s memory loop is the same closed line, much
+      larger. The bottleneck is HBM at 3.3 TB/s. At 1.98 GHz that is 1,666.7 bytes per cycle for the
+      chip, 12.63 per SM. The raw process time is the source&rsquo;s 400-cycle latency. So
+    </p>
+    <div class="mathbox">$$\begin{aligned} w_0 &= r_b\,T_0 = 12.63\ \tfrac{\text{B}}{\text{cycle}} \times 400\ \text{cycles} = 5{,}051\ \text{B per SM} \\ &= 39.5\ \text{warp-loads of 128 B, on each of 132 SMs.} \end{aligned}$$</div>
+    <p>
+      Chip-wide that is <b>666,667 bytes</b> on their way at every instant. Part 1&rsquo;s core needed
+      14.6 lines of 64 bytes, 934 bytes; one SM needs 5.4 times that, and there are 132 of them. The
+      source&rsquo;s L2 row gives a similar figure at its level, 6 TB/s &times; 200 cycles = 606,061 bytes
+      (<code>[Ch16p2 s05]</code>).
+    </p>
+    <p>
+      Who holds those 39.5 loads? A warp that has issued a load and is waiting for it. A coalesced load
+      brings 128 bytes, one float for each of the warp&rsquo;s 32 threads (&sect;07), so one waiting warp is
+      one card in the loop, and the SM needs about 40 of them circulating. It can hold at most 64 warps
+      (reported), so a kernel with one load in flight per warp needs <b>62% occupancy</b>. The source&rsquo;s
+      profiling rule, that occupancy below 50% means &ldquo;too few threads to hide memory latency&rdquo;,
+      is this calculation done roughly, and it depends on the kernel: with four loads in flight per warp,
+      ten warps do it.
+    </p>
+    <h3 style="margin-top:24px">The register file is the card rack</h3>
+    <p>
+      Here the GPU does something no CPU does. A warp stays resident with all its registers while it
+      waits, so switching to another warp costs nothing, and the scheduler can pick a ready warp every
+      cycle. The price is that every resident warp&rsquo;s registers must fit in the SM&rsquo;s register
+      file at once. The source gives 256 KB per SM, which is 65,536 registers of 4 bytes. A warp is 32
+      threads, so with \(r\) registers per thread
+    </p>
+    <div class="mathbox">$$\text{warps resident} \le \min\!\left(64,\ \left\lfloor \frac{65{,}536}{32\,r} \right\rfloor\right).$$</div>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>The card rack: registers per thread against the most warps an SM can hold, and what one load per warp then gets (<code>[Ch16p2 s05]</code>).</caption>
+      <thead><tr><th>Registers per thread</th><th>Warps the rack holds</th><th>Share of bandwidth, one load per warp</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">32</td><td class="mono">64</td><td class="mono">100%</td></tr>
+        <tr><td class="mono">51</td><td class="mono">40</td><td class="mono">100%, just</td></tr>
+        <tr><td class="mono">64</td><td class="mono">32</td><td class="mono">80%</td></tr>
+        <tr><td class="mono">128</td><td class="mono">16</td><td class="mono">40%</td></tr>
+        <tr><td class="mono">255 (the most allowed)</td><td class="mono">8</td><td class="mono">20%</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      The source says only that &ldquo;using too many registers per thread reduces occupancy&rdquo;. The
+      law says by how much it costs. Forty cards fit only at <b>51 registers or fewer</b>. At 128
+      registers the rack holds 16 warps, and with one load each the SM can use
+      \(16 \times 128 / 404 = 5.07\) of its 12.63 bytes per cycle: <b>40%</b> of its bandwidth, from a
+      kernel that never touches arithmetic limits. (The 404 is the 400-cycle round trip plus the four
+      instructions the warp issues per load.)
+    </p>
+    <p>
+      The arithmetic loop has the same shape. A dependent FMA on these GPUs waits about 4 cycles
+      (reported), and each of an SM&rsquo;s four schedulers issues one warp instruction per cycle, so
+      \(4 \times 4 = 16\) warps with one independent FMA each keep the lanes busy. Part 1&rsquo;s core
+      needed 8 accumulators for the same reason.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity, simulated: the bound with warps as cards</div>
+      <p style="margin-bottom:0">
+        The lab below simulates one SM cycle by cycle: each warp issues a 128-byte load, waits 400
+        cycles plus any queue at the memory, issues four instructions, and loops; the memory serves one
+        load every 10.13 cycles; four instructions issue per cycle. Throughput in bytes per cycle against
+        the bound, for 1, 8, 16, 24, 40 and 64 warps: <b>0.32 (0.32), 2.53 (2.53), 5.07 (5.07), 7.60
+        (7.60), 12.63 (12.63), 12.63 (12.63)</b>. A deterministic loop meets the best case exactly, as a
+        perfectly regular CONWIP line would. The knee is at \(w_0 = 39.9\) warps (<code>[Ch16p2 s05]</code>).
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where the cards picture breaks</div>
+      <p style="margin-bottom:0">
+        <b>Nobody chooses the card count.</b> A CONWIP planner sets it. Here it is whatever the register
+        file and shared memory leave room for, after the compiler has decided how many registers each
+        thread needs, and it moves in whole blocks: a block of 256 threads is 8 warps admitted together or
+        not at all. <b>A card can carry several orders.</b> A warp that issues four independent loads
+        before waiting is four cards in one; at 16 warps that alone lifts the simulated SM from 40% to
+        100%. That is how register-hungry kernels survive (&sect;08). <b>The switching is done by
+        hardware, every cycle.</b> On part 1&rsquo;s CPU the cards were accumulators, fixed by the
+        compiler before the program ran. And <b>real latency varies.</b> Let it range uniformly over
+        200&ndash;600 cycles and the simulated SM falls to <b>94.4%</b> of the bound at 40 warps, against
+        98.8% at 16 and the full bound at 64. Variability costs most near the knee, as on any real line.
+      </p>
+    </div>
+    <p>
+      The same law sizes a CPU prefetch, which file 04 also covers. A software prefetch must be issued
+      far enough ahead that the data arrives as it is needed: distance = consumption rate &times;
+      latency. Part 1 measured one core streaming about 10 GB/s with a 210 ns trip to memory, which gives
+      2,100 bytes, <b>about 525 floats</b> ahead. The source prefetches 64 floats ahead, 256 bytes, which
+      covers 25.6 ns: enough for a cache level, not for memory. Its own advice to tune the distance
+      &ldquo;to match the memory latency and loop iteration time&rdquo; is Little&rsquo;s law, unnamed.
+    </p>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Cards in one SM</div><div class="lab-tag">Predict, then resize the rack</div></div>
+    <div class="lab-body">
+    <div class="predict">
+      <p style="margin-top:0">
+        A kernel uses 128 registers per thread and keeps one 128-byte load in flight per warp. What share
+        of its SM&rsquo;s memory bandwidth can it use?
+      </p>
+      <button class="pbtn" data-p2="a" type="button">About 100%: 64 warps is plenty</button>
+      <button class="pbtn" data-p2="b" type="button">About 62%</button>
+      <button class="pbtn" data-p2="c" type="button">About 40%</button>
+      <button class="pbtn" data-p2="d" type="button">About 16%</button>
+      <div class="pverdict" id="pv2"></div>
+    </div>
+    <div class="chartwrap">
+    <svg class="svgfig" id="wS" viewBox="0 0 560 300" role="img"
+         aria-label="Bytes per cycle against warps resident on one SM: the closed-line bound, simulated points, the knee and the register-file limit"></svg>
+    </div>
+    <div class="ctl">
+      <label for="wR">Registers per thread</label>
+      <input type="range" id="wR" min="16" max="255" value="128" step="1">
+      <span class="ro-v" id="wRv" style="min-width:40px">128</span>
+    </div>
+    <div class="ctl">
+      <label for="wK1">Loads in flight per warp</label>
+      <button class="btn on" id="wK1" data-wk="1" type="button">1</button>
+      <button class="btn" data-wk="2" type="button">2</button>
+      <button class="btn" data-wk="4" type="button">4</button>
+      <button class="btn" id="wJ" type="button">Latency 200&ndash;600</button>
+    </div>
+    <div class="ctl">
+      <label for="wM">Instructions per load</label>
+      <input type="range" id="wM" min="1" max="64" value="4" step="1">
+      <span class="ro-v" id="wMv" style="min-width:40px">4</span>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Warps the<br>rack holds</div><div class="ro-v a" id="wC">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Simulated<br><span class="gk">B/cycle</span></div><div class="ro-v b" id="wSm">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Bound<br><span class="gk">B/cycle</span></div><div class="ro-v c" id="wBd">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Share of<br>bandwidth</div><div class="ro-v" id="wPc">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Knee <span class="gk">w&#8320;</span>,<br>warps</div><div class="ro-v" id="wW0">&mdash;</div></div>
+    </div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    The blue line is \(\min(w \cdot k \cdot 128/T_0,\ 12.63)\) bytes per cycle with \(T_0\) = 400 + loads +
+    instructions &minus; 1; the orange dots are the cycle-by-cycle simulation at 12 warp counts; the
+    purple bar is the rack. At 128 registers the rack stops at <b>16 warps and 5.07 bytes per cycle,
+    40.1%</b> of the SM&rsquo;s share, the answer to the prediction. Drag the registers down to 51 to
+    reach the knee, or keep 128 and press <b>4</b> loads in flight: the same 16 cards now carry four
+    orders each and the SM saturates. <b>Latency 200&ndash;600</b> makes the round trip vary and pulls
+    the dots below the line near the knee.
+  </div>
+</section>
+
 </main>
 </div>
 
@@ -734,6 +1100,170 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
     axis:'stroke:var(--rule-strong);stroke-width:1'
   };
   window.__c16={$:$,comma:comma,predict:predict,rng:rng,txt:txt,ln:ln,onBtn:onBtn,ST:ST,f1:f1};
+})();
+</script>
+
+<script>
+/* ===== LAB 1 -- the GPU roofline with the PCIe dock as a third station ===== */
+(function(){
+  'use strict';
+  var U=window.__c16, $=U.$, ST=U.ST;
+  var PK32=16896*1.98e9*2/1e12, PKT=989, BP=16e9*128/130/8*16/1e12;   /* TFLOP/s and TB/s */
+  var roof='fp', dock=false;
+  var X0=64, X1=540, Y0=280, Y1=22;
+  var LX0=Math.log10(0.05), LX1=Math.log10(2000), LY0=Math.log10(0.01), LY1=Math.log10(3000);
+  function X(v){return X0+(X1-X0)*(Math.log10(v)-LX0)/(LX1-LX0);}
+  function Y(v){return Y0-(Y0-Y1)*(Math.log10(v)-LY0)/(LY1-LY0);}
+  var OPS=[0.125,0.25,0.625,4,8,16,32,139.64];
+  function lab(v){return v<1?String(v):U.comma(v);}
+  function fmt(v){return v>=100?v.toFixed(0):(v>=10?v.toFixed(1):(v>=1?v.toFixed(2):v.toFixed(3)));}
+  function roofLine(peak,bw,st){
+    var x0=Math.max(0.05,0.01/bw), xr=peak/bw;
+    return '<polyline points="'+U.f1(X(x0))+','+U.f1(Y(bw*x0))+' '+U.f1(X(xr))+','+U.f1(Y(peak))+' '+
+      U.f1(X(2000))+','+U.f1(Y(peak))+'" style="fill:none;'+st+'"/>';
+  }
+  function draw(){
+    var I=+$('gOp').value, bw=+$('gB').value, u=Math.pow(10,+$('gU').value);
+    $('gBv').textContent=bw.toFixed(1); $('gUv').textContent=U.comma(u);
+    var P=roof==='fp'?PK32:PKT, R=P/bw;
+    function att(i){var a=Math.min(P,bw*i); if(dock) a=Math.min(a,BP*u*i); return a;}
+    var h='';
+    [0.1,1,10,100,1000].forEach(function(v){h+=U.ln(X(v),Y0,X(v),Y1,ST.grid)+U.txt(X(v),Y0+16,lab(v),ST.tick,'middle');});
+    [0.01,0.1,1,10,100,1000].forEach(function(v){h+=U.ln(X0,Y(v),X1,Y(v),ST.grid)+U.txt(X0-6,Y(v)+4,lab(v),ST.tick,'end');});
+    h+=U.ln(X0,Y0,X1,Y0,ST.axis)+U.ln(X0,Y0,X0,Y1,ST.axis);
+    h+=U.txt((X0+X1)/2,Y0+34,'intensity I, FLOP per byte from HBM (log scale)',ST.lab,'middle');
+    h+=U.txt(X0+6,Y1-8,'attainable TFLOP/s (log scale)',ST.small);
+    h+=roofLine(0.128,0.05,'stroke:var(--ink-3);stroke-width:1.6;stroke-dasharray:6 4');
+    h+=U.txt(X(300),Y(0.128)-7,'part 1 core',ST.small,'middle');
+    h+=roofLine(P,bw,'stroke:var(--c2);stroke-width:2.4');
+    h+=U.txt(X(1400),Y(P)-8,(roof==='fp'?'GPU, FP32 lanes':'GPU, tensor cores'),ST.lab,'end');
+    if(dock){
+      var xa=Math.max(0.05,0.01/(BP*u)), xb=Math.min(2000,3000/(BP*u));
+      h+=U.ln(X(xa),Y(BP*u*xa),X(xb),Y(BP*u*xb),'stroke:var(--c1);stroke-width:2;stroke-dasharray:7 4');
+      var xl=Math.min(xb,Math.max(xa*4,0.3));
+      h+=U.txt(X(xl)+6,Y(BP*u*xl)+16,'PCIe dock',ST.small);
+    }
+    h+=U.ln(X(R),Y0,X(R),Y(P),'stroke:var(--c2);stroke-width:1;stroke-dasharray:2 3');
+    h+=U.txt(X(R)+5,Y0-8,'ridge '+fmt(R),ST.small);
+    OPS.forEach(function(i){ if(Math.abs(i-I)<1e-9) return;
+      h+='<circle cx="'+U.f1(X(i))+'" cy="'+U.f1(Y(att(i)))+'" r="4" style="fill:var(--sheet);stroke:var(--ink-3);stroke-width:1.4"/>';});
+    var a=att(I);
+    h+='<circle cx="'+U.f1(X(I))+'" cy="'+U.f1(Y(a))+'" r="7" style="fill:var(--c1);stroke:var(--sheet);stroke-width:2"/>';
+    var onSlope=a<P*0.999;
+    h+=U.txt(X(I)+(onSlope?12:(I>200?-10:10)),Y(a)+(onSlope?20:-12),fmt(a)+' TFLOP/s',ST.lab,(!onSlope&&I>200)?'end':'start');
+    $('gS').innerHTML=h;
+    var st=[{k:'Dock',r:dock?BP*u*I:null,s:dock?'31.5 GB/s':'not in line'},{k:'Stores (HBM)',r:bw*I,s:bw.toFixed(1)+' TB/s'},{k:'Machines',r:P,s:roof==='fp'?'FP32 lanes':'tensor cores'}];
+    var bind=0,best=1e99; st.forEach(function(o,j){if(o.r!==null&&o.r<best-1e-12){best=o.r;bind=j;}});
+    var g='', bx=[10,198,386], w=164;
+    st.forEach(function(o,j){
+      var on=j===bind, x=bx[j];
+      g+='<rect x="'+x+'" y="18" width="'+w+'" height="60" rx="3" style="fill:var(--sheet);stroke:'+(on?'var(--c1)':'var(--rule-strong)')+';stroke-width:'+(on?2.5:1)+'"/>';
+      g+=U.txt(x+w/2,38,o.k,ST.lab,'middle');
+      g+=U.txt(x+w/2,56,o.r===null?'off':fmt(o.r)+' TFLOP/s of work',ST.tick,'middle');
+      g+=U.txt(x+w/2,71,o.s,ST.small,'middle');
+      if(on) g+=U.txt(x+w/2,96,'binds',('font-family:var(--f-disp);font-size:12px;font-weight:700;fill:var(--c1)'),'middle');
+      if(j<2) g+=U.ln(x+w,48,bx[j+1]-2,48,'stroke:var(--ink-3);stroke-width:1.4')+'<path d="M'+(bx[j+1]-2)+',48 l-7,-4 l0,8 z" style="fill:var(--ink-3)"/>';
+    });
+    $('gL').innerHTML=g;
+    $('gP').textContent=fmt(P); $('gR').textContent=fmt(R); $('gA').textContent=fmt(a);
+    $('gF').textContent=(100*a/P).toFixed(1)+'%';
+    $('gK').textContent=['dock (PCIe)','stores (HBM)','machines'][bind];
+  }
+  document.querySelectorAll('[data-gr]').forEach(function(b){b.addEventListener('click',function(){
+    roof=b.getAttribute('data-gr'); U.onBtn('data-gr',roof); draw();});});
+  $('gD').addEventListener('click',function(){dock=!dock; $('gD').classList.toggle('on',dock); draw();});
+  ['gOp','gB','gU'].forEach(function(id){$(id).addEventListener('input',draw);});
+  U.predict('data-p1','pv1',{
+    a:'<b>No.</b> Being a tiled matmul is not enough. 16/4 = 4 FLOP/B is a fifth of the ridge, 66.9/3.3 = 20.3, so the stores bind at 3.3 &times; 4 = <b>13.2 TFLOP/s</b>, 19.7% of the roof.',
+    b:'<b>Right.</b> The ridge is 66.9/3.3 = 20.3 FLOP/B. At 4 the line runs at 3.3 TB/s &times; 4 = <b>13.2 TFLOP/s</b>, 19.7% of the roof. On part 1&rsquo;s CPU core the same tile was machining-bound: the constraint moved.',
+    c:'<b>No.</b> Balance needs 20.3 FLOP/B. At 4 the delivery station is five times too slow, and the line runs at <b>13.2 TFLOP/s</b>.'});
+  draw();
+})();
+</script>
+
+<script>
+/* ===== LAB 2 -- warps as kanban cards: one SM simulated cycle by cycle =====
+   Same arithmetic as simsm() in verify_claims.py [Ch16p2 s05]. */
+(function(){
+  'use strict';
+  var U=window.__c16, $=U.$, ST=U.ST;
+  var BSM=3.3e12/1.98e9/132, SVC=128/BSM, L=400, WS=[1,2,4,8,12,16,24,32,40,48,56,64];
+  var K=1, JIT=false, timer=null;
+  function simsm(W,k,m,cyc,warm,jit){
+    var rj=U.rng(7), ph=[], cnt=[], rdy=[], first=[], lastc=[], nd=[], w, t;
+    for(w=0;w<W;w++){ph.push(0);cnt.push(0);rdy.push(0);first.push(-1);lastc.push(-1);nd.push(0);}
+    var nf=0, rr=0;
+    for(t=0;t<cyc;t++){
+      for(w=0;w<W;w++){ if(ph[w]===1&&rdy[w]<=t){ph[w]=2;cnt[w]=m;} }
+      var issued=0, i=0, last=-1;
+      while(i<W&&issued<4){
+        w=(rr+i)%W;
+        if(ph[w]===0){
+          var st=t>nf?t:nf; nf=st+SVC;
+          var r=st+(jit?L*(1-jit+2*jit*rj()):L);
+          rdy[w]=cnt[w]===0?r:(rdy[w]>r?rdy[w]:r);
+          cnt[w]+=1; if(cnt[w]===k){ph[w]=1;cnt[w]=0;}
+          issued++; last=w;
+        } else if(ph[w]===2){
+          cnt[w]-=1;
+          if(cnt[w]===0){ph[w]=0; if(t>=warm){ if(first[w]<0) first[w]=t; lastc[w]=t; nd[w]+=1; }}
+          issued++; last=w;
+        }
+        i++;
+      }
+      if(issued) rr=(last+1)%W;
+    }
+    var rate=0; for(w=0;w<W;w++){ if(nd[w]>=2) rate+=(nd[w]-1)/(lastc[w]-first[w]); }
+    return rate*k*128;
+  }
+  function bound(W,k,m){var T0=L+k+m-1; return Math.min(W*k*128/T0,BSM,4*k*128/(k+m));}
+  function cap(r){return Math.min(64,Math.floor(65536/(32*r)));}
+  var X0=58, X1=540, Y0=256, Y1=24, YM=14;
+  function X(v){return X0+(X1-X0)*v/64;}
+  function Y(v){return Y0-(Y0-Y1)*v/YM;}
+  function draw(){
+    var r=+$('wR').value, m=+$('wM').value, c=cap(r);
+    $('wRv').textContent=r; $('wMv').textContent=m;
+    var jit=JIT?0.5:0, cyc=JIT?42000:12000, warm=2000;
+    var h='', i;
+    for(i=0;i<=14;i+=2){h+=U.ln(X0,Y(i),X1,Y(i),ST.grid)+U.txt(X0-6,Y(i)+4,i,ST.tick,'end');}
+    for(i=0;i<=64;i+=8){h+=U.ln(X(i),Y0,X(i),Y0+5,ST.axis)+U.txt(X(i),Y0+18,i,ST.tick,'middle');}
+    h+=U.ln(X0,Y0,X1,Y0,ST.axis)+U.ln(X0,Y0,X0,Y1,ST.axis);
+    h+=U.txt((X0+X1)/2,Y0+34,'warps resident on the SM',ST.lab,'middle');
+    h+=U.txt(X0+4,Y1-8,'bytes per cycle delivered (SM share of HBM = 12.63)',ST.small);
+    h+='<rect x="'+U.f1(X(c))+'" y="'+Y1+'" width="'+U.f1(X(64)-X(c))+'" height="'+(Y0-Y1)+'" style="fill:var(--sheet-2)"/>';
+    h+=U.ln(X(c),Y0,X(c),Y1,'stroke:var(--c4);stroke-width:3');
+    h+=U.txt(X(c)+(c>48?-6:6),Y1+14,'rack: '+c+' warps',('font-family:var(--f-disp);font-size:12px;font-weight:700;fill:var(--c4)'),c>48?'end':'start');
+    var w0=BSM*(L+K+m-1)/(K*128);
+    if(w0<=64){h+=U.ln(X(w0),Y0,X(w0),Y(BSM),'stroke:var(--ink-3);stroke-width:1;stroke-dasharray:3 3');
+      h+=U.txt(X(w0)+(w0>40?-5:5),Y0-8,'knee '+w0.toFixed(1),ST.small,w0>40?'end':'start');}
+    var pts=[]; for(i=1;i<=64;i++) pts.push(U.f1(X(i))+','+U.f1(Y(bound(i,K,m))));
+    h+='<polyline points="'+pts.join(' ')+'" style="fill:none;stroke:var(--c2);stroke-width:2.2"/>';
+    var simC=null;
+    WS.forEach(function(W){
+      var s=simsm(W,K,m,cyc,warm,jit); if(W===c) simC=s;
+      h+='<circle cx="'+U.f1(X(W))+'" cy="'+U.f1(Y(s))+'" r="4.5" style="fill:var(--c1);stroke:var(--sheet);stroke-width:1.5"/>';
+    });
+    if(simC===null) simC=simsm(c,K,m,cyc,warm,jit);
+    h+='<circle cx="'+U.f1(X(c))+'" cy="'+U.f1(Y(simC))+'" r="8" style="fill:none;stroke:var(--c1);stroke-width:2.5"/>';
+    $('wS').innerHTML=h;
+    $('wC').textContent=c;
+    $('wSm').textContent=simC.toFixed(2);
+    $('wBd').textContent=bound(c,K,m).toFixed(2);
+    $('wPc').textContent=(100*simC/BSM).toFixed(1)+'%';
+    $('wW0').textContent=w0.toFixed(1);
+  }
+  function soon(){ if(timer) clearTimeout(timer); timer=setTimeout(draw,40); }
+  document.querySelectorAll('[data-wk]').forEach(function(b){b.addEventListener('click',function(){
+    K=+b.getAttribute('data-wk'); U.onBtn('data-wk',K); draw();});});
+  $('wJ').addEventListener('click',function(){JIT=!JIT; $('wJ').classList.toggle('on',JIT); draw();});
+  ['wR','wM'].forEach(function(id){$(id).addEventListener('input',soon);});
+  U.predict('data-p2','pv2',{
+    a:'<b>No.</b> The SM could hold 64 warps, but at 128 registers per thread its 65,536-register file is full at 16. Sixteen cards with one load each carry 16 &times; 128 / 404 = 5.07 bytes per cycle of 12.63: <b>40%</b>.',
+    b:'<b>That is what the kernel would need</b>: 39.5 of 64 warps, 62% occupancy. The rack holds only 16, so it reaches <b>40%</b>.',
+    c:'<b>Right.</b> 65,536 / (32 &times; 128) = 16 warps. Little&rsquo;s law: 16 &times; 128 B / 404 cycles = 5.07 B per cycle against 12.63, <b>40.1%</b>. The simulation lands on it.',
+    d:'<b>Too low.</b> 16 is the number of warps. Sixteen of the 39.5 needed carry <b>40%</b> of the bandwidth.'});
+  draw();
 })();
 </script>
 
