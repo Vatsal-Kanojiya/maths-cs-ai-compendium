@@ -40,24 +40,24 @@ browser probe those runs used is now in the repo: `tools/probe.js` (see the prob
 | 15 | Production Software Engineering | `ch15-production-software-engineering/` | https://claude.ai/artifact/FGGLCb4G11EoK8UXHnVhHs |
 | 16 | SIMD and GPU Programming **pt 1/3** (the CPU) | `ch16-simd-gpu/` | https://claude.ai/artifact/PkFJKQedyFn3SNLNqWGKCy |
 | 16 | SIMD and GPU Programming **pt 2/3** (the GPU) | `ch16-simd-gpu-part2/` | https://claude.ai/artifact/8byqc279ofge6NJ7k7h4NU |
+| 16 | SIMD and GPU Programming **pt 3/3** (portability and the edge) | `ch16-simd-gpu-part3/` | https://claude.ai/artifact/SHS1r9AzoMUwqskvgMc4G7 |
 | 17 | AI Inference | `ch17-ai-inference/` | https://claude.ai/artifact/UdoN6PEmWrY6pHxACELcxr |
 | 18 | ML Systems Design | `ch18-ml-systems-design/` | https://claude.ai/artifact/Swz1BNJbZVNzbMcUyZVtdh |
 | 19–20 | Applied AI; Bleeding-edge AI (coda) | `ch19-20-coda/` | https://claude.ai/artifact/BRYcFocRMW6VkHCMbECTie |
 
-`verify_claims.py` stands at **1,157 checks, 0 failures**, covering every published sheet (01–18
-and the 19–20 coda). Two more Sheet 16 part 2 checks run the source's JAX/Pallas code and are
-skipped with a NOTE when JAX is not installed (1,159 with it). Run it first in any new session. It needs numpy and scipy (`pip install numpy
-scipy`) and now takes about **three minutes**, longer than the Bash tool's 120 s default — run it
-with a long timeout or in the background, alone. Each chapter's block lives in its own function
-(`_ch14p1`, `_ch15`, `_ch16p1`, `_ch17`, `_ch18`, `_ch1920`, …); empty stubs `_ch16p2()` and
-`_ch16p3()` are waiting. **Sheet 16 part 1's measured-timing checks (s01, s08, s10, s11) are
-flaky under CPU load** — see Known issues. Also run `python3 study-companion/audit_classes.py`.
+`verify_claims.py` stands at **1,206 checks, 0 failures**, covering every published sheet. Run it
+first in any new session. It needs numpy and scipy (`pip install numpy scipy`) and takes about three to
+four minutes, longer than the Bash tool's 120 s default — run it with a long timeout or in the
+background. Each chapter's block lives in its own function (`_ch14p1`, `_ch15`, `_ch16p1`…`_ch16p3`,
+`_ch17`, `_ch18`, `_ch1920`). Optional tools are skipped with a NOTE when absent: JAX (two Sheet 16
+part 2 checks) and glslang (Sheet 16 part 3). **Timing checks:** Sheet 16 part 1's checks that time real
+loops go through `tsay`, which prints a NOTE instead of a FAIL when a measurement misses its bound;
+`VERIFY_TIMING=1 python3 study-companion/verify_claims.py` asserts them strictly. Under full CPU load
+(four busy-loops on four cores) the default run gave 0 FAIL and one NOTE. Also run
+`python3 study-companion/audit_classes.py`.
 
-**What is left: Sheet 16 part 3, nothing else.** Parts 1 (the CPU) and 2 (the GPU) are published.
-Part 2's §19 is the contract for part 3 — six items, listed in `handoff-notes/ch16-part2.md` §6:
-RVV as predicates, Vulkan subgroups as lanes, file 07's tree reduction and GLSL tiled matmul counted
-and priced, FLOPs per joule at the edge, and a concept map joining all three parts. Part 3 is files
-06–07 (RISC-V and embedded; Vulkan compute) into `ch16-simd-gpu-part3/`, verifier stub `_ch16p3()`.
+**The series is complete.** Every chapter has a published sheet: 01–15, 16 in three parts, 17, 18 and
+the 19–20 coda. What remains is optional clean-up, listed under "What is actually left".
 
 Copy the **page skeleton from `ch14-data-structures-algorithms-part2/`**, not from Chapters 09–13.
 
@@ -360,6 +360,14 @@ for branch counts and broke at per-lane addressing, warp switching and shuffles.
 the c = 0 sampling plan for divergence, the two-bin system for double buffering, and fusion's
 ceiling `1 + ksI*/d`.
 
+**Part 3 written; Chapter 16 complete.** The bank's two entries held across all
+three parts: bandwidth as material flow became a line with two stations (CPU), three (GPU, with the
+PCIe dock) and a phone ridge near 195 FLOP/B (reported bandwidth); "SIMD ↔ multi-spindle machining"
+was right for the drilling head only, and that head counted strokes on every machine, ending as
+`vsetvl` and Vulkan subgroups. Outside the bank, per part: Little's law (accumulators, warps, a job too
+small to fill the pipe), kitting, the c = 0 plan, the whiffletree, design allowables, and specific fuel
+consumption with its part-load rise.
+
 **17 AI inference.** ~~Quantisation ↔ measurement resolution and significant figures.
 **Batching ↔ batch production versus one-piece flow** in lean manufacturing; latency versus
 throughput ↔ cycle time versus takt time. Strong.~~ **Written.** Quantisation ↔ measurement
@@ -432,11 +440,12 @@ VaR's failure; the exact (3/8)^n plateau; rate coding = frequency counter.
   show the broken layout**; they are superseded, not deleted (deleting is the user's call). The
   new artifacts were published after this session hit the 10-watch cap, so none of them is
   watched.
-- **Sheet 16 part 1's measured-timing checks are flaky.** `[Ch16 s01]`, `s08`, `s10` and `s11` time
-  real loops on a shared VM; under CPU load (another verifier, a probe, a parallel run) one of them
-  fails now and then. A quiet full run passes all 1,072. Fix in the Sheet 16 part 2 session:
-  best-of-N with wider bounds, or move them behind a `--timing` flag so the default run is
-  deterministic. Until then, read any FAIL by its tag before blaming your own block.
+- ~~Sheet 16 part 1's measured-timing checks are flaky.~~ **Resolved** after part 3: the 19 checks that
+  time real loops now go through `tsay` (NOTE on a miss, FAIL only with `VERIFY_TIMING=1`). One of them,
+  the ReLU unrolling ratio (bound 0.85–1.2), misses even on a quiet run on the Sapphire Rapids-class
+  container: six back-to-back runs gave unrolled/AVX2 of 0.87, 1.03, 1.01, 0.95, 0.99 and 0.81, so the
+  claim "unrolling buys nothing" holds on average but a best-of-five minimum taken per column can land
+  at 0.79. Taking the minimum of the *ratio* per run would be the sounder statistic.
 - **Two wrong cross-references in published sheets, found by the coda, not fixed:** Sheet 06 §06
   sends Adam's moving average to "Chapter 04 §02", which has no EWMA; Sheet 09 §19 sends Lagrange
   multipliers to "Chapter 03 §08" — they are in §07. The coda cites the right targets. Fixing them
@@ -1072,6 +1081,25 @@ removes 4 of 5 passes" is true and buys 1.29x on a compute-bound layer; the form
 - **Per-warp completion-interval throughput** avoids window-quantisation bias in short simulations
   (a 10,000-cycle window over a 404-cycle loop read 1.2% above the bound until changed).
 
+## The Chapter 16 part 3 lesson worth generalising
+
+**Divide the source's table by itself.** The three-device table was printed to show how extreme the
+edge is; dividing compute by power, a one-line operation on numbers already on the page, gave the
+sheet's headline and contradicted the impression the table was meant to give. Then test the series'
+own earlier law against it (part 1's cube law, off by 219x) rather than citing the law. Second: when
+there is no hardware, **compile what can be compiled**: clang's RISC-V target and an npm WebAssembly
+glslang turned "cannot run" into instruction counts and 6/6 shaders checked.
+
+**New traps from Chapter 16 part 3.**
+
+- **Tools for absent hardware exist in the package managers.** `clang --target=riscv64-unknown-elf
+  -march=rv64gcv -ffreestanding -S` compiles RVV intrinsics with no sysroot; `npm pack @webgpu/glslang`
+  gives a working GLSL-to-SPIR-V compiler in Node. The verifier skips both with a NOTE when absent
+  (the glslang path is in this session's scratchpad, so a fresh session will skip it).
+- **A unit slip that keeps its units survives review**: task 1's "MCU cycles" are host time x MCU clock.
+  Check a printed count against the work it must contain (50,816 multiply-adds).
+- **The worktree guard refuses shell lines with heredocs plus pipes**: write scripts to the scratchpad.
+
 ## The Chapter 17 lesson worth generalising
 
 **When a bridge pairs two vocabularies, check each term's definition, not the pairing.** The
@@ -1192,13 +1220,10 @@ push every part; never leave a part uncommitted at the end of a run.
 
 ## What is actually left
 
-**Sheet 16 part 3.** Everything else in the series is written and published: chapters 01–15, 16
-parts 1–2, 17, 18, and the 19–20 coda. Part 3's contract is part 2 §19 (six items). A single run at
-about 1,100 source lines.
-
-Optional clean-ups, each needing artifacts republished: the flaky timing checks, the two
-cross-references, Sheet 13 part 2's container sentence, and the nine sheets with display
-equations wider than their box at 390 px (all under Known issues).
+**Nothing required: the series is complete.** Optional clean-ups, each needing artifacts republished:
+the two wrong cross-references in Sheets 06 and 09, Sheet 13 part 2's container sentence, the nine
+sheets with display equations wider than their box at 390 px, the ReLU ratio statistic, and deleting
+the stray Sheet 18 copy (the user's call) — all under Known issues.
 
 **On running parallel agents** (learned in the Chapter 15–18 session): three Opus runs at once hit
 the account's usage limit roughly every two finished sheets, and each limit stopped everything
