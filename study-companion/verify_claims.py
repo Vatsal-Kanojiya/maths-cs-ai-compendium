@@ -6334,7 +6334,504 @@ _ch16p1()
 # Chapter 16 part 2 block. Owned by the Chapter 16 part 2 run: replace only the body of _ch16p2() below.
 # Keep every name inside the function so nothing collides with another chapter's block.
 def _ch16p2():
-    pass
+    import math, os, re
+    import numpy as np
+    T = "[Ch16p2 %s]"
+    def say(sec, msg, ok=None):
+        tail = "" if ok is None else "   " + P(ok)
+        print(f"{T % sec} {msg}{tail}")
+    def near(a, b, tol):
+        return abs(a - b) <= tol
+    here = os.path.dirname(os.path.abspath(__file__))
+    srcdir = os.path.join(os.path.dirname(here), "chapter 16 - SIMD and GPU programming")
+    f04 = open(os.path.join(srcdir, "04. GPU architecture and CUDA.md")).read()
+    f05 = open(os.path.join(srcdir, "05. triton, TPUs and pallax.md")).read()
+    M32 = 0xFFFFFFFF
+    def mul32(seed):
+        st = [seed & M32]
+        def r():
+            st[0] = (st[0] + 0x6D2B79F5) & M32
+            t = st[0]
+            t = ((t ^ (t >> 15)) * (t | 1)) & M32
+            t = (t ^ ((t + (((t ^ (t >> 7)) * (t | 61)) & M32)) & M32)) & M32
+            return ((t ^ (t >> 14)) & M32) / 4294967296
+        return r
+    print()
+    say("s00", "Sheet 16 part 2: no GPU in the build container; hardware figures are the source's or reported, "
+        "everything below is derived or simulated")
+
+    # ---------------- reference GPU: the source's figures, plus four reported constants ----------
+    BW = 3.3e12            # source: HBM 1-3.3 TB/s (top of its row, an H100-class part)
+    LANES = 16896          # reported: FP32 lanes ("CUDA cores") of an H100 SXM
+    FCLK = 1.98e9          # reported boost clock; the source's range is 1-2.5 GHz
+    SMS = 132              # reported SM count
+    PK32 = LANES * FCLK * 2
+    PKT = 989e12           # source: 989 TFLOPS (its table says FP8; reported datasheets: BF16 dense)
+    R32 = PK32 / BW; RT = PKT / BW
+    for txt in ["1-3.3 TB/s", "~400 cycles", "~256 KB per SM", "~20 TB/s", "~6 TB/s", "#define TILE 16",
+                "989 TFLOPS FP8", "125 TFLOPS TF32", "4×4 matrix multiply", "128×128 or 256×256"]:
+        if txt not in f04 + f05:
+            say("s00", f"source text not found: {txt!r}", False)
+    say("s00", "every source figure quoted below is present verbatim in files 04-05", all(
+        t in f04 + f05 for t in ["1-3.3 TB/s", "~400 cycles", "~256 KB per SM", "~20 TB/s", "~6 TB/s",
+                                 "#define TILE 16", "989 TFLOPS FP8", "125 TFLOPS TF32", "4×4 matrix multiply",
+                                 "128×128 or 256×256"]))
+
+    # ---------------- s01: lanes, not cores -----------------------------------------------------
+    say("s01", f"reference FP32 peak = 16,896 lanes x 1.98 GHz x 2 FLOP = {PK32/1e12:.2f} TFLOP/s, inside the source's 30-80",
+        30e12 <= PK32 <= 80e12 and near(PK32 / 1e12, 66.91, 0.01))
+    say("s01", f"with an FMA counted once it would be {PK32/2e12:.2f}, also inside 30-80: the range cannot tell the conventions apart",
+        30e12 <= PK32 / 2 <= 80e12)
+    say("s01", f"16,896 lanes / 132 SMs = {LANES // SMS} lanes per SM = 4 schedulers x 32", LANES / SMS == 128)
+    bwr = (1000 / 100, 3000 / 50); pkr = (30 / 5, 80 / 1)
+    say("s01", f"source's own table: GPU/CPU bandwidth ratio {bwr[0]:.0f}-{bwr[1]:.0f}x (it says 10-30x), "
+        f"FP32 peak ratio {pkr[0]:.0f}-{pkr[1]:.0f}x (it says the core count gives 100-1000x)",
+        bwr == (10.0, 60.0) and pkr == (6.0, 80.0))
+    lane_cpu_hi = 128 * 16 * 2; lane_cpu_lo = 4 * 8 * 2
+    say("s01", f"counted in FP32 FMA lanes: 128 AVX-512 cores x 16 x 2 units = {lane_cpu_hi:,} against 16,896 "
+        f"({LANES/lane_cpu_hi:.1f}x); 4 AVX2 cores = {lane_cpu_lo} ({LANES/lane_cpu_lo:.0f}x)",
+        near(LANES / lane_cpu_hi, 4.125, 1e-9) and LANES // lane_cpu_lo == 264)
+
+    # ---------------- s02: the CUDA model --------------------------------------------------------
+    n = 1 << 20; bs = 256; gs = (n + bs - 1) // bs
+    h_a = np.full(n, 1.0, np.float32); h_b = np.full(n, 2.0, np.float32)
+    d_a, d_b = h_a.copy(), h_b.copy(); d_c = d_a + d_b
+    h_c = d_a.copy()                       # the source copies d_a, not d_c, back to the host
+    say("s02", f"vector_add as printed copies d_a back and prints c[0] = {h_c[0]:f} (it says expected 3.0); "
+        f"copying d_c gives {d_c[0]:f}",
+        "cudaMemcpy(h_c, d_a, bytes, cudaMemcpyDeviceToHost)" in f04 and h_c[0] == 1.0 and d_c[0] == 3.0)
+    ids = sorted(b * bs + t for b in range(16) for t in range(bs))
+    say("s02", f"idx = blockIdx*blockDim + threadIdx numbers 16 x 256 threads 0..4095 once each (a mixed-radix serial); "
+        f"2^20 elements need {gs:,} blocks", ids == list(range(16 * bs)) and gs == 4096)
+    n6 = 10**6; g6 = -(-n6 // bs)
+    say("s02", f"n = 1,000,000 at 256 per block: {g6:,} blocks, {g6*bs - n6} threads masked off by the bounds check "
+        f"({n6/(g6*bs):.4%} in range): part 1's last stroke", g6 == 3907 and g6 * bs - n6 == 192)
+    nsync = f04.count("cudaEventSynchronize(stop)")
+    say("s02", f"the source's own timing code calls cudaEventSynchronize {nsync} times, needed only because a kernel "
+        f"launch returns before the kernel finishes", nsync == 5)
+
+    # ---------------- s03: the roofline with a GPU's numbers ---------------------------------------
+    conv_fl = 2 * 9 * 64 * 128 * 32 * 32
+    conv_by = 4 * (64 * 32 * 32 + 128 * 32 * 32 + 9 * 64 * 128)
+    conv_I = conv_fl / conv_by
+    say("s03", f"FP32 ridge = {PK32/1e12:.2f} / 3.3 = {R32:.2f} FLOP/B; tensor-core ridge = 989 / 3.3 = {RT:.1f}",
+        near(R32, 20.27, 0.01) and near(RT, 299.7, 0.05))
+    ops = [("ReLU", 0.125), ("naive matmul", 0.25), ("layer norm", 0.625), ("tile 16", 4.0), ("tile 32", 8.0),
+           ("tile 64", 16.0), ("conv 3x3", conv_I)]
+    cpu_ridge = 128e9 / 50e9
+    rows = []
+    for nm, I in ops:
+        att = min(PK32, BW * I)
+        rows.append((nm, I, att, "machining" if I >= R32 else "delivery", "machining" if I >= cpu_ridge else "delivery"))
+    say("s03", "placed on the FP32 roof: " + "; ".join(f"{r[0]} {r[1]:.3g} -> {r[2]/1e12:.2f} TFLOP/s ({r[3]})" for r in rows))
+    moved = [r[0] for r in rows if r[3] != r[4]]
+    say("s03", f"conv = {conv_fl:,} FLOP / {conv_by:,} B = {conv_I:.2f} FLOP/B (part 1's 139.6)", near(conv_I, 139.64, 0.005))
+    say("s03", f"against part 1's one-core ridge 2.56 the operations that change station are {moved}: every tile from "
+        f"b = 11 to b = 81 (2.56 <= b/4 < {R32:.2f}); the conv stays machining-bound", moved == ["tile 16", "tile 32", "tile 64"])
+    say("s03", f"source's 16x16 tile: I = 16/4 = 4 FLOP/B -> {BW*4/1e12:.1f} TFLOP/s, {BW*4/PK32:.1%} of the FP32 roof",
+        near(BW * 4 / 1e12, 13.2, 1e-9) and near(BW * 4 / PK32, 0.1973, 0.0005))
+    say("s03", f"on the tensor-core roof the conv (fp32 bytes) reaches {BW*conv_I/1e12:.0f} of 989 TFLOP/s "
+        f"({BW*conv_I/PKT:.1%}); with 16-bit operands I = {2*conv_I:.1f} < {RT:.1f}: still just below the ridge",
+        conv_I < RT and 2 * conv_I < RT and near(2 * conv_I, 279.3, 0.05))
+    say("s03", f"against part 1's single core (128 GFLOP/s, 50 GB/s): delivery-bound work speeds up {BW/50e9:.0f}x, "
+        f"machining-bound {PK32/128e9:.0f}x; the eight-core ridge was 20.48, this one is {R32:.2f}",
+        round(BW / 50e9) == 66 and round(PK32 / 128e9) == 523)
+
+    # ---------------- s04: the receiving dock --------------------------------------------------------
+    BP = 16e9 * 128 / 130 / 8 * 16
+    say("s04", f"PCIe 4.0 x16 = 16 GT/s x 128/130 / 8 x 16 = {BP/1e9:.2f} GB/s each way (part 1); HBM/PCIe = {BW/BP:.1f}",
+        near(BP / 1e9, 31.51, 0.01) and near(BW / BP, 104.7, 0.1))
+    N24 = 1 << 24; by = N24 * 4
+    t_p = 2 * by / BP; t_k = 2 * by / BW; tot = t_p + t_k
+    printed = 2.0 * by / (tot * 1e3) / 1e6
+    say("s04", f"ReLU task: 2 x 64 MiB over PCIe = {t_p*1e3:.2f} ms, kernel {t_k*1e6:.1f} us: the link is {t_p/tot:.1%} "
+        f"of the timed interval and the program's 'Bandwidth' line prints {printed:.1f} GB/s, the link's rate",
+        near(t_p * 1e3, 4.26, 0.005) and near(t_k * 1e6, 40.7, 0.05) and t_p / tot > 0.99 and near(printed, 31.2, 0.05))
+    Nstar = 6 * PK32 / BP
+    t_pc = 12 * 1024**2 / BP; t_cc = 2 * 1024**3 / PK32
+    say("s04", f"matmul with A, B in and C out over the link: compute 2N^3/P equals transfer 12N^2/B at N* = 6P/B = {Nstar:,.0f}; "
+        f"at N = 1024 the link takes {t_pc*1e3:.3f} ms against {t_cc*1e3:.4f} ms of arithmetic ({t_pc/t_cc:.1f}x)",
+        near(Nstar, 12741, 1) and near(t_pc / t_cc, 12.4, 0.05))
+    def chunked(c):
+        a = by / c / BP; k = t_k / c
+        return a + k + a + (c - 1) * max(a, k, a)
+    t8 = chunked(8); tinf = by / BP
+    say("s04", f"streams as a three-station pipeline (Sheet 13 part 1): 8 chunks take {t8*1e3:.2f} ms against {tot*1e3:.2f} "
+        f"sequential ({tot/t8:.2f}x); no chunk count beats {tot/tinf:.2f}x, because one direction alone needs {tinf*1e3:.2f} ms",
+        near(t8 * 1e3, 2.40, 0.01) and near(tot / t8, 1.79, 0.01) and tot / chunked(10**6) < tot / tinf + 1e-9 and near(tot / tinf, 2.02, 0.01))
+    I_p = 1024 / 6
+    say("s04", f"product mix at the dock for that matmul = 2N^3/12N^2 = N/6 = {I_p:.1f} FLOP/B; dock rate x mix = "
+        f"{BP*I_p/1e12:.2f} TFLOP/s, {BP*I_p/PK32:.1%} of the roof", near(BP * I_p / 1e12, 5.38, 0.01))
+
+    # ---------------- s05: warps are kanban cards ------------------------------------------------------
+    Lc = 400
+    bcyc = BW / FCLK; infl = bcyc * Lc; per_sm = infl / SMS; wl = per_sm / 128
+    say("s05", f"Little: {BW/1e12} TB/s / 1.98 GHz = {bcyc:,.1f} B/cycle x 400 cycles = {infl:,.0f} B in flight; "
+        f"per SM {per_sm:,.0f} B = {wl:.1f} warp-loads of 128 B", near(infl, 666667, 1) and near(wl, 39.46, 0.01))
+    regs = 256 * 1024 // 4
+    cap = lambda r: min(64, regs // (32 * r))
+    say("s05", f"register file 256 KB = {regs:,} registers: warps held at 32/64/128/255 registers per thread = "
+        f"{cap(32)}/{cap(64)}/{cap(128)}/{cap(255)}; 40 warps fit only at <= {regs // (32*40)} registers",
+        (cap(32), cap(64), cap(128), cap(255)) == (64, 32, 16, 8) and regs // (32 * 40) == 51)
+    say("s05", f"one load per warp needs {wl/64:.0%} of the 64-warp maximum resident; four loads per warp, {wl/4:.1f} warps",
+        near(wl / 64, 0.617, 0.001))
+    say("s05", f"FMA chain: 4-cycle latency (reported) x 4 schedulers issuing 1 per cycle = {4*4} warps per SM, "
+        f"against part 1's 4 x 2 = 8 accumulators per core")
+    l2 = 6e12 / FCLK * 200
+    say("s05", f"L2 (source: ~200 cycles, ~6 TB/s): {l2:,.0f} B in flight chip-wide; a CPU core held 14.6 x 64 = "
+        f"{14.6*64:.0f} B, one SM {per_sm:,.0f} B ({per_sm/(14.6*64):.1f}x)", near(l2, 606061, 1))
+    pf = 10e9 * 210e-9
+    say("s05", f"prefetch distance by the same law (part 1: 10 GB/s, 210 ns): {pf:,.0f} B = {pf/4:.0f} floats ahead; "
+        f"the source's 64 floats (256 B) cover {256/10e9*1e9:.1f} ns", near(pf, 2100, 1e-6) and near(256 / 10e9 * 1e9, 25.6, 1e-9))
+    # the SM simulation used by LAB 2 (identical arithmetic in the page's script)
+    BSM = BW / FCLK / SMS; SVC = 128 / BSM
+    def simsm(W, k=1, m=4, L=400, cyc=12000, warm=2000, jit=0.0):
+        rj = mul32(7)
+        ph = [0] * W; cnt = [0] * W; rdy = [0.0] * W
+        nf = 0.0; rr = 0
+        first = [-1] * W; lastc = [-1] * W; ndone = [0] * W
+        for t in range(cyc):
+            for w in range(W):
+                if ph[w] == 1 and rdy[w] <= t:
+                    ph[w] = 2; cnt[w] = m
+            issued = 0; i = 0; last = -1
+            while i < W and issued < 4:
+                w = (rr + i) % W
+                if ph[w] == 0:
+                    st = t if t > nf else nf
+                    nf = st + SVC; r = st + (L * (1 - jit + 2 * jit * rj()) if jit else L)
+                    rdy[w] = r if cnt[w] == 0 else (rdy[w] if rdy[w] > r else r)
+                    cnt[w] += 1
+                    if cnt[w] == k:
+                        ph[w] = 1; cnt[w] = 0
+                    issued += 1; last = w
+                elif ph[w] == 2:
+                    cnt[w] -= 1
+                    if cnt[w] == 0:
+                        ph[w] = 0
+                        if t >= warm:
+                            if first[w] < 0:
+                                first[w] = t
+                            lastc[w] = t; ndone[w] += 1
+                    issued += 1; last = w
+                i += 1
+            if issued:
+                rr = (last + 1) % W
+        rate = 0.0
+        for w in range(W):
+            if ndone[w] >= 2:
+                rate += (ndone[w] - 1) / (lastc[w] - first[w])
+        return rate * k * 128
+    def bound(W, k=1, m=4, L=400):
+        T0 = L + k + m - 1
+        return min(W * k * 128 / T0, BSM, 4 * k * 128 / (k + m))
+    sims = {W: simsm(W) for W in (1, 8, 16, 24, 40, 64)}
+    rel = {W: sims[W] / bound(W) for W in sims}
+    say("s05", "simulated SM, one 128-B load + 4 instructions per loop, B/cycle (bound): " +
+        ", ".join(f"W={W}: {sims[W]:.2f} ({bound(W):.2f})" for W in sims) + f"; knee w0 = {BSM*404/128:.1f}",
+        all(0.95 <= rel[W] <= 1.0001 for W in (1, 8, 16, 24)) and rel[64] > 0.97 and rel[40] > 0.85 and near(BSM * 404 / 128, 39.9, 0.05))
+    jv = {W: simsm(W, jit=0.5, cyc=42000) / bound(W) for W in (16, 40, 64)}
+    say("s05", f"latency varying uniformly 200-600 cycles: W=16 at {jv[16]:.1%} of the bound, W=40 at {jv[40]:.1%}, "
+        f"W=64 at {jv[64]:.1%}: variability costs most near the knee", jv[40] < 0.97 and jv[40] < jv[16] and jv[40] < jv[64] and max(jv.values()) < 1.005)
+    s16k1 = simsm(16); s16k4 = simsm(16, k=4)
+    say("s05", f"16 warps (the 128-register rack): {s16k1/BSM:.1%} of the SM's bandwidth share with one load each "
+        f"(bound {bound(16)/BSM:.1%}); with four loads in flight each, {s16k4/BSM:.1%}",
+        near(s16k1 / BSM, 0.401, 0.01) and s16k4 / BSM > 0.95)
+
+    # ---------------- s06: divergence ------------------------------------------------------------------
+    lanes = np.arange(32)
+    def wcost(mask, a, b):
+        return a * bool(mask.any()) + b * bool((~mask).any())
+    ev = lanes % 2 == 0
+    say("s06", f"even/odd branch, equal paths: every warp runs both, {16*2/(32*wcost(ev,1,1)):.0%} of lane-slots useful",
+        wcost(ev, 1, 1) == 2)
+    nn = 1 << 24; idx = np.arange(nn).reshape(-1, 32)
+    half_div = int(((idx < nn // 2).any(1) & ~(idx < nn // 2).all(1)).sum())
+    eo_div = int(((idx % 2 == 0).any(1) & ~(idx % 2 == 0).all(1)).sum())
+    say("s06", f"same 50/50 split of 2^24 threads, two layouts: even/odd diverges in {eo_div:,} of {nn//32:,} warps, "
+        f"first-half/second-half in {half_div}", eo_div == nn // 32 and half_div == 0)
+    rgs = np.random.default_rng(1602)
+    q = 0.01
+    sim_q = float((rgs.random((400000, 32)) < q).any(1).mean())
+    pq = 1 - (1 - q)**32
+    say("s06", f"branch taken by 1% of threads at random: P(warp must run it) = 1 - 0.99^32 = {pq:.4f}; "
+        f"400,000 simulated warps: {sim_q:.4f} (Sheet 15's c = 0 plan with n = 32)", near(pq, 0.2750, 5e-5) and near(sim_q, pq, 0.003))
+    a_, b_ = 100.0, 10.0
+    ec = a_ * pq + b_ * (1 - q**32); ideal = q * a_ + (1 - q) * b_
+    say("s06", f"rare path 100, common 10: expected warp time {ec:.1f} against a per-lane average {ideal:.1f} ({ec/ideal:.2f}x)",
+        near(ec, 37.5, 0.05) and near(ec / ideal, 3.44, 0.01))
+    trips = lanes + 1
+    say("s06", f"a loop whose trip count is lane+1 runs 32 times for every lane: {trips.sum()/(32*trips.max()):.1%} useful "
+        f"(the stroke lasts as long as the deepest hole)", near(trips.sum() / (32 * trips.max()), 0.5156, 1e-4))
+    say("s06", f"five nested two-way branches on thread bits: {2**5} paths, {1/32:.1%} useful")
+    t_mem = nn * 8 / BW; t_ar = nn * 2 / PK32
+    say("s06", f"source's task 3: {t_mem*1e6:.1f} us of memory traffic per launch against {t_ar*1e6:.2f} us of arithmetic at peak; "
+        f"even 2x for divergence and 10x for overhead stays below it, so the printed speedup should be about 1.0",
+        near(t_mem * 1e6, 40.7, 0.05) and 20 * t_ar < t_mem)
+    x = np.float32(0); kinf = None
+    with np.errstate(over="ignore"):
+        for kk in range(1, 300):
+            x = np.float32(x * np.float32(2) + np.float32(1))
+            if np.isinf(x):
+                kinf = kk; break
+    say("s06", f"its even elements double each launch from 0: x = 2^k - 1 overflows float32 at launch {kinf} "
+        f"(the 28th of the branchless kernel)", kinf == 128)
+
+    # ---------------- s07: coalescing --------------------------------------------------------------------
+    def segs(stride, off=0, seg=128):
+        return len({(off + 4 * stride * i) // seg for i in range(32)})
+    tab = {s: (segs(s), segs(s, seg=32)) for s in (1, 2, 4, 8, 16, 32, 64)}
+    eff = {s: (128 / (tab[s][0] * 128), 128 / (tab[s][1] * 32)) for s in tab}
+    say("s07", "warp of 32 float loads, stride s: (128-B transactions, 32-B sectors) = " +
+        ", ".join(f"s={s}: {tab[s]}" for s in tab))
+    say("s07", f"stride 32: {eff[32][0]:.1%} as the source says; stride 64 is no worse, {eff[64][0]:.1%}; "
+        f"with 32-B sectors (reported) stride >= 8 bottoms out at {eff[8][1]:.1%}",
+        near(eff[32][0], 0.03125, 1e-12) and eff[64] == eff[32] and eff[8][1] == eff[64][1] == 0.125)
+    say("s07", f"unit stride one float off alignment: {segs(1, 4)} transactions ({128/(segs(1,4)*128):.0%}), "
+        f"{segs(1, 4, 32)} sectors ({128/(segs(1,4,32)*32):.0%}); AoS x-field of a 16-B particle: "
+        f"{eff[4][0]:.0%} in both models", segs(1, 4) == 2 and segs(1, 4, 32) == 5 and eff[4] == (0.25, 0.25))
+
+    # ---------------- s08: the kit in shared memory --------------------------------------------------------
+    N = 1024; b = 16
+    tiled_loads = (N // b)**2 * (N // b) * 2 * b * b
+    naive_loads = N * N * 2 * N
+    say("s08", f"source's task 2, N = 1024, TILE 16: tiled kernel loads {tiled_loads:,} floats = 2N^3/b, the naive one "
+        f"{naive_loads:,} = 2N^3: ratio {naive_loads//tiled_loads} = TILE", tiled_loads == 2 * N**3 // b and naive_loads // tiled_loads == 16)
+    # direct count for part 1's 32 x 32 example, 8 x 8 tiles: planned bin of two tiles (C in registers)
+    n32, b8 = 32, 8
+    fetched = 0
+    for bi in range(n32 // b8):
+        for bj in range(n32 // b8):
+            for t in range(n32 // b8):
+                fetched += 2 * b8 * b8
+    say("s08", f"part 1's 32 x 32 product in 8 x 8 tiles with a planned bin: {fetched:,} words in + {n32*n32:,} out = "
+        f"{fetched + n32*n32:,}, the formula n^2 + 2n^3/b exactly, with a bin of {2*b8*b8} words (LRU needed 512 to match it)",
+        fetched + n32 * n32 == 9216 and 2 * b8 * b8 == 128)
+    bstar = math.ceil(4 * R32)
+    say("s08", f"b/4 >= {R32:.2f} needs b >= {bstar}: {bstar**2:,} threads at one output each, over the 1,024 limit; "
+        f"the largest legal tile, 32, gives {32/4:.0f} FLOP/B = {BW*8/PK32:.1%} of the roof",
+        bstar == 82 and bstar**2 > 1024 and near(BW * 8 / PK32, 0.3946, 0.0005))
+    Irect = lambda BM, BN, s: 2 * BM * BN / (s * (BM + BN))
+    say("s08", f"128 x 128 block tile, 256 threads x 64 outputs: I = {Irect(128,128,4):.0f} FLOP/B > {R32:.2f}; "
+        f"its kit (BK = 32) is {(128*32+32*128)*4//1024} KiB, two of them {2*(128*32+32*128)*4//1024} KiB of the 228",
+        Irect(128, 128, 4) == 32 and (128 * 32 + 32 * 128) * 4 == 32768)
+    tri = [Irect(128, 128, 2), Irect(64, 256, 2), Irect(256, 64, 2)]
+    say("s08", f"Triton's three autotune tiles in 16-bit: {tri[0]:.0f}, {tri[1]:.1f}, {tri[2]:.1f} FLOP/B, all short of the "
+        f"tensor ridge {RT:.0f}; L2 reuse between blocks has to close the rest", tri == [64.0, 51.2, 51.2] and max(tri) < RT)
+    fl_sm = 128 * 2
+    say("s08", f"two-bin rule: a 16-tile step is {2*16**3:,} FLOP = {2*16**3/fl_sm:.0f} cycles of one SM against a 400-cycle "
+        f"refill, so {400/(2*16**3/fl_sm):.1f} bins must be in flight; a 128 x 128 x 32 step is {2*128*128*32/fl_sm:,.0f} cycles",
+        2 * 16**3 / fl_sm == 32 and 2 * 128 * 128 * 32 / fl_sm == 4096)
+
+    # ---------------- s09: tensor cores --------------------------------------------------------------------
+    v100 = 640 * 64 * 2 * 1.53e9
+    say("s09", f"4 x 4 x 4 = {4*4*4} FMAs per tensor core per cycle; 640 cores (reported) x 64 x 2 x 1.53 GHz (reported) = "
+        f"{v100/1e12:.1f} TFLOP/s: the source's 125 for Volta, an FP16-input rate counting an FMA as 2",
+        near(v100 / 1e12, 125.3, 0.05))
+    vrow = [l for l in f04.splitlines() if l.startswith("| Volta")][0]
+    arow = [l for l in f04.splitlines() if l.startswith("| Ampere")][0]
+    say("s09", "the source's Volta row says '125 TFLOPS TF32' while its Ampere row lists TF32 as Ampere's innovation",
+        "TF32" in vrow and "TF32" in arow.split("|")[3])
+    say("s09", f"per SM on Volta (reported 64 FP32 lanes, 8 tensor cores): {8*64} against 64 FMAs per cycle = {8*64//64}x; "
+        f"989 / {PK32/1e12:.1f} = {PKT/PK32:.1f}x on the reference GPU: the source's 8-16x", 8 <= PKT / PK32 <= 16)
+    macs = {"SME FMOPA": 16 * 16, "tensor core per cycle": 4 * 4 * 4, "wmma m16n16k16": 16 * 16 * 16,
+            "AMX TDPBF16PS": 16 * 16 * 32, "MXU 128": 128 * 128, "MXU 256": 256 * 256}
+    say("s09", "multiply-accumulates per instruction or per cycle: " + ", ".join(f"{k} {v:,}" for k, v in macs.items()),
+        macs["wmma m16n16k16"] == 4096 and macs["AMX TDPBF16PS"] == 8192 and macs["MXU 128"] == 16384)
+
+    # ---------------- s10: the systolic array ----------------------------------------------------------------
+    def systolic(A, B):
+        n_, K = A.shape
+        C = np.zeros((n_, n_), dtype=np.int64); D = np.zeros((K, n_, n_), dtype=np.int64)
+        cyc = 0; macs_ = 0
+        t = 0
+        while True:
+            act = 0
+            for i in range(n_):
+                for j in range(n_):
+                    k = t - i - j
+                    if 0 <= k < K:
+                        C[i, j] += A[i, k] * B[k, j]; D[k, i, j] += A[i, k] * B[k, j]; act += 1
+            if act == 0 and t > 0:
+                break
+            macs_ += act; t += 1
+        return C, t, macs_, D
+    rs = np.random.default_rng(1610)
+    ok = True
+    for n_, K in ((4, 4), (4, 9), (8, 5), (6, 32)):
+        A = rs.integers(-9, 10, (n_, K)); B = rs.integers(-9, 10, (K, n_))
+        C, cyc, mc, D = systolic(A, B)
+        ok &= np.array_equal(C, A @ B) and cyc == K + 2 * n_ - 2 and mc == n_ * n_ * K
+        ok &= all(np.array_equal(D[k], np.outer(A[:, k], B[k, :])) for k in range(K))
+    say("s10", "output-stationary array, 4 sizes: C = AB exactly, cycles = K + 2n - 2, and wave k adds exactly a_k b_k^T", ok)
+    util = lambda L, n_: L / (L + 2 * n_ - 2)
+    say("s10", f"utilisation L/(L + 2n - 2) for a 128 array: L = 8 -> {util(8,128):.1%}, 128 -> {util(128,128):.1%}, "
+        f"1024 -> {util(1024,128):.1%}; a 256 array at L = 8: {util(8,256):.1%}",
+        near(util(8, 128), 0.0305, 5e-4) and near(util(128, 128), 0.3351, 5e-4) and near(util(1024, 128), 0.8013, 5e-4))
+    say("s10", "that is Sheet 13's pipeline time (depth + items - 1) with depth 2n - 1: (2n - 1) + L - 1 = L + 2n - 2",
+        all((2 * n_ - 1) + L - 1 == L + 2 * n_ - 2 for n_ in (4, 128) for L in (1, 8, 100)))
+    bf_max = (2 - 2**-7) * 2.0**127; f16_max = (2 - 2**-10) * 2.0**15
+    say("s10", f"bfloat16 keeps float32's 8 exponent bits: largest {bf_max:.4g} against float16's {f16_max:.0f}",
+        near(bf_max, 3.3895e38, 1e34) and f16_max == 65504)
+
+    # ---------------- s11: Triton and Pallas --------------------------------------------------------------------
+    progs = -(-10**6 // 1024)
+    say("s11", f"Triton add, 10^6 elements in blocks of 1024: cdiv = {progs} programs, last one {10**6-(progs-1)*1024} lanes live, "
+        f"{10**6/(progs*1024):.2%} of lanes used", progs == 977 and 10**6 - 976 * 1024 == 576)
+    cover = lambda n_: (n_ // 128) * 128
+    say("s11", f"source's Pallas grid uses floor division: n = 1000 -> {1000//128} blocks write {cover(1000)} elements, "
+        f"{1000-cover(1000)} never written; n = 100 -> {100//128} blocks, nothing written",
+        "grid=(x.shape[0] // 128,)" in f05 and cover(1000) == 896 and cover(100) == 0)
+    try:
+        import jax, jax.numpy as jnp
+        from jax.experimental import pallas as pl
+        def add_kernel(x_ref, y_ref, o_ref):
+            o_ref[...] = x_ref[...] + y_ref[...]
+        def add_pallas(x, y):
+            return pl.pallas_call(add_kernel, out_shape=jax.ShapeDtypeStruct(x.shape, x.dtype),
+                                  grid=(x.shape[0] // 128,),
+                                  in_specs=[pl.BlockSpec((128,), lambda i: (i,)), pl.BlockSpec((128,), lambda i: (i,))],
+                                  out_specs=pl.BlockSpec((128,), lambda i: (i,)), interpret=True)(x, y)
+        xj = jnp.arange(1000, dtype=jnp.float32); yj = jnp.ones(1000, dtype=jnp.float32)
+        zj = np.asarray(add_pallas(xj, yj)); good = np.asarray(xj + yj) == zj
+        say("s11", f"ran it (JAX {jax.__version__}, Pallas interpret mode): {int(good.sum())} of 1000 correct, "
+            f"first wrong index {int(np.argmin(good))}", int(good.sum()) == 896 and not good[896:].any())
+        def chain_ops(x):
+            x = x * 2.0; x = x + 1.0; x = jnp.maximum(x, 0.0); x = x / jnp.sum(x); return x
+        xc = jax.random.normal(jax.random.PRNGKey(0), (10000, 1000))
+        hlo = jax.jit(chain_ops).lower(xc).compile().as_text()
+        fl_lines = [l for l in hlo.splitlines() if "calls=" in l and " fusion(" in l]
+        big = [l for l in fl_lines if "f32[10000,1000]" in l.split("=")[1][:30]]
+        say("s12", f"JAX chain_ops compiled by XLA (CPU backend): {len(fl_lines)} fused kernels, {len(big)} of them writing "
+            f"a full 10000 x 1000 array; not 1", len(fl_lines) >= 2 and len(big) >= 1)
+    except ImportError:
+        say("s11", "NOTE: JAX not installed here; the Pallas and XLA runs are skipped (the page reports them)")
+
+    # ---------------- s12: fusion, priced ---------------------------------------------------------------------
+    say("s12", f"Triton task 2 (x*w+b then ReLU, 10^7 floats): unfused moves 2+1, 2+1, 1+1 = 8 arrays, fused 3+1 = 4: "
+        f"{8/4:.1f}x, {8*4e7/BW*1e6:.0f} us against {4*4e7/BW*1e6:.1f} us at 3.3 TB/s", near(8 * 4e7 / BW * 1e6, 97.0, 0.05))
+    def layer(Tk, k=2, d=4096, f=16384, s=2, P=PKT, bw=BW):
+        fl = 2 * Tk * d * f; mb = s * (Tk * d + d * f + Tk * f); tail = 2 * k * s * Tk * f
+        tm = max(fl / P, mb / bw)
+        return tm + tail / bw, tm, (mb + tail) / mb, fl / P, mb / bw, tail / bw
+    u, fz, tr, tc_, tmb, ttl = layer(4096)
+    say("s12", f"layer 4096 tokens x 4096 -> 16384, bf16, bias + activation (k = 2): matmul {tc_*1e6:.1f} us of arithmetic, "
+        f"{tmb*1e6:.1f} us of its own traffic; tail {ttl*1e6:.1f} us unfused; total {u*1e6:.1f} vs {fz*1e6:.1f} us fused = "
+        f"{u/fz:.3f}x; bytes {tr:.2f}x; output-sized arrays (1+2k) = 5 : 1",
+        near(u * 1e6, 718.5, 0.1) and near(fz * 1e6, 555.8, 0.1) and near(u / fz, 1.293, 0.001) and near(tr, 2.78, 0.005))
+    asym = 1 + 2 * 2 * RT / 4096
+    say("s12", f"once the matmul is compute-bound the gain is 1 + k s I*/d = 1 + 2 x 2 x {RT:.1f} / 4096 = {asym:.4f} for any token count",
+        near(layer(10**6)[0] / layer(10**6)[1], asym, 1e-9) and near(asym, 1.2927, 1e-4))
+    u1, f1_ = layer(1)[:2]
+    say("s12", f"one token (decode): {u1*1e6:.2f} vs {f1_*1e6:.2f} us, {u1/f1_:.4f}x; FP32 cores (s = 4, ridge {R32:.2f}): "
+        f"asymptote {1 + 2*4*R32/4096:.3f}", u1 / f1_ < 1.002 and near(1 + 2 * 4 * R32 / 4096, 1.0396, 1e-4))
+    Ms, Ns = 4096, 1024
+    sm3 = (3 * Ms * Ns + 2 * Ms * Ns) / (2 * Ms * Ns)
+    sm5 = ((5 * Ms * Ns + 2 * Ms) + (3 * Ms * Ns + 2 * Ms)) / (2 * Ms * Ns)
+    say("s12", f"softmax traffic, rows of 1024: three kernels (max, exp-and-sum, divide) {sm3:.2f}x a fused kernel; five "
+        f"separate ops {sm5:.3f}x: the source's '2-4x faster' brackets both", sm3 == 2.5 and near(sm5, 4.0, 0.01))
+    say("s12", f"JAX chain on 10^7 floats: eager 9 array passes = {9*40} MB; XLA's CPU plan above 5 = {5*40} MB "
+        f"({9/5:.1f}x); the least possible is 3 passes, {3*40} MB, because the divide must wait for the whole sum")
+
+    # ---------------- s13: flash attention ----------------------------------------------------------------------
+    n128 = 128 * 1024
+    say("s13", f"128K x 128K x 4 B = {n128*n128*4:,} B = {n128*n128*4/2**30:.0f} GiB per head, per sequence",
+        n128 * n128 * 4 == 64 * 2**30)
+    def att_traffic(n_, d, Br):
+        return 4 * n_ * n_ + 4 * n_ * d, 2 * n_ * d + 2 * n_ * n_ * d / Br
+    st_, fa_ = att_traffic(4096, 64, 128)
+    say("s13", f"n = 4096, d = 64, 128-row Q blocks: standard {st_/1e6:.1f} M elements of HBM traffic, tiled {fa_/1e6:.1f} M "
+        f"({st_/fa_:.2f}x); halve the block and K, V are re-read twice as often ({att_traffic(4096,64,64)[1]/1e6:.1f} M)",
+        near(st_ / fa_, 3.94, 0.01))
+    ro = np.random.default_rng(1613)
+    S = ro.normal(0, 3, (6, 300)); V = ro.normal(0, 1, (300, 5))
+    ref = np.exp(S - S.max(1, keepdims=True)); ref = (ref / ref.sum(1, keepdims=True)) @ V
+    m = np.full(6, -np.inf); l = np.zeros(6); acc = np.zeros((6, 5))
+    for j in range(0, 300, 64):
+        Sb = S[:, j:j + 64]; mn = np.maximum(m, Sb.max(1)); sc = np.exp(m - mn)
+        Pb = np.exp(Sb - mn[:, None]); l = l * sc + Pb.sum(1); acc = acc * sc[:, None] + Pb @ V[j:j + 64]; m = mn
+    err = float(np.abs(acc / l[:, None] - ref).max())
+    say("s13", f"online softmax in 64-column blocks with a running max and rescale equals one-pass softmax(S)V: max error {err:.1e}",
+        err < 1e-12)
+    say("s13", f"source's own table: shared memory ~20 TB/s against HBM 1-3.3 TB/s is {20/3.3:.0f}-{20/1:.0f}x in bandwidth, "
+        f"~5 against ~400 cycles is {400/5:.0f}x in latency (it says ~100x faster)")
+
+    # ---------------- s14: same numbers, different sum ---------------------------------------------------------------
+    f32 = np.float32
+    r1 = mul32(16)
+    data = np.array([r1() for _ in range(65536)], dtype=np.float32)
+    exact = math.fsum(float(v) for v in data)
+    seq = f32(0)
+    for v in data:
+        seq = f32(seq + v)
+    blocks = data.reshape(256, 256).copy()
+    stride = 128
+    while stride >= 1:
+        blocks[:, :stride] = (blocks[:, :stride] + blocks[:, stride:2 * stride]).astype(np.float32)
+        stride //= 2
+    parts = blocks[:, 0].copy()
+    ulp = float(np.spacing(f32(exact)))
+    def addorder(order):
+        s_ = f32(0)
+        for i in order:
+            s_ = f32(s_ + parts[i])
+        return s_
+    fixed = addorder(range(256))
+    r2 = mul32(99); res = []
+    for run in range(200):
+        perm = list(range(256))
+        for i in range(255, 0, -1):
+            j = int(r2() * (i + 1)); perm[i], perm[j] = perm[j], perm[i]
+        res.append(float(addorder(perm)))
+    distinct = len(set(res)); spread = (max(res) - min(res)) / ulp
+    say("s14", f"65,536 floats in [0,1) (the lab's data), exact sum {exact:.4f}, one ulp there = {ulp}: sequential float32 "
+        f"is off by {(float(seq)-exact)/ulp:+.1f} ulp, 256 tree-summed blocks added in order by {(float(fixed)-exact)/ulp:+.1f}")
+    say("s14", f"the same 256 block results added in 200 random arrival orders: {distinct} different sums, spread {spread:.0f} ulp "
+        f"(relative {(max(res)-min(res))/exact:.1e})", distinct > 5 and spread >= 2)
+    say("s14", f"lab rest values: distinct {distinct}, spread {spread:.0f} ulp, sequential {(float(seq)-exact)/ulp:+.1f} ulp, "
+        f"tree {(float(fixed)-exact)/ulp:+.1f} ulp")
+    a3, b3, c3 = f32(1.0), f32(1e8), f32(-1e8)
+    say("s14", f"(1 + 1e8) - 1e8 = {float(f32(f32(a3 + b3) + c3))}, 1 + (1e8 - 1e8) = {float(f32(a3 + f32(b3 + c3)))} in float32",
+        float(f32(f32(a3 + b3) + c3)) == 0.0 and float(f32(a3 + f32(b3 + c3))) == 1.0)
+    xr = np.random.default_rng(0).standard_normal((10000, 1000), dtype=np.float32)
+    tr32 = np.maximum(xr * f32(2) + f32(1), f32(0)).ravel()
+    ex2 = math.fsum(tr32.astype(np.float64)); sq2 = float(np.cumsum(tr32, dtype=np.float32)[-1]); pw2 = float(tr32.sum())
+    say("s14", f"the source's JAX array size (10^7 values of relu(2x+1)): one running float32 total is off by "
+        f"{(sq2-ex2)/ex2:.2%}, numpy's pairwise sum by {(pw2-ex2)/ex2:.1e}",
+        abs(sq2 - ex2) / ex2 > 1e-3 and abs(pw2 - ex2) / ex2 < 1e-6)
+    # recursive vs pairwise worst-case bounds, as tolerance stacks
+    u_ = 2.0**-24
+    say("s14", f"worst-case error bounds (unit roundoff u = 2^-24): running total (n-1)u = {65535*u_:.2e}, "
+        f"tree log2(n) u = {16*u_:.2e} of the sum of magnitudes; linear stack against a short one")
+
+    # ---------------- s15: worked example ------------------------------------------------------------------------
+    fl1024 = 2 * 1024**3
+    tn = fl1024 / (BW * 0.25); t16 = fl1024 / (BW * 4); t128 = fl1024 / min(PK32, BW * 32)
+    line = min(PK32, BW * 32, BP * I_p)
+    say("s15", f"N = 1024 FP32 matmul: naive {tn*1e3:.2f} ms, 16-tile {t16*1e3:.3f} ms, 128-tile {t128*1e6:.1f} us; "
+        f"with the operands crossing the dock the line runs at {line/1e12:.2f} TFLOP/s ({line/PK32:.1%})",
+        near(tn * 1e3, 2.60, 0.005) and near(t16 * 1e3, 0.163, 0.0005) and near(t128 * 1e6, 32.1, 0.05) and near(line / 1e12, 5.38, 0.01))
+
+    # ---------------- s17: question bank ------------------------------------------------------------------------
+    q9 = 50e12 / 2e12
+    say("s17", f"Q9: ridge 50/2 = {q9:.0f} FLOP/B; layer norm 0.625 x 2 = {0.625*2:.2f} TFLOP/s", q9 == 25)
+    q11 = 2e12 / 1.5e9 * 500 / 100 / 128
+    say("s17", f"Q11: 2 TB/s / 1.5 GHz x 500 / 100 SMs / 128 B = {q11:.1f} warp-loads per SM", near(q11, 52.1, 0.05))
+    say("s17", f"Q12: 65,536 / (32 x 80) = {65536/(32*80):.1f} -> {65536//(32*80)} warps", 65536 // (32 * 80) == 25)
+    say("s17", f"Q13: 1 - 0.98^32 = {1-0.98**32:.3f}", near(1 - 0.98**32, 0.476, 0.0005))
+    say("s17", f"Q14: stride 8 -> {segs(8)} transactions, {1/segs(8):.1%}", segs(8) == 8)
+    say("s17", f"Q15: 64/(64 + 254) = {util(64,128):.1%}", near(util(64, 128), 0.2013, 5e-4))
+    say("s17", f"Q17: 128 registers -> 16 warps; 16 x 128 / 404 = {16*128/404:.2f} B/cycle of {BSM:.2f} = {16*128/404/BSM:.1%}",
+        near(16 * 128 / 404 / BSM, 0.401, 0.001))
+    q20p = 12 * 2048**2 / BP; q20c = 2 * 2048**3 / PK32
+    say("s17", f"Q20: 2048: link {q20p*1e3:.2f} ms vs arithmetic {q20c*1e3:.3f} ms", near(q20p * 1e3, 1.60, 0.005) and near(q20c * 1e3, 0.257, 0.0005))
+    say("s17", f"Q21: one row through a 128 array: 1/255 = {util(1,128):.2%}", near(util(1, 128), 1 / 255, 1e-12))
+
+    # ---------------- s20: lab rest values (asserted again by the page's expect.json) ---------------------------
+    say("s20", f"LAB 1 rest: peak {PK32/1e12:.1f}, ridge {R32:.2f}, tile-16 {BW*4/1e12:.1f} TFLOP/s, delivery-bound")
+    say("s20", f"LAB 2 rest (W = 16): simulated {s16k1:.2f} B/cycle, bound {bound(16):.2f}, w0 {BSM*404/128:.1f}")
+    say("s20", f"LAB 3 rest (q = 1%): P = {pq:.1%}")
+    say("s20", f"LAB 5 rest: {u*1e6:.1f} / {fz*1e6:.1f} us, {u/fz:.2f}x")
 
 _ch16p2()
 # ----- end of Chapter 16 part 2 block -----
