@@ -6871,7 +6871,289 @@ _ch16p2()
 # Chapter 16 part 3 block. Owned by the Chapter 16 part 3 run: replace only the body of _ch16p3() below.
 # Keep every name inside the function so nothing collides with another chapter's block.
 def _ch16p3():
-    pass
+    import math, os, re, shutil, subprocess, tempfile
+    import numpy as np
+    T = "[Ch16p3 %s]"
+    def say(sec, msg, ok=None):
+        tail = "" if ok is None else "   " + P(ok)
+        print(f"{T % sec} {msg}{tail}")
+    def near(a, b, tol):
+        return abs(a - b) <= tol
+    here = os.path.dirname(os.path.abspath(__file__))
+    root = os.path.dirname(here)
+    srcdir = os.path.join(root, "chapter 16 - SIMD and GPU programming")
+    f06 = open(os.path.join(srcdir, "06. RISC-V and embedded systems.md")).read()
+    f07 = open(os.path.join(srcdir, "07. vulkan compute and cross-platform GPU.md")).read()
+    f04 = open(os.path.join(srcdir, "04. GPU architecture and CUDA.md")).read()
+    def blocks(s):
+        return re.findall(r"```(\w*)\n(.*?)```", s, re.S)
+    M32 = 0xFFFFFFFF
+    def mul32(seed):
+        st = [seed & M32]
+        def r():
+            st[0] = (st[0] + 0x6D2B79F5) & M32
+            t = st[0]
+            t = ((t ^ (t >> 15)) * (t | 1)) & M32
+            t = (t ^ ((t + (((t ^ (t >> 7)) * (t | 61)) & M32)) & M32)) & M32
+            return ((t ^ (t >> 14)) & M32) / 4294967296
+        return r
+    f32 = np.float32
+    print()
+    say("s00", "Sheet 16 part 3: no RISC-V machine, emulator or GPU here; RVV compiled with clang, shaders compiled "
+        "with glslang where available, everything else derived or simulated")
+
+    # ---------------- s01: the base ISA ------------------------------------------------------------
+    say("s01", "RV64I: x0-x31 is 32 registers, x0 wired to zero (the source counts right; part 1 caught AArch64's 31)",
+        "32 general-purpose registers** (x0-x31" in f06 and len(range(0, 32)) == 32)
+
+    # ---------------- s02: one loop, any width ------------------------------------------------------
+    def vlmax(vlen, sew, lmul):
+        return vlen * lmul // sew
+    say("s02", f"VLMAX = VLEN x LMUL / SEW: e32m1 gives {vlmax(128,32,1)} lanes at VLEN 128 and {vlmax(65536,32,1):,} at 65,536; "
+        f"e8m8 at 65,536 gives {vlmax(65536,8,8):,}", vlmax(128, 32, 1) == 4 and vlmax(65536, 32, 1) == 2048 and vlmax(65536, 8, 8) == 65536)
+    def strip(n, vm, policy):
+        out = []
+        avl = n
+        while avl > 0:
+            if avl <= vm:
+                vl = avl
+            elif avl < 2 * vm:
+                vl = vm if policy == "greedy" else -(-avl // 2)
+            else:
+                vl = vm
+            out.append(vl); avl -= vl
+        return out
+    ok = True
+    for vm in (4, 8, 16, 32, 64, 128, 2048):
+        for n in range(1, 3001):
+            g = strip(n, vm, "greedy"); b = strip(n, vm, "balanced")
+            ok &= len(g) == len(b) == -(-n // vm) and sum(g) == sum(b) == n
+            if len(b) >= 2 and n > vm:
+                ok &= abs(b[-1] - b[-2]) <= 1 or b[-2] == vm
+    say("s02", "vsetvl strip-mining, n = 1..3000 at seven VLMAX values: strokes = ceil(n/VLMAX) whether the hardware "
+        "fills strokes greedily or balances the last two (the spec's freedom, reported); every element done once", ok)
+    g1000 = strip(1000, 16, "greedy"); b1000 = strip(1000, 16, "balanced")
+    say("s02", f"LAB 1 rest: n = 1000, VLEN 512, e32m1 -> VLMAX 16, {len(g1000)} strokes, last {g1000[-1]} lanes "
+        f"({1000/(len(g1000)*16):.1%} of lane-strokes used); balanced tail {b1000[-2]} + {b1000[-1]}",
+        len(g1000) == 63 and g1000[-1] == 8 and b1000[-2:] == [12, 12] and near(1000 / (63 * 16), 0.992, 0.0005))
+    say("s02", f"register groups left at LMUL 1/2/4/8: {[32 // l for l in (1, 2, 4, 8)]} (the source: m8 leaves 4)",
+        [32 // l for l in (1, 2, 4, 8)] == [32, 16, 8, 4])
+    clang = shutil.which("clang")
+    rvv_src = [c for lang, c in blocks(f06) if "vsetvl" in c][0]
+    ninstr = None
+    if clang:
+        tmp = tempfile.mkdtemp(prefix="ch16p3_")
+        open(os.path.join(tmp, "rvv.c"), "w").write(rvv_src)
+        r = subprocess.run([clang, "--target=riscv64-unknown-elf", "-march=rv64gcv", "-ffreestanding", "-O2", "-S",
+                            os.path.join(tmp, "rvv.c"), "-o", os.path.join(tmp, "rvv.s")], capture_output=True, text=True)
+        if r.returncode == 0:
+            asm = open(os.path.join(tmp, "rvv.s")).read()
+            body = asm.split(".LBB0_1:")[1].split("ret")[0] if ".LBB0_1:" in asm else ""
+            ins = [l.strip().split()[0] for l in body.splitlines() if l.strip() and not l.strip().startswith((".", "#"))]
+            ninstr = len(ins)
+            say("s02", f"the source's vadd_rvv compiled by clang for rv64gcv: loop of {ninstr} instructions per stroke "
+                f"({', '.join(ins)})", "vsetvli" in ins and ninstr == 11)
+        else:
+            say("s02", "NOTE: clang could not compile for riscv64 here; the instruction count below uses 11")
+    else:
+        say("s02", "NOTE: clang not installed; the instruction count below uses 11, from the build machine")
+    k11 = ninstr or 11
+    say("s02", f"instructions per float at {k11} per stroke: VLEN 128 -> {k11/4:.2f}, 1024 -> {k11/32:.3f}, 65,536 -> {k11/2048:.4f}; "
+        f"10^6 floats take {-(-10**6//4):,} strokes at VLEN 128 and {-(-10**6//2048)} at 65,536",
+        -(-10**6 // 2048) == 489 and -(-10**6 // 4) == 250000)
+
+    # ---------------- s03: TinyML, the source's three tasks run ------------------------------------------
+    macs = 784 * 64 + 64 * 10
+    say("s03", f"task 1 model: 784x64 + 64 + 64x10 + 10 = {784*64+64+640+10:,} bytes of weights; {macs:,} multiply-adds per inference",
+        784 * 64 + 64 + 640 + 10 == 50890 and macs == 50816)
+    gxx = shutil.which("g++")
+    cpp = [c for lang, c in blocks(f06) if lang == "cpp" and "task" in c.split("\n")[0]]
+    if gxx and len(cpp) == 3:
+        tmp = tempfile.mkdtemp(prefix="ch16p3t_")
+        outs = []
+        for i, code in enumerate(cpp):
+            pth = os.path.join(tmp, f"t{i+1}.cpp"); exe = os.path.join(tmp, f"t{i+1}")
+            open(pth, "w").write(code)
+            r = subprocess.run([gxx, "-O2", "-o", exe, pth], capture_output=True, text=True)
+            outs.append(subprocess.run([exe], capture_output=True, text=True, timeout=120).stdout if r.returncode == 0 else "")
+        o1, o2, o3 = outs
+        cyc = int(re.search(r"~(\d+) cycles", o1).group(1)) if "cycles" in o1 else -1
+        say("s03", f"task 1 run: 'Model size: 50890 bytes', logits all 1, and it prints ~{cyc:,} MCU cycles for {macs:,} multiply-adds: "
+            f"the host's time counted in 160 MHz ticks", "Model size: 50890" in o1 and "1 1 1 1 1 1 1 1 1 1" in o1 and 0 < cyc < macs)
+        say("s03", f"at one multiply-add per cycle (an assumption) the MCU needs >= {macs:,} cycles = {macs/160e6*1e6:.1f} us at 160 MHz",
+            near(macs / 160e6 * 1e6, 317.6, 0.05))
+        sc = float(re.search(r"Scale factor: ([0-9.e-]+)", o2).group(1)); mae = float(re.search(r"Mean abs error: ([0-9.e-]+)", o2).group(1))
+        mx = float(re.search(r"Max abs error:\s+([0-9.e-]+)", o2).group(1))
+        say("s03", f"task 2 run: scale {sc:.6g}, max error {mx/sc:.4f} steps (<= 0.5), mean error {mae/sc:.4f} steps against "
+            f"the uniform-rounding value 1/4", mx / sc <= 0.5 + 1e-4 and near(mae / sc, 0.25, 0.005))
+        sp = re.search(r"INT8 speedup: ([0-9.]+)x", o3)
+        say("s03", f"task 3 run (timing, not asserted): INT8 speedup printed {sp.group(1) if sp else '?'}x on this host; "
+            f"memory line {'right' if '32768 bytes vs FP32 = 131072' in o3 else 'missing'}", "32768 bytes vs FP32 = 131072" in o3)
+    else:
+        say("s03", "NOTE: g++ not available; the source's tasks were not run here")
+    # quantisation error statistics, replayed in float32
+    i_ = np.arange(100000)
+    u1 = ((i_ * 7 % 997 + 1) / 998.0).astype(np.float32); u2 = ((i_ * 13 % 991 + 1) / 992.0).astype(np.float32)
+    w = (np.sqrt(f32(-2) * np.log(u1)) * np.cos(f32(6.2832) * u2) * f32(0.1)).astype(np.float32)
+    s_ = np.abs(w).max() / f32(127); qv = np.clip(np.round(w / s_), -127, 127); err = np.abs(w - qv * s_)
+    say("s03", f"replayed: mean |error| = {err.mean()/s_:.4f} step (uniform: 1/4), RMS {np.sqrt((err**2).mean())/s_:.4f} "
+        f"(uniform: 1/sqrt12 = {1/math.sqrt(12):.4f}, Sheet 17 s03)", near(err.mean() / s_, 0.25, 0.005) and near(np.sqrt((err**2).mean()) / s_, 0.2887, 0.005))
+    say("s03", "the source sends quantisation to 'chapter 18'; the compendium's quantisation file is chapter 17's",
+        "Quantisation** (chapter 18)" in f06 and os.path.exists(os.path.join(root, "chapter 17 - AI inference", "01. quantisation.md")))
+
+    # ---------------- s04: smaller, not cheaper ----------------------------------------------------------
+    dev = {"server GPU": (1000e12, 700.0, 30000.0), "smartphone": (10e12, 5.0, 500.0), "microcontroller": (0.001e12, 0.001, 1.0)}
+    pj = {k: p / f * 1e12 for k, (f, p, c) in dev.items()}
+    say("s04", "the source's table, energy per FLOP: " + ", ".join(f"{k} {v:.2f} pJ" for k, v in pj.items()) +
+        f"; spread {max(pj.values())/min(pj.values()):.1f}x across a power range of {700/0.001:,.0f}x",
+        near(pj["server GPU"], 0.70, 0.005) and near(pj["smartphone"], 0.50, 1e-9) and near(pj["microcontroller"], 1.0, 1e-9))
+    say("s04", "per dollar: " + ", ".join(f"{k} {f/c/1e9:.0f} GFLOP/s per $" for k, (f, p, c) in dev.items()),
+        [round(f / c / 1e9) for f, p, c in dev.values()] == [33, 20, 1])
+    cube = 0.70 * (160e6 / 1.98e9) ** 2
+    say("s04", f"part 1's cube law (energy per op ~ f^2) scaling the server to 160 MHz predicts {cube*1000:.2f} fJ per FLOP; the table says "
+        f"1 pJ, {1/cube:.0f}x more: the law fails at the edge, as part 1's own break box warned (leakage, threshold voltage)",
+        near(cube * 1000, 4.57, 0.01) and 1 / cube > 200)
+    say("s04", f"the microcontroller row at task 1's 160 MHz: {0.001e12/160e6:.2f} FLOP per cycle and {0.001/160e6*1e12:.2f} pJ per cycle",
+        near(0.001e12 / 160e6, 6.25, 1e-9))
+    def part_load(u, s):
+        return (s + (1 - s) * u) / u
+    say("s04", f"part load, static share 30% of full power: at 100% use x{part_load(1,0.3):.2f}, 50% x{part_load(0.5,0.3):.2f}, "
+        f"10% x{part_load(0.1,0.3):.2f} the full-load energy per FLOP", near(part_load(0.1, 0.3), 3.7, 1e-9) and part_load(1, 0.3) == 1)
+
+    # ---------------- s06: latency budgets ----------------------------------------------------------------
+    say("s06", "a 30 ms perception budget against a 50-200 ms cloud round trip: short even at the best case by 20 ms; "
+        "a 200 ms wake word leaves 0-150 ms", 50 - 30 == 20 and (200 - 200, 200 - 50) == (0, 150))
+
+    # ---------------- s07: Vulkan, counted ------------------------------------------------------------------
+    vk = [c for lang, c in blocks(f07) if lang == "cpp" and "vulkan_compute.cpp" in c][0]
+    cu = [c for lang, c in blocks(f04) if lang == "cpp" and "vector_add.cu" in c][0]
+    def code_lines(c):
+        return sum(1 for l in c.splitlines() if l.strip() and not l.strip().startswith("//"))
+    say("s07", f"the source's Vulkan program: {len(vk.splitlines())} lines, {code_lines(vk)} of code; its CUDA vector_add: "
+        f"{len(cu.splitlines())} lines, {code_lines(cu)} of code ({code_lines(vk)/code_lines(cu):.1f}x; it says ~200 against ~30)",
+        code_lines(vk) > 180 and code_lines(cu) > 30)
+    HV, HC, HCACHED, DL = 2, 4, 8, 1
+    test = lambda flags: bool(flags & (HV | HC))
+    right = lambda flags: (flags & (HV | HC)) == (HV | HC)
+    say("s07", f"memory-type test 'flags & (VISIBLE|COHERENT)': accepts VISIBLE|CACHED without COHERENT ({test(HV|HCACHED)}) and "
+        f"COHERENT alone ({test(HC)}); '(flags & both) == both' accepts neither ({right(HV|HCACHED)}, {right(HC)})",
+        test(HV | HCACHED) and test(HC) and not right(HV | HCACHED) and not right(HC) and right(HV | HC | DL))
+    say("s07", f"dispatch (1024 + 255)/256 = {(1024+255)//256} workgroups of 256", (1024 + 255) // 256 == 4)
+
+    gjs = "/tmp/claude-0/-home-user-maths-cs-ai-compendium/a9730798-79c0-54d9-8c17-6a37a7b68645/scratchpad/p3/npm/package/dist/node-devel/glslang.js"
+    node = shutil.which("node")
+    if node and os.path.exists(gjs):
+        import json as _json
+        shaders = [c for lang, c in blocks(f07) if lang == "glsl"] + [re.search(r'R"\((.*?)\)"', f07, re.S).group(1)]
+        tmpg = tempfile.mkdtemp(prefix="ch16p3g_")
+        open(os.path.join(tmpg, "s.json"), "w").write(_json.dumps(shaders))
+        js = ("const g=require(%r)();const sh=require(%r);let ok=0;sh.forEach(s=>{try{g.compileGLSL(s,'compute',false);ok++;}catch(e){}});"
+              "console.log(ok+'/'+sh.length);") % (gjs, os.path.join(tmpg, "s.json"))
+        r = subprocess.run([node, "-e", js], capture_output=True, text=True, timeout=120)
+        say("s07", f"all of file 07's GLSL compute shaders (add, ReLU, reduce, tiled matmul, softmax, Kompute's) compiled to SPIR-V "
+            f"by glslang (WebAssembly build): {r.stdout.strip()}", r.stdout.strip() == f"{len(shaders)}/{len(shaders)}")
+    else:
+        say("s07", "NOTE: glslang (WebAssembly build) not found here; the shader compile check is skipped")
+
+    # ---------------- s08: subgroups are lanes ----------------------------------------------------------------
+    q = 0.01
+    pr = {s: 1 - (1 - q)**s for s in (32, 64, 128)}
+    cost = {s: (100 * pr[s] + 10 * (1 - q**s)) / (q * 100 + (1 - q) * 10) for s in pr}
+    say("s08", "rare branch at q = 1%: a subgroup runs it with P = " + ", ".join(f"{s}: {v:.1%}" for s, v in pr.items()) +
+        "; warp time over lane average " + ", ".join(f"{s}: {v:.2f}x" for s, v in cost.items()),
+        near(pr[32], 0.275, 5e-4) and near(pr[64], 0.474, 5e-4) and near(cost[64], 5.27, 0.01))
+    say("s08", f"Kompute's local_size_x = 1: one live lane per subgroup, {1/32:.1%} at 32 lanes, {1/64:.1%} at 64; its 5 elements "
+        f"occupy 5 subgroups, 160 or 320 lane-slots", "local_size_x = 1" in f07)
+    say("s08", "a 256-invocation workgroup is 8 subgroups of 32 or 4 of 64; even/odd diverges in every subgroup at both sizes",
+        256 // 32 == 8 and 256 // 64 == 4)
+
+    # ---------------- s09: the tree reduction, counted -----------------------------------------------------------
+    strides = [128 >> i for i in range(8)]
+    def tree_stats(sg):
+        act = [-(-s // sg) for s in strides]
+        return sum(strides), act, sum(strides) / (sum(act) * sg)
+    a32 = tree_stats(32); a64 = tree_stats(64)
+    say("s09", f"file 07's reduce_sum: {len(strides)} halvings + 1 load = {len(strides)+1} barriers; {a32[0]} adds = n - 1; "
+        f"lane-slots used {a32[0]/(8*256):.1%} of 8 x 256", a32[0] == 255 and near(a32[0] / 2048, 0.1245, 5e-4))
+    say("s09", f"subgroups issuing per step at 32 lanes {a32[1]} ({a32[2]:.1%} of their lanes busy), at 64 lanes {a64[1]} ({a64[2]:.1%})",
+        a32[1] == [4, 2, 1, 1, 1, 1, 1, 1] and near(a32[2], 0.664, 0.0005) and near(a64[2], 0.443, 0.0005))
+    say("s09", f"steps inside one partly idle subgroup: {sum(1 for s in strides if s < 32)} at 32 lanes, {sum(1 for s in strides if s < 64)} at 64; "
+        f"finishing each subgroup with a subgroup add leaves 1 barrier instead of 9 (subgroup ops reported)")
+    r1 = mul32(16)
+    data = np.array([r1() for _ in range(65536)], dtype=np.float32)
+    exact = math.fsum(float(v) for v in data); ulp = float(np.spacing(f32(exact)))
+    def tree256(x):
+        x = x.reshape(-1, 256).copy()
+        st = 128
+        while st >= 1:
+            x[:, :st] = (x[:, :st] + x[:, st:2 * st]).astype(np.float32)
+            st //= 2
+        return x[:, 0].copy()
+    tot1 = tree256(tree256(data))[0]; tot2 = tree256(tree256(data.copy()))[0]
+    say("s09", f"file 07's two dispatches on part 2's 65,536 numbers: total {(float(tot1)-exact)/ulp:+.1f} ulp from exact, the same bits "
+        f"on every run ({float(tot1) == float(tot2)}); part 2's atomic arrival order gave 14 different totals",
+        float(tot1) == float(tot2) and abs((float(tot1) - exact) / ulp) < 2)
+    say("s09", f"worst-case bound for 16 tree levels: 16u = {16*2**-24:.2e} of the sum of magnitudes, against (n-1)u = {65535*2**-24:.2e} for a running total")
+
+    # ---------------- s10: the portable kit -------------------------------------------------------------------------
+    BW = 3.3e12; PK32 = 16896 * 1.98e9 * 2
+    say("s10", f"GLSL TILE_SIZE 16: {16*16} invocations, {2*16*16*4} B of shared memory, I = 4 FLOP/B -> {BW*4/1e12:.1f} TFLOP/s on part 2's "
+        f"reference GPU ({BW*4/PK32:.1%})", "#define TILE_SIZE 16" in f07 and near(BW * 4 / PK32, 0.197, 0.001))
+    bmin = int(math.isqrt(128)); bsh = int(math.isqrt(16384 // 8))
+    say("s10", f"to the minimum limits (reported: 128 invocations, 16 KiB shared): one-output tile <= {bmin} ({bmin**2} invocations), "
+        f"I = {bmin/4} -> {BW*bmin/4/1e12:.2f} TFLOP/s; shared memory alone allows b <= {bsh}; 16 x 16 = 256 is not guaranteed",
+        bmin == 11 and bsh == 45 and 256 > 128)
+    rp = 10e12 / 51.2e9
+    say("s10", f"phone (source 10 TFLOP/s; reported LPDDR5 51.2 GB/s): ridge {rp:.0f} FLOP/B; the 16-tile reaches {51.2e9*4/1e12:.3f} TFLOP/s, "
+        f"{51.2e9*4/10e12:.1%} of the phone's peak", near(rp, 195.3, 0.1))
+
+    # ---------------- s11: softmax shader and small jobs ------------------------------------------------------------
+    def softmax_shader(x, wg=256):
+        out = np.zeros_like(x); n = len(x)
+        for g in range(-(-n // wg)):
+            idx = np.arange(g * wg, (g + 1) * wg); v = np.where(idx < n, x[np.minimum(idx, n - 1)], f32(-1e30)).astype(np.float32)
+            mx = v.max(); e = np.where(idx < n, np.exp(v - mx), 0).astype(np.float32); s_ = e.sum()
+            out[idx[idx < n]] = (e / s_)[idx < n]
+        return out
+    rs = np.random.default_rng(1611)
+    x256 = rs.normal(0, 2, 256).astype(np.float32); x512 = rs.normal(0, 2, 512).astype(np.float32)
+    ref = np.exp(x256 - x256.max()); ref /= ref.sum()
+    o512 = softmax_shader(x512)
+    say("s11", f"softmax shader, simulated: n = 256 matches softmax to {np.abs(softmax_shader(x256)-ref).max():.1e}; n = 512 runs 2 workgroups "
+        f"that each normalise their own half, so the outputs sum to {o512.sum():.3f}, not 1", np.abs(softmax_shader(x256) - ref).max() < 1e-6 and near(o512.sum(), 2.0, 1e-3))
+    say("s11", f"its barriers per workgroup: 1 + 8 + 1 + 1 + 8 = {1+8+1+1+8}")
+    small = 3 * 1024 * 4; lat = 400 / 1.98e9
+    say("s11", f"vector add of 1,024 floats moves {small:,} B; at best it all flies in one 400-cycle trip: {small/lat/1e9:.1f} GB/s, "
+        f"{small/lat/BW:.1%} of 3.3 TB/s, since Little's law wants 666,667 B in flight", near(small / lat / 1e9, 60.8, 0.1))
+    say("s11", f"WGSL add has no bounds test: N = 1000 dispatches {-(-1000//256)} x 256 = {(-(-1000//256))*256} invocations, "
+        f"{(-(-1000//256))*256-1000} past the end", "if (idx < n)" in f07 and (-(-1000 // 256)) * 256 - 1000 == 24)
+
+    # ---------------- s13: worked example -----------------------------------------------------------------------------
+    def strokes(vm):
+        return 64 * -(-784 // vm) + 10 * -(-64 // vm)
+    s128, s1024 = strokes(16), strokes(128)
+    say("s13", f"task 1's MLP in int8 strokes: VLEN 128 (16 lanes) {s128:,} strokes, {macs/(s128*16):.1%} of lanes used; VLEN 1024 "
+        f"(128 lanes) {s1024} strokes, {macs/(s1024*128):.1%}", s128 == 3176 and s1024 == 458 and near(macs / (s1024 * 128), 0.8667, 0.0005))
+    t_sc = macs / 160e6; e_sc = t_sc * 0.001
+    say("s13", f"scalar at 1 MAC/cycle: {t_sc*1e6:.1f} us, {e_sc*1e6:.3f} uJ at 1 mW; 10 inferences a second use {10*t_sc:.2%} of the time; "
+        f"one stroke per cycle at VLEN 128: {s128/160e6*1e6:.1f} us", near(t_sc * 1e6, 317.6, 0.05) and near(s128 / 160e6 * 1e6, 19.85, 0.01))
+    say("s13", f"fits: {50890:,} B of weights in 1 MB of flash ({50890/2**20:.1%}); 74 B of activations in a 32 KiB arena",
+        50890 < 2**20 and 74 < 32768)
+
+    # ---------------- s16: question bank -------------------------------------------------------------------------------
+    say("s16", f"Q09: VLEN 256, e16m2 -> VLMAX {vlmax(256,16,2)}; 100 elements -> {-(-100//32)} strokes", vlmax(256, 16, 2) == 32 and -(-100 // 32) == 4)
+    say("s16", f"Q10: q = 0.5%, subgroup 64: {1-(1-0.005)**64:.3f}", near(1 - 0.995**64, 0.274, 0.0005))
+    say("s16", f"Q11: 512-wide tree: {9+1} barriers, {511} adds", math.log2(512) + 1 == 10)
+    say("s16", f"Q12: 40 W at 20 TFLOP/s = {40/20e12*1e12:.1f} pJ per FLOP", near(40 / 20e12 * 1e12, 2.0, 1e-12))
+    say("s16", f"Q13: tile 8 to 128 invocations? {8*8} invocations, I = {8/4}", 8 * 8 <= 128)
+    say("s16", f"Q14: static 40%, 25% use: x{part_load(0.25,0.4):.2f}", near(part_load(0.25, 0.4), 2.2, 1e-9))
+    say("s16", f"Q15: 1,000 floats, VLMAX 64: {-(-1000//64)} strokes, last {1000-15*64} lanes", -(-1000 // 64) == 16 and 1000 - 15 * 64 == 40)
+    say("s16", f"Q16: 4,096 floats in one 400-cycle trip at 1.98 GHz: {4096*4/lat/1e9:.0f} GB/s", near(4096 * 4 / lat / 1e9, 81.1, 0.1))
+
+    # ---------------- s20: lab rest values ------------------------------------------------------------------------------
+    say("s20", f"LAB 1 rest: VLMAX 16, 63 strokes, last 8, 99.2%, {63*k11} instructions")
+    say("s20", f"LAB 2 rest (32 lanes): 9 barriers, 12.5% of lane-slots, 66.4% in issuing subgroups; total {(float(tot1)-exact)/ulp:+.1f} ulp")
+    say("s20", f"LAB 3 rest: {pj['server GPU']:.2f} / {pj['smartphone']:.2f} / {pj['microcontroller']:.2f} pJ per FLOP; cube-law edge {cube*1000:.2f} fJ")
 
 _ch16p3()
 # ----- end of Chapter 16 part 3 block -----
