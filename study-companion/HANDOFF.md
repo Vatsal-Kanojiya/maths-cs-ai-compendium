@@ -40,6 +40,7 @@ browser probe those runs used is now in the repo: `tools/probe.js` (see the prob
 | 15 | Production Software Engineering | `ch15-production-software-engineering/` | https://claude.ai/artifact/FGGLCb4G11EoK8UXHnVhHs |
 | 16 | SIMD and GPU Programming **pt 1/3** (the CPU) | `ch16-simd-gpu/` | https://claude.ai/artifact/PkFJKQedyFn3SNLNqWGKCy |
 | 17 | AI Inference | `ch17-ai-inference/` | https://claude.ai/artifact/UdoN6PEmWrY6pHxACELcxr |
+| 18 | ML Systems Design | `ch18-ml-systems-design/` | https://claude.ai/artifact/Swz1BNJbZVNzbMcUyZVtdh |
 
 `verify_claims.py` stands at **612 checks, 0 failures**, covering chapters 01–14. Run it first in
 any new session — it is the fastest way to confirm nothing has rotted. It needs numpy and scipy,
@@ -367,8 +368,18 @@ uses 1% of the machine). "Latency ↔ cycle time" was **wrong**: latency is lead
 time and takt are both rates; Little ties them. Headline outside the bank: continuous batching
 = the lean minimum lot, by Little's law. Also outside: GPTQ = support settlement.
 
-**18 ML systems design.** Plant design and capacity planning. **Little's law** is already
-used in manufacturing. Redundancy ↔ reliability engineering.
+**18 ML systems design.** ~~Plant design and capacity planning. **Little's law** is already
+used in manufacturing. Redundancy ↔ reliability engineering.~~ **Written.** All three held, and
+each was a family whose useful member had to be named. Little's law held exactly and is every
+sizing in file 05 — which exposed the source's systematic omission: it sizes at `rho = 1`. The
+margin is the inventory **safety-stock** square root (M/G/∞ count is Poisson), the headline, not
+in the bank. "Redundancy ↔ reliability" held as series/parallel/k-of-n, and **broke usefully on
+common cause**: the β-factor floor is the sheet's best reliability result, because for software
+β ≈ 1 (identical builds) and canary deployment is the only defence. Added beyond the bank:
+fan-out = PERT merge bias (Sheet 14's object, twice), hedging = parallel redundancy for time,
+load-duration curve / load factor / base-load plant / diversity factor from **power plant
+engineering** (not in the bank, and the cleanest exact identities on the sheet), checkpoint =
+EOQ, Kafka = transfer-line buffer (Groover's `E0`/`E∞`), G90/G91 = idempotency.
 
 **19–20.** Outline stubs in the source (six files are empty). Either skip, or write them
 as genuine surveys and mark them clearly as not derived from the compendium.
@@ -1065,6 +1076,31 @@ rest on a clock calibration under turbo. Report both machines on the page. The s
   `.chartwrap > .svgfig{min-width:500px}` keeps labels legible and passes the probe.
 - **Sheet 13 already named the staging vocabulary** (line-side bin, cell supermarket, plant store;
   bench and stores). Grep the earlier sheets for a bridge before coining new words for it.
+
+## The Chapter 18 lesson worth generalising
+
+**Line a chapter's worked numbers up in one table before checking any of them.** Checked one at
+a time, the source's "~50 replicas", "20 replicas", "60/240/12 classifiers" each look like correct
+arithmetic, and they are. Side by side they are all `lambda × s`, the offered load, which means
+they share one omitted term — the margin — and that omission is a systematic error no single
+row reveals. The same table found the two unit slips (1,000 GPU-seconds/second read as 10 GPUs;
+a billion 512-dim fp16 vectors read as 128 GB). Second lesson: **a finished sheet's model is a
+test bench for the next sheet's question.** Running Sheet 17's continuous-batching server under
+this sheet's question (the spread, not the mean) found its `1/(1-rho)` a second time, in the
+variance, which is what turned its nameplate capacity into a planning capacity.
+
+**New traps from Chapter 18.**
+
+- **Lab SVGs are illegible on a phone.** 10-unit labels in a 560-wide viewBox render near 6 px at
+  390 px. Wrap each `svg.stage` in `.chartwrap{overflow-x:auto}` with `.chartwrap > .stage{min-width:480px}`
+  (Sheet 16's fix) and set `touch-action:auto` on the stage, or the stock `.stage{touch-action:none}`
+  blocks the sideways swipe.
+- **A single random draw is a bad probe expectation.** "Keys moved, this ring" depends on the seed;
+  add an averaged readout (1,000 rings) and put the expectation on that.
+- **`verify_claims.py` is no longer deterministic or fast.** Ch16's timing checks (s01, s08, s10,
+  s11 seen) fail intermittently under CPU load, e.g. while another verifier or a probe runs; and a
+  full run exceeds the Bash tool's 120 s default. Run it alone, in the background or with a long
+  timeout, and read FAILs by tag before blaming your own block.
 
 ## On splitting a chapter into parts
 

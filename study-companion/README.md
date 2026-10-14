@@ -56,6 +56,7 @@ merely structural, that is said plainly.
 | 15 | Production Software Engineering | [`ch15-production-software-engineering/`](ch15-production-software-engineering/index.html) | [Read online](https://claude.ai/artifact/FGGLCb4G11EoK8UXHnVhHs) |
 | 16 | SIMD and GPU Programming *(pt 1: the CPU)* | [`ch16-simd-gpu/`](ch16-simd-gpu/index.html) | [Read online](https://claude.ai/artifact/PkFJKQedyFn3SNLNqWGKCy) |
 | 17 | AI Inference | [`ch17-ai-inference/`](ch17-ai-inference/index.html) | [Read online](https://claude.ai/artifact/UdoN6PEmWrY6pHxACELcxr) |
+| 18 | ML Systems Design | [`ch18-ml-systems-design/`](ch18-ml-systems-design/index.html) | [Read online](https://claude.ai/artifact/Swz1BNJbZVNzbMcUyZVtdh) |
 
 ## What's in a chapter page
 
@@ -154,7 +155,18 @@ run (its bandwidth benchmark printing ~1,000 GB/s because GCC ran 1 of 100 trial
 benchmark deleted as dead code), `min(K/4, 2)` against measured FMA chains, Little's law against a
 K-chain pointer chase, exact LRU traffic of naive and tiled matmul by stack distance against direct
 simulation, `16x16x32 = 8,192` MACs for AMX run with and without its setup, and the cube-law
-equal-power Amdahl crossover `s* = (n^-1/3 - 1/n)/(1 - 1/n)`.
+equal-power Amdahl crossover `s* = (n^-1/3 - 1/n)/(1 - 1/n)`; and -- for Chapter 18 -- Little's
+law against every sizing in the source's design examples and by simulation, Erlang C at the
+source's 50 replicas (no steady state; 4.2 ms at 51, 0.39 ms at 55), the M/G/inf count in service
+as Poisson for fixed and log-normal service times, square-root staffing against the Halfin-Whitt
+limit, the spread of Sheet 17's continuous batch (variance/mean against `1/(1-rho)`), pooling
+against random, round-robin and least-connections routing, consistent hashing's `1/(n+1)` and
+`sqrt((n-1)/(nv+1))`, read replicas as Amdahl to 5e-14, 2-of-3 voting against 3-of-4 for every
+availability, the beta-factor floor by Monte Carlo, a two-station transfer line with buffers, the
+token-bucket bound, the exact quantile `F^-1(0.99^(1/n))` of a fan-out and hedging, the screening
+rule for reserved capacity against brute force, Young's checkpoint interval against the exact
+exponential optimum and a simulation, ring all-reduce's `2(N-1)/N`, the 6ND cost table, A/B sample
+sizes, PSI in sigmas, and every number in file 05.
 
 Several checks exist because they caught an error. The suite has overturned claims in the
 source material (what neighbour-averaging consensus converges to; whether four legs are
