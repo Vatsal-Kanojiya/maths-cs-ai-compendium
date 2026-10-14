@@ -525,3 +525,386 @@ a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(-
   </div>
 </section>
 
+<section id="smooth">
+  <div class="col">
+    <div class="sechead"><span class="secnum">01</span><h2>Exponential smoothing is a first-order lag, tuned by a Kalman filter</h2>
+      <a class="srcref" href="@SRC@chapter%2019%20-%20applied%20AI/01.%20AI%20for%20finance.md" target="_blank" rel="noopener">src 19/01. finance &#8599;</a>
+    </div>
+    <p>
+      The outline&rsquo;s first finance bullet lists forecasting methods from ARIMA to
+      transformers. The oldest of them is the one with a derivable core.
+      <b>Exponential smoothing</b> keeps one number, the level \(s\), and updates it with each
+      new observation \(x_k\):
+    </p>
+  </div>
+  <div class="mathbox col">$$s_k = (1-\alpha)\,s_{k-1} + \alpha\,x_k, \qquad 0 < \alpha \le 1, \qquad \text{forecast of } x_{k+1} = s_k$$</div>
+  <div class="col">
+    <p>
+      Sheet 07 &sect;04 wrote this equation, \(x_k = a x_{k-1} + b u_k\), and named where you
+      met it: a thermal mass, an RC circuit, a settling tank, sampled at a fixed step. It is a
+      first-order lag with unit gain. Unroll it and the level is a weighted sum of the past,
+      with weights \(\alpha(1-\alpha)^j\) on the observation \(j\) steps old. Those weights
+      are the lag&rsquo;s discrete impulse response; they sum to 1, which is the unit gain.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: two properties of the weights you can compute as section properties</div>
+      <p>
+        Treat the weights as a distribution of mass along the time axis, as Sheet 04 &sect;01
+        did. Their <b>centroid</b> is the average age of the data inside the level:
+        \(\sum_j j\,\alpha(1-\alpha)^j = (1-\alpha)/\alpha\), which is 4 samples at
+        \(\alpha = 0.2\). The sum of their <b>squares</b> is how much white noise gets
+        through: the level&rsquo;s variance is \(\sigma^2\alpha/(2-\alpha)\), a ninth of
+        \(\sigma^2\) at \(\alpha = 0.2\) (<code>[Ch19 s01]</code>).
+      </p>
+      <p style="margin-bottom:0">
+        A plain moving average of \(N\) points passes \(\sigma^2/N\), so the moving average
+        with the same noise has \(N = (2-\alpha)/\alpha\) points, 9 at \(\alpha = 0.2\). Its
+        average age is \((N-1)/2 = 4\), exactly the smoother&rsquo;s. The two filters buy the
+        same noise reduction for the same delay; the exponential one does it with one stored
+        number instead of nine.
+      </p>
+    </div>
+    <h3>It is already on your quality-control chart</h3>
+    <p>
+      Sheet 04 &sect;06 showed that every point on an \(\bar{X}\) chart is a hypothesis test.
+      The <b>EWMA chart</b> of statistical process control plots exactly \(s_k\), with
+      \(\alpha\) written \(\lambda\), so that a small sustained shift accumulates instead of
+      hiding inside each sample&rsquo;s noise. Its steady-state control limits follow from
+      the noise factor above:
+    </p>
+  </div>
+  <div class="mathbox col">$$\mu_0 \pm L\,\sigma\sqrt{\frac{\lambda}{2-\lambda}} \;=\; \mu_0 \pm 1.000\,\sigma \quad\text{at } \lambda = 0.2,\ L = 3$$</div>
+  <div class="col">
+    <p>
+      A simulation of 200,000 in-control points gives a steady-state variance of 0.1107
+      against the formula&rsquo;s \(1/9 = 0.1111\) (<code>[Ch19 s01]</code>). If your quality
+      course stopped at Shewhart charts, this is the one it would have taught next.
+    </p>
+    <p>
+      The same recurrence is inside Sheet 06 &sect;06: Adam&rsquo;s \(m_t\) and \(v_t\) are
+      exponential smoothers of the gradient and of its square. That section pointed back to
+      Sheet 04 for the definition, which Sheet 04 never gave; it is here. Adam&rsquo;s
+      bias correction is the unit-gain property repaired. A smoother started at zero has
+      weights summing to \(1-(1-\alpha)^t\), not 1, so after 50 steps with
+      \(\beta_2 = 0.999\) it reads 0.44 where the mean square is 9.03, and dividing by
+      \(1-\beta_2^{50}\) gives 9.026 (<code>[Ch19 s01]</code>).
+    </p>
+    <h3>The best smoothing constant is a Kalman gain</h3>
+    <p>
+      Every forecasting text says \(\alpha\) is chosen by judgement or by trial. There is a
+      better answer. Suppose the true level wanders as a random walk, moving by a random step
+      of variance \(q\) each period, and you see it through measurement noise of variance
+      \(r\). That is a one-state system with \(F = 1\) and \(H = 1\), and Sheet 11 &sect;09
+      gave its optimal estimator: predict \(\hat{x}^- = \hat{x}\) with \(P^- = P + q\), then
+      correct with gain \(K = P^-/(P^- + r)\). The correction is
+      \(\hat{x} \leftarrow \hat{x} + K(x_k - \hat{x})\), which is exponential smoothing with
+      \(\alpha = K\). Once the filter settles, \(K\) is constant, and the steady state of
+      \(P^-\) solves \((P^-)^2 = qP^- + qr\):
+    </p>
+  </div>
+  <div class="mathbox col">$$\alpha^\ast = \frac{\sqrt{\lambda^2 + 4\lambda} - \lambda}{2}, \qquad \lambda = \frac{q}{r}$$</div>
+  <div class="col">
+    <p>
+      The closed form matches the Riccati recursion to \(2\times10^{-16}\) for \(q/r\) from
+      0.001 to 100 (<code>[Ch19 s01]</code>). Three values are worth remembering:
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>The optimal smoothing constant against the ratio of drift to noise. N is the moving average with the same noise reduction.</caption>
+      <thead><tr><th>q / r</th><th class="mono">&alpha;*</th><th class="mono">N</th><th>What it means</th></tr></thead>
+      <tbody>
+        <tr><td>0.01, a slow drift in heavy noise</td><td class="mono">0.0951</td><td class="mono">20.0</td><td>Average about 20 readings</td></tr>
+        <tr><td>0.1</td><td class="mono">0.2702</td><td class="mono">6.4</td><td>The lab below starts here</td></tr>
+        <tr><td>1, drift as large as the noise</td><td class="mono">0.6180</td><td class="mono">2.2</td><td>The reciprocal of the golden ratio, exactly</td></tr>
+        <tr><td>&rarr; &infin;, no measurement noise</td><td class="mono">1</td><td class="mono">1</td><td>The latest value is the best forecast</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      The last row is the finance lesson. If a price were a pure random walk with no noise
+      on top, the best forecast of tomorrow would be today&rsquo;s price, and no smoothing
+      could improve it. The one-step forecast error of any \(\alpha\) has a closed form,
+    </p>
+  </div>
+  <div class="mathbox col">$$\text{MSE}(\alpha) = \frac{(1-\alpha)^2 q + \alpha^2 r}{\alpha(2-\alpha)} + q + r,$$</div>
+  <div class="col">
+    <p>
+      whose minimum sits at \(\alpha^\ast\) and equals the Kalman filter&rsquo;s innovation
+      variance \(P^- + r\): 1.3702 at \(q/r = 0.1\). On a 400,000-step simulated series the
+      measured errors were 1.5830, 1.3728 and 1.5498 at \(\alpha\) = 0.1, 0.270 and 0.6,
+      against 1.5789, 1.3702 and 1.5476 from the formula (<code>[Ch19 s01]</code>).
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: the first-order sibling of the 0.707 servo</div>
+      <p style="margin-bottom:0">
+        Sheet 11 &sect;10 found that the Kalman filter for a measured position with white-noise
+        acceleration settles into a second-order system with \(\zeta = 1/\sqrt2\) and
+        \(\omega_n = (q/\rho)^{1/4}\). One integrator fewer gives this: a first-order lag whose
+        time constant, in the continuous limit, is \(\sqrt{r_c/q_c}\). The discrete
+        \(\Delta t/\alpha^\ast\) converges on it, 0.50502, 0.50050, 0.50005 at
+        \(\Delta t = 10^{-2}, 10^{-3}, 10^{-4}\) against 0.5 (<code>[Ch19 s01]</code>).
+        In both cases the estimator nobody tuned arrives at a definite filter, and in both
+        the noise ratio sets only the speed.
+      </p>
+    </div>
+    <p>
+      One more line connects the outline&rsquo;s ARIMA. Write the forecast error as
+      \(e_k = x_k - s_{k-1}\). Then the differenced series obeys
+      \(x_k - x_{k-1} = e_k - (1-\alpha)\,e_{k-1}\), which is the model ARIMA calls (0,1,1).
+      Exponential smoothing is the forecast that model implies (<code>[Ch19 s01]</code>);
+      the rest of the ARIMA family is not treated here.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks</div>
+      <p>
+        <b>A trend.</b> The forecast is a flat line at the current level, so a series rising
+        steadily is always under-forecast. Feed a ramp of slope 2 per step through
+        \(\alpha = 0.25\) and the level settles 6.000 behind, which is slope
+        \(\times(1-\alpha)/\alpha\) (<code>[Ch19 s01]</code>). It is the same velocity error as
+        a thermocouple in a furnace that is heating up, which reads low by the heating rate
+        times its time constant. Methods with a trend term exist (reported) and are not
+        derived here.
+      </p>
+      <p style="margin-bottom:0">
+        <b>The model.</b> \(\alpha^\ast\) is optimal for a random walk plus white noise and
+        for nothing else. Returns on real assets have heavy tails and volatility that comes in
+        clusters (reported); neither is in the model. Sheet 11 &sect;09&rsquo;s innovation
+        test is how you would find out: if the forecast errors are not white, the model is
+        wrong, whatever \(\alpha\) you chose.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Pick the smoothing constant</div><div class="lab-tag">Predict, then tune</div></div>
+    <div class="predict">
+      <div class="predict-h">Predict</div>
+      <p>
+        The level drifts each period by a step whose variance is a tenth of the measurement
+        noise. Which smoothing constant gives the smallest one-step forecast error?
+      </p>
+      <div class="opts">
+        <button class="pbtn" data-p1="a" type="button">&alpha; = 0.05</button>
+        <button class="pbtn" data-p1="b" type="button">&alpha; = 0.27</button>
+        <button class="pbtn" data-p1="c" type="button">&alpha; = 0.5</button>
+        <button class="pbtn" data-p1="d" type="button">&alpha; = 1, use the latest value</button>
+      </div>
+      <div class="pverdict" id="pv1"></div>
+    </div>
+    <svg class="stage" id="sS" viewBox="0 0 560 250" role="img"
+         aria-label="A drifting level, noisy observations of it, and the exponentially smoothed level for the chosen smoothing constant">
+      <g id="sGrid"></g><g id="sObs"></g><path id="sTrue" fill="none"></path><path id="sLvl" fill="none"></path><g id="sLab"></g>
+    </svg>
+    <div class="legend">
+      <span class="lg"><i style="background:var(--ink-3)"></i>observations</span>
+      <span class="lg"><i style="background:var(--c3)"></i>true level</span>
+      <span class="lg"><i style="background:var(--c1)"></i>smoothed level</span>
+    </div>
+    <div class="ctl">
+      <label for="sA">Smoothing constant <span class="gk">&alpha;</span></label>
+      <input type="range" id="sA" min="0.02" max="1" step="0.01" value="0.10">
+      <span class="ro-v" id="sAv" style="min-width:48px">0.10</span>
+    </div>
+    <div class="ctl">
+      <label for="sQ">Drift / noise, <span class="gk">q/r</span></label>
+      <input type="range" id="sQ" min="-3" max="2" step="0.1" value="-1">
+      <span class="ro-v" id="sQv" style="min-width:48px">0.10</span>
+      <button class="btn" id="sBest" type="button">Set <span class="gk">&alpha;</span> to the Kalman gain</button>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Kalman gain<br><span class="gk">&alpha;</span>*</div><div class="ro-v b" id="sAs">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Forecast MSE,<br>formula</div><div class="ro-v a" id="sMt">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Forecast MSE,<br>20,000 steps</div><div class="ro-v a" id="sMm">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Least possible,<br><span class="gk">P&#8315; + r</span></div><div class="ro-v c" id="sMin">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Same-noise moving<br>average, points</div><div class="ro-v" id="sN">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Mean age of<br>the level</div><div class="ro-v" id="sAge">&mdash;</div></div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    Measurement noise has variance \(r = 1\); the level&rsquo;s step has variance \(q\). The
+    plot shows 120 periods; the measured error uses a separate 20,000-period series drawn with
+    the same \(q/r\), so it sits within a few per cent of the formula. At the opening setting
+    \(\alpha = 0.10\) the smoothed line lags every turn of the true level and the error is
+    1.579. Press the button and \(\alpha\) moves to 0.27, the Kalman gain and the answer to
+    the prediction, where the error falls to its floor of 1.370. Push \(\alpha\) to 1 and the
+    forecast is just the last observation, error 2.100: it now passes all the noise through.
+    Slide \(q/r\) up to 100 and the best \(\alpha\) approaches 1; down to 0.001 and it falls to
+    0.031, an average over about 63 readings.
+  </div>
+</section>
+
+<section id="minvar">
+  <div class="col">
+    <div class="sechead"><span class="secnum">02</span><h2>The minimum-variance portfolio is Sheet 09&rsquo;s beamformer</h2>
+      <a class="srcref" href="@SRC@chapter%2019%20-%20applied%20AI/01.%20AI%20for%20finance.md" target="_blank" rel="noopener">src 19/01. finance &#8599;</a>
+    </div>
+    <p>
+      The third finance bullet names mean&ndash;variance portfolio optimisation, due to
+      Markowitz (reported). Hold \(n\) assets in proportions \(w_i\), with the whole budget
+      invested, \(\sum w_i = 1\). The returns have a covariance matrix \(\Sigma\), which Sheet
+      04 &sect;03 showed is built exactly like an inertia tensor: variances on the diagonal,
+      covariances in place of products of inertia. The portfolio&rsquo;s variance is the
+      quadratic form \(w^{\mathsf T}\Sigma w\). Minimise it, subject to the budget:
+    </p>
+  </div>
+  <div class="mathbox col">$$\min_{w}\ w^{\mathsf T}\Sigma\,w \quad\text{subject to}\quad \mathbf{1}^{\mathsf T}w = 1 \qquad\Longrightarrow\qquad w^\ast = \frac{\Sigma^{-1}\mathbf{1}}{\mathbf{1}^{\mathsf T}\Sigma^{-1}\mathbf{1}}, \quad \sigma^2_{\min} = \frac{1}{\mathbf{1}^{\mathsf T}\Sigma^{-1}\mathbf{1}}$$</div>
+  <div class="col">
+    <p>
+      Sheet 03 &sect;07&rsquo;s recipe gives it in two lines. Setting the gradient of
+      \(w^{\mathsf T}\Sigma w - \lambda(\mathbf{1}^{\mathsf T}w - 1)\) to zero gives
+      \(2\Sigma w = \lambda\mathbf{1}\), so \(w\) is proportional to \(\Sigma^{-1}\mathbf{1}\),
+      and the budget fixes the scale. On 200 random covariance matrices the closed form met the
+      budget exactly, and none of 20,000 other fully-invested portfolios did better
+      (<code>[Ch19 s02]</code>).
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: it is the MVDR beamformer with every steering weight equal to one</div>
+      <p>
+        Sheet 09 &sect;19 minimised the output power of a microphone array,
+        \(\mathbf{w}^{H}\Phi_{nn}\mathbf{w}\), subject to passing the target direction
+        undistorted, \(\mathbf{w}^{H}\mathbf{d} = 1\), and got
+        \(\Phi_{nn}^{-1}\mathbf{d}/(\mathbf{d}^{H}\Phi_{nn}^{-1}\mathbf{d})\). Put the return
+        covariance in place of the noise covariance and \(\mathbf{d} = \mathbf{1}\), and it is
+        the formula above, to the last bit: the computed difference is zero
+        (<code>[Ch19 s02]</code>). The budget constraint is a steering vector. (Sheet 09 sent
+        you to Sheet 03 &sect;08 for the method; the Lagrange-multiplier section is &sect;07.)
+      </p>
+      <p style="margin-bottom:0">
+        Sheet 03 &sect;07 also said the multiplier is a shadow price, the rate at which the
+        optimum changes as the constraint is relaxed. Here \(\lambda = 2\sigma^2_{\min}\), and
+        the derivative of the minimum variance with respect to the budget, measured by finite
+        difference, is the same number, 0.065208 for the two assets below
+        (<code>[Ch19 s02]</code>).
+      </p>
+    </div>
+    <p>
+      Two assets make it concrete: volatilities 20% and 30%, correlation 0.2. The
+      minimum-variance mix is 73.6% and 26.4%, with a volatility of 18.06%, lower than
+      either asset alone. Adding the other half of the bullet, a target expected return as a
+      second constraint, adds a second multiplier and traces the efficient frontier, a
+      parabola in variance against return whose vertex is this portfolio
+      (<code>[Ch19 s02]</code>).
+    </p>
+    <h3>Diversification is a tolerance stack</h3>
+    <p>
+      Put equal weights on \(n\) assets of equal volatility \(\sigma\), every pair correlated
+      at \(\rho\). The portfolio return is the average of \(n\) random parts, and its
+      variance is Sheet 04 &sect;05&rsquo;s stack-up with the covariance terms kept:
+    </p>
+  </div>
+  <div class="mathbox col">$$\sigma_p = \sigma\sqrt{\rho + \frac{1-\rho}{n}} \;\longrightarrow\; \sigma\sqrt{\rho} \quad (n\to\infty)$$</div>
+  <div class="tw col">
+    <table>
+      <caption>Equal-weight portfolios, checked against 40,000 sampled returns where n = 25 (<code>[Ch19 s02]</code>).</caption>
+      <thead><tr><th>Assets n</th><th>Correlation</th><th class="mono">&sigma;<sub>p</sub> / &sigma;</th><th>Reading</th></tr></thead>
+      <tbody>
+        <tr><td>25</td><td>0</td><td class="mono">0.200</td><td>RSS: \(1/\sqrt{25}\), the standard error of Sheet 04</td></tr>
+        <tr><td>25</td><td>0.3</td><td class="mono">0.573</td><td>Most of the benefit is already gone</td></tr>
+        <tr><td>400</td><td>0.3</td><td class="mono">0.549</td><td>Sixteen times the assets, 4% less risk</td></tr>
+        <tr><td>&infin;</td><td>0.3</td><td class="mono">0.548</td><td>The floor \(\sqrt{0.3}\): risk no number of assets removes</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: worst-case stacking is RSS with every correlation set to 1</div>
+      <p style="margin-bottom:0">
+        With \(\rho = 1\) between every pair, the stack formula collapses to
+        \(\sigma_{\text{sum}} = \sum\sigma_i\), the arithmetic stack you were taught as the
+        conservative method; for six random parts it gives 7.239 against 3.206 for RSS
+        (<code>[Ch19 s02]</code>). So the choice between worst-case and RSS stacking is a
+        choice of correlation, 1 or 0, and the honest answer for most assemblies lies
+        between. Sheet 04 &sect;05 named the shop-floor cause of correlation, a tool
+        wearing through a shift; Sheet 17 &sect;08 found that a rounding bias stacks linearly
+        for the same reason. In a portfolio the common cause is the market itself, and the
+        floor \(\sigma\sqrt{\rho}\) is what finance calls systematic risk.
+      </p>
+    </div>
+    <h3>Negative weights, and the dummy gauge</h3>
+    <p>
+      The riskier asset&rsquo;s weight is proportional to \(\sigma_1^2 - \rho\sigma_1\sigma_2\),
+      so it turns negative exactly when \(\rho > \sigma_1/\sigma_2\), which is 2/3 for 20% and
+      30% (<code>[Ch19 s02]</code>). At \(\rho = 0.8\) the best portfolio holds &minus;23.5% of
+      the riskier asset: it sells it short, using the correlated part to cancel the safer
+      asset&rsquo;s risk. At \(\rho = 1\) the weights (3, &minus;2) cancel the risk completely.
+      A half-bridge with a dummy gauge does the same thing with a strain measurement: the
+      dummy sees only the temperature, which it shares perfectly with the active gauge, and
+      its signal enters with a minus sign. Sheet 09&rsquo;s beamformer does it with noise.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks: you never know \(\Sigma\)</div>
+      <p>
+        A beamformer can measure its noise covariance for as long as it likes. A portfolio
+        manager has, say, five years of monthly returns. The formula needs \(\Sigma^{-1}\), and
+        Sheet 02 &sect;03 warned what an inverse does to an ill-conditioned matrix. Take 20
+        assets that are in truth independent with equal risk, so the true \(\Sigma\) is the
+        identity with condition number 1, and estimate it from 60 months: the estimate&rsquo;s
+        condition number has a median of 10.8. The &ldquo;optimal&rdquo; weights built from
+        it carry 1.487 times the true minimum variance on average, and 1.863 times at the
+        95th percentile over 4,000 trials (<code>[Ch19 s02]</code>).
+      </p>
+      <p style="margin-bottom:0">
+        The average matches a reported closed form, \((T-2)/(T-N-1) = 58/39 = 1.487\), which
+        grows without bound as the number of assets \(N\) approaches the number of
+        observations \(T\). The optimiser cannot tell real structure from sampling noise, and
+        it bets hardest on whichever it sees most clearly. Expected returns are harder still to
+        estimate (reported), which is one reason the minimum-variance point, which needs no
+        expected returns at all, is the part of the theory that survives contact with data.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">Two assets, one budget</div><div class="lab-tag">Predict, then correlate</div></div>
+    <div class="predict">
+      <div class="predict-h">Predict</div>
+      <p>
+        Asset 1 has 20% volatility, asset 2 has 30%, and their correlation is 0.8. How much
+        of asset 2 does the minimum-variance portfolio hold?
+      </p>
+      <div class="opts">
+        <button class="pbtn" data-p2="a" type="button">None at all</button>
+        <button class="pbtn" data-p2="b" type="button">About a quarter</button>
+        <button class="pbtn" data-p2="c" type="button">A negative amount: it sells asset 2 short</button>
+        <button class="pbtn" data-p2="d" type="button">Half</button>
+      </div>
+      <div class="pverdict" id="pv2"></div>
+    </div>
+    <svg class="stage" id="mS" viewBox="0 0 560 270" role="img"
+         aria-label="Portfolio volatility against the weight in asset 1, with the minimum marked">
+      <g id="mGrid"></g><rect id="mShort" fill="var(--brk-soft)"></rect><path id="mCurve" fill="none"></path><g id="mPts"></g><g id="mLab"></g>
+    </svg>
+    <div class="ctl">
+      <label for="mR">Correlation <span class="gk">&rho;</span></label>
+      <input type="range" id="mR" min="-0.95" max="0.99" step="0.01" value="0.2">
+      <span class="ro-v" id="mRv" style="min-width:48px">0.20</span>
+    </div>
+    <div class="ctl">
+      <label for="mS2">Asset 2 volatility</label>
+      <input type="range" id="mS2" min="10" max="50" step="1" value="30">
+      <span class="ro-v" id="mS2v" style="min-width:48px">30%</span>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Weight in<br>asset 1</div><div class="ro-v b" id="mW1">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Weight in<br>asset 2</div><div class="ro-v b" id="mW2">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Least volatility,<br>closed form</div><div class="ro-v a" id="mSig">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Least volatility,<br>search on curve</div><div class="ro-v a" id="mSigG">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Short sale when<br><span class="gk">&rho;</span> &gt; <span class="gk">&sigma;</span>&#8321;/<span class="gk">&sigma;</span>&#8322;</div><div class="ro-v c" id="mThr">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Multiplier<br>2<span class="gk">&sigma;</span>&sup2;<sub>min</sub></div><div class="ro-v" id="mLam">&mdash;</div></div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    The curve is the portfolio&rsquo;s volatility for every split of the budget; weight 1 is
+    asset 1 alone, weight 0 is asset 2 alone. The shaded band is where asset 2 is sold short.
+    The dot is the closed-form minimum, and the readout beside it repeats the minimum found by
+    searching the curve in steps of 0.0001, so the two agree to the last digit shown. At the
+    opening correlation of 0.2 the minimum is 73.6% / 26.4% at 18.06%. Drag the correlation
+    past 0.67 and the dot crosses into the shaded band: at 0.8 the weights are 123.5% and
+    &minus;23.5%, the answer to the prediction. Near 1 the minimum volatility falls towards
+    zero, bought with ever larger offsetting positions, which is the dummy gauge with
+    leverage. Below zero the two assets hedge each other without any short sale at all.
+  </div>
+</section>
+
