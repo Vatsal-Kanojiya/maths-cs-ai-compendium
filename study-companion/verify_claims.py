@@ -7328,6 +7328,10 @@ def _ch18():
         say("s19", f"CTR {p:.0%}: relative +0.1% needs {nab(p, p*0.001):.2e} per arm; absolute +0.1 point needs {nab(p, 0.001):,.0f} per arm", True)
     say("s19", "source's 'millions of impressions': relative 0.1% at 2% CTR needs 1.5e9 in total; absolute 0.1 pt needs 0.6e6",
         abs(2*nab(0.02, 2e-5)/1.54e9 - 1) < 0.02 and abs(2*nab(0.02, 0.001)/6.15e5 - 1) < 0.02)
+    # the source's A/B figure: CTR 4.2% -> 4.5%, p = 0.02
+    zf = _n18.ppf(0.99); nfig = zf**2*(0.042*0.958 + 0.045*0.955)/0.003**2
+    say("s19", f"figure's 4.2% -> 4.5% at p = 0.02 (two-sided) needs {nfig:,.0f} users per arm; the lift is "
+        f"+0.3 points = +{0.003/0.042:.1%} relative", 49000 < nfig < 51000)
     # PSI = KL(a||e) + KL(e||a); normal shift d -> Jeffreys d^2
     rp2 = np.random.default_rng(19); ok = True
     for _ in range(100):

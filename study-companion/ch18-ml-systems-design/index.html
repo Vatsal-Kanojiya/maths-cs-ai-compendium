@@ -1,0 +1,1066 @@
+<title>Capacity, Redundancy, Tails</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['\\(', '\\)']], displayMath: [['$$', '$$']], processEscapes: true },
+  svg: { fontCache: 'global', scale: 1.0 },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-svg.js" id="MathJax-script" async></script>
+
+<style>
+/* ============ TOKENS: light is complete and authoritative ============ */
+:root{
+  --ground:#F0F2F1;
+  --sheet:#FBFCFB;
+  --sheet-2:#F4F6F5;
+  --ink:#14181A;
+  --ink-2:#4E575B;
+  --ink-3:#77838A;
+  --rule:#D3DAD7;
+  --rule-strong:#A8B4B0;
+  --accent:#12507E;
+  --accent-ink:#0E4267;
+  --accent-soft:#E4EEF6;
+  --bridge:#1F8A4C;
+  --bridge-soft:#E4F2EA;
+  --brk:#A8500F;
+  --brk-soft:#FAEBDF;
+  --s1:#BF5B00;
+  --s2:#0F74C7;
+  --s3:#1F8A4C;
+  --paper:#FFFFFF;            /* pasted-drawing ground, both themes */
+  --paper-ink:#1b1b1b;
+  --shadow:0 1px 2px rgba(20,24,26,.06), 0 6px 18px rgba(20,24,26,.05);
+  --f-disp:'Archivo Narrow', 'Arial Narrow', Helvetica, sans-serif;
+  --f-body:'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --f-mono:'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+    --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+    --rule:#293134; --rule-strong:#3F494C;
+    --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+    --bridge:#35AC63; --bridge-soft:#11281B;
+    --brk:#E0913F; --brk-soft:#2E2012;
+    --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E1112; --sheet:#161A1C; --sheet-2:#1C2123;
+  --ink:#E7EBE9; --ink-2:#A3AEB1; --ink-3:#7B878B;
+  --rule:#293134; --rule-strong:#3F494C;
+  --accent:#6FB3E0; --accent-ink:#8CC4EA; --accent-soft:#14283A;
+  --bridge:#35AC63; --bridge-soft:#11281B;
+  --brk:#E0913F; --brk-soft:#2E2012;
+  --s1:#D9782B; --s2:#4A97D6; --s3:#35AC63;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:var(--f-body); font-size:17px; line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ============ TITLE BLOCK (engineering drawing header) ============ */
+.titleblock{
+  position:sticky; top:env(safe-area-inset-top,0px); z-index:40;
+  background:var(--sheet); border-bottom:1px solid var(--rule-strong);
+}
+.tb-in{
+  max-width:1240px; margin:0 auto; padding:0 16px;
+  display:flex; align-items:stretch; gap:0; min-height:46px;
+}
+.tb-cell{
+  display:flex; flex-direction:column; justify-content:center;
+  padding:5px 14px; border-right:1px solid var(--rule);
+  font-family:var(--f-disp);
+}
+.tb-cell:first-child{padding-left:0}
+.tb-cell:last-child{border-right:0; margin-left:auto; padding-right:0}
+.tb-k{
+  font-size:8.5px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); line-height:1.4;
+}
+.tb-v{font-size:13px; font-weight:700; letter-spacing:.02em; color:var(--ink); line-height:1.3}
+.tb-v.accent{color:var(--accent)}
+.tb-hide{display:none}
+@media (min-width:680px){ .tb-hide{display:flex} }
+
+.themebtn{
+  appearance:none; background:transparent; border:1px solid var(--rule-strong);
+  color:var(--ink-2); font-family:var(--f-disp); font-size:10px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:6px 10px; border-radius:2px;
+  cursor:pointer; align-self:center; white-space:nowrap;
+}
+.themebtn:hover{border-color:var(--accent); color:var(--accent)}
+.themebtn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+/* ============ SHELL ============ */
+.shell{max-width:1240px; margin:0 auto; padding:0 16px; padding-block:0 64px}
+@media (min-width:1080px){
+  .shell{display:grid; grid-template-columns:212px minmax(0,1fr); gap:44px; align-items:start}
+}
+.rail{display:none}
+@media (min-width:1080px){
+  .rail{
+    display:block; position:sticky; top:calc(env(safe-area-inset-top,0px) + 70px);
+    padding-block:28px; font-family:var(--f-disp); font-size:12.5px;
+  }
+}
+.rail-h{
+  font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-3);
+  padding-bottom:8px; border-bottom:1px solid var(--rule); margin-bottom:10px;
+}
+.rail a{
+  display:flex; gap:9px; padding:4px 0; color:var(--ink-2); text-decoration:none;
+  border-left:2px solid transparent; padding-left:9px; margin-left:-11px; line-height:1.35;
+}
+.rail a:hover{color:var(--accent)}
+.rail a.on{color:var(--accent); border-left-color:var(--accent); font-weight:700}
+.rail a .n{font-family:var(--f-mono); font-size:10.5px; color:var(--ink-3); flex:none; padding-top:1px}
+.rail a.on .n{color:var(--accent)}
+
+main{min-width:0; padding-block:0 0}
+.col{max-width:70ch}
+
+/* ============ TYPE ============ */
+h1,h2,h3,h4{font-family:var(--f-disp); text-wrap:balance; margin:0; line-height:1.14}
+h1{font-size:clamp(34px,7vw,58px); font-weight:700; letter-spacing:-.015em}
+h2{font-size:clamp(25px,4.2vw,34px); font-weight:700; letter-spacing:-.01em}
+h3{font-size:19px; font-weight:700; letter-spacing:.005em; margin-top:2px}
+h4{font-size:14px; font-weight:700; letter-spacing:.06em; text-transform:uppercase}
+p{margin:0 0 1.05em}
+a{color:var(--accent-ink)}
+strong{font-weight:600}
+em{font-style:italic}
+code{font-family:var(--f-mono); font-size:.87em; background:var(--sheet-2); padding:1px 5px; border-radius:2px; border:1px solid var(--rule)}
+.lead{font-size:19.5px; line-height:1.56; color:var(--ink-2)}
+.eyebrow{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--ink-3); margin:0 0 10px;
+}
+.srcref{
+  font-family:var(--f-mono); font-size:11px; color:var(--ink-3);
+  border:1px solid var(--rule); border-radius:2px; padding:2px 7px; display:inline-block;
+  background:var(--sheet-2); white-space:nowrap;
+}
+
+/* ============ SECTION ============ */
+section{padding-block:38px 0; scroll-margin-top:calc(env(safe-area-inset-top,0px) + 62px)}
+.sechead{display:flex; align-items:baseline; gap:13px; margin-bottom:6px; flex-wrap:wrap}
+.secnum{
+  font-family:var(--f-mono); font-size:12px; font-weight:600; color:var(--accent);
+  border:1px solid var(--accent); border-radius:2px; padding:2px 7px; flex:none;
+  background:var(--accent-soft);
+}
+.rule-h{border:0; border-top:1px solid var(--rule); margin:0 0 22px}
+.rule-d{border:0; border-top:1px dashed var(--rule-strong); margin:34px 0}
+
+/* ============ CALLOUTS ============ */
+.note{
+  border:1px solid var(--rule); border-left:3px solid var(--accent);
+  background:var(--sheet); border-radius:2px; padding:16px 18px; margin:22px 0;
+}
+/* Greek letters must never be uppercased: text-transform turns beta into
+   a capital Beta, which is the Latin letter B on screen -- likewise eta->H,
+   kappa->K, lambda->A-shape.  Any Greek inside an uppercased label wears .gk. */
+.gk{text-transform:none}
+.note.bridge{border-left-color:var(--bridge); background:var(--bridge-soft)}
+.note.brk{border-left-color:var(--brk); background:var(--brk-soft)}
+.note-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; margin-bottom:7px; display:flex; align-items:center; gap:8px;
+}
+.note.bridge .note-h{color:var(--bridge)}
+.note.brk .note-h{color:var(--brk)}
+.note .note-h{color:var(--accent)}
+.note p:last-child, .note ul:last-child{margin-bottom:0}
+.note-h .ic{
+  width:15px; height:15px; border-radius:50%; border:1.5px solid currentColor; flex:none;
+  display:grid; place-items:center; font-size:9.5px; font-weight:700; font-family:var(--f-mono);
+}
+ul,ol{margin:0 0 1.05em; padding-left:1.25em}
+li{margin-bottom:.4em}
+li::marker{color:var(--ink-3)}
+
+/* ============ DEFINITION BLOCK ============ */
+.defn{
+  background:var(--sheet); border:1px solid var(--rule); border-radius:3px;
+  padding:18px 20px; margin:22px 0; box-shadow:var(--shadow);
+}
+.defn-h{
+  font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:10px;
+  padding-bottom:8px; border-bottom:1px solid var(--rule);
+}
+.defn p:last-child{margin-bottom:0}
+
+/* ============ TABLES ============ */
+.tw{overflow-x:auto; margin:22px 0; border:1px solid var(--rule); border-radius:3px; background:var(--sheet)}
+table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:480px}
+th,td{text-align:left; padding:10px 14px; border-bottom:1px solid var(--rule); vertical-align:top}
+thead th{
+  font-family:var(--f-disp); font-size:10px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-3); background:var(--sheet-2); font-weight:700; white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:0}
+td.mono,th.mono{font-family:var(--f-mono); font-size:13px; font-variant-numeric:tabular-nums}
+.tw caption{
+  caption-side:bottom; text-align:left; padding:9px 14px; font-size:12.5px;
+  color:var(--ink-3); border-top:1px solid var(--rule); font-family:var(--f-disp);
+}
+
+/* ============ FIGURES ============ */
+figure{margin:24px 0}
+.paper{
+  background:var(--paper); border:1px solid var(--rule-strong); border-radius:3px;
+  padding:16px; display:flex; justify-content:center; box-shadow:var(--shadow);
+}
+.paper img{max-width:100%; height:auto; display:block}
+figcaption{
+  font-family:var(--f-disp); font-size:12.5px; color:var(--ink-3); margin-top:9px;
+  line-height:1.45; padding-left:2px;
+}
+figcaption b{color:var(--ink-2); font-weight:700; letter-spacing:.04em}
+
+/* ============ INTERACTIVE PANELS ============ */
+.lab{
+  background:var(--sheet); border:1px solid var(--rule-strong); border-radius:3px;
+  margin:26px 0; overflow:hidden; box-shadow:var(--shadow);
+}
+.lab-h{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:11px 16px; border-bottom:1px solid var(--rule); background:var(--sheet-2);
+}
+.lab-t{font-family:var(--f-disp); font-size:13px; font-weight:700; letter-spacing:.05em; text-transform:uppercase}
+.lab-tag{
+  font-family:var(--f-mono); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--accent); border:1px solid var(--accent); border-radius:2px; padding:2px 6px;
+  margin-left:auto; white-space:nowrap;
+}
+.lab-body{padding:16px}
+.lab-foot{
+  padding:11px 16px; border-top:1px solid var(--rule); background:var(--sheet-2);
+  font-size:13.5px; color:var(--ink-2); line-height:1.5;
+}
+.lab-foot b{color:var(--ink)}
+.stage{width:100%; max-width:560px; height:auto; display:block; margin-inline:auto; touch-action:none; cursor:grab}
+.stage.drag{cursor:grabbing}
+
+/* Dividers are drawn as cell borders rather than as 1px grid gaps over a grey
+   backdrop: when the item count does not fill the last row, a gap-based grid
+   leaves the backdrop showing as an empty grey block. */
+.readout{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr)); gap:0;
+  background:var(--sheet); border:1px solid var(--rule); border-radius:2px;
+  margin-top:14px; overflow:hidden;
+}
+.ro{background:var(--sheet); padding:8px 11px;
+  border-right:1px solid var(--rule); border-bottom:1px solid var(--rule)}
+.ro-k{
+  font-family:var(--f-disp); font-size:9px; letter-spacing:.13em; text-transform:uppercase;
+  color:var(--ink-3); margin-bottom:2px;
+  /* was white-space:nowrap, which clipped the longer keys instead of wrapping */
+  white-space:normal; overflow-wrap:break-word; line-height:1.3; min-height:2.6em;
+}
+.ro-v{
+  font-family:var(--f-mono); font-size:15px; font-weight:500; font-variant-numeric:tabular-nums;
+  color:var(--ink); line-height:1.25;
+}
+.ro-v.a{color:var(--s2)} .ro-v.b{color:var(--s1)} .ro-v.c{color:var(--s3)}
+
+.ctl{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:14px}
+.ctl label{
+  font-family:var(--f-disp); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-2); white-space:nowrap;
+}
+input[type=range]{
+  -webkit-appearance:none; appearance:none; height:22px; background:transparent;
+  flex:1 1 160px; min-width:130px; cursor:pointer;
+}
+input[type=range]:focus-visible{outline:2px solid var(--accent); outline-offset:3px}
+input[type=range]::-webkit-slider-runnable-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-moz-range-track{height:3px; background:var(--rule-strong); border-radius:2px}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:16px; height:16px; border-radius:50%;
+  background:var(--accent); border:2px solid var(--sheet); margin-top:-6.5px;
+}
+input[type=range]::-moz-range-thumb{
+  width:16px; height:16px; border-radius:50%; background:var(--accent);
+  border:2px solid var(--sheet);
+}
+.btn{
+  appearance:none; font-family:var(--f-disp); font-size:11px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; padding:7px 13px; border-radius:2px;
+  border:1px solid var(--rule-strong); background:var(--sheet); color:var(--ink-2); cursor:pointer;
+}
+.btn:hover{border-color:var(--accent); color:var(--accent)}
+.btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.btn.on{background:var(--accent); border-color:var(--accent); color:var(--sheet)}
+
+.legend{display:flex; gap:16px; flex-wrap:wrap; margin-top:12px}
+.lg{display:flex; align-items:center; gap:7px; font-family:var(--f-disp); font-size:12px; color:var(--ink-2)}
+.lg i{width:15px; height:3px; border-radius:2px; flex:none; display:block}
+
+/* ============ MISC ============ */
+.mathbox{overflow-x:auto; overflow-y:hidden; margin:18px 0}
+mjx-container[display="true"]{margin:0 !important}
+.kv{display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:15px; margin:16px 0}
+.kv dt{font-family:var(--f-mono); font-size:13px; color:var(--accent); white-space:nowrap}
+.kv dd{margin:0; color:var(--ink-2)}
+
+details.q{
+  border:1px solid var(--rule); border-radius:3px; background:var(--sheet);
+  margin-bottom:9px; overflow:hidden;
+}
+details.q summary{
+  cursor:pointer; padding:12px 15px; font-weight:600; list-style:none;
+  display:flex; gap:11px; align-items:flex-start; font-size:15.5px;
+}
+details.q summary::-webkit-details-marker{display:none}
+details.q summary::after{
+  content:'+'; margin-left:auto; font-family:var(--f-mono); color:var(--accent);
+  font-size:17px; line-height:1; flex:none; padding-top:2px;
+}
+details.q[open] summary::after{content:'\2212'}
+details.q summary:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
+details.q summary .qn{
+  font-family:var(--f-mono); font-size:12px; color:var(--ink-3); flex:none; padding-top:3px;
+}
+details.q .ans{padding:0 15px 14px 41px; font-size:15.5px; color:var(--ink-2); border-top:1px solid var(--rule); padding-top:13px}
+details.q .ans p:last-child{margin-bottom:0}
+
+.endnote{
+  margin-top:44px; padding-top:20px; border-top:1px solid var(--rule-strong);
+  font-size:13.5px; color:var(--ink-3); font-family:var(--f-disp); line-height:1.55;
+}
+.endnote a{color:var(--accent)}
+
+.srcref{text-decoration:none}
+a.srcref{color:var(--ink-2); transition:none}
+
+</style>
+<style>
+.srcref{text-decoration:none}
+a.srcref{color:var(--ink-2)}
+a.srcref:hover{border-color:var(--accent); color:var(--accent); background:var(--accent-soft)}
+.srcref.nolink{opacity:.75; font-style:italic}
+.pv{font-family:var(--f-disp); font-size:9.5px; font-weight:700; letter-spacing:.1em;
+    text-transform:uppercase; padding:2px 7px; border-radius:2px; white-space:nowrap}
+.pv.ok{background:var(--bridge-soft); color:var(--bridge)}
+.pv.add{background:var(--accent-soft); color:var(--accent)}
+.pv.corr{background:var(--brk-soft); color:var(--brk)}
+.flag{display:inline-block; padding:1px 7px; border-radius:2px; font-family:var(--f-disp);
+      font-size:10px; letter-spacing:.1em; text-transform:uppercase; font-weight:700}
+.flag.ok{background:var(--bridge-soft); color:var(--bridge)}
+.flag.bad{background:var(--brk-soft); color:var(--brk)}
+.predict{border:1px solid var(--rule-strong); border-left:3px solid var(--brk);
+  background:var(--brk-soft); border-radius:2px; padding:13px 15px; margin:0 0 14px}
+.predict-h{font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--brk); margin-bottom:6px}
+.predict p{margin:0 0 10px; font-size:15px}
+.predict .opts{display:flex; gap:8px; flex-wrap:wrap}
+.pbtn{appearance:none; font-family:var(--f-disp); font-size:12px; font-weight:600;
+  padding:6px 12px; border-radius:2px; border:1px solid var(--rule-strong);
+  background:var(--sheet); color:var(--ink-2); cursor:pointer}
+.pbtn:hover{border-color:var(--brk); color:var(--brk)}
+.pbtn.picked{background:var(--brk); border-color:var(--brk); color:var(--sheet)}
+.pverdict{margin-top:10px; font-size:14.5px; color:var(--ink-2); display:none}
+.pverdict.show{display:block}
+.pverdict b{color:var(--ink)}
+.gap{border:1px solid var(--rule); border-left:3px solid var(--ink-3); background:var(--sheet-2);
+  border-radius:2px; padding:14px 16px; margin:18px 0}
+.gap-h{font-family:var(--f-disp); font-size:10.5px; font-weight:700; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:7px}
+</style>
+
+<header class="titleblock">
+  <div class="tb-in">
+    <div class="tb-cell"><div class="tb-k">Chapter</div><div class="tb-v accent">18 &middot; ML Systems Design</div></div>
+    <div class="tb-cell tb-hide"><div class="tb-k">Sheet</div><div class="tb-v">18 of 20</div></div>
+    <div class="tb-cell tb-hide"><div class="tb-k">Reader</div><div class="tb-v">B.E. Mechanical</div></div>
+    <div class="tb-cell tb-hide"><div class="tb-k">Prerequisite</div><div class="tb-v">Sheet 17</div></div>
+    <div class="tb-cell"><button class="themebtn" id="themebtn" type="button" aria-label="Switch colour theme">Theme</button></div>
+  </div>
+</header>
+
+<div class="shell">
+
+<nav class="rail" aria-label="Chapter contents">
+  <div class="rail-h">Contents</div>
+  <a href="#bridge" class="on"><span class="n">00</span><span>The bridge</span></a>
+  <a href="#plant"><span class="n">01</span><span>Little&rsquo;s law sizes it</span></a>
+  <a href="#cliff"><span class="n">02</span><span>Sized to the cliff</span></a>
+  <a href="#safety"><span class="n">03</span><span>Safety capacity</span></a>
+  <a href="#pooling"><span class="n">04</span><span>One queue or many</span></a>
+  <a href="#hashing"><span class="n">05</span><span>The ring</span></a>
+  <a href="#shards"><span class="n">06</span><span>Shards and replicas</span></a>
+  <a href="#nines"><span class="n">07</span><span>Nines in series</span></a>
+  <a href="#quorum"><span class="n">08</span><span>Quorums</span></a>
+  <a href="#common"><span class="n">09</span><span>Common cause</span></a>
+  <a href="#buffer"><span class="n">10</span><span>Buffers</span></a>
+  <a href="#protect"><span class="n">11</span><span>Protective devices</span></a>
+  <a href="#tail"><span class="n">12</span><span>The slowest shard</span></a>
+  <a href="#day"><span class="n">13</span><span>The day&rsquo;s load</span></a>
+  <a href="#tariff"><span class="n">14</span><span>Base load, peak load</span></a>
+  <a href="#series"><span class="n">15</span><span>A series system</span></a>
+  <a href="#checkpoint"><span class="n">16</span><span>Checkpoints are an EOQ</span></a>
+  <a href="#fabric"><span class="n">17</span><span>The fabric</span></a>
+  <a href="#budget"><span class="n">18</span><span>What training costs</span></a>
+  <a href="#lifecycle"><span class="n">19</span><span>A quality system</span></a>
+  <a href="#audit"><span class="n">20</span><span>The numbers, recomputed</span></a>
+  <a href="#worked"><span class="n">21</span><span>Worked example</span></a>
+  <a href="#breaks"><span class="n">22</span><span>Where it breaks</span></a>
+  <a href="#recall"><span class="n">23</span><span>Question bank</span></a>
+  <a href="#map"><span class="n">24</span><span>The map</span></a>
+  <a href="#provenance"><span class="n">A</span><span>Provenance</span></a>
+</nav>
+
+<main>
+
+<section id="top" style="padding-top:44px">
+  <div class="col">
+    <p class="eyebrow">Maths, CS &amp; AI Compendium &middot; Chapter 18</p>
+    <h1>The Plant Behind the Model</h1>
+    <p class="lead" style="margin-top:18px">
+      Every replica count in the source&rsquo;s design examples is the load at which the queue
+      never empties. Little&rsquo;s law gives the mean; your inventory training gives the margin.
+      Requests in service are Poisson, so spare capacity is safety stock, and it grows only as
+      the square root of the load.
+    </p>
+    <p>
+      Sheet 17 built one inference server and found that its batch is set by Little&rsquo;s law
+      (Sheet 17 &sect;14). This sheet starts where that one stops: many servers, daily peaks,
+      failures, spare capacity, the network between machines, and the training cluster, which
+      is the largest series system most engineers will ever meet. The source&rsquo;s five files
+      cover systems design fundamentals, cloud computing, large-scale infrastructure, ML
+      systems design and seven worked designs. Read as a plant engineer reads a plant, they
+      turn out to be capacity planning, reliability engineering and quality control, and most
+      of their numbers can be checked by hand. They are, in &sect;20.
+    </p>
+    <p>
+      The headline is &sect;03. The number of requests being served at once is a Poisson
+      count whatever the service-time distribution, so the servers you need are the mean plus
+      \(z\) standard deviations of that count: \(c = a + z\sqrt{a}\), which is the reorder point
+      of a Poisson-demand item. It explains why the source&rsquo;s 50 replicas never catch up
+      (&sect;02), why a large plant can run hotter than a small one at the same delay, and how
+      many of Sheet 17&rsquo;s servers a growing help desk really needs (&sect;21). Two other
+      results carry the rest of the sheet. Redundancy is a reliability block diagram until a
+      bad deploy makes every replica fail at once, and the &beta;-factor model of common-cause
+      failure puts a floor under it (&sect;09). And a request that fans out to a hundred
+      shards waits for the slowest one, which is PERT&rsquo;s merge bias again (&sect;12).
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Corrections to the source on this sheet. Each is recomputed by <code>verify_claims.py</code> under <code>[Ch18 sNN]</code>.</caption>
+      <thead><tr><th>Source says</th><th>Computed</th><th>Where</th></tr></thead>
+      <tbody>
+        <tr><td>&ldquo;~50 model replicas&rdquo; for 10,000 requests/s at 5 ms, and the same arithmetic for every other service in file 05</td><td>50 is the offered load. At 50 replicas utilisation is 100% and the mean wait is unbounded; 51 gives 4.2 ms, 55 gives 0.39 ms.</td><td>&sect;02</td></tr>
+        <tr><td>Ranking needs &ldquo;1000 GPU-seconds per second &rarr; ~10 A10G GPUs&rdquo;</td><td>1,000 GPU-seconds per second is 1,000 GPUs busy. Ten GPUs work only if each holds 100 requests in flight.</td><td>&sect;02</td></tr>
+        <tr><td>Image index &ldquo;~128 GB for 1B &times; 512-dim &times; float16 + graph overhead&rdquo;</td><td>The vectors alone are 1.024 TB. 128 GB is the size of the graph links alone.</td><td>&sect;20</td></tr>
+        <tr><td>HNSW &ldquo;adds ~2x overhead&rdquo;</td><td>+25% at the usual \(M = 16\), +50% at \(M = 32\). Doubling needs \(M = 64\).</td><td>&sect;20</td></tr>
+        <tr><td>Checkpoint &ldquo;70B &times; 4 bytes &times; 2 for optimiser&rdquo; = 560 GB</td><td>Adam keeps two moments: fp32 weights, \(m\) and \(v\) are 12 bytes a parameter, 840 GB.</td><td>&sect;16</td></tr>
+        <tr><td>NVLink &ldquo;30x faster than PCIe&rdquo;</td><td>900 GB/s counts both directions. Like for like against PCIe 5.0 it is 7.1&times;.</td><td>&sect;17</td></tr>
+        <tr><td>A 16,000-GPU cluster must read &ldquo;~100 GB/s of data continuously&rdquo;</td><td>Text training reads 11 to 62 MB/s. 100 GB/s is the scale of a checkpoint burst, or of pixels.</td><td>&sect;17</td></tr>
+        <tr><td>10 GPUs at peak, 2 at night: autoscaling &ldquo;saves ~60%&rdquo;</td><td>The saving is one minus the load factor: 40% for a 12-hour peak. 60% needs a 6-hour peak.</td><td>&sect;13</td></tr>
+        <tr><td>Read replicas scale read throughput &ldquo;linearly&rdquo;</td><td>Every replica applies every write, so throughput follows Amdahl&rsquo;s law with the write share as the serial fraction: 6.9&times; from 10 replicas at 5% writes, never more than 20&times;.</td><td>&sect;06</td></tr>
+        <tr><td>A 0.1% CTR improvement needs &ldquo;millions of impressions&rdquo;</td><td>A relative 0.1% at a 2% CTR needs about 1.5 billion. An absolute 0.1-point lift needs about 0.6 million.</td><td>&sect;19</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="bridge">
+  <div class="col">
+    <div class="sechead"><span class="secnum">00</span><h2>The bridge</h2>
+      <a class="srcref" href="@F1@" target="_blank" rel="noopener">src 01. systems design fundamentals &#8599;</a>
+    </div>
+    <p>
+      <b>Identity</b> means the same formula or procedure, checked numerically. <b>Same
+      structure</b> means the parts correspond but nothing is computed through the
+      correspondence. <b>Breaks</b> means the section shows where it stops being true.
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>What a GATE-prepared mechanical engineer already owns, and what this chapter calls it.</caption>
+      <thead><tr><th>What you already know</th><th>What this chapter calls it</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td>Little&rsquo;s law: WIP = throughput &times; lead time</td><td>Servers busy = requests per second &times; service time</td><td><b style="color:var(--bridge)">Identity.</b> Every sizing in file 05 is this. See &sect;01.</td></tr>
+        <tr><td>The utilisation cliff (Sheet 13 part 2 &sect;06)</td><td>Latency against load; the source&rsquo;s replica counts</td><td><b style="color:var(--bridge)">Identity.</b> The source sizes at \(\rho = 1\). See &sect;02.</td></tr>
+        <tr><td>Safety stock and the reorder point for Poisson demand</td><td>Spare servers, \(c = a + z\sqrt a\)</td><td><b style="color:var(--bridge)">Identity</b> for the count in service. See &sect;03.</td></tr>
+        <tr><td>A shared machine pool against dedicated machines</td><td>One queue for all servers against sticky routing</td><td><b style="color:var(--bridge)">Identity.</b> 19.6&times; less waiting at 10 servers. See &sect;04.</td></tr>
+        <tr><td>The RSS tolerance stack (Sheet 04 &sect;05)</td><td>Load spread on a hash ring with virtual nodes</td><td><b style="color:var(--bridge)">Identity.</b> Spread falls as \(1/\sqrt v\). See &sect;05.</td></tr>
+        <tr><td>The station that cannot be split (Sheet 13 part 2 &sect;16)</td><td>Writes on a replicated database</td><td><b style="color:var(--bridge)">Identity.</b> Amdahl with the write share. See &sect;06.</td></tr>
+        <tr><td>Series and parallel blocks (Sheet 05 &sect;03)</td><td>A request path through services; replicas</td><td><b style="color:var(--bridge)">Identity</b> while failures are independent. See &sect;&sect;07, 09.</td></tr>
+        <tr><td>2-out-of-3 voting</td><td>A majority quorum (Raft)</td><td><b style="color:var(--bridge)">Identity.</b> Even cluster sizes are worse. See &sect;08.</td></tr>
+        <tr><td>The &beta;-factor model of common-cause failure</td><td>Region outages, shared software, a bad deploy</td><td><b style="color:var(--bridge)">Same model;</b> for a software bug &beta; is near 1. See &sect;09.</td></tr>
+        <tr><td>A storage buffer between transfer-line stations</td><td>A message queue between services</td><td><b style="color:var(--bridge)">Identity</b> for throughput. <b style="color:var(--brk)">Breaks</b> for a user who is waiting. See &sect;10.</td></tr>
+        <tr><td>An autorecloser; a surge tank; breaking step on a bridge</td><td>A circuit breaker; a token bucket; retry jitter</td><td><b style="color:var(--bridge)">Same structure.</b> The tank is an exact mass balance. See &sect;11.</td></tr>
+        <tr><td>PERT&rsquo;s merge bias (Sheet 14 part 1 &sect;09)</td><td>Tail latency of a fan-out request</td><td><b style="color:var(--bridge)">Identity:</b> the maximum of \(n\) draws. See &sect;12.</td></tr>
+        <tr><td>The load-duration curve and load factor</td><td>Autoscaling</td><td><b style="color:var(--bridge)">Identity:</b> saving = 1 &minus; load factor. See &sect;13.</td></tr>
+        <tr><td>Base-load and peaking plants; the diversity factor</td><td>Reserved and on-demand capacity; a shared cluster</td><td><b style="color:var(--bridge)">Identity.</b> Same screening rule. See &sect;14.</td></tr>
+        <tr><td>A series system, \(\lambda = \sum \lambda_i\)</td><td>A synchronous training job on 16,384 GPUs</td><td><b style="color:var(--bridge)">Identity</b> for exponential lives. See &sect;15.</td></tr>
+        <tr><td>The economic order quantity</td><td>The checkpoint interval, \(\sqrt{2\delta M}\)</td><td><b style="color:var(--bridge)">Identity.</b> See &sect;16.</td></tr>
+        <tr><td>Acceptance sampling and the OC curve (Sheet 04 &sect;07)</td><td>The sample size of an A/B test</td><td><b style="color:var(--bridge)">Identity.</b> See &sect;19.</td></tr>
+        <tr><td>Gauge correlation; incoming inspection; feedback with a delay</td><td>Training&ndash;serving skew; data validation; retraining loops</td><td><b style="color:var(--bridge)">Same structure.</b> See &sect;19.</td></tr>
+        <tr><td>Order-of-magnitude estimation</td><td>Back-of-envelope sizing</td><td><b style="color:var(--bridge)">Same method.</b> The source&rsquo;s own estimates miss by 8&times; and 100&times;. See &sect;20.</td></tr>
+        <tr><td>&mdash;</td><td>Consensus, logical clocks, the CAP theorem</td><td><b style="color:var(--brk)">No counterpart.</b> Learn these cold. See &sect;08.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="plant">
+  <div class="col">
+    <div class="sechead"><span class="secnum">01</span><h2>A server is a machine, and Little&rsquo;s law sizes the shop</h2>
+      <a class="srcref" href="@F1@" target="_blank" rel="noopener">src 01. systems design fundamentals &#8599;</a>
+    </div>
+    <p>
+      File 01 opens with the client&ndash;server pattern: a client sends a request, a server
+      does the work and replies. A <b>stateless</b> server keeps nothing between requests, so
+      any server can take any request, and adding capacity means adding identical servers
+      behind a load balancer. A <b>stateful</b> server remembers a user&rsquo;s session, so
+      that user&rsquo;s requests must go back to the same machine. In shop-floor terms a
+      stateless pool is a group of identical machines that can each do any job, and session
+      affinity ties a job to one machine. &sect;04 shows what that tie costs.
+    </p>
+    <p>
+      The first sizing question for any such pool is how many machines are busy on average,
+      and Sheet 13 part 2 &sect;06 already gave the answer. Little&rsquo;s law says the
+      average number in a system equals the arrival rate times the average time each item
+      spends there:
+    </p>
+    <div class="mathbox">$$L = \lambda W$$</div>
+    <p>
+      Apply it to the time a request spends being served, and \(L\) is the average number of
+      requests in service at once. A replica that serves one request at a time is busy
+      exactly when it holds one, so \(L\) is also the number of replicas that would be busy
+      all the time. Queueing theory calls \(a = \lambda s\) the <b>offered load</b>, measured
+      in erlangs. Every sizing in the source&rsquo;s worked designs is this product
+      (<code>[Ch18 s01]</code>):
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>File 05&rsquo;s sizings, each the offered load \(a = \lambda s\).</caption>
+      <thead><tr><th>Service</th><th class="mono">&lambda;, per second</th><th class="mono">s, service time</th><th class="mono">a = &lambda;s</th><th>Source&rsquo;s count</th></tr></thead>
+      <tbody>
+        <tr><td>User-embedding model</td><td class="mono">10,000</td><td class="mono">5 ms</td><td class="mono">50</td><td>~50 replicas</td></tr>
+        <tr><td>ANN index search</td><td class="mono">10,000</td><td class="mono">2 ms</td><td class="mono">20</td><td>20 replicas</td></tr>
+        <tr><td>Ranking model</td><td class="mono">10,000</td><td class="mono">100 ms</td><td class="mono">1,000</td><td>~10 GPUs (&sect;02)</td></tr>
+        <tr><td>Text moderation</td><td class="mono">12,000</td><td class="mono">5 ms</td><td class="mono">60</td><td>~60</td></tr>
+        <tr><td>Image moderation</td><td class="mono">12,000</td><td class="mono">20 ms</td><td class="mono">240</td><td>~240</td></tr>
+        <tr><td>Hash matching</td><td class="mono">12,000</td><td class="mono">1 ms</td><td class="mono">12</td><td>~12</td></tr>
+        <tr><td>Ad click prediction</td><td class="mono">100,000</td><td class="mono">10 ms</td><td class="mono">1,000</td><td>(not sized)</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      The moderation rate is the source&rsquo;s one billion posts a day divided by 86,400
+      seconds, which is 11,574 a second; it rounds to 12,000. Little&rsquo;s law assumes
+      nothing about distributions or scheduling, so a simulation of 50 servers with Poisson
+      arrivals and fixed service times confirms it to the third figure: the time-average
+      number in the system is 40.27 and \(\lambda W\) is 40.28 (<code>[Ch18 s01]</code>).
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: work in progress equals throughput times lead time</div>
+      <p style="margin-bottom:0">
+        A shop that starts 12 jobs an hour, each spending 5 hours on the floor, carries 60 jobs
+        of WIP. A plant that receives 12,000 posts a second, each spending 5 ms in a text
+        classifier, keeps 60 classifiers busy. Sheet 17 &sect;14 used the same law on one
+        server and found its batch size; here it sizes every station in a plant. The law
+        holds for averages, and it is silent about two things a plant engineer always asks
+        next: how much the count varies, and how long items wait. Those are the next two
+        sections.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="cliff">
+  <div class="col">
+    <div class="sechead"><span class="secnum">02</span><h2>Sized to the cliff</h2>
+      <a class="srcref" href="@F5@" target="_blank" rel="noopener">src 05. ML design examples &#8599;</a>
+    </div>
+    <p>
+      The offered load is the number of servers that would be busy <em>all</em> the time.
+      Provide exactly that many and utilisation \(\rho = a/c\) is 1. Sheet 13 part 2 &sect;06
+      showed what happens to one server as \(\rho\) approaches 1: the queue grows as
+      \(\rho/(1-\rho)\), without limit. A pool of \(c\) servers fed by one queue, with Poisson
+      arrivals and exponential service times, is the M/M/\(c\) queue. The probability that an
+      arriving request finds every server busy is the Erlang C formula, and the mean wait
+      follows from it:
+    </p>
+    <div class="mathbox">$$P_{\text{wait}} = C(c,a) = \frac{\dfrac{a^c}{c!}\,\dfrac{c}{c-a}}{\displaystyle\sum_{k=0}^{c-1}\frac{a^k}{k!} + \frac{a^c}{c!}\,\frac{c}{c-a}}, \qquad W_q = \frac{C(c,a)\;s}{c-a}$$</div>
+    <p>
+      For the source&rsquo;s user-embedding service, \(\lambda\) = 10,000 per second and
+      \(s\) = 5 ms, so \(a = 50\) (<code>[Ch18 s02]</code>):
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Replicas for 10,000 requests/s at 5 ms. p99 is the response time 99% of requests beat.</caption>
+      <thead><tr><th class="mono">Replicas c</th><th class="mono">&rho;</th><th class="mono">P(wait)</th><th class="mono">Mean wait</th><th class="mono">p99 response</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">50 (source)</td><td class="mono">1.000</td><td class="mono">1</td><td class="mono">unbounded</td><td class="mono">unbounded</td></tr>
+        <tr><td class="mono">51</td><td class="mono">0.980</td><td class="mono">0.840</td><td class="mono">4.20 ms</td><td class="mono">32.3 ms</td></tr>
+        <tr><td class="mono">52</td><td class="mono">0.962</td><td class="mono">0.700</td><td class="mono">1.75 ms</td><td class="mono">25.7 ms</td></tr>
+        <tr><td class="mono">55</td><td class="mono">0.909</td><td class="mono">0.385</td><td class="mono">0.385 ms</td><td class="mono">23.5 ms</td></tr>
+        <tr><td class="mono">58</td><td class="mono">0.862</td><td class="mono">0.194</td><td class="mono">0.122 ms</td><td class="mono">23.2 ms</td></tr>
+        <tr><td class="mono">60</td><td class="mono">0.833</td><td class="mono">0.117</td><td class="mono">0.059 ms</td><td class="mono">23.1 ms</td></tr>
+        <tr><td class="mono">65</td><td class="mono">0.769</td><td class="mono">0.027</td><td class="mono">0.009 ms</td><td class="mono">23.0 ms</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      At the source&rsquo;s 50 the queue has no steady state at all. It behaves like a random
+      walk with nothing pulling it back to zero, and its average grows with the length of
+      the run. The fifty-first replica brings the mean wait down to 4.2 ms; the fifty-fifth,
+      to 0.39 ms. The p99 column barely moves after 55 because an exponential service time
+      on its own has a p99 of \(s\ln 100\) = 23.0 ms; queueing adds 9.3 ms of that at 51
+      replicas and 0.46 ms at 55. Real model servers have steadier service times than the
+      exponential, which helps: for one server, fixed service times halve the mean wait
+      (the Pollaczek&ndash;Khinchine formula gives 4.5 service times at \(\rho = 0.9\),
+      against 9.0). No service distribution rescues \(\rho = 1\).
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>The source computed the first number and stopped</div>
+      <p style="margin-bottom:0">
+        &ldquo;At 10K QPS, need ~50 model replicas to handle the load&rdquo; is the offered
+        load, which is the right place to start, and it is the load at which a queue never
+        empties. The same is true of every count in the table in &sect;01: the 20 ANN replicas
+        (each &ldquo;handles ~500 QPS&rdquo;, which is one search at a time at 2 ms, busy
+        100% of the time) and the 60, 240 and 12 moderation servers. The moderation section
+        adds &ldquo;plus redundancy&rdquo;, which points the right way. No plant engineer
+        loads a line to 100% of its rated capacity, for the reason in Sheet 13 part 2 &sect;06.
+        &sect;03 says how much to add.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>1,000 GPU-seconds per second is 1,000 GPUs</div>
+      <p style="margin-bottom:0">
+        The ranking stage scores 1,000 candidates at about 0.1 ms each, 100 ms a request.
+        The source writes &ldquo;At 10K QPS, need 1000 GPU-seconds per second &rarr; ~10 A10G
+        GPUs for ranking alone&rdquo;. A GPU-second per second is one GPU kept busy, so the
+        sentence&rsquo;s own arithmetic says 1,000 GPUs. Ten GPUs can do it only if each one
+        holds 100 requests (100,000 candidates) in flight at once, which by Little&rsquo;s law
+        is what &ldquo;100 ms per request on 10 GPUs at 10,000 a second&rdquo; requires. That is
+        batching, which Sheet 17 &sect;14 shows a GPU does well; the 0.1 ms per candidate must
+        then be time per candidate at that batch, not time for one candidate alone. At the
+        source&rsquo;s own $1.00 an hour for an A10G, the difference is $7,300 a month against
+        $730,000 (<code>[Ch18 s02]</code>).
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">How many replicas?</div><div class="lab-tag">Predict, then add servers</div></div>
+    <div class="lab-body">
+    <div class="predict">
+      <div class="predict-h">Commit before you drag</div>
+      <p>
+        The source provisions 50 replicas for 10,000 requests a second at 5 ms each. On
+        average, how long does a request wait for a free replica?
+      </p>
+      <div class="opts">
+        <button class="pbtn" data-p1="a" type="button">No wait: capacity matches demand</button>
+        <button class="pbtn" data-p1="b" type="button">About 5 ms, one service time</button>
+        <button class="pbtn" data-p1="c" type="button">About 0.4 ms</button>
+        <button class="pbtn" data-p1="d" type="button">The wait keeps growing</button>
+      </div>
+      <div class="pverdict" id="pv1"></div>
+    </div>
+    <svg class="stage" id="qS" viewBox="0 0 560 330" role="img"
+         aria-label="Top: the Poisson distribution of how many requests want service at once, with the replica count marked. Bottom: the probability of waiting against the replica count.">
+      <g id="qTop"></g><g id="qBot"></g>
+    </svg>
+    <div class="ctl"><label for="qL">Requests/s</label><input type="range" id="qL" min="1000" max="20000" step="500" value="10000"><span class="ro-v" id="qLv">10,000</span></div>
+    <div class="ctl"><label for="qSv">Service time, ms</label><input type="range" id="qSv" min="1" max="20" step="0.5" value="5"><span class="ro-v" id="qSvv">5.0</span></div>
+    <div class="ctl"><label for="qC">Replicas <span class="gk">c</span></label><input type="range" id="qC" min="2" max="400" step="1" value="50"><span class="ro-v" id="qCv">50</span></div>
+    <div class="ctl">
+      <button class="btn" data-qm="pool" type="button">One shared queue</button>
+      <button class="btn" data-qm="split" type="button">Random routing</button>
+      <button class="btn" id="qRule" type="button">Square-root rule</button>
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Offered load<br><span class="gk">a = &lambda;s</span></div><div class="ro-v" id="qA">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Utilisation<br><span class="gk">&rho; = a/c</span></div><div class="ro-v" id="qR">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">P(wait),<br>Erlang C</div><div class="ro-v a" id="qP">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Mean wait,<br>formula</div><div class="ro-v a" id="qW">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Mean wait,<br>simulated</div><div class="ro-v b" id="qWs">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">p99 response,<br>formula</div><div class="ro-v" id="q99">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Square-root rule<br><span class="gk">a + &radic;a</span></div><div class="ro-v c" id="qQ">&mdash;</div></div>
+    </div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    The top panel is the Poisson distribution of how many requests would be in service at
+    once if servers were unlimited (&sect;03); the orange line is your replica count, and
+    the shaded bars beyond it are the moments when requests must queue. The bottom panel is
+    the probability of waiting against the number of replicas, with your setting marked. At
+    the source&rsquo;s 50 the line sits on the mean of the distribution, half the bars lie
+    beyond it, and the formula&rsquo;s wait is unbounded; the simulation of 40,000 requests
+    shows its average still rising, which answers the prediction. Drag to 55 and the wait
+    falls to 0.39 ms. <b>Random routing</b> gives each replica its own queue, which is what
+    sticky routing does (&sect;04): at 55 replicas the wait becomes 50 ms. <b>Square-root
+    rule</b> sets \(c = \lceil a + \sqrt a\,\rceil\).
+  </div>
+</section>
+
+<section id="safety">
+  <div class="col">
+    <div class="sechead"><span class="secnum">03</span><h2>Spare capacity is safety stock</h2>
+      <span class="srcref nolink" title="Added material, not in the source chapter">beyond the chapter</span>
+    </div>
+    <p>
+      How many to add? Start from a fact that needs no queueing theory. Let requests arrive
+      as a Poisson stream at rate \(\lambda\), give each an independent service time \(S\)
+      from any distribution with mean \(s\), and pretend servers are unlimited. A request
+      that arrived \(t\) seconds ago is still in service with probability \(P(S > t)\).
+      Thinning a Poisson stream by a probability leaves a Poisson count, so the number in
+      service now is Poisson with mean
+    </p>
+    <div class="mathbox">$$\lambda\int_0^\infty P(S>t)\,dt \;=\; \lambda s \;=\; a$$</div>
+    <p>
+      whatever the shape of the service-time distribution. A simulation with fixed service
+      times gives a mean of 50.20 and a variance of 48.38; one with log-normal service times
+      gives 50.11 and 52.07 (<code>[Ch18 s03]</code>). Both are Poisson with mean 50, whose
+      variance equals its mean. So the count of requests wanting service has a standard
+      deviation of \(\sqrt a\), and a pool sized at the mean plus \(z\) standard deviations
+      is
+    </p>
+    <div class="mathbox">$$c = a + z\sqrt{a}$$</div>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: the reorder point of a Poisson-demand item</div>
+      <p>
+        An item reordered at a fixed lead time is reordered at the mean lead-time demand plus
+        safety stock, \(\text{ROP} = \mu + z\sigma\). For Poisson demand \(\sigma = \sqrt\mu\),
+        so \(\text{ROP} = \mu + z\sqrt\mu\): for \(\mu = 50\) and a 95% service level
+        (\(z = 1.645\)) it is 61.6, and the exact Poisson chance of demand above 62 is 4.2%
+        (<code>[Ch18 s03]</code>). Replace stock on hand with servers on hand and lead-time
+        demand with requests in service, and the formula does not change.
+      </p>
+      <p style="margin-bottom:0">
+        The service level you learned to choose is the same choice here. Halfin and Whitt
+        showed (reported) that if \(c = a + \beta\sqrt a\), the chance a request waits settles
+        to a fixed value as the plant grows, about 0.223 at \(\beta = 1\). Computed with
+        Erlang C (<code>[Ch18 s03]</code>):
+      </p>
+    </div>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Square-root staffing with \(\beta = 1\). The chance of waiting stays near 0.2; utilisation climbs.</caption>
+      <thead><tr><th class="mono">Offered load a</th><th class="mono">Servers c</th><th class="mono">Utilisation</th><th class="mono">P(wait)</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">5</td><td class="mono">8</td><td class="mono">62.5%</td><td class="mono">0.167</td></tr>
+        <tr><td class="mono">50</td><td class="mono">58</td><td class="mono">86.2%</td><td class="mono">0.194</td></tr>
+        <tr><td class="mono">500</td><td class="mono">523</td><td class="mono">95.6%</td><td class="mono">0.218</td></tr>
+        <tr><td class="mono">5,000</td><td class="mono">5,071</td><td class="mono">98.6%</td><td class="mono">0.224</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      The margin grows as \(\sqrt a\) while the load grows as \(a\), so the fraction held in
+      reserve falls as \(1/\sqrt a\). A cell of five machines at the same delay must run at
+      62%; a fleet of five thousand can run at 99%. That is why a fixed utilisation target is
+      the wrong rule for both: 85% wastes capacity in a large plant and starves a small one.
+      Risk pooling in inventory is the same fact seen from the stores: consolidating \(n\)
+      warehouses cuts total safety stock from \(nz\sigma\) to \(z\sigma\sqrt n\).
+    </p>
+    <h3>Sheet 17&rsquo;s server, with the spread put back</h3>
+    <p>
+      Sheet 17 &sect;14 found that a continuous-batching server settles at the batch
+      \(b = \Lambda t_w/(1-\rho)\), its minimum lot, and that each output token then takes
+      \(t_w/(1-\rho)\). That batch is a count of requests in service, so it fluctuates. Its
+      average follows Little&rsquo;s law (simulated 56.7 against 56.3 at 1,800 tokens/s), but
+      its spread is wider than Poisson, because a large batch makes every step slower, which
+      keeps everyone in the batch longer. Measured, the variance-to-mean ratio tracks the same
+      factor Sheet 17 found in the time per token (<code>[Ch18 s03]</code>):
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Sheet 17&rsquo;s server (\(t_w\) = 20 ms, \(t_{kv}\) = 0.2 ms, 300-token requests), uncapped, six runs of 120,000 steps per load.</caption>
+      <thead><tr><th class="mono">Demand, tok/s</th><th class="mono">&rho; = &Lambda;t<sub>kv</sub></th><th class="mono">Variance / mean, measured</th><th class="mono">1/(1&minus;&rho;)</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">1,000</td><td class="mono">0.20</td><td class="mono">1.29</td><td class="mono">1.25</td></tr>
+        <tr><td class="mono">1,800</td><td class="mono">0.36</td><td class="mono">1.54</td><td class="mono">1.56</td></tr>
+        <tr><td class="mono">3,000</td><td class="mono">0.60</td><td class="mono">2.39</td><td class="mono">2.50</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      The agreement is empirical, within a few per cent and slightly below the factor at high
+      load. It matters because Sheet 17&rsquo;s server has a hard memory cap of 100 sequences,
+      and its nameplate capacity of 2,500 tokens/s is the demand that puts the <em>average</em>
+      batch at that cap. Simulated without the cap, the batch would exceed 100 sequences on
+      0.5% of steps at 2,000 tokens/s, 0.9% at 2,100, 3.6% at 2,200, 10% at 2,300 and 26% at
+      2,400. The cap is a reorder point, and the safety-stock rule with the measured spread,
+      \(\bar b + 2.33\sqrt{\bar b/(1-\rho)} \le 100\), gives a planning capacity of 2,121
+      tokens/s per server, which the simulation brackets (<code>[Ch18 s03]</code>). &sect;21
+      plans a fleet with it.
+    </p>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks</div>
+      <p>
+        The Poisson count needs Poisson arrivals. Real traffic is burstier: retries after an
+        outage, a link shared at once, a batch job hitting an online service. Its variance
+        exceeds its mean, and \(\sqrt a\) understates the margin. Lumpy demand does the same
+        to safety stock, and the fix is the same: use the measured standard deviation, not
+        the Poisson one.
+      </p>
+      <p style="margin-bottom:0">
+        A server is also not a unit of stock. An idle server costs its full hourly rate, and a
+        new one takes minutes to start and load its weights, which the source puts at about
+        2.3 minutes for 140 GB at 1 GB/s (&sect;14). That start-up time is the replenishment
+        lead time, and it is why the margin must cover the demand that can arrive while a
+        replacement is starting.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="pooling">
+  <div class="col">
+    <div class="sechead"><span class="secnum">04</span><h2>One queue or many</h2>
+      <a class="srcref" href="@F1@" target="_blank" rel="noopener">src 01. systems design fundamentals &#8599;</a>
+    </div>
+    <p>
+      A load balancer decides which server gets each request. If it picks at random, or by a
+      hash of the user, each server receives its own Poisson stream and has its own queue: \(c\)
+      separate M/M/1 queues. If idle servers take the next request from one shared line, the
+      pool is a single M/M/\(c\) queue. Same servers, same load, very different waits
+      (<code>[Ch18 s04]</code>):
+    </p>
+  </div>
+  <div class="tw col">
+    <table>
+      <caption>Mean wait at 80% utilisation, in service times.</caption>
+      <thead><tr><th class="mono">Servers</th><th class="mono">Separate queues</th><th class="mono">One shared queue</th><th class="mono">Ratio</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">2</td><td class="mono">4.00</td><td class="mono">1.78</td><td class="mono">2.2&times;</td></tr>
+        <tr><td class="mono">10</td><td class="mono">4.00</td><td class="mono">0.205</td><td class="mono">19.6&times;</td></tr>
+        <tr><td class="mono">50</td><td class="mono">4.00</td><td class="mono">0.0087</td><td class="mono">460&times;</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="col">
+    <p>
+      The source lists four balancing rules. Simulated on 10 servers at 80% utilisation, the
+      mean waits are 4.15 service times for random choice, 1.98 for round robin, 0.39 for
+      least connections and 0.23 for one shared queue (<code>[Ch18 s04]</code>). Round robin
+      halves the random wait because it spaces arrivals evenly at each server. Least
+      connections, which sends each request to the server holding the fewest, recovers most
+      of the pool, and it is the rule the source recommends when request lengths vary.
+    </p>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: a common queue in front of identical machines</div>
+      <p style="margin-bottom:0">
+        A group of identical machines fed from one queue keeps every machine working while
+        any job waits. Assign jobs to machines on arrival and one machine can sit idle while
+        another has a backlog. The numbers above are Erlang C against M/M/1, and the shop
+        version is the same pair of formulas. The gap widens with the number of machines for
+        the reason in &sect;03: one pool needs a margin of \(\sqrt a\), while \(c\) separate
+        machines each need their own.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks: some requests can only go to one machine</div>
+      <p style="margin-bottom:0">
+        Pooling assumes any server can take any request. That holds for stateless replicas
+        that load the same weights. It fails once a server holds something the request needs:
+        a user&rsquo;s session, a shard of the data, or a cached prompt prefix (Sheet 17
+        &sect;16). The source recommends consistent hashing (&sect;05) for exactly those cases,
+        and that is a deliberate choice of dedicated machines. The cache hits it buys must pay
+        for the pooling it gives up.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="hashing">
+  <div class="col">
+    <div class="sechead"><span class="secnum">05</span><h2>The ring, and a tolerance stack in it</h2>
+      <a class="srcref" href="@F1@" target="_blank" rel="noopener">src 01. systems design fundamentals &#8599;</a>
+    </div>
+    <p>
+      To spread keys (users, cached items, database rows) over \(n\) machines, the simplest
+      rule is <code>shard = hash(key) % n</code>. Its weakness appears when a machine is
+      added: a key stays put only if its hash leaves the same remainder for \(n\) and
+      \(n+1\), which happens for about one key in \(n+1\). So adding a fourth machine to three
+      moves 75% of the keys, and adding the hundred-and-first moves 99% (measured 0.752,
+      0.909 and 0.990 for \(n\) = 3, 10, 100, <code>[Ch18 s05]</code>). For a cache that is a
+      near-total flush.
+    </p>
+    <p>
+      <b>Consistent hashing</b> puts the machines at points on a circle and sends each key to
+      the first machine clockwise from the key&rsquo;s own point. A new machine takes over
+      only the arc just before it, so the keys that move are the ones that now belong to it:
+      on average \(1/(n+1)\) of them, and none move between old machines. Measured on one ring
+      of ten machines, adding an eleventh moved 9.8% of keys against 9.1% predicted, all of
+      them to the newcomer (<code>[Ch18 s05]</code>). This is the source&rsquo;s &ldquo;only
+      ~1/n of keys need to move&rdquo;, and it holds.
+    </p>
+    <p>
+      Balance is the cost. With one point per machine, the arcs are the gaps between \(n\)
+      random points, and the longest gap is on average \(H_n = 1 + \tfrac12 + \dots +
+      \tfrac1n\) times the fair share: 2.93 for ten machines, measured 2.91. One machine
+      carries three times its share. The fix is <b>virtual nodes</b>: give each machine \(v\)
+      points, so its share is the sum of \(v\) arcs. The spread of that sum is exactly
+      computable, and it matched 400 random rings at every \(v\) tried
+      (<code>[Ch18 s05]</code>):
+    </p>
+    <div class="mathbox">$$\frac{\sigma_{\text{share}}}{\text{fair share}} = \sqrt{\frac{n-1}{nv+1}} \;\approx\; \frac{1}{\sqrt v}$$</div>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: a tolerance stack of \(v\) parts</div>
+      <p style="margin-bottom:0">
+        Sheet 04 &sect;05 showed that \(v\) independent parts stacked end to end have a
+        tolerance that grows as \(\sqrt v\) while the nominal length grows as \(v\), so the
+        relative spread falls as \(1/\sqrt v\): the RSS stack. A machine&rsquo;s share of the
+        ring is \(v\) arcs stacked end to end. Each arc&rsquo;s spread equals its own mean
+        (a random gap is close to exponential), so the relative spread of the sum is
+        \(1/\sqrt v\): 10% at 100 virtual nodes. The exact formula above has the factor
+        \(\sqrt{(n-1)/n}\) because the arcs must add up to the whole circle, a constraint a
+        free stack does not have. Sheet 07 &sect;08&rsquo;s mixture-of-experts load
+        balancing is the same problem of the most loaded of \(n\) bins.
+      </p>
+    </div>
+    <div class="note brk">
+      <div class="note-h"><span class="ic">&#33;</span>Where it breaks: the ring balances keys, not load</div>
+      <p style="margin-bottom:0">
+        Virtual nodes even out how many <em>keys</em> each machine owns. They do nothing for a
+        key that is far busier than the rest: a celebrity&rsquo;s profile, or one system prompt
+        used by every request of a popular product. That key hashes to one point and lands on
+        one machine whatever \(v\) is. Hot keys need copies on several machines, which is the
+        replication of &sect;06, not hashing.
+      </p>
+    </div>
+  </div>
+
+  <div class="lab col">
+    <div class="lab-h"><div class="lab-t">The hash ring</div><div class="lab-tag">Predict, then add a server</div></div>
+    <div class="lab-body">
+    <div class="predict">
+      <div class="predict-h">Commit before you add</div>
+      <p>
+        Four cache servers, one point each on the ring. You add a fifth. What fraction of the
+        cached keys must move to a different server?
+      </p>
+      <div class="opts">
+        <button class="pbtn" data-p2="a" type="button">About 80%, as with hash mod n</button>
+        <button class="pbtn" data-p2="b" type="button">About 20%</button>
+        <button class="pbtn" data-p2="c" type="button">None</button>
+        <button class="pbtn" data-p2="d" type="button">All of them</button>
+      </div>
+      <div class="pverdict" id="pv2"></div>
+    </div>
+    <svg class="stage" id="hS" viewBox="0 0 560 300" role="img"
+         aria-label="Left: a circle divided into arcs, each coloured by the server that owns it. Right: each server's share of the keys against the fair share.">
+      <g id="hRing"></g><g id="hBar"></g>
+    </svg>
+    <div class="ctl">
+      <button class="btn" data-hn="2" type="button">2 servers</button>
+      <button class="btn" data-hn="3" type="button">3 servers</button>
+      <button class="btn" data-hn="4" type="button">4 servers</button>
+      <button class="btn" id="hAdd" type="button">Add a server</button>
+      <button class="btn" id="hNew" type="button">New placement</button>
+    </div>
+    <div class="ctl"><label for="hV">Points per server <span class="gk">v</span></label><input type="range" id="hV" min="0" max="7" step="1" value="0"><span class="ro-v" id="hVv">1</span></div>
+    <div class="readout">
+      <div class="ro"><div class="ro-k">Keys moved by adding,<br>this ring</div><div class="ro-v b" id="hM">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Predicted<br><span class="gk">1/(n+1)</span></div><div class="ro-v" id="hMp">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Hash mod <span class="gk">n</span><br>would move</div><div class="ro-v" id="hMod">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Largest share,<br>this ring</div><div class="ro-v" id="hX">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Spread, 1,000<br>rings measured</div><div class="ro-v a" id="hC">&mdash;</div></div>
+      <div class="ro"><div class="ro-k">Spread,<br>formula</div><div class="ro-v a" id="hCp">&mdash;</div></div>
+    </div>
+    </div>
+  </div>
+  <div class="lab-foot col">
+    Each arc is coloured by the server that owns it; the bars on the right are the
+    servers&rsquo; shares of the circle, with the fair share dashed. <b>Add a server</b> drops
+    a fifth colour onto the ring: it takes over the arcs just before its points and nothing
+    else changes. Measured over 20,000 keys, the share that moves is close to \(1/(n+1)\),
+    20% for four servers, which answers the prediction; hash mod \(n\) would have moved
+    \(n/(n+1)\), 80%. The spread readouts are the standard deviation of a server&rsquo;s share
+    divided by the fair share, averaged over 1,000 random rings and set against
+    \(\sqrt{(n-1)/(nv+1)}\). Slide the points per server up and it falls as \(1/\sqrt v\),
+    the tolerance stack of the text.
+  </div>
+</section>
+
+<section id="shards">
+  <div class="col">
+    <div class="sechead"><span class="secnum">06</span><h2>Shards, replicas, and Amdahl&rsquo;s law again</h2>
+      <a class="srcref" href="@F3@" target="_blank" rel="noopener">src 03. large scale infrastructure &#8599;</a>
+    </div>
+    <p>
+      <b>Sharding</b> splits data across machines; <b>replication</b> copies it. File 01
+      gives two ways to shard. Hash sharding spreads keys evenly and makes range queries
+      impossible; range sharding keeps ranges together and creates hot spots wherever keys
+      cluster. Both are the storekeeper&rsquo;s choice from Sheet 14 part 1 &sect;13 between
+      bins chosen by a scrambled part number and a ledger in part-number order.
+    </p>
+    <p>
+      Sheet 12 promised that partitioning a graph is a systems problem. Here is why. Shard
+      the nodes of a graph by hash over \(n\) machines and an edge stays on one machine only
+      if both its ends land there, which happens with probability \(1/n\). So hashing over 8
+      machines cuts 87.5% of edges (measured 87.6%, <code>[Ch18 s06]</code>), and every cut
+      edge is a network hop each time a graph network passes a message along it. A partition
+      that follows the graph, such as the Fiedler-vector split of Sheet 12 &sect;08, cuts far
+      fewer.
+    </p>
+    <h3>Read replicas</h3>
+    <p>
+      File 03 says read replicas scale read throughput &ldquo;linearly with the number of
+      replicas&rdquo;, because most workloads are 95% reads. Count the work. Give \(N\)
+      machines a capacity of \(C\) operations each, and let a fraction \(w\) of operations be
+      writes. Reads are shared among the \(N\) machines, but every write must be applied on
+      every copy, or the copies drift apart. A total throughput \(X\) is feasible when each
+      machine&rsquo;s load fits:
+    </p>
+    <div class="mathbox">$$\frac{(1-w)X}{N} + wX \;\le\; C \quad\Longrightarrow\quad \frac{X}{C} \;\le\; \frac{N}{(1-w) + Nw} \;=\; \frac{1}{w + \dfrac{1-w}{N}}$$</div>
+    <div class="note bridge">
+      <div class="note-h"><span class="ic">&check;</span>Identity: the write share is Amdahl&rsquo;s serial fraction</div>
+      <p style="margin-bottom:0">
+        The right-hand side is Amdahl&rsquo;s law from Sheet 13 part 2 &sect;16 with serial
+        fraction \(w\), to \(5\times10^{-14}\) over 600 cases (<code>[Ch18 s06]</code>). Writes
+        are the station that cannot be split: every replica must do all of them. At 5% writes
+        10 replicas give 6.90&times;, 20 give 10.3&times;, and no number gives more than
+        20&times;. If replicas apply writes more cheaply than the primary does, the ceiling
+        stays, because the primary takes every write and saturates at \(X = C/w\). For a fixed
+        write <em>rate</em>, as opposed to a fixed mix, each replica does add the same read
+        capacity, which is presumably what &ldquo;linearly&rdquo; meant; but traffic usually
+        grows with its mix intact.
+      </p>
+    </div>
+    <h3>An index is an order quantity</h3>
+    <p>
+      File 03 says an IVF vector index searches in \(O(n/k)\) per query: split \(n\) vectors
+      into \(k\) clusters and search only the nearest. Finding the nearest cluster costs \(k\)
+      comparisons as well, so the cost is \(k + n/k\), lowest at \(k = \sqrt n\). For 100
+      million vectors that is 10,000 clusters and 20,000 distance computations against 100
+      million for a flat search, 5,000 times fewer (<code>[Ch18 s06]</code>). It is the shape
+      of Sheet 13 part 2 &sect;05&rsquo;s order-quantity cost, a term rising with \(k\) against
+      one falling with it, and it has the same flat bottom: twice or half the best \(k\)
+      costs only 25% more.
+    </p>
+  </div>
+</section>
