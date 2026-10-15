@@ -453,6 +453,14 @@ VaR's failure; the exact (3/8)^n plateau; rate coding = frequency counter.
 - **A stray copy of Sheet 18 exists** at https://claude.ai/artifact/FrjRrsZ4e8egRpAAQCL7nf (no
   figures), created by a failed republish attempt. The real one is Swz1BNJbZVNzbMcUyZVtdh. Deleting
   the stray is the user's call.
+- **Final sweep (after Sheet 16 part 3), all 24 pages through `tools/probe.js` at five widths:** 20 clean;
+  no page anywhere has horizontal scroll, a JS error, a broken image or unrendered maths. Four flags,
+  all inspected by screenshot and all cosmetic: a readout *value* wider than its cell in Sheet 06
+  ("UNDERDAMPED" badge, 5 px), Sheet 10 ("EXTRAPOLATING", 17 px at 390) and Sheet 13 part 3
+  ("(dimensionless)", into an empty neighbouring cell) — fully legible, overlapping nothing; and Sheet
+  07's `sErr` showing "—", which is that lab's intended state after Reset (no samples drawn yet), not
+  a lab that failed to run. The older probe only checked `.ro-k` for clipping, which is why these
+  were never flagged. Fix, if wanted: `.ro-v{overflow-wrap:anywhere}` and republish those three.
 - **Sheet 13 part 2 §10 overstates containers.** It says a container "runs identically
   everywhere"; Sheet 15 §19 qualifies this, because the kernel and the GPU driver belong to the
   host, not the image. Sheet 15 says so in the open; the Sheet 13 sentence itself is unchanged,
