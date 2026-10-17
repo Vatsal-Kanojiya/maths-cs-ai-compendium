@@ -1,0 +1,45 @@
+<svg width="740" height="300" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <defs>
+    <marker id="rd-arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="none" stroke="#555" stroke-width="1"/>
+    </marker>
+  </defs>
+  <text x="370" y="22" fill="#333" font-size="14" font-weight="bold" text-anchor="middle">Multi-Step Forecasting Strategies</text>
+
+  <!-- Recursive -->
+  <text x="185" y="52" fill="#333" font-size="12" font-weight="bold" text-anchor="middle">Recursive: one model, fed its own outputs</text>
+  <g font-size="11" text-anchor="middle">
+    <rect x="20" y="70" width="40" height="26" rx="3" fill="#3498db" opacity="0.8"/><text x="40" y="87" fill="white">y₁</text>
+    <rect x="64" y="70" width="40" height="26" rx="3" fill="#3498db" opacity="0.8"/><text x="84" y="87" fill="white">y₂</text>
+    <rect x="108" y="70" width="40" height="26" rx="3" fill="#3498db" opacity="0.8"/><text x="128" y="87" fill="white">y₃</text>
+    <rect x="160" y="70" width="40" height="26" rx="3" fill="#f39c12"/><text x="180" y="87" fill="white">ŷ₄</text>
+    <rect x="204" y="70" width="40" height="26" rx="3" fill="#f39c12"/><text x="224" y="87" fill="white">ŷ₅</text>
+    <rect x="248" y="70" width="40" height="26" rx="3" fill="#f39c12"/><text x="268" y="87" fill="white">ŷ₆</text>
+  </g>
+  <path d="M84,100 C110,130 160,130 178,100" fill="none" stroke="#555" stroke-width="1.1" marker-end="url(#rd-arrow)"/>
+  <path d="M128,100 C160,145 205,140 222,100" fill="none" stroke="#555" stroke-width="1.1" marker-end="url(#rd-arrow)"/>
+  <path d="M180,100 C205,150 250,150 266,100" fill="none" stroke="#e74c3c" stroke-width="1.3" marker-end="url(#rd-arrow)"/>
+  <text x="185" y="180" fill="#555" font-size="11" text-anchor="middle">Uses all recent lags, but errors compound:</text>
+  <text x="185" y="196" fill="#555" font-size="11" text-anchor="middle">later steps are predicted from predictions.</text>
+
+  <line x1="370" y1="45" x2="370" y2="230" stroke="#ddd"/>
+
+  <!-- Direct -->
+  <text x="555" y="52" fill="#333" font-size="12" font-weight="bold" text-anchor="middle">Direct: one model (or one output) per horizon</text>
+  <g font-size="11" text-anchor="middle">
+    <rect x="390" y="70" width="40" height="26" rx="3" fill="#3498db" opacity="0.8"/><text x="410" y="87" fill="white">y₁</text>
+    <rect x="434" y="70" width="40" height="26" rx="3" fill="#3498db" opacity="0.8"/><text x="454" y="87" fill="white">y₂</text>
+    <rect x="478" y="70" width="40" height="26" rx="3" fill="#3498db" opacity="0.8"/><text x="498" y="87" fill="white">y₃</text>
+    <rect x="530" y="70" width="40" height="26" rx="3" fill="#27ae60"/><text x="550" y="87" fill="white">ŷ₄</text>
+    <rect x="574" y="70" width="40" height="26" rx="3" fill="#27ae60"/><text x="594" y="87" fill="white">ŷ₅</text>
+    <rect x="618" y="70" width="40" height="26" rx="3" fill="#27ae60"/><text x="638" y="87" fill="white">ŷ₆</text>
+  </g>
+  <path d="M498,100 C515,120 530,120 548,100" fill="none" stroke="#555" stroke-width="1.1" marker-end="url(#rd-arrow)"/>
+  <path d="M498,100 C525,135 570,135 592,100" fill="none" stroke="#555" stroke-width="1.1" marker-end="url(#rd-arrow)"/>
+  <path d="M498,100 C535,155 610,155 636,100" fill="none" stroke="#555" stroke-width="1.1" marker-end="url(#rd-arrow)"/>
+  <text x="555" y="180" fill="#555" font-size="11" text-anchor="middle">No compounding, but the model for step h can</text>
+  <text x="555" y="196" fill="#555" font-size="11" text-anchor="middle">only use lags of h or more (what is known then).</text>
+
+  <text x="370" y="252" fill="#333" font-size="11" text-anchor="middle">Multi-output (seq2seq) models predict all horizons jointly from one input window, sharing parameters across steps.</text>
+  <text x="370" y="272" fill="#777" font-size="11" text-anchor="middle">Blue: observed history. Orange: recursive predictions reused as inputs. Green: direct predictions.</text>
+</svg>
