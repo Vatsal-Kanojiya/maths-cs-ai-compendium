@@ -1,0 +1,66 @@
+<svg width="760" height="360" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <defs>
+    <marker id="ll-arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="none" stroke="#555" stroke-width="1"/>
+    </marker>
+  </defs>
+  <text x="380" y="22" fill="#333" font-size="14" font-weight="bold" text-anchor="middle">Too Few Labels? Match the Tool to What You Do Have</text>
+
+  <rect x="290" y="42" width="180" height="40" rx="6" fill="#333" opacity="0.85"/>
+  <text x="380" y="67" fill="white" font-size="12" font-weight="bold" text-anchor="middle">a few labelled examples</text>
+
+  <g stroke="#555" stroke-width="1.2" fill="none">
+    <path d="M330,82 L95,128" marker-end="url(#ll-arrow)"/>
+    <path d="M350,82 L250,128" marker-end="url(#ll-arrow)"/>
+    <path d="M380,82 L380,128" marker-end="url(#ll-arrow)"/>
+    <path d="M410,82 L510,128" marker-end="url(#ll-arrow)"/>
+    <path d="M430,82 L665,128" marker-end="url(#ll-arrow)"/>
+  </g>
+
+  <g font-size="11" text-anchor="middle">
+    <!-- columns: x centres 95, 250, 380, 510, 665 -->
+    <rect x="20" y="132" width="150" height="40" rx="5" fill="#3498db" opacity="0.15" stroke="#3498db"/>
+    <text x="95" y="149" fill="#333" font-weight="bold">plenty of unlabelled</text>
+    <text x="95" y="164" fill="#333" font-weight="bold">data, same task</text>
+    <rect x="178" y="132" width="144" height="40" rx="5" fill="#e74c3c" opacity="0.15" stroke="#e74c3c"/>
+    <text x="250" y="149" fill="#333" font-weight="bold">budget to label</text>
+    <text x="250" y="164" fill="#333" font-weight="bold">a few hundred more</text>
+    <rect x="330" y="132" width="100" height="40" rx="5" fill="#f39c12" opacity="0.15" stroke="#f39c12"/>
+    <text x="380" y="149" fill="#333" font-weight="bold">domain rules</text>
+    <text x="380" y="164" fill="#333" font-weight="bold">or heuristics</text>
+    <rect x="438" y="132" width="144" height="40" rx="5" fill="#9b59b6" opacity="0.15" stroke="#9b59b6"/>
+    <text x="510" y="149" fill="#333" font-weight="bold">a related task or a</text>
+    <text x="510" y="164" fill="#333" font-weight="bold">pretrained model</text>
+    <rect x="590" y="132" width="150" height="40" rx="5" fill="#27ae60" opacity="0.15" stroke="#27ae60"/>
+    <text x="665" y="149" fill="#333" font-weight="bold">labels exist but</text>
+    <text x="665" y="164" fill="#333" font-weight="bold">are unreliable</text>
+
+    <text x="95" y="200" fill="#3498db" font-weight="bold">semi-supervised</text>
+    <text x="95" y="218" fill="#555">label propagation,</text>
+    <text x="95" y="233" fill="#555">pseudo-labels, FixMatch,</text>
+    <text x="95" y="248" fill="#555">self-supervised pretraining</text>
+
+    <text x="250" y="200" fill="#e74c3c" font-weight="bold">active learning</text>
+    <text x="250" y="218" fill="#555">uncertainty sampling,</text>
+    <text x="250" y="233" fill="#555">query by committee,</text>
+    <text x="250" y="248" fill="#555">diversity sampling</text>
+
+    <text x="380" y="200" fill="#f39c12" font-weight="bold">weak supervision</text>
+    <text x="380" y="218" fill="#555">labelling functions,</text>
+    <text x="380" y="233" fill="#555">label model,</text>
+    <text x="380" y="248" fill="#555">LLM annotators</text>
+
+    <text x="510" y="200" fill="#9b59b6" font-weight="bold">transfer and few-shot</text>
+    <text x="510" y="218" fill="#555">fine-tuning, linear probes,</text>
+    <text x="510" y="233" fill="#555">prototypes, meta-learning,</text>
+    <text x="510" y="248" fill="#555">in-context learning</text>
+
+    <text x="665" y="200" fill="#27ae60" font-weight="bold">noisy-label learning</text>
+    <text x="665" y="218" fill="#555">confident learning,</text>
+    <text x="665" y="233" fill="#555">loss correction,</text>
+    <text x="665" y="248" fill="#555">relabel what is flagged</text>
+  </g>
+
+  <text x="380" y="292" fill="#333" font-size="12" text-anchor="middle">They combine: pretrain on unlabelled data, label actively, bootstrap with weak rules,</text>
+  <text x="380" y="310" fill="#333" font-size="12" text-anchor="middle">clean the result, and fine-tune. A small, carefully labelled test set is still non-negotiable.</text>
+</svg>
