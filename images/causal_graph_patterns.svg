@@ -1,0 +1,50 @@
+<svg width="760" height="310" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <defs>
+    <marker id="dag-arrow" markerWidth="9" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <path d="M0,0 L9,3.5 L0,7 z" fill="#555"/>
+    </marker>
+  </defs>
+  <text x="380" y="22" fill="#333" font-size="14" font-weight="bold" text-anchor="middle">Three Building Blocks of Causal Graphs</text>
+
+  <!-- Fork / confounder -->
+  <g transform="translate(20,45)">
+    <rect width="230" height="200" rx="6" fill="#fafafa" stroke="#ddd"/>
+    <text x="115" y="22" fill="#333" font-size="13" font-weight="bold" text-anchor="middle">Fork (confounder)</text>
+    <circle cx="115" cy="62" r="22" fill="#f39c12"/><text x="115" y="67" fill="white" font-size="13" text-anchor="middle">Z</text>
+    <circle cx="50" cy="135" r="22" fill="#3498db"/><text x="50" y="140" fill="white" font-size="13" text-anchor="middle">X</text>
+    <circle cx="180" cy="135" r="22" fill="#27ae60"/><text x="180" y="140" fill="white" font-size="13" text-anchor="middle">Y</text>
+    <line x1="101" y1="79" x2="65" y2="117" stroke="#555" stroke-width="1.5" marker-end="url(#dag-arrow)"/>
+    <line x1="129" y1="79" x2="165" y2="117" stroke="#555" stroke-width="1.5" marker-end="url(#dag-arrow)"/>
+    <text x="115" y="178" fill="#555" font-size="11" text-anchor="middle">age → coffee, age → heart risk</text>
+    <text x="115" y="194" fill="#27ae60" font-size="11" font-weight="bold" text-anchor="middle">adjust for Z</text>
+  </g>
+
+  <!-- Chain / mediator -->
+  <g transform="translate(265,45)">
+    <rect width="230" height="200" rx="6" fill="#fafafa" stroke="#ddd"/>
+    <text x="115" y="22" fill="#333" font-size="13" font-weight="bold" text-anchor="middle">Chain (mediator)</text>
+    <circle cx="40" cy="100" r="22" fill="#3498db"/><text x="40" y="105" fill="white" font-size="13" text-anchor="middle">X</text>
+    <circle cx="115" cy="100" r="22" fill="#9b59b6"/><text x="115" y="105" fill="white" font-size="13" text-anchor="middle">M</text>
+    <circle cx="190" cy="100" r="22" fill="#27ae60"/><text x="190" y="105" fill="white" font-size="13" text-anchor="middle">Y</text>
+    <line x1="62" y1="100" x2="91" y2="100" stroke="#555" stroke-width="1.5" marker-end="url(#dag-arrow)"/>
+    <line x1="137" y1="100" x2="166" y2="100" stroke="#555" stroke-width="1.5" marker-end="url(#dag-arrow)"/>
+    <text x="115" y="178" fill="#555" font-size="11" text-anchor="middle">exercise → weight → blood pressure</text>
+    <text x="115" y="194" fill="#e74c3c" font-size="11" font-weight="bold" text-anchor="middle">do not adjust (for the total effect)</text>
+  </g>
+
+  <!-- Collider -->
+  <g transform="translate(510,45)">
+    <rect width="230" height="200" rx="6" fill="#fafafa" stroke="#ddd"/>
+    <text x="115" y="22" fill="#333" font-size="13" font-weight="bold" text-anchor="middle">Collider</text>
+    <circle cx="50" cy="62" r="22" fill="#3498db"/><text x="50" y="67" fill="white" font-size="13" text-anchor="middle">X</text>
+    <circle cx="180" cy="62" r="22" fill="#27ae60"/><text x="180" y="67" fill="white" font-size="13" text-anchor="middle">Y</text>
+    <circle cx="115" cy="135" r="22" fill="#e74c3c"/><text x="115" y="140" fill="white" font-size="13" text-anchor="middle">C</text>
+    <line x1="65" y1="79" x2="100" y2="117" stroke="#555" stroke-width="1.5" marker-end="url(#dag-arrow)"/>
+    <line x1="165" y1="79" x2="130" y2="117" stroke="#555" stroke-width="1.5" marker-end="url(#dag-arrow)"/>
+    <text x="115" y="178" fill="#555" font-size="11" text-anchor="middle">talent → hired ← looks</text>
+    <text x="115" y="194" fill="#e74c3c" font-size="11" font-weight="bold" text-anchor="middle">do not adjust or select on C</text>
+  </g>
+
+  <text x="380" y="272" fill="#333" font-size="12" text-anchor="middle">A fork creates a spurious association that adjustment removes. A chain carries part of the real effect.</text>
+  <text x="380" y="290" fill="#333" font-size="12" text-anchor="middle">A collider blocks association until you condition on it, which creates a spurious one.</text>
+</svg>
