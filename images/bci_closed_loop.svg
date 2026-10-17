@@ -1,0 +1,58 @@
+<svg width="780" height="300" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <defs>
+    <marker id="bci-arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="none" stroke="#555" stroke-width="1"/>
+    </marker>
+    <marker id="bci-arrow-o" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="none" stroke="#f39c12" stroke-width="1"/>
+    </marker>
+  </defs>
+  <text x="390" y="22" fill="#333" font-size="14" font-weight="bold" text-anchor="middle">A Closed-Loop Brain-Computer Interface</text>
+
+  <g font-size="11" text-anchor="middle">
+    <rect x="20" y="60" width="120" height="80" rx="8" fill="#9b59b6" opacity="0.15" stroke="#9b59b6" stroke-width="1.2"/>
+    <text x="80" y="85" fill="#333" font-weight="bold">Brain</text>
+    <text x="80" y="103" fill="#555">intention to move,</text>
+    <text x="80" y="118" fill="#555">speak or select</text>
+
+    <rect x="170" y="60" width="120" height="80" rx="8" fill="#3498db" opacity="0.15" stroke="#3498db" stroke-width="1.2"/>
+    <text x="230" y="85" fill="#333" font-weight="bold">Acquisition</text>
+    <text x="230" y="103" fill="#555">electrodes,</text>
+    <text x="230" y="118" fill="#555">amplify, digitise</text>
+
+    <rect x="320" y="60" width="120" height="80" rx="8" fill="#3498db" opacity="0.15" stroke="#3498db" stroke-width="1.2"/>
+    <text x="380" y="85" fill="#333" font-weight="bold">Processing</text>
+    <text x="380" y="103" fill="#555">filter, re-reference,</text>
+    <text x="380" y="118" fill="#555">remove artefacts</text>
+
+    <rect x="470" y="60" width="120" height="80" rx="8" fill="#3498db" opacity="0.15" stroke="#3498db" stroke-width="1.2"/>
+    <text x="530" y="85" fill="#333" font-weight="bold">Features</text>
+    <text x="530" y="103" fill="#555">spike counts,</text>
+    <text x="530" y="118" fill="#555">band power</text>
+
+    <rect x="620" y="60" width="140" height="80" rx="8" fill="#27ae60" opacity="0.15" stroke="#27ae60" stroke-width="1.2"/>
+    <text x="690" y="85" fill="#333" font-weight="bold">Decoder</text>
+    <text x="690" y="103" fill="#555">Kalman filter, RNN,</text>
+    <text x="690" y="118" fill="#555">classifier + language model</text>
+
+    <rect x="560" y="190" width="200" height="60" rx="8" fill="#ecf0f1" stroke="#95a5a6"/>
+    <text x="660" y="214" fill="#333" font-weight="bold">Output</text>
+    <text x="660" y="232" fill="#555">cursor, text, speech, robotic arm</text>
+  </g>
+
+  <g stroke="#555" stroke-width="1.2" fill="none">
+    <path d="M140,100 L166,100" marker-end="url(#bci-arrow)"/>
+    <path d="M290,100 L316,100" marker-end="url(#bci-arrow)"/>
+    <path d="M440,100 L466,100" marker-end="url(#bci-arrow)"/>
+    <path d="M590,100 L616,100" marker-end="url(#bci-arrow)"/>
+    <path d="M690,140 L690,186" marker-end="url(#bci-arrow)"/>
+  </g>
+  <!-- feedback -->
+  <g stroke="#f39c12" stroke-width="1.4" fill="none" stroke-dasharray="6,3">
+    <path d="M560,220 L80,220 L80,144" marker-end="url(#bci-arrow-o)"/>
+  </g>
+  <text x="320" y="212" fill="#f39c12" font-size="11" text-anchor="middle">feedback: vision, sound, or touch via stimulation</text>
+  <text x="320" y="238" fill="#555" font-size="11" text-anchor="middle">the user adapts to the decoder while the decoder adapts to the user</text>
+
+  <text x="390" y="285" fill="#333" font-size="11" text-anchor="middle">Calibration fits the decoder to recorded intentions; closing the loop lets the user correct errors in real time.</text>
+</svg>
