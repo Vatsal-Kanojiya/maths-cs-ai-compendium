@@ -162,6 +162,6 @@
 ### Chapter 20: Bleeding Edge AI
 - [Quantum Machine Learning](chapter 20 - bleeding edge AI/01. quantum machine learning.md): Qubits, superposition, entanglement, gates and circuits, Shor/Grover/HHL and dequantisation, NISQ and error correction, variational circuits and the parameter-shift rule, quantum kernels, data loading, barren plateaus, kernel concentration, where advantage stands
 - [Neuromorphic Computing](chapter 20 - bleeding edge AI/02. neuromorphic computing.md): LIF neurons and the f-I curve, rate/temporal/population coding, STDP, surrogate gradients and BPTT, ANN-to-SNN conversion, TrueNorth/Loihi/SpiNNaker/BrainScaleS, in-memory computing, event cameras, honest energy accounting
-- [Datacentres in Space](chapter 20 - bleeding edge AI/03. datacentres in space.md): Orbital computing, latency, radiation, power constraints
+- [Datacentres in Space](chapter 20 - bleeding edge AI/03. datacentres in space.md): Data centre energy demand, solar power and dawn-dusk orbits, radiative cooling (Stefan-Boltzmann), latency and inter-satellite bandwidth, radiation and reliability without repair, launch economics, current projects, objections
 - [Decentralised AI](chapter 20 - bleeding edge AI/04. decentralised AI.md): Federated learning, blockchain ML, distributed training
 - [Brain Machine Interfaces](chapter 20 - bleeding edge AI/05. brain machine interfaces.md): Neural decoding, BCI architectures, neural signal processing
