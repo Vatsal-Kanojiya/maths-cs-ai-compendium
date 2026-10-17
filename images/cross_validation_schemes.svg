@@ -1,0 +1,146 @@
+<svg width="760" height="400" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+<defs><marker id="cv-arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="none" stroke="#555" stroke-width="1"/></marker></defs>
+<text x="380" y="22" fill="#333" font-size="14" font-weight="bold" text-anchor="middle">Cross-Validation Schemes</text>
+<text x="20" y="54" fill="#333" font-size="12" font-weight="bold">k-fold (k = 5)</text>
+<text x="20" y="69" fill="#777" font-size="10">shuffle the rows, then rotate</text>
+<text x="20" y="82" fill="#777" font-size="10">which fold is held out</text>
+<text x="270" y="54" fill="#555" font-size="10" text-anchor="end">fold 1</text>
+<rect x="280" y="42" width="43" height="16" rx="2" fill="#e74c3c" opacity="0.85"/>
+<rect x="326" y="42" width="43" height="16" rx="2" fill="#e74c3c" opacity="0.85"/>
+<rect x="372" y="42" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="418" y="42" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="464" y="42" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="510" y="42" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="556" y="42" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="602" y="42" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="648" y="42" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="694" y="42" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<text x="270" y="73" fill="#555" font-size="10" text-anchor="end">fold 2</text>
+<rect x="280" y="61" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="326" y="61" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="372" y="61" width="43" height="16" rx="2" fill="#e74c3c" opacity="0.85"/>
+<rect x="418" y="61" width="43" height="16" rx="2" fill="#e74c3c" opacity="0.85"/>
+<rect x="464" y="61" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="510" y="61" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="556" y="61" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="602" y="61" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="648" y="61" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="694" y="61" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<text x="270" y="92" fill="#555" font-size="10" text-anchor="end">fold 3</text>
+<rect x="280" y="80" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="326" y="80" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="372" y="80" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="418" y="80" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="464" y="80" width="43" height="16" rx="2" fill="#e74c3c" opacity="0.85"/>
+<rect x="510" y="80" width="43" height="16" rx="2" fill="#e74c3c" opacity="0.85"/>
+<rect x="556" y="80" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="602" y="80" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="648" y="80" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="694" y="80" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<text x="270" y="111" fill="#555" font-size="10" text-anchor="end">fold 4</text>
+<rect x="280" y="99" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="326" y="99" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="372" y="99" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="418" y="99" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="464" y="99" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="510" y="99" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="556" y="99" width="43" height="16" rx="2" fill="#e74c3c" opacity="0.85"/>
+<rect x="602" y="99" width="43" height="16" rx="2" fill="#e74c3c" opacity="0.85"/>
+<rect x="648" y="99" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="694" y="99" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<text x="270" y="130" fill="#555" font-size="10" text-anchor="end">fold 5</text>
+<rect x="280" y="118" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="326" y="118" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="372" y="118" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="418" y="118" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="464" y="118" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="510" y="118" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="556" y="118" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="602" y="118" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="648" y="118" width="43" height="16" rx="2" fill="#e74c3c" opacity="0.85"/>
+<rect x="694" y="118" width="43" height="16" rx="2" fill="#e74c3c" opacity="0.85"/>
+<text x="20" y="162" fill="#333" font-size="12" font-weight="bold">Group k-fold</text>
+<text x="20" y="177" fill="#777" font-size="10">every row of one patient or</text>
+<text x="20" y="190" fill="#777" font-size="10">user stays on the same side</text>
+<text x="270" y="162" fill="#555" font-size="10" text-anchor="end">hold out A</text>
+<rect x="280" y="150" width="43" height="16" rx="2" fill="#e74c3c" opacity="0.85"/>
+<rect x="326" y="150" width="43" height="16" rx="2" fill="#e74c3c" opacity="0.85"/>
+<rect x="372" y="150" width="43" height="16" rx="2" fill="#e74c3c" opacity="0.85"/>
+<rect x="418" y="150" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="464" y="150" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="510" y="150" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="556" y="150" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="602" y="150" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="648" y="150" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="694" y="150" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<text x="270" y="181" fill="#555" font-size="10" text-anchor="end">hold out C</text>
+<rect x="280" y="169" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="326" y="169" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="372" y="169" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="418" y="169" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="464" y="169" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="510" y="169" width="43" height="16" rx="2" fill="#e74c3c" opacity="0.85"/>
+<rect x="556" y="169" width="43" height="16" rx="2" fill="#e74c3c" opacity="0.85"/>
+<rect x="602" y="169" width="43" height="16" rx="2" fill="#e74c3c" opacity="0.85"/>
+<rect x="648" y="169" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="694" y="169" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<text x="301.5" y="202" fill="#555" font-size="10" text-anchor="middle">A</text>
+<text x="347.5" y="202" fill="#555" font-size="10" text-anchor="middle">A</text>
+<text x="393.5" y="202" fill="#555" font-size="10" text-anchor="middle">A</text>
+<text x="439.5" y="202" fill="#555" font-size="10" text-anchor="middle">B</text>
+<text x="485.5" y="202" fill="#555" font-size="10" text-anchor="middle">B</text>
+<text x="531.5" y="202" fill="#555" font-size="10" text-anchor="middle">C</text>
+<text x="577.5" y="202" fill="#555" font-size="10" text-anchor="middle">C</text>
+<text x="623.5" y="202" fill="#555" font-size="10" text-anchor="middle">C</text>
+<text x="669.5" y="202" fill="#555" font-size="10" text-anchor="middle">D</text>
+<text x="715.5" y="202" fill="#555" font-size="10" text-anchor="middle">D</text>
+<text x="270" y="202" fill="#555" font-size="10" text-anchor="end">group</text>
+<text x="20" y="242" fill="#333" font-size="12" font-weight="bold">Time-series split</text>
+<text x="20" y="257" fill="#777" font-size="10">train on the past, test on the</text>
+<text x="20" y="270" fill="#777" font-size="10">future; a gap stops leakage</text>
+<text x="20" y="283" fill="#777" font-size="10">across the boundary</text>
+<text x="270" y="242" fill="#555" font-size="10" text-anchor="end">split 1</text>
+<rect x="280" y="230" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="326" y="230" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="372" y="230" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="418" y="230" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="464" y="230" width="43" height="16" rx="2" fill="#f39c12" opacity="0.85"/>
+<rect x="510" y="230" width="43" height="16" rx="2" fill="#e74c3c" opacity="0.85"/>
+<rect x="556" y="230" width="43" height="16" rx="2" fill="#e74c3c" opacity="0.85"/>
+<rect x="602" y="230" width="43" height="16" rx="2" fill="#ecf0f1" opacity="1"/>
+<rect x="648" y="230" width="43" height="16" rx="2" fill="#ecf0f1" opacity="1"/>
+<rect x="694" y="230" width="43" height="16" rx="2" fill="#ecf0f1" opacity="1"/>
+<text x="270" y="261" fill="#555" font-size="10" text-anchor="end">split 2</text>
+<rect x="280" y="249" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="326" y="249" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="372" y="249" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="418" y="249" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="464" y="249" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="510" y="249" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="556" y="249" width="43" height="16" rx="2" fill="#f39c12" opacity="0.85"/>
+<rect x="602" y="249" width="43" height="16" rx="2" fill="#e74c3c" opacity="0.85"/>
+<rect x="648" y="249" width="43" height="16" rx="2" fill="#e74c3c" opacity="0.85"/>
+<rect x="694" y="249" width="43" height="16" rx="2" fill="#ecf0f1" opacity="1"/>
+<text x="270" y="280" fill="#555" font-size="10" text-anchor="end">split 3</text>
+<rect x="280" y="268" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="326" y="268" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="372" y="268" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="418" y="268" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="464" y="268" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="510" y="268" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="556" y="268" width="43" height="16" rx="2" fill="#3498db" opacity="0.85"/>
+<rect x="602" y="268" width="43" height="16" rx="2" fill="#f39c12" opacity="0.85"/>
+<rect x="648" y="268" width="43" height="16" rx="2" fill="#e74c3c" opacity="0.85"/>
+<rect x="694" y="268" width="43" height="16" rx="2" fill="#e74c3c" opacity="0.85"/>
+<line x1="280" y1="294" x2="737" y2="294" stroke="#555" stroke-width="1" marker-end="url(#cv-arrow)"/>
+<text x="737" y="308" fill="#555" font-size="10" text-anchor="end">time</text>
+<rect x="110" y="335" width="14" height="12" rx="2" fill="#3498db" opacity="0.85"/>
+<text x="130" y="345" fill="#555" font-size="11">train</text>
+<rect x="260" y="335" width="14" height="12" rx="2" fill="#e74c3c" opacity="0.85"/>
+<text x="280" y="345" fill="#555" font-size="11">test / validation</text>
+<rect x="410" y="335" width="14" height="12" rx="2" fill="#f39c12" opacity="0.85"/>
+<text x="430" y="345" fill="#555" font-size="11">gap (embargo)</text>
+<rect x="560" y="335" width="14" height="12" rx="2" fill="#ecf0f1" opacity="0.85"/>
+<text x="580" y="345" fill="#555" font-size="11">not used yet</text>
+<text x="380" y="375" fill="#333" font-size="11" text-anchor="middle">The split must mirror how the model will meet new data: new rows, new people, or the future.</text>
+</svg>
