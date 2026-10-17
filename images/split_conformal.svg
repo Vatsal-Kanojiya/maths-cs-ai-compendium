@@ -1,0 +1,51 @@
+<svg width="760" height="270" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <defs>
+    <marker id="cp-arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="none" stroke="#555" stroke-width="1"/>
+    </marker>
+  </defs>
+  <text x="380" y="22" fill="#333" font-size="14" font-weight="bold" text-anchor="middle">Split Conformal Prediction</text>
+
+  <!-- Step 1 -->
+  <rect x="15" y="45" width="220" height="150" rx="6" fill="#3498db" opacity="0.08" stroke="#3498db" stroke-width="1.2"/>
+  <text x="125" y="66" fill="#333" font-size="12" font-weight="bold" text-anchor="middle">1. Train</text>
+  <text x="125" y="92" fill="#555" font-size="11" text-anchor="middle">Fit any model f on the</text>
+  <text x="125" y="108" fill="#555" font-size="11" text-anchor="middle">training set: a GBM, a</text>
+  <text x="125" y="124" fill="#555" font-size="11" text-anchor="middle">neural net, an LLM scorer…</text>
+  <text x="125" y="160" fill="#3498db" font-size="12" text-anchor="middle">ŷ = f(x)</text>
+
+  <line x1="238" y1="120" x2="262" y2="120" stroke="#555" stroke-width="1.2" marker-end="url(#cp-arrow)"/>
+
+  <!-- Step 2 -->
+  <rect x="266" y="45" width="230" height="150" rx="6" fill="#f39c12" opacity="0.08" stroke="#f39c12" stroke-width="1.2"/>
+  <text x="381" y="66" fill="#333" font-size="12" font-weight="bold" text-anchor="middle">2. Calibrate</text>
+  <text x="381" y="84" fill="#555" font-size="11" text-anchor="middle">On n held-out points, compute</text>
+  <text x="381" y="99" fill="#555" font-size="11" text-anchor="middle">scores sᵢ = |yᵢ − f(xᵢ)|</text>
+  <!-- sorted score bars -->
+  <g fill="#f39c12" opacity="0.7">
+    <rect x="296" y="160" width="10" height="10"/><rect x="309" y="156" width="10" height="14"/>
+    <rect x="322" y="152" width="10" height="18"/><rect x="335" y="148" width="10" height="22"/>
+    <rect x="348" y="145" width="10" height="25"/><rect x="361" y="141" width="10" height="29"/>
+    <rect x="374" y="137" width="10" height="33"/><rect x="387" y="132" width="10" height="38"/>
+    <rect x="400" y="126" width="10" height="44"/>
+  </g>
+  <rect x="413" y="118" width="10" height="52" fill="#e74c3c"/>
+  <rect x="426" y="110" width="10" height="60" fill="#f39c12" opacity="0.7"/>
+  <text x="418" y="113" fill="#e74c3c" font-size="11" text-anchor="middle">q̂</text>
+  <text x="381" y="186" fill="#555" font-size="10" text-anchor="middle">q̂ = the ⌈(n+1)(1−α)⌉-th smallest score</text>
+
+  <line x1="499" y1="120" x2="523" y2="120" stroke="#555" stroke-width="1.2" marker-end="url(#cp-arrow)"/>
+
+  <!-- Step 3 -->
+  <rect x="527" y="45" width="220" height="150" rx="6" fill="#27ae60" opacity="0.08" stroke="#27ae60" stroke-width="1.2"/>
+  <text x="637" y="66" fill="#333" font-size="12" font-weight="bold" text-anchor="middle">3. Predict</text>
+  <text x="637" y="92" fill="#555" font-size="11" text-anchor="middle">For a new x, report</text>
+  <text x="637" y="124" fill="#27ae60" font-size="13" font-weight="bold" text-anchor="middle">[ f(x) − q̂ ,  f(x) + q̂ ]</text>
+  <line x1="577" y1="160" x2="697" y2="160" stroke="#27ae60" stroke-width="3"/>
+  <line x1="577" y1="152" x2="577" y2="168" stroke="#27ae60" stroke-width="2"/>
+  <line x1="697" y1="152" x2="697" y2="168" stroke="#27ae60" stroke-width="2"/>
+  <circle cx="637" cy="160" r="4" fill="#3498db"/>
+
+  <text x="380" y="228" fill="#333" font-size="12" text-anchor="middle">Guarantee: if calibration and test points are exchangeable, P(y_new ∈ interval) ≥ 1 − α,</text>
+  <text x="380" y="246" fill="#333" font-size="12" text-anchor="middle">for any model and any data distribution. Better models give narrower intervals, not better coverage.</text>
+</svg>
