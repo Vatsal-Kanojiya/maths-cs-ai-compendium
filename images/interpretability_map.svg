@@ -1,0 +1,49 @@
+<svg width="760" height="340" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <text x="380" y="22" fill="#333" font-size="14" font-weight="bold" text-anchor="middle">A Map of Interpretability Methods</text>
+
+  <!-- column headers -->
+  <text x="320" y="52" fill="#333" font-size="12" font-weight="bold" text-anchor="middle">Global: how does the model behave overall?</text>
+  <text x="610" y="52" fill="#333" font-size="12" font-weight="bold" text-anchor="middle">Local: why this prediction?</text>
+
+  <!-- row headers -->
+  <text x="95" y="105" fill="#333" font-size="12" font-weight="bold" text-anchor="middle">Interpretable</text>
+  <text x="95" y="121" fill="#333" font-size="12" font-weight="bold" text-anchor="middle">by design</text>
+  <text x="95" y="190" fill="#333" font-size="12" font-weight="bold" text-anchor="middle">Post-hoc,</text>
+  <text x="95" y="206" fill="#333" font-size="12" font-weight="bold" text-anchor="middle">model-agnostic</text>
+  <text x="95" y="273" fill="#333" font-size="12" font-weight="bold" text-anchor="middle">Post-hoc, inside</text>
+  <text x="95" y="289" fill="#333" font-size="12" font-weight="bold" text-anchor="middle">neural networks</text>
+
+  <!-- cells -->
+  <g font-size="11" fill="#333">
+    <rect x="180" y="68" width="285" height="72" rx="5" fill="#27ae60" opacity="0.12" stroke="#27ae60"/>
+    <text x="195" y="90">linear / logistic coefficients, GAMs and</text>
+    <text x="195" y="106">explainable boosting machines, shallow trees,</text>
+    <text x="195" y="122">rule lists, points-based scorecards</text>
+
+    <rect x="475" y="68" width="270" height="72" rx="5" fill="#27ae60" opacity="0.12" stroke="#27ae60"/>
+    <text x="490" y="90">read the model directly: coefficient times</text>
+    <text x="490" y="106">value, the path through the tree, the rule</text>
+    <text x="490" y="122">that fired, the points that were added</text>
+
+    <rect x="180" y="152" width="285" height="72" rx="5" fill="#3498db" opacity="0.12" stroke="#3498db"/>
+    <text x="195" y="174">permutation importance, partial dependence</text>
+    <text x="195" y="190">(PDP), ALE plots, global surrogate models,</text>
+    <text x="195" y="206">mean |SHAP| per feature</text>
+
+    <rect x="475" y="152" width="270" height="72" rx="5" fill="#3498db" opacity="0.12" stroke="#3498db"/>
+    <text x="490" y="174">SHAP values, LIME, ICE curves,</text>
+    <text x="490" y="190">counterfactual explanations, anchors</text>
+    <text x="490" y="206">(rules that "lock in" a prediction)</text>
+
+    <rect x="180" y="236" width="285" height="72" rx="5" fill="#9b59b6" opacity="0.12" stroke="#9b59b6"/>
+    <text x="195" y="258">probing classifiers, concept vectors (TCAV),</text>
+    <text x="195" y="274">circuits, sparse-autoencoder features,</text>
+    <text x="195" y="290">mechanistic interpretability</text>
+
+    <rect x="475" y="236" width="270" height="72" rx="5" fill="#9b59b6" opacity="0.12" stroke="#9b59b6"/>
+    <text x="490" y="258">saliency maps, integrated gradients,</text>
+    <text x="490" y="274">Grad-CAM, activation patching,</text>
+    <text x="490" y="290">attention patterns (with caution)</text>
+  </g>
+  <text x="380" y="328" fill="#777" font-size="11" text-anchor="middle">Every post-hoc method explains the model, not the world: an important feature is not necessarily a cause.</text>
+</svg>
