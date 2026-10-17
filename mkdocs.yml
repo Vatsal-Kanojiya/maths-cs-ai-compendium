@@ -127,6 +127,7 @@ nav:
     - Fairness, Robustness and Distribution Shift: "chapter 06 - machine learning/15. fairness, robustness and distribution shift.md"
     - Learning with Limited Labels: "chapter 06 - machine learning/16. learning with limited labels.md"
     - Advanced Reinforcement Learning: "chapter 06 - machine learning/17. advanced reinforcement learning.md"
+    - Probabilistic Graphical Models and Bayesian Workflow: "chapter 06 - machine learning/18. probabilistic graphical models and Bayesian workflow.md"
 
   - Computational Linguistics:
     - Linguistic Foundations: "chapter 07 - computational linguistics/01. linguistic foundations.md"
