@@ -52,6 +52,7 @@
 - [Deep Learning](chapter 06 - machine learning/03. deep learning.md): MLPs, CNNs, RNNs, LSTMs, attention, transformers, ViT, autoencoders, VAEs
 - [Reinforcement Learning](chapter 06 - machine learning/04. reinforcement learning.md): MDPs, Q-learning, policy gradient, actor-critic, PPO, RLHF, DPO
 - [Distributed Training](chapter 06 - machine learning/05. distributed deep learning.md): Data/model/pipeline/tensor parallelism, mixed precision, scaling laws, MoE
+- [Tree Ensembles and Gradient Boosting](chapter 06 - machine learning/06. tree ensembles and gradient boosting.md): Split finding, histograms, random forest variance, OOB, gradient boosting, XGBoost second-order maths, LightGBM, CatBoost, tuning, monotonic constraints, stacking, LambdaMART, tabular deep learning
 
 ### Chapter 7: Computational Linguistics
 - [Linguistic Foundations](chapter 07 - computational linguistics/01. linguistic foundations.md): Morphology, syntax, semantics, pragmatics, phonology

@@ -115,6 +115,7 @@ nav:
     - Deep Learning: "chapter 06 - machine learning/03. deep learning.md"
     - Reinforcement Learning: "chapter 06 - machine learning/04. reinforcement learning.md"
     - Distributed Deep Learning: "chapter 06 - machine learning/05. distributed deep learning.md"
+    - Tree Ensembles and Gradient Boosting: "chapter 06 - machine learning/06. tree ensembles and gradient boosting.md"
 
   - Computational Linguistics:
     - Linguistic Foundations: "chapter 07 - computational linguistics/01. linguistic foundations.md"
