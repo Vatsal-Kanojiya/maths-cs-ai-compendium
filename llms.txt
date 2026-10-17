@@ -154,7 +154,7 @@
 
 ### Chapter 19: Applied AI
 - [AI for Finance](chapter 19 - applied AI/01. AI for finance.md): Stylised facts, GARCH, factor models, ML asset pricing, backtest overfitting, portfolio optimisation and shrinkage, execution and microstructure, VaR and expected shortfall, credit scoring, fraud and AML, financial NLP, alternative data, model risk
-- [Protein Design](chapter 19 - applied AI/02. protein design.md): AlphaFold, protein structure prediction, inverse folding
+- [Protein Design](chapter 19 - applied AI/02. protein design.md): Protein basics, coevolution and Potts models, AlphaFold 2 (Evoformer, IPA, pLDDT) and 3, protein language models (ESM), RMSD and TM-score, ProteinMPNN, RFdiffusion, design pipelines, variant effects, limits, genomic and single-cell models
 - [Drug Discovery](chapter 19 - applied AI/03. drug discovery.md): Molecular representations, virtual screening, binding affinity prediction
 - [Agentic Systems](chapter 19 - applied AI/04. agentic systems.md): AI agents, tool use, planning, multi-agent systems
 - [Healthcare](chapter 19 - applied AI/05. healthcare.md): Medical imaging, clinical NLP, drug safety, health monitoring
