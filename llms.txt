@@ -153,7 +153,7 @@
 - [ML Design Examples](chapter 18 - ML systems design/05. ML design examples.md): Recommendation systems, search ranking, ads, fraud detection, content moderation, RAG chatbot, image search
 
 ### Chapter 19: Applied AI
-- [AI for Finance](chapter 19 - applied AI/01. AI for finance.md): Time series, algorithmic trading, portfolio optimisation, risk modelling
+- [AI for Finance](chapter 19 - applied AI/01. AI for finance.md): Stylised facts, GARCH, factor models, ML asset pricing, backtest overfitting, portfolio optimisation and shrinkage, execution and microstructure, VaR and expected shortfall, credit scoring, fraud and AML, financial NLP, alternative data, model risk
 - [Protein Design](chapter 19 - applied AI/02. protein design.md): AlphaFold, protein structure prediction, inverse folding
 - [Drug Discovery](chapter 19 - applied AI/03. drug discovery.md): Molecular representations, virtual screening, binding affinity prediction
 - [Agentic Systems](chapter 19 - applied AI/04. agentic systems.md): AI agents, tool use, planning, multi-agent systems
