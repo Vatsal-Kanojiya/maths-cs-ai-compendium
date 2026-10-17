@@ -1,0 +1,53 @@
+<svg width="760" height="330" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <defs>
+    <marker id="ag-arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="none" stroke="#555" stroke-width="1"/>
+    </marker>
+  </defs>
+  <text x="380" y="22" fill="#333" font-size="14" font-weight="bold" text-anchor="middle">The Agent Loop: the Model Proposes, the Harness Disposes</text>
+
+  <!-- context -->
+  <rect x="20" y="50" width="200" height="200" rx="8" fill="#9b59b6" opacity="0.08" stroke="#9b59b6" stroke-width="1.2"/>
+  <text x="120" y="72" fill="#333" font-size="12" font-weight="bold" text-anchor="middle">Context</text>
+  <g font-size="11" fill="#555" text-anchor="middle">
+    <text x="120" y="96">system prompt, tool descriptions</text>
+    <text x="120" y="116">user goal</text>
+    <text x="120" y="136">previous actions</text>
+    <text x="120" y="156">observations (tool results)</text>
+    <text x="120" y="176">retrieved memory, notes</text>
+    <text x="120" y="206" fill="#9b59b6">kept within the window by</text>
+    <text x="120" y="222" fill="#9b59b6">summarising and retrieval</text>
+  </g>
+
+  <!-- model -->
+  <rect x="290" y="70" width="170" height="60" rx="8" fill="#3498db" opacity="0.15" stroke="#3498db" stroke-width="1.2"/>
+  <text x="375" y="96" fill="#333" font-size="12" font-weight="bold" text-anchor="middle">Language model</text>
+  <text x="375" y="114" fill="#555" font-size="11" text-anchor="middle">reasons, picks next action</text>
+
+  <!-- harness -->
+  <rect x="290" y="175" width="170" height="75" rx="8" fill="#e74c3c" opacity="0.1" stroke="#e74c3c" stroke-width="1.2"/>
+  <text x="375" y="197" fill="#333" font-size="12" font-weight="bold" text-anchor="middle">Harness</text>
+  <text x="375" y="215" fill="#555" font-size="11" text-anchor="middle">validate the call, check policy,</text>
+  <text x="375" y="230" fill="#555" font-size="11" text-anchor="middle">budgets, ask a human if needed</text>
+
+  <!-- environment -->
+  <rect x="535" y="120" width="205" height="90" rx="8" fill="#27ae60" opacity="0.12" stroke="#27ae60" stroke-width="1.2"/>
+  <text x="637" y="144" fill="#333" font-size="12" font-weight="bold" text-anchor="middle">Environment / tools</text>
+  <text x="637" y="164" fill="#555" font-size="11" text-anchor="middle">search, code execution, files,</text>
+  <text x="637" y="180" fill="#555" font-size="11" text-anchor="middle">APIs, browser, other agents</text>
+
+  <g stroke="#555" stroke-width="1.3" fill="none">
+    <path d="M222,110 L286,100" marker-end="url(#ag-arrow)"/>
+    <path d="M375,132 L375,171" marker-end="url(#ag-arrow)"/>
+    <path d="M462,205 C500,205 505,175 531,170" marker-end="url(#ag-arrow)"/>
+    <path d="M637,212 C637,285 220,290 160,253" marker-end="url(#ag-arrow)"/>
+    <path d="M288,232 C250,240 240,240 222,236" marker-end="url(#ag-arrow)" stroke="#e74c3c"/>
+  </g>
+  <text x="250" y="100" fill="#555" font-size="10" text-anchor="middle">prompt</text>
+  <text x="400" y="155" fill="#555" font-size="10">tool call (JSON)</text>
+  <text x="478" y="222" fill="#555" font-size="10">execute</text>
+  <text x="430" y="296" fill="#555" font-size="10" text-anchor="middle">observation appended to context</text>
+  <text x="255" y="252" fill="#e74c3c" font-size="10" text-anchor="middle">error or refusal</text>
+
+  <text x="380" y="322" fill="#333" font-size="11" text-anchor="middle">The loop repeats until the model gives a final answer or a step, time or cost budget runs out.</text>
+</svg>
