@@ -123,6 +123,7 @@ nav:
     - Time Series and Forecasting: "chapter 06 - machine learning/11. time series and forecasting.md"
     - Causal Inference: "chapter 06 - machine learning/12. causal inference.md"
     - Interpretability: "chapter 06 - machine learning/13. interpretability.md"
+    - Learning Theory: "chapter 06 - machine learning/14. learning theory.md"
 
   - Computational Linguistics:
     - Linguistic Foundations: "chapter 07 - computational linguistics/01. linguistic foundations.md"
