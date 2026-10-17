@@ -54,6 +54,7 @@
 - [Distributed Training](chapter 06 - machine learning/05. distributed deep learning.md): Data/model/pipeline/tensor parallelism, mixed precision, scaling laws, MoE
 - [Tree Ensembles and Gradient Boosting](chapter 06 - machine learning/06. tree ensembles and gradient boosting.md): Split finding, histograms, random forest variance, OOB, gradient boosting, XGBoost second-order maths, LightGBM, CatBoost, tuning, monotonic constraints, stacking, LambdaMART, tabular deep learning
 - [Model Evaluation and Validation](chapter 06 - machine learning/07. model evaluation and validation.md): Train/val/test roles, k-fold, stratified, group and time-series CV, nested CV, data leakage, regression and classification metrics, ROC vs PR, thresholds, calibration, imbalanced data, hyperparameter search, winner's curse, learning curves, statistical model comparison
+- [Practical Data Work](chapter 06 - machine learning/08. practical data work.md): Problem framing, pandas essentials, EDA, cleaning, outliers, missing-data mechanisms, categorical encoding (one-hot, target, hashing), scaling and transforms, point-in-time feature engineering, scikit-learn pipelines, end-to-end churn project, reproducibility
 
 ### Chapter 7: Computational Linguistics
 - [Linguistic Foundations](chapter 07 - computational linguistics/01. linguistic foundations.md): Morphology, syntax, semantics, pragmatics, phonology
