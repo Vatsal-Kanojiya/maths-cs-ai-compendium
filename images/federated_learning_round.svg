@@ -1,0 +1,51 @@
+<svg width="760" height="330" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <defs>
+    <marker id="fl-arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="none" stroke="#555" stroke-width="1"/>
+    </marker>
+    <marker id="fl-arrow-g" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="none" stroke="#27ae60" stroke-width="1"/>
+    </marker>
+  </defs>
+  <text x="380" y="22" fill="#333" font-size="14" font-weight="bold" text-anchor="middle">One Round of Federated Learning</text>
+
+  <!-- server -->
+  <rect x="290" y="45" width="180" height="62" rx="8" fill="#3498db" opacity="0.15" stroke="#3498db" stroke-width="1.2"/>
+  <text x="380" y="70" fill="#333" font-size="12" font-weight="bold" text-anchor="middle">Server</text>
+  <text x="380" y="88" fill="#555" font-size="11" text-anchor="middle">w ← weighted average of updates</text>
+
+  <!-- clients -->
+  <g font-size="11" text-anchor="middle">
+    <rect x="40" y="215" width="160" height="70" rx="8" fill="#ecf0f1" stroke="#95a5a6"/>
+    <text x="120" y="238" fill="#333" font-weight="bold">Hospital A</text>
+    <text x="120" y="256" fill="#555">private records</text>
+    <text x="120" y="272" fill="#555">k local training steps</text>
+    <rect x="300" y="215" width="160" height="70" rx="8" fill="#ecf0f1" stroke="#95a5a6"/>
+    <text x="380" y="238" fill="#333" font-weight="bold">Phone B</text>
+    <text x="380" y="256" fill="#555">private keyboard data</text>
+    <text x="380" y="272" fill="#555">k local training steps</text>
+    <rect x="560" y="215" width="160" height="70" rx="8" fill="#ecf0f1" stroke="#95a5a6"/>
+    <text x="640" y="238" fill="#333" font-weight="bold">Bank C</text>
+    <text x="640" y="256" fill="#555">private transactions</text>
+    <text x="640" y="272" fill="#555">k local training steps</text>
+  </g>
+
+  <!-- down arrows (global model) -->
+  <g stroke="#555" stroke-width="1.2" fill="none">
+    <path d="M320,108 L140,210" marker-end="url(#fl-arrow)"/>
+    <path d="M365,108 L365,210" marker-end="url(#fl-arrow)"/>
+    <path d="M440,108 L620,210" marker-end="url(#fl-arrow)"/>
+  </g>
+  <!-- up arrows (updates) -->
+  <g stroke="#27ae60" stroke-width="1.2" fill="none" stroke-dasharray="5,3">
+    <path d="M165,212 L340,111" marker-end="url(#fl-arrow-g)"/>
+    <path d="M395,210 L395,111" marker-end="url(#fl-arrow-g)"/>
+    <path d="M600,212 L425,111" marker-end="url(#fl-arrow-g)"/>
+  </g>
+  <text x="228" y="150" fill="#555" font-size="11" text-anchor="end">1. send global model w</text>
+  <text x="545" y="140" fill="#27ae60" font-size="11">2. send back updated models</text>
+  <text x="545" y="155" fill="#27ae60" font-size="11">(masked, clipped, noised)</text>
+
+  <text x="380" y="310" fill="#333" font-size="11" text-anchor="middle">Raw data never leave the clients. Secure aggregation hides each update; differential privacy limits what the</text>
+  <text x="380" y="326" fill="#333" font-size="11" text-anchor="middle">average reveals; robust aggregation limits what malicious clients can do.</text>
+</svg>
