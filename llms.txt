@@ -157,7 +157,7 @@
 - [Protein Design](chapter 19 - applied AI/02. protein design.md): Protein basics, coevolution and Potts models, AlphaFold 2 (Evoformer, IPA, pLDDT) and 3, protein language models (ESM), RMSD and TM-score, ProteinMPNN, RFdiffusion, design pipelines, variant effects, limits, genomic and single-cell models
 - [Drug Discovery](chapter 19 - applied AI/03. drug discovery.md): Pipeline, SMILES/graphs/fingerprints, QSAR and ADMET, scaffold splits, virtual screening and docking, enrichment, binding affinity and FEP, generative design, DMTA cycles, retrosynthesis, biologics, state of AI drugs
 - [Agentic Systems](chapter 19 - applied AI/04. agentic systems.md): Workflows vs agents, the agent loop and harness, tool use and MCP, ReAct, reasoning and planning as search, memory and context engineering, multi-agent systems, coding and computer-use agents, evaluation (pass^k), compounding reliability, prompt injection and harness-level defences
-- [Healthcare](chapter 19 - applied AI/05. healthcare.md): Medical imaging, clinical NLP, drug safety, health monitoring
+- [Healthcare](chapter 19 - applied AI/05. healthcare.md): EHR data and its pitfalls, medical imaging and pathology, segmentation and Dice, clinical prediction, PPV and prevalence, decision curve analysis, survival analysis, LLMs in medicine, wearables, shortcut learning and external validation, regulation, safe deployment
 
 ### Chapter 20: Bleeding Edge AI
 - [Quantum Machine Learning](chapter 20 - bleeding edge AI/01. quantum machine learning.md): Qubits, quantum gates, variational circuits, quantum kernels
