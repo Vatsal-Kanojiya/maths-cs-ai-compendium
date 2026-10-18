@@ -39,7 +39,7 @@ This repo includes an MCP server that lets any AI assistant (Claude Code, Cursor
 | 18 | [ML Systems Design](chapter%2018%20-%20ML%20systems%20design/01.%20systems%20design%20fundamentals.md) | systems fundamentals, cloud computing, distributed systems, ML lifecycle, feature stores, A/B testing, recommendation/search/ads/fraud design examples | Available |
 | 19 | [Applied AI](chapter%2019%20-%20applied%20AI/01.%20AI%20for%20finance.md) | AI for finance (returns, risk, backtesting, fraud), protein structure and design, drug discovery, agentic systems and evaluation, healthcare (imaging, clinical prediction, survival analysis, regulation) | Available |
 | 20 | [Bleeding Edge AI](chapter%2020%20-%20bleeding%20edge%20AI/01.%20quantum%20machine%20learning.md) | quantum machine learning, neuromorphic computing, datacentres in space, decentralised and federated AI, brain-machine interfaces | Available |
-| 21 | [Hands-On ML Engineering](chapter%2021%20-%20hands-on%20ML%20engineering/01.%20setup%20and%20roadmap.md) | laptop setup, a roadmap of eight real-data project milestones (tabular and text) placed at the end of the chapters they apply, and interview preparation | Available |
+| 21 | [Hands-On ML Engineering](chapter%2021%20-%20hands-on%20ML%20engineering/01.%20setup%20and%20roadmap.md) | laptop setup, a three-level path (foundations, production, frontier) with real-data project milestones placed at the end of the chapters they apply, and interview preparation | Available |
 
 ## Foreword
 
