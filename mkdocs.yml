@@ -230,3 +230,6 @@ nav:
     - Datacentres in Space: "chapter 20 - bleeding edge AI/03. datacentres in space.md"
     - Decentralised AI: "chapter 20 - bleeding edge AI/04. decentralised AI.md"
     - Brain Machine Interfaces: "chapter 20 - bleeding edge AI/05. brain machine interfaces.md"
+
+  - Hands-On ML Engineering:
+    - Setup and Roadmap: "chapter 21 - hands-on ML engineering/01. setup and roadmap.md"

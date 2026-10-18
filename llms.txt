@@ -167,3 +167,6 @@
 - [Datacentres in Space](chapter 20 - bleeding edge AI/03. datacentres in space.md): Data centre energy demand, solar power and dawn-dusk orbits, radiative cooling (Stefan-Boltzmann), latency and inter-satellite bandwidth, radiation and reliability without repair, launch economics, current projects, objections
 - [Decentralised AI](chapter 20 - bleeding edge AI/04. decentralised AI.md): Federated learning (FedAvg, non-IID data, FedProx, SCAFFOLD), gradient leakage, secure aggregation, differential privacy, Byzantine-robust aggregation, gossip and spectral gap, gradient compression and error feedback, DiLoCo, volunteer and incentive networks, verification, model merging
 - [Brain Machine Interfaces](chapter 20 - bleeding edge AI/05. brain machine interfaces.md): Recording methods, spike sorting, cosine tuning and population decoding, Kalman filter decoders, EEG motor imagery and CSP, P300 and SSVEP, information transfer rate, speech and handwriting neuroprostheses, stimulation, neural foundation models, neuroethics
+
+### Chapter 21: Hands-On ML Engineering
+- [Setup and Roadmap](chapter 21 - hands-on ML engineering/01. setup and roadmap.md): Laptop setup for ML engineering, GPU notebooks, downloading and caching datasets, and the roadmap of real-data project milestones (Adult income, AG News/IMDB) placed at the end of the chapters they apply
