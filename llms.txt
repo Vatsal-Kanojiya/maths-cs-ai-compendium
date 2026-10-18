@@ -170,3 +170,4 @@
 
 ### Chapter 21: Hands-On ML Engineering
 - [Setup and Roadmap](chapter 21 - hands-on ML engineering/01. setup and roadmap.md): Laptop setup for ML engineering, GPU notebooks, downloading and caching datasets, and the roadmap of real-data project milestones (Adult income, AG News/IMDB) placed at the end of the chapters they apply
+- [Interview Preparation](chapter 21 - hands-on ML engineering/02. interview preparation.md): ML engineer interview structure, fundamentals questions mapped to the compendium, an ML system design framework with two worked walkthroughs (ticket routing, delivery time prediction), a take-home exercise template, presenting your project, and a checklist
