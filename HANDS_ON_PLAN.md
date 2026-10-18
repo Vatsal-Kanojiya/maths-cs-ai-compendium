@@ -69,5 +69,6 @@ Placements in steps 5-7 are provisional: check the target file first, and put th
 
 ## Status
 
-- Planned on 18 October 2026 on branch `claude/hopeful-maxwell-ixge0f`. No step has been started.
-- Note: the cloud sandbox used to write this plan could not reach OpenML or Hugging Face, so code there could only be tested on stand-in data. On a normal internet connection the loaders above work directly.
+- All eleven steps are complete on branch `claude/hopeful-maxwell-ixge0f` (18 October 2026). Chapter 21's roadmap links every milestone.
+- Placements that differ from the table above: milestone 5 (serving and monitoring) went to chapter 18's ML systems design file only, because chapter 17's serving file is about LLM serving; the text project's quantisation uses ONNX Runtime rather than PyTorch's deprecated `torch.ao.quantization`.
+- Testing: every code block ran in the cloud sandbox, but on a stand-in dataset with the same columns as Adult (OpenML and the Hugging Face Hub were unreachable there), and the transformer code ran with a tiny locally built model. The Docker build could not be tested there. **First real-data runs happen on your machine**; the text gives expectations for the real data as rough ranges.
